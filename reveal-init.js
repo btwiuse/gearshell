@@ -19,6 +19,8 @@ const HUSH_ENV = {
   GOGC: '70',
 };
 
+const DEFAULT_CMD = 'hush -rcfile /tmp/profile';
+
 let tabIdCounter = 0;
 let activeTabId = null;
 let homeTabId = 0;
@@ -53,7 +55,7 @@ window.addEventListener('DOMContentLoaded', initReveal);
 
 // --- Config (localStorage) ---
 const CONFIG_KEY = 'gear-shell-config';
-const DEFAULT_CONFIG = { cmd: 'hush', env: '', autoOpen: false };
+const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', autoOpen: false };
 
       function loadConfig() {
         try {
@@ -74,7 +76,7 @@ function saveConfig(cfg) {
 
       document.getElementById('cfg-save').addEventListener('click', () => {
         saveConfig({
-          cmd: document.getElementById('cfg-cmd').value.trim() || 'hush',
+          cmd: document.getElementById('cfg-cmd').value.trim() || DEFAULT_CMD,
           env: document.getElementById('cfg-env').value,
           autoOpen: document.getElementById('cfg-auto-open').checked,
         });
@@ -173,7 +175,7 @@ function wake(el) {
 
   const task = document.createElement('wanix-task');
   task.id = `repl-${id}`;
-  task.setAttribute('cmd', cfg.cmd || 'hush');
+  task.setAttribute('cmd', cfg.cmd || DEFAULT_CMD);
   task.setAttribute('type', 'gojs');
   task.setAttribute('env', buildEnv());
   task.setAttribute('term', '');

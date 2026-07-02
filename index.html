@@ -93,7 +93,7 @@
                 <details open>
                   <summary><span>Startup command</span></summary>
                   <div class="body">
-                    <input id="cfg-cmd" type="text" placeholder="hush" spellcheck="false">
+                    <input id="cfg-cmd" type="text" placeholder="hush -rcfile /tmp/profile" spellcheck="false">
                   </div>
                 </details>
 
@@ -139,19 +139,26 @@
       <wanix-bind type="fetch" dst="hush" src="https://w9y.up.railway.app/go/github.com/btwiuse/hush/cmd/hush@v0.5.2" mode="0755"></wanix-bind>
       <wanix-bind type="fetch" dst="w9y" src="https://w9y.up.railway.app/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.3" mode="0755"></wanix-bind>
       <wanix-bind dst="tmp/profile" type="file" mode="0666">
-	path="$LOCATION"
-	OLDIFS=$IFS
-	IFS='/'
+	function w9y_detect() {
+	  path="$LOCATION"
+	  OLDIFS=$IFS
+	  IFS='/'
 
-	set -- $path
+	  set -- $path
 
-	IFS=$OLDIFS
+	  IFS=$OLDIFS
 
-	for x; do
-          [[ -d $HOME/.w9y/$x ]] && continue
-	  w9y mod apply -v "$x"
-          mkdir -p $HOME/.w9y/$x
-	done
+	  for x; do
+	    [[ -d $HOME/.w9y/$x ]] && continue
+	    w9y mod apply -v "$x"
+	    mkdir -p $HOME/.w9y/$x
+	  done
+	}
+        function auto_home() {
+          [[ -d $HOME ]] && mkdir -p $HOME && cd $HOME
+        }
+        auto_home
+        w9y_detect
       </wanix-bind>
     </wanix-system>
 
