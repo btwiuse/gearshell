@@ -152,7 +152,12 @@
 	    [[ -d $HOME/.w9y/$x ]] && continue
 	    /w9y mod apply -v "$x"
 	    mkdir -p $HOME/.w9y/$x
-	    echo "[INFO] crush successfully installed, type `crush` to get started"
+            if [[ $x = picoclaw ]]; then
+	      echo "[INFO] picoclaw successfully installed, type `picoclaw` to get started"
+            fi
+            if [[ $x = crush ]]; then
+	      echo "[INFO] crush successfully installed, type `crush` to get started"
+            fi
 	  done
 	}
         function ensure_home() {
