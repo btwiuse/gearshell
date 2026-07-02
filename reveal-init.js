@@ -55,7 +55,7 @@ window.addEventListener('DOMContentLoaded', initReveal);
 
 // --- Config (localStorage) ---
 const CONFIG_KEY = 'gear-shell-config';
-const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', autoOpen: false };
+const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', autoOpen: true };
 
       function loadConfig() {
         try {
