@@ -52,28 +52,68 @@
         <div class="slides">
           <section>
             <section>
-              <h2>What is Gear Shell?</h2>
-              <p>A Bourne-like shell for the browser.<br>Built on <a href="https://wanix.sh" style="color:#58a6ff">Wanix</a> — a Plan&nbsp;9-inspired microkernel written in Go, compiled to WebAssembly.</p>
+              <h1>GEAR SHELL</h1>
+              <p>基于浏览器的 Agent 沙盒</p>
             </section>
 
             <section>
-              <h2>Features</h2>
+              <h2>核心痛点 — WHY</h2>
+              <p>1. 主流 Agent 配置流程复杂，无法开箱即用</p>
               <ul>
-                <li>Native Go builtins: cat, ls, cd, curl, and more</li>
-                <li>Tab completion, history, pipe &amp; redirect support</li>
-                <li>Multi-tab interface — run multiple shells side by side</li>
-                <li>WebAssembly — zero dependencies, runs anywhere</li>
+                <li>约有 73% 的新用户在首次安装 OpenClaw（俗称"养龙虾"）时会遇到阻塞性报错</li>
+              </ul>
+              <p>2. Agent 在本地运行存在诸多安全问题</p>
+              <ul>
+                <li>高危漏洞与远程代码执行 (RCE)</li>
+                <li>插件生态与供应链投毒</li>
+                <li>提示词注入与 Agent 误判</li>
               </ul>
             </section>
 
             <section>
-              <h2>How it works</h2>
-              <p>hush is compiled to WebAssembly via a patched Go compiler, then loaded in the browser through the Wanix runtime. It feels like a real terminal because it <em>is</em> one.</p>
+              <h2>目标用户 — WHO</h2>
+              <p>1. Agent 开发者/厂商</p>
+              <ul>
+                <li>降低 Agent 上手门槛</li>
+                <li>快速线上 Demo 环境</li>
+              </ul>
+              <p>2. Agent 终端用户</p>
+              <ul>
+                <li>快速体验 Agent 功能</li>
+                <li>提升默认安全性</li>
+              </ul>
             </section>
 
             <section>
-              <h2>Try it now</h2>
-              <p>Click the <strong>+</strong> button above to open a terminal.</p>
+              <h2>技术原理 — HOW</h2>
+              <p>1. WebAssembly 沙盒</p>
+              <ul>
+                <li>在浏览器支持运行多种语言的代码：C++/Rust/Go …</li>
+                <li>轻量无服务器：核心组件只依赖预先发布至 CDN 的静态资源（js, wasm）</li>
+              </ul>
+              <p>2. 虚拟文件系统</p>
+              <ul>
+                <li>Filesystem Access API</li>
+                <li>挂载本地目录供 Agent 访问</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2>演示 DEMO</h2>
+              <p><em>首次加载需要消耗 ~50M 数据</em></p>
+              <ul>
+                <li><a href="https://gear.sh/picoclaw" style="color:#58a6ff">https://gear.sh/picoclaw</a> — 国产皮皮虾</li>
+                <li><a href="https://gear.sh/crush" style="color:#58a6ff">https://gear.sh/crush</a> — Crush 编程助手</li>
+                <li><a href="https://ide.gear.sh" style="color:#58a6ff">https://ide.gear.sh</a> — 在线 IDE + go4js 编译器</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2>商业模式- Dual Licensing</h2>
+              <ul>
+                <li>开源项目免费使用</li>
+                <li>企业商用需购买许可</li>
+              </ul>
             </section>
           </section>
 
