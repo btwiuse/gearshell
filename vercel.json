@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/ide/:path*",
+      "destination": "https://justwasm.github.io/go4js/:path*"
+    },
     { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
   ],
   "headers": [
