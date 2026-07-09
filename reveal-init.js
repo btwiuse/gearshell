@@ -48,6 +48,7 @@ function initReveal() {
     keyboardCondition: () => !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName),
     overview: true,
     touch: true,
+    plugins: [ RevealMarkdown ],
   });
   deck.initialize();
 }
