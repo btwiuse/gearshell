@@ -44,9 +44,9 @@
 
 *首次加载需要消耗 ~50M 数据*
 
-- [https://gear.sh/picoclaw](https://gear.sh/picoclaw) — 国产皮皮虾
-- [https://gear.sh/crush](https://gear.sh/crush) — Crush 编程助手
-- [https://ide.gear.sh](https://ide.gear.sh) — 在线 IDE + go4js 编译器
+- <a href="https://gear.sh/picoclaw" data-preview-link>https://gear.sh/picoclaw — 国产皮皮虾</a>
+- <a href="https://justwasm.github.io/crush?env.STEPFUN_API_KEY=1cYrhPs9nD57hfBfhenbg5irS90PMMe5wfHK4URRk5PMe1Jeqe93dHeWyditOHOCa" data-preview-link>https://justwasm.github.io/crush — Crush 编程助手</a>
+- <a href="https://justwasm.github.io/go4js" data-preview-link>https://justwasm.github.io/go4js — 在线 IDE + go4js 编译器, 通过植入 GearShell 集成第三方 Agent</a>
 
 --
 
