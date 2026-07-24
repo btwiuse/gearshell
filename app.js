@@ -74,6 +74,16 @@ document.addEventListener('dragstart', (event) => {
   if (event.target.closest?.('[role="tab"]')) hideTerminalLayer();
 }, true);
 
+function hideTerminalLayerForTouch(event) {
+  if (event.type === 'pointerdown' && event.pointerType !== 'touch') return;
+  if (event.target.closest?.('[role="tab"]')) hideTerminalLayer();
+}
+
+// Pointer drag targets sit below the persistent terminal layer. Hide it before
+// the long-press drag begins so Home can be dropped onto a terminal pane too.
+document.addEventListener('pointerdown', hideTerminalLayerForTouch, true);
+document.addEventListener('touchstart', hideTerminalLayerForTouch, true);
+
 function restoreTerminalLayer() {
   terminalLayer?.classList.remove('dragging');
 }
@@ -84,6 +94,8 @@ document.addEventListener('dragend', restoreTerminalLayer, true);
 document.addEventListener('drop', restoreTerminalLayer, true);
 document.addEventListener('pointerup', restoreTerminalLayer, true);
 document.addEventListener('pointercancel', restoreTerminalLayer, true);
+document.addEventListener('touchend', restoreTerminalLayer, true);
+document.addEventListener('touchcancel', restoreTerminalLayer, true);
 window.addEventListener('blur', restoreTerminalLayer);
 
 function createTerminalSession(id) {
