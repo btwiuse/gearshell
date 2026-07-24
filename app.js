@@ -66,9 +66,12 @@ wanixSystem?.addEventListener('ready', (event) => {
   for (const session of terminalSessions.values()) wakeTerminalSession(session);
 });
 
+function hideTerminalLayer() {
+  terminalLayer?.classList.add('dragging');
+}
+
 document.addEventListener('dragstart', (event) => {
-  if (!event.target.closest?.('[role="tab"]') || !terminalLayer) return;
-  terminalLayer.classList.add('dragging');
+  if (event.target.closest?.('[role="tab"]')) hideTerminalLayer();
 }, true);
 
 function restoreTerminalLayer() {
@@ -79,6 +82,8 @@ function restoreTerminalLayer() {
 // drag. Listen in capture phase so the preview state cannot get stuck hidden.
 document.addEventListener('dragend', restoreTerminalLayer, true);
 document.addEventListener('drop', restoreTerminalLayer, true);
+document.addEventListener('pointerup', restoreTerminalLayer, true);
+document.addEventListener('pointercancel', restoreTerminalLayer, true);
 window.addEventListener('blur', restoreTerminalLayer);
 
 function createTerminalSession(id) {
@@ -376,6 +381,10 @@ function AddTerminalButton({ containerApi, group }) {
 // Main application
 function App() {
   const onReady = useCallback((event) => {
+    // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
+    event.api.onWillShowOverlay(hideTerminalLayer);
+    event.api.onDidDrop(restoreTerminalLayer);
+
     // Add home panel first (not closable)
     event.api.addPanel({
       id: 'home',
