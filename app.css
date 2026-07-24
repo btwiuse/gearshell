@@ -13,7 +13,10 @@ wanix-bind { display: none; }
 wanix-term { flex: 1; min-width: 0; }
 
 .panel-content { height: 100%; min-height: 0; }
-#home-content { height: 100%; overflow: hidden; }
+#home-content { height: 100%; overflow: hidden; position: relative; }
+#home-content .slide-controls { position: absolute; right: 12px; bottom: 12px; z-index: 20; display: flex; gap: 8px; }
+#home-content .slide-controls button { width: 36px; height: 36px; padding: 0; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font-family: Arial, sans-serif; font-size: 28px; line-height: 1; }
+#home-content .slide-controls button:active { background: #30363d; }
 
 /* --- Reveal.js overrides --- */
 #home-content .reveal { height: 100%; width: 100%; container-type: size; }

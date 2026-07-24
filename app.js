@@ -218,6 +218,19 @@ function attachTerminalSession(id, anchor, api) {
 
 // --- Reveal.js ---
 let deck = null;
+let slideControlsInitialized = false;
+
+function setupSlideControls() {
+  if (slideControlsInitialized) return;
+  const previous = document.getElementById('slide-prev');
+  const next = document.getElementById('slide-next');
+  if (!previous || !next) return;
+
+  previous.addEventListener('click', () => deck?.prev());
+  next.addEventListener('click', () => deck?.next());
+  slideControlsInitialized = true;
+}
+
 function initReveal() {
   if (typeof Reveal === 'undefined') { requestAnimationFrame(initReveal); return; }
   const el = document.querySelector('#home-content .reveal');
@@ -228,7 +241,7 @@ function initReveal() {
   }
   deck = new Reveal(el, {
     hash: false,
-    controls: true,
+    controls: false,
     progress: true,
     center: true,
     transition: 'slide',
@@ -239,7 +252,7 @@ function initReveal() {
     touch: true,
     plugins: [ RevealMarkdown ],
   });
-  deck.initialize();
+  Promise.resolve(deck.initialize()).then(setupSlideControls);
 }
 
 // --- Config form setup (once) ---
