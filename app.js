@@ -117,6 +117,14 @@ function getTerminalSession(id) {
   return terminalSessions.get(id) || createTerminalSession(id);
 }
 
+function destroyTerminalSession(id) {
+  const session = terminalSessions.get(id);
+  if (!session) return;
+  terminalSessions.delete(id);
+  session.anchor = null;
+  session.wrapper.remove();
+}
+
 function wakeTerminalSession(session) {
   if (!systemReady || session.started) return;
   session.started = true;
@@ -145,7 +153,14 @@ function layoutTerminalSession(session, anchor, isVisible) {
   session.wrapper.style.height = `${bounds.height}px`;
   session.wrapper.classList.add('visible');
   requestAnimationFrame(() => {
+    if (!session.wrapper.isConnected) return;
     session.term._fitAddon?.fit();
+  });
+}
+
+function focusTerminalSession(session, anchor) {
+  requestAnimationFrame(() => {
+    if (session.anchor !== anchor || !session.wrapper.classList.contains('visible')) return;
     session.term._term?.focus();
   });
 }
@@ -171,13 +186,20 @@ function attachTerminalSession(id, anchor, api) {
   observer.observe(anchor);
   const subscriptions = [
     api.onDidDimensionsChange(update),
-    api.onDidActiveChange(update),
+    api.onDidActiveChange((event) => {
+      update();
+      if (event.isActive && api.isGroupActive) focusTerminalSession(session, anchor);
+    }),
+    api.onDidFocusChange((event) => {
+      if (event.isFocused) focusTerminalSession(session, anchor);
+    }),
     api.onDidVisibilityChange(update),
     api.onDidLocationChange(update),
     api.onDidGroupChange(update),
   ];
 
   update();
+  if (api.isActive && api.isGroupActive) focusTerminalSession(session, anchor);
 
   return () => {
     observer.disconnect();
@@ -259,7 +281,6 @@ function addTerminalPanel(api, group) {
     component: 'terminal',
     params: { terminalId: id },
     title: `Term ${id}`,
-    inactive: false,
     ...(group && { position: { referenceGroup: group } }),
   });
   panel.api.setActive();
@@ -315,7 +336,7 @@ function HomePanel({ api }) {
 }
 
 // Terminal panel: creates wanix-task + wanix-term
-function TerminalPanel({ api, containerApi, params }) {
+function TerminalPanel({ api, params }) {
   const id = params.terminalId;
   const wrapperRef = useRef(null);
 
@@ -361,6 +382,11 @@ function App() {
       component: 'home',
       params: {},
       title: 'Home',
+    });
+
+    event.api.onDidRemovePanel((panel) => {
+      const match = /^terminal-(\d+)$/.exec(panel.id);
+      if (match) destroyTerminalSession(Number(match[1]));
     });
 
     // Auto-open only after wanix is ready so it follows the same path as new tabs.
