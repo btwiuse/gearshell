@@ -1,24 +1,62 @@
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; overflow: hidden; overscroll-behavior: none; }
-#tab-bar { display: flex; align-items: center; background: #161b22; border-bottom: 1px solid #30363d; min-height: 36px; flex-shrink: 0; overflow-x: auto; }
-#tab-bar::-webkit-scrollbar { height: 2px; }
-#tab-bar::-webkit-scrollbar-thumb { background: #30363d; border-radius: 1px; }
-.tab { display: flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; color: #8b949e; cursor: pointer; border-right: 1px solid #21262d; white-space: nowrap; user-select: none; min-width: 0; }
-.tab:hover { background: #1c2128; }
-.tab.active { background: #0d1117; color: #c9d1d9; border-bottom: 2px solid #58a6ff; }
-.tab .close { display: none; font-size: 12px; line-height: 1; padding: 1px 4px; border-radius: 3px; color: #8b949e; }
-.tab:hover .close { display: inline; }
-.tab:hover .close:hover { background: #30363d; color: #f85149; }
-.tab .close.disabled { display: none !important; }
-#new-tab-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; font-size: 18px; color: #8b949e; cursor: pointer; border: none; background: transparent; flex-shrink: 0; }
-#new-tab-btn:hover { color: #c9d1d9; background: #1c2128; }
-#home-content { position: absolute; top: 36px; left: 0; right: 0; bottom: 0; z-index: 10; overflow: hidden; }
-#home-content.hidden { display: none; }
-wanix-system { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-wanix-system:not(:defined) { display: none; }
-.term-wrapper { flex: 1; display: flex; min-height: 0; min-width: 0; overflow: hidden; }
-.term-wrapper.hidden { visibility: hidden; position: absolute; pointer-events: none; }
+
+wanix-system { flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; }
+wanix-bind { display: none; }
+
+#app-root { flex: 1; display: flex; min-height: 0; min-width: 0; position: relative; z-index: 0; }
+
+#terminal-layer { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+#terminal-layer.dragging .terminal-session { visibility: hidden; pointer-events: none; }
+.terminal-session { position: absolute; display: flex; overflow: hidden; visibility: hidden; pointer-events: none; }
+.terminal-session.visible { visibility: visible; pointer-events: auto; }
 wanix-term { flex: 1; min-width: 0; }
+
+.panel-content { height: 100%; min-height: 0; }
+#home-content { height: 100%; overflow: hidden; }
+
+/* --- Reveal.js overrides --- */
+#home-content .reveal { height: 100%; width: 100%; container-type: size; }
+#home-content .reveal .slides { text-align: left; }
+#home-content .reveal .slides section { padding: 20px 32px; }
+#home-content .reveal h1 { font-size: 2em; font-weight: 600; color: #c9d1d9; }
+#home-content .reveal h2 { font-size: 1.2em; font-weight: 500; color: #58a6ff; margin-bottom: 0.2em; }
+#home-content .reveal p { font-size: 0.6em; color: #8b949e; line-height: 1.5; }
+#home-content .reveal .zen { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 0.5em; color: #8b949e; line-height: 1.8; letter-spacing: 0.02em; }
+#home-content .reveal ul { font-size: 0.55em; color: #8b949e; list-style: none; padding: 0; }
+#home-content .reveal ul li { padding: 3px 0; }
+#home-content .reveal ul li::before { content: "\2192 "; color: #58a6ff; }
+#home-content .reveal .controls { color: #8b949e; }
+#home-content .reveal .progress { color: #58a6ff; height: 3px; }
+#home-content .reveal .config-form { width: 100%; max-width: 90%; text-align: left; }
+#home-content .reveal .config-scroll { overflow-y: auto; max-height: calc(100cqh - 180px); padding-right: 8px; }
+#home-content .reveal .config-scroll::-webkit-scrollbar { width: 4px; }
+#home-content .reveal .config-scroll::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+#home-content .reveal .config-form label { display: block; font-size: 0.45em; color: #8b949e; margin-bottom: 2px; margin-top: 8px; }
+#home-content .reveal .config-form label:first-child { margin-top: 0; }
+#home-content .reveal .config-form input,
+#home-content .reveal .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 0.45em; padding: 5px 8px; border-radius: 4px; outline: none; }
+#home-content .reveal .config-form input:focus,
+#home-content .reveal .config-form textarea:focus { border-color: #58a6ff; }
+#home-content .reveal .config-form textarea { height: 240px; line-height: 1.4; box-sizing: border-box; }
+#home-content .reveal .config-form details { border: 1px solid #30363d; border-radius: 4px; margin-top: 6px; }
+#home-content .reveal .config-form details summary { display: flex; align-items: center; padding: 6px 10px; cursor: pointer; background: #161b22; border-radius: 4px; user-select: none; list-style: none; }
+#home-content .reveal .config-form details summary::-webkit-details-marker { display: none; }
+#home-content .reveal .config-form details summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; font-size: 0.7em; }
+#home-content .reveal .config-form details[open] summary::after { transform: rotate(90deg); }
+#home-content .reveal .config-form details summary span { font-size: 0.45em; color: #c9d1d9; }
+#home-content .reveal .config-form details .body { padding: 8px 10px; text-align: left; }
+#home-content .reveal .config-form .hint { font-size: 0.38em; color: #484f58; margin-top: 1px; }
+#home-content .reveal .config-form .actions { margin-top: 10px; display: flex; gap: 8px; }
+#home-content .reveal .config-form button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 5px 14px; border-radius: 4px; font-size: 0.45em; cursor: pointer; }
+#home-content .reveal .config-form button:hover { background: #30363d; }
+#home-content .reveal .config-form button.primary { background: #238636; border-color: #2ea043; color: #fff; }
+#home-content .reveal .config-form button.primary:hover { background: #2ea043; }
 
 .cfg-toggle { display: block; font-size: 0.45em; color: #c9d1d9; cursor: pointer; }
 .cfg-toggle input[type="checkbox"] { width: auto !important; height: auto !important; accent-color: #58a6ff; cursor: pointer; vertical-align: middle; margin-right: 6px; }
+
+/* Fix dockview theme for gap between tab bar and content */
+.dockview-theme-github-dark .dv-groupview {
+  border: none;
+}
