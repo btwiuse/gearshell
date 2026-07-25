@@ -159,7 +159,7 @@ function createTerminalSession(id) {
   wrapper.append(task, term);
   terminalLayer?.appendChild(wrapper);
 
-  const session = { id, wrapper, task, term, anchor: null, started: false };
+  const session = { id, wrapper, task, term, anchor: null, layout: null, started: false };
   terminalSessions.set(id, session);
   return session;
 }
@@ -188,6 +188,7 @@ function wakeTerminalSession(session) {
 function layoutTerminalSession(session, anchor, isVisible) {
   if (!terminalLayer || !anchor || !isVisible) {
     session.wrapper.classList.remove('visible');
+    session.layout = null;
     return;
   }
 
@@ -195,18 +196,38 @@ function layoutTerminalSession(session, anchor, isVisible) {
   const layerBounds = terminalLayer.getBoundingClientRect();
   if (bounds.width === 0 || bounds.height === 0) {
     session.wrapper.classList.remove('visible');
+    session.layout = null;
     return;
   }
 
-  session.wrapper.style.left = `${bounds.left - layerBounds.left}px`;
-  session.wrapper.style.top = `${bounds.top - layerBounds.top}px`;
-  session.wrapper.style.width = `${bounds.width}px`;
-  session.wrapper.style.height = `${bounds.height}px`;
+  const nextLayout = {
+    left: bounds.left - layerBounds.left,
+    top: bounds.top - layerBounds.top,
+    width: bounds.width,
+    height: bounds.height,
+  };
+  const previousLayout = session.layout;
+  const layoutChanged = !previousLayout || Object.keys(nextLayout).some((key) =>
+    Math.abs(nextLayout[key] - previousLayout[key]) >= 0.5
+  );
+  const sizeChanged = !previousLayout ||
+    Math.abs(nextLayout.width - previousLayout.width) >= 0.5 ||
+    Math.abs(nextLayout.height - previousLayout.height) >= 0.5;
+
+  if (layoutChanged) {
+    session.wrapper.style.left = `${nextLayout.left}px`;
+    session.wrapper.style.top = `${nextLayout.top}px`;
+    session.wrapper.style.width = `${nextLayout.width}px`;
+    session.wrapper.style.height = `${nextLayout.height}px`;
+    session.layout = nextLayout;
+  }
   session.wrapper.classList.add('visible');
-  requestAnimationFrame(() => {
-    if (!session.wrapper.isConnected) return;
-    session.term._fitAddon?.fit();
-  });
+  if (sizeChanged) {
+    requestAnimationFrame(() => {
+      if (!session.wrapper.isConnected) return;
+      session.term._fitAddon?.fit();
+    });
+  }
 }
 
 function focusTerminalSession(session, anchor, api, deferred = true) {
@@ -224,8 +245,10 @@ function focusTerminalSession(session, anchor, api, deferred = true) {
 
 function attachTerminalSession(id, anchor, api) {
   const session = getTerminalSession(id);
+  let updateFrame = 0;
 
   const update = () => {
+    updateFrame = 0;
     session.anchor = anchor;
     const bounds = anchor.getBoundingClientRect();
     const isVisible = anchor.isConnected && bounds.width > 0 && bounds.height > 0;
@@ -234,35 +257,43 @@ function attachTerminalSession(id, anchor, api) {
       requestAnimationFrame(() => {
         const currentBounds = anchor.getBoundingClientRect();
         if (session.anchor === anchor && currentBounds.width > 0 && currentBounds.height > 0) {
+          const needsFocusAfterWake = !session.started && api.isActive;
           wakeTerminalSession(session);
+          if (needsFocusAfterWake) {
+            requestAnimationFrame(() => focusTerminalSession(session, anchor, api, false));
+          }
         }
       });
     }
   };
-  const observer = new ResizeObserver(update);
+  const scheduleUpdate = () => {
+    if (!updateFrame) updateFrame = requestAnimationFrame(update);
+  };
+  const observer = new ResizeObserver(scheduleUpdate);
   observer.observe(anchor);
   const focusFromTerminalInteraction = () => focusTerminalSession(session, anchor, api, false);
   session.wrapper.addEventListener('pointerdown', focusFromTerminalInteraction);
   session.wrapper.addEventListener('touchstart', focusFromTerminalInteraction, { passive: true });
   const subscriptions = [
-    api.onDidDimensionsChange(update),
+    api.onDidDimensionsChange(scheduleUpdate),
     api.onDidActiveChange((event) => {
-      update();
+      scheduleUpdate();
       if (event.isActive) focusTerminalSession(session, anchor, api);
     }),
     api.onDidFocusChange((event) => {
       if (event.isFocused) focusTerminalSession(session, anchor, api);
     }),
-    api.onDidVisibilityChange(update),
-    api.onDidLocationChange(update),
-    api.onDidGroupChange(update),
+    api.onDidVisibilityChange(scheduleUpdate),
+    api.onDidLocationChange(scheduleUpdate),
+    api.onDidGroupChange(scheduleUpdate),
   ];
 
-  update();
+  scheduleUpdate();
   if (api.isActive) focusTerminalSession(session, anchor, api);
 
   return () => {
     observer.disconnect();
+    if (updateFrame) cancelAnimationFrame(updateFrame);
     session.wrapper.removeEventListener('pointerdown', focusFromTerminalInteraction);
     session.wrapper.removeEventListener('touchstart', focusFromTerminalInteraction);
     for (const subscription of subscriptions) subscription.dispose();
