@@ -200,16 +200,17 @@ function layoutTerminalSession(session, anchor, isVisible) {
   });
 }
 
-function focusTerminalSession(session, anchor, api) {
-  requestAnimationFrame(() => {
+function focusTerminalSession(session, anchor, api, deferred = true) {
+  const focus = () => {
     if (
       session.anchor !== anchor ||
       !api.isActive ||
-      !api.isGroupActive ||
       !session.wrapper.classList.contains('visible')
     ) return;
     session.term._term?.focus();
-  });
+  };
+  if (deferred) requestAnimationFrame(focus);
+  else focus();
 }
 
 function attachTerminalSession(id, anchor, api) {
@@ -231,6 +232,9 @@ function attachTerminalSession(id, anchor, api) {
   };
   const observer = new ResizeObserver(update);
   observer.observe(anchor);
+  const focusFromTerminalInteraction = () => focusTerminalSession(session, anchor, api, false);
+  session.wrapper.addEventListener('pointerdown', focusFromTerminalInteraction);
+  session.wrapper.addEventListener('touchstart', focusFromTerminalInteraction, { passive: true });
   const subscriptions = [
     api.onDidDimensionsChange(update),
     api.onDidActiveChange((event) => {
@@ -250,6 +254,8 @@ function attachTerminalSession(id, anchor, api) {
 
   return () => {
     observer.disconnect();
+    session.wrapper.removeEventListener('pointerdown', focusFromTerminalInteraction);
+    session.wrapper.removeEventListener('touchstart', focusFromTerminalInteraction);
     for (const subscription of subscriptions) subscription.dispose();
     if (session.anchor === anchor) {
       session.anchor = null;
