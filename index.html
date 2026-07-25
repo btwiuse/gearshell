@@ -36,6 +36,17 @@
     <link rel="stylesheet" href="reveal.css" />
     <script>
       if (window.location.search.includes('debug')) {
+        window.homeDebugErrors = [];
+        window.addEventListener('error', function (event) {
+          var error = event.error;
+          var details = error && (error.stack || error.message);
+          window.homeDebugErrors.push('Error: ' + (details || event.message || 'Unknown error'));
+        });
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason;
+          var details = reason && (reason.stack || reason.message || String(reason));
+          window.homeDebugErrors.push('Unhandled rejection: ' + (details || 'Unknown error'));
+        });
         var s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/npm/eruda/eruda.js';
         s.onload = function () { eruda.init(); };
@@ -59,10 +70,11 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260725" />
+    <link rel="stylesheet" href="app.css?v=20260725.3" />
   </head>
   <body>
     <div id="home-content" hidden>
+      <pre id="home-debug-errors" hidden aria-live="assertive"></pre>
       <div class="reveal">
         <div class="slides">
           <section id="slides-markdown"></section>
@@ -104,10 +116,6 @@
               <div class="hint" id="cfg-status" style="margin-top:6px"></div>
             </div>
           </section>
-        </div>
-        <div class="slide-controls" aria-label="Slide controls">
-          <button id="slide-prev" class="navigate-prev" type="button" title="Previous slide" aria-label="Previous slide">&#8249;</button>
-          <button id="slide-next" class="navigate-next" type="button" title="Next slide" aria-label="Next slide">&#8250;</button>
         </div>
       </div>
     </div>
@@ -157,6 +165,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260725.8"></script>
+    <script type="module" src="app.js?v=20260725.9"></script>
   </body>
 </html>

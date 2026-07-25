@@ -2,10 +2,29 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewReact } from 'dockview-react';
 
-if (window.location.search.includes('debug')) {
-  window.addEventListener('error', (event) => {
-    console.error('Debug error', event.message, event.filename, event.lineno, event.colno, event.error?.stack);
-  });
+const debugMode = window.location.search.includes('debug');
+
+function showHomeDebugErrors() {
+  if (!debugMode) return;
+  const output = document.getElementById('home-debug-errors');
+  const errors = window.homeDebugErrors || [];
+  if (!output || errors.length === 0) return;
+  output.textContent = errors.slice(-3).join('\n\n');
+  output.hidden = false;
+}
+
+function reportHomeError(context, error) {
+  console.error(context, error);
+  if (!debugMode) return;
+  const details = (error && (error.stack || error.message)) || String(error);
+  window.homeDebugErrors = window.homeDebugErrors || [];
+  window.homeDebugErrors.push(`${context}: ${details}`);
+  showHomeDebugErrors();
+}
+
+if (debugMode) {
+  window.addEventListener('error', () => requestAnimationFrame(showHomeDebugErrors));
+  window.addEventListener('unhandledrejection', () => requestAnimationFrame(showHomeDebugErrors));
 }
 
 // --- Constants ---
@@ -291,11 +310,11 @@ function initReveal() {
       layoutReveal();
     }).catch((error) => {
       revealInitializing = false;
-      console.error('Reveal initialization failed', error);
+      reportHomeError('Reveal initialization failed', error);
     });
   }).catch((error) => {
     revealInitializing = false;
-    console.error('Reveal initialization failed', error);
+    reportHomeError('Reveal initialization failed', error);
   });
 }
 
@@ -374,10 +393,13 @@ function HomePanel({ api }) {
     if (!wrapper || !homeContent) return;
 
     wrapper.appendChild(homeContent);
+    const panelView = wrapper.closest('.dv-view');
+    if (panelView) panelView.classList.add('home-view');
     // Reveal also emits a bubbling "ready" event. Keep it from waking wanix.
     const stopReadyEvent = (event) => event.stopPropagation();
     homeContent.addEventListener('ready', stopReadyEvent);
     homeContent.hidden = false;
+    showHomeDebugErrors();
     initReveal();
     const layout = () => requestAnimationFrame(layoutReveal);
     const subscriptions = [
@@ -390,6 +412,7 @@ function HomePanel({ api }) {
 
     return () => {
       homeContent.removeEventListener('ready', stopReadyEvent);
+      if (panelView) panelView.classList.remove('home-view');
       for (const subscription of subscriptions) subscription.dispose();
     };
   }, [api]);
