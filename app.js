@@ -614,7 +614,11 @@ function AddTerminalButton({ containerApi, group }) {
 
 // Main application
 function App() {
+  const [dockviewApi, setDockviewApi] = useState(null);
+  const [workspaceEmpty, setWorkspaceEmpty] = useState(false);
+
   const onReady = useCallback((event) => {
+    setDockviewApi(event.api);
     // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
@@ -625,7 +629,9 @@ function App() {
     event.api.onDidRemovePanel((panel) => {
       const match = /^terminal-(\d+)$/.exec(panel.id);
       if (match) destroyTerminalSession(Number(match[1]));
+      requestAnimationFrame(() => setWorkspaceEmpty(event.api.panels.length === 0));
     });
+    event.api.onDidAddPanel(() => setWorkspaceEmpty(false));
 
     // Auto-open only after wanix is ready so it follows the same path as new tabs.
     const cfg = loadConfig();
@@ -637,15 +643,38 @@ function App() {
     }
   }, []);
 
-  return React.createElement(DockviewReact, {
-    className: 'dockview-theme-github-dark',
-    onReady,
-    components: {
-      home: HomePanel,
-      terminal: TerminalPanel,
-    },
-    rightHeaderActionsComponent: AddTerminalButton,
-  });
+  const addPanelFromEmptyWorkspace = (component) => {
+    if (!dockviewApi) return;
+    if (component === 'terminal') addTerminalPanel(dockviewApi);
+    else addHomePanel(dockviewApi);
+  };
+
+  return React.createElement(React.Fragment, null,
+    React.createElement(DockviewReact, {
+      className: 'dockview-theme-github-dark',
+      onReady,
+      components: {
+        home: HomePanel,
+        terminal: TerminalPanel,
+      },
+      rightHeaderActionsComponent: AddTerminalButton,
+    }),
+    workspaceEmpty && React.createElement('div', { className: 'empty-workspace' },
+      React.createElement('div', { className: 'empty-workspace-card' },
+        React.createElement('p', null, 'No open panels'),
+        React.createElement('div', { className: 'empty-workspace-actions' },
+          React.createElement('button', {
+            type: 'button',
+            onClick: () => addPanelFromEmptyWorkspace('terminal'),
+          }, 'New Term'),
+          React.createElement('button', {
+            type: 'button',
+            onClick: () => addPanelFromEmptyWorkspace('home'),
+          }, 'Home'),
+        ),
+      ),
+    ),
+  );
 }
 
 // --- Mount React app ---
