@@ -375,6 +375,7 @@ function initReveal(homeContent, api) {
         !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName),
       overview: true,
       touch: true,
+      mouseWheel: true,
       // Reveal switches to its scroll reader below 435px by default. That
       // mode disables navigation controls, including the custom arrows.
       scrollActivationWidth: null,
