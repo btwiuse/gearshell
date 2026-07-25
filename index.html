@@ -75,8 +75,10 @@
   <body>
     <template id="home-template">
       <div class="home-content">
-      <pre class="home-debug-errors" hidden aria-live="assertive"></pre>
-      <button class="home-debug-dismiss" type="button" aria-label="Dismiss debug errors" title="Dismiss debug errors" hidden>&times;</button>
+      <div class="home-debug-panel">
+        <pre class="home-debug-errors" hidden aria-live="assertive"></pre>
+        <button class="home-debug-dismiss" type="button" aria-label="Dismiss debug errors" title="Dismiss debug errors" hidden>&times;</button>
+      </div>
       <div class="reveal">
         <div class="slides">
           <section data-home-slides-markdown></section>

@@ -15,8 +15,9 @@ wanix-term { flex: 1; min-width: 0; }
 .panel-content { height: 100%; min-height: 0; }
 .home-content { height: 100%; overflow: hidden; position: relative; }
 .dv-view.home-view { overflow: hidden !important; }
-.home-debug-errors { position: absolute; right: 8px; bottom: 8px; left: 8px; z-index: 30; max-height: 40%; margin: 0; overflow: auto; padding: 8px; border: 1px solid #f85149; border-radius: 4px; background: rgba(13, 17, 23, 0.96); color: #ff7b72; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; }
-.home-debug-dismiss { position: absolute; right: 12px; bottom: 12px; z-index: 31; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: #f85149; color: #0d1117; cursor: pointer; font-size: 18px; line-height: 1; }
+.home-debug-panel { position: absolute; right: 8px; bottom: 8px; left: 8px; z-index: 30; max-height: 40%; }
+.home-debug-errors { max-height: 100%; margin: 0; overflow: auto; padding: 8px 36px 8px 8px; border: 1px solid #f85149; border-radius: 4px; background: rgba(13, 17, 23, 0.96); color: #ff7b72; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; }
+.home-debug-dismiss { position: absolute; right: 4px; top: 4px; z-index: 31; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: #f85149; color: #0d1117; cursor: pointer; font-size: 18px; line-height: 1; }
 .panel-actions { position: relative; display: flex; height: 100%; }
 .dv-groupview.panel-action-host { overflow: visible !important; }
 .panel-action-button { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: none; background: transparent; color: #8b949e; cursor: pointer; font-size: 18px; flex-shrink: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -27,11 +28,11 @@ wanix-term { flex: 1; min-width: 0; }
 .empty-workspace { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; background: #0d1117; }
 .empty-workspace-card { width: min(280px, calc(100% - 32px)); padding: 20px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; text-align: center; }
 .empty-workspace-card p { margin: 0 0 16px; color: #8b949e; }
-.empty-workspace-actions { display: flex; justify-content: center; gap: 8px; }
-.empty-workspace-actions button { min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
+.empty-workspace-actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.empty-workspace-actions button { width: 100%; min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
 .empty-workspace-actions button:hover { background: #30363d; }
-.group-panel { display: grid; place-items: center; overflow: hidden; padding: 16px; background: #0d1117; }
-.group-panel img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.group-panel { overflow: auto; padding: 16px; background: #0d1117; -webkit-overflow-scrolling: touch; }
+.group-panel img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
 
 /* --- Reveal.js overrides --- */
 .home-content .reveal { height: 100%; width: 100%; container-type: size; }

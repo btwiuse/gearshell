@@ -474,6 +474,18 @@ function addGroupPanel(api, group) {
   return panel;
 }
 
+const PANEL_CREATION_OPTIONS = [
+  { component: 'terminal', label: 'New Term' },
+  { component: 'home', label: 'Home' },
+  { component: 'group', label: 'Group' },
+];
+
+function addPanelByComponent(api, component, group) {
+  if (component === 'terminal') return addTerminalPanel(api, group);
+  if (component === 'group') return addGroupPanel(api, group);
+  return addHomePanel(api, group);
+}
+
 function whenWanixReady(callback) {
   if (systemReady) {
     callback();
@@ -619,21 +631,17 @@ function AddTerminalButton({ containerApi, group }) {
       onClick: createTerminal,
     }, '+'),
     menuOpen && React.createElement('div', { className: 'panel-action-menu', role: 'menu' },
-      React.createElement('button', {
-        type: 'button',
-        role: 'menuitem',
-        onClick: () => { setMenuOpen(false); addTerminalPanel(containerApi, group); },
-      }, 'New Term'),
-      React.createElement('button', {
-        type: 'button',
-        role: 'menuitem',
-        onClick: () => { setMenuOpen(false); addHomePanel(containerApi, group); },
-      }, 'Home'),
-      React.createElement('button', {
-        type: 'button',
-        role: 'menuitem',
-        onClick: () => { setMenuOpen(false); addGroupPanel(containerApi, group); },
-      }, 'Group'),
+      PANEL_CREATION_OPTIONS.map((option) =>
+        React.createElement('button', {
+          key: option.component,
+          type: 'button',
+          role: 'menuitem',
+          onClick: () => {
+            setMenuOpen(false);
+            addPanelByComponent(containerApi, option.component, group);
+          },
+        }, option.label)
+      ),
     ),
   );
 }
@@ -671,8 +679,7 @@ function App() {
 
   const addPanelFromEmptyWorkspace = (component) => {
     if (!dockviewApi) return;
-    if (component === 'terminal') addTerminalPanel(dockviewApi);
-    else addHomePanel(dockviewApi);
+    addPanelByComponent(dockviewApi, component);
   };
 
   return React.createElement(React.Fragment, null,
@@ -690,14 +697,13 @@ function App() {
       React.createElement('div', { className: 'empty-workspace-card' },
         React.createElement('p', null, 'No open panels'),
         React.createElement('div', { className: 'empty-workspace-actions' },
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => addPanelFromEmptyWorkspace('terminal'),
-          }, 'New Term'),
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => addPanelFromEmptyWorkspace('home'),
-          }, 'Home'),
+          PANEL_CREATION_OPTIONS.map((option) =>
+            React.createElement('button', {
+              key: option.component,
+              type: 'button',
+              onClick: () => addPanelFromEmptyWorkspace(option.component),
+            }, option.label)
+          ),
         ),
       ),
     ),
