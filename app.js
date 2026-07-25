@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewReact } from 'dockview-react';
 
@@ -418,6 +418,22 @@ function addTerminalPanel(api, group) {
   panel.api.setActive();
 }
 
+function addHomePanel(api, group) {
+  const existing = api.getPanel('home');
+  if (existing) {
+    existing.api.setActive();
+    return;
+  }
+  const panel = api.addPanel({
+    id: 'home',
+    component: 'home',
+    params: {},
+    title: 'Home',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  panel.api.setActive();
+}
+
 function whenWanixReady(callback) {
   if (systemReady) {
     callback();
@@ -488,28 +504,84 @@ function TerminalPanel({ api, params }) {
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
 
-// Add terminal button in dockview header
+// Compact header action: tap creates a terminal, long-press opens extensions.
 function AddTerminalButton({ containerApi, group }) {
-  const addTerminal = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const controlRef = useRef(null);
+  const pressTimer = useRef(null);
+  const longPress = useRef(false);
+
+  useEffect(() => {
+    const groupView = controlRef.current?.closest('.dv-groupview');
+    groupView?.classList.add('panel-action-host');
+    return () => groupView?.classList.remove('panel-action-host');
+  }, []);
+
+  const clearPressTimer = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
+
+  const openMenu = () => {
+    clearPressTimer();
+    longPress.current = true;
+    setMenuOpen(true);
+  };
+
+  const startPress = (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    longPress.current = false;
+    pressTimer.current = setTimeout(openMenu, 450);
+  };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeMenu = (event) => {
+      if (!controlRef.current?.contains(event.target)) setMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', closeMenu, true);
+    return () => document.removeEventListener('pointerdown', closeMenu, true);
+  }, [menuOpen]);
+
+  const createTerminal = (event) => {
+    if (longPress.current) {
+      event.preventDefault();
+      longPress.current = false;
+      return;
+    }
     addTerminalPanel(containerApi, group);
   };
 
-  return React.createElement('button', {
-    onClick: addTerminal,
-    title: 'New terminal',
-    style: {
-      background: 'transparent',
-      border: 'none',
-      color: '#8b949e',
-      cursor: 'pointer',
-      fontSize: '13px',
-      padding: '0 12px',
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-    },
-  }, '+', React.createElement('span', null, 'New Term'));
+  return React.createElement('div', { ref: controlRef, className: 'panel-actions' },
+    React.createElement('button', {
+      className: 'panel-action-button',
+      type: 'button',
+      title: 'Add',
+      'aria-label': 'Add panel',
+      'aria-haspopup': 'menu',
+      'aria-expanded': menuOpen,
+      onPointerDown: startPress,
+      onPointerUp: clearPressTimer,
+      onPointerCancel: clearPressTimer,
+      onPointerLeave: clearPressTimer,
+      onContextMenu: (event) => { event.preventDefault(); openMenu(); },
+      onClick: createTerminal,
+    }, '+'),
+    menuOpen && React.createElement('div', { className: 'panel-action-menu', role: 'menu' },
+      React.createElement('button', {
+        type: 'button',
+        role: 'menuitem',
+        onClick: () => { setMenuOpen(false); addTerminalPanel(containerApi, group); },
+      }, 'New Term'),
+      React.createElement('button', {
+        type: 'button',
+        role: 'menuitem',
+        onClick: () => { setMenuOpen(false); addHomePanel(containerApi, group); },
+      }, 'Home'),
+    ),
+  );
 }
 
 // Main application
@@ -519,13 +591,8 @@ function App() {
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
 
-    // Add home panel first (not closable)
-    event.api.addPanel({
-      id: 'home',
-      component: 'home',
-      params: {},
-      title: 'Home',
-    });
+    // Add home panel first.
+    addHomePanel(event.api);
 
     event.api.onDidRemovePanel((panel) => {
       const match = /^terminal-(\d+)$/.exec(panel.id);
