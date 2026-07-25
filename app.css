@@ -19,7 +19,7 @@ wanix-term { flex: 1; min-width: 0; }
 .home-debug-dismiss { position: absolute; right: 12px; bottom: 12px; z-index: 31; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: #f85149; color: #0d1117; cursor: pointer; font-size: 18px; line-height: 1; }
 .panel-actions { position: relative; display: flex; height: 100%; }
 .dv-groupview.panel-action-host { overflow: visible !important; }
-.panel-action-button { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: none; background: transparent; color: #8b949e; cursor: pointer; font-size: 18px; flex-shrink: 0; }
+.panel-action-button { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: none; background: transparent; color: #8b949e; cursor: pointer; font-size: 18px; flex-shrink: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .panel-action-button:hover { color: #c9d1d9; background: #1c2128; }
 .panel-action-menu { position: absolute; top: calc(100% + 4px); right: 4px; z-index: 100; min-width: 112px; padding: 4px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
 .panel-action-menu button { display: block; width: 100%; padding: 6px 8px; border: 0; border-radius: 3px; background: transparent; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
