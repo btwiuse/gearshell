@@ -484,6 +484,10 @@ function HomePanel({ api }) {
       dismiss?.removeEventListener('click', dismissHomeDebugErrors);
       if (panelView) panelView.classList.remove('home-view');
       for (const subscription of subscriptions) subscription.dispose();
+      // A closed Dockview panel removes its wrapper. Park the persistent
+      // Reveal DOM outside that wrapper so a later Home panel can reuse it.
+      homeContent.hidden = true;
+      document.body.appendChild(homeContent);
     };
   }, [api]);
 
