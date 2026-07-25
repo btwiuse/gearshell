@@ -276,7 +276,14 @@ function attachTerminalSession(id, anchor, api) {
   };
   const observer = new ResizeObserver(scheduleUpdate);
   observer.observe(anchor);
-  const focusFromTerminalInteraction = () => focusTerminalSession(session, anchor, api, false);
+  const focusFromTerminalInteraction = () => {
+    if (!api.isActive) {
+      api.setActive();
+      focusTerminalSession(session, anchor, api);
+      return;
+    }
+    focusTerminalSession(session, anchor, api, false);
+  };
   session.wrapper.addEventListener('pointerdown', focusFromTerminalInteraction);
   session.wrapper.addEventListener('touchstart', focusFromTerminalInteraction, { passive: true });
   const subscriptions = [
