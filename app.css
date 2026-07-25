@@ -20,6 +20,7 @@ wanix-term { flex: 1; min-width: 0; }
 
 /* --- Reveal.js overrides --- */
 #home-content .reveal { height: 100%; width: 100%; container-type: size; }
+#home-content .reveal .controls { display: none !important; }
 #home-content .reveal .slides { text-align: left; }
 #home-content .reveal .slides section { padding: 20px 32px; }
 #home-content .reveal h1 { font-size: 2em; font-weight: 600; color: #c9d1d9; }

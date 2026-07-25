@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewReact } from 'dockview-react';
 
+if (window.location.search.includes('debug')) {
+  window.addEventListener('error', (event) => {
+    console.error('Debug error', event.message, event.filename, event.lineno, event.colno, event.error?.stack);
+  });
+}
+
 // --- Constants ---
 const WANIX = '/opfs/wanix';
 const HOME = '/opfs/home';
@@ -230,17 +236,27 @@ function attachTerminalSession(id, anchor, api) {
 
 // --- Reveal.js ---
 let deck = null;
-let slideControlsInitialized = false;
+let revealReady = false;
+let revealInitializing = false;
 
-function setupSlideControls() {
-  if (slideControlsInitialized) return;
-  const previous = document.getElementById('slide-prev');
-  const next = document.getElementById('slide-next');
-  if (!previous || !next) return;
+function layoutReveal() {
+  if (revealReady) deck?.layout();
+}
 
-  previous.addEventListener('click', () => deck?.prev());
-  next.addEventListener('click', () => deck?.next());
-  slideControlsInitialized = true;
+async function prepareRevealSlides() {
+  const placeholder = document.getElementById('slides-markdown');
+  if (!placeholder) return;
+
+  const response = await fetch('slides.md');
+  if (!response.ok) throw new Error(`Unable to load slides.md (${response.status})`);
+
+  const stack = document.createElement('section');
+  for (const source of (await response.text()).split(/^\s*--\s*$/m)) {
+    const slide = document.createElement('section');
+    slide.innerHTML = marked.parse(source);
+    stack.appendChild(slide);
+  }
+  placeholder.replaceWith(stack);
 }
 
 function initReveal() {
@@ -248,23 +264,39 @@ function initReveal() {
   const el = document.querySelector('#home-content .reveal');
   if (!el) { requestAnimationFrame(initReveal); return; }
   if (deck) {
-    deck.layout();
+    layoutReveal();
     return;
   }
-  deck = new Reveal(el, {
-    hash: false,
-    controls: false,
-    progress: true,
-    center: true,
-    transition: 'slide',
-    backgroundTransition: 'fade',
-    keyboard: true,
-    keyboardCondition: () => !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName),
-    overview: true,
-    touch: true,
-    plugins: [ RevealMarkdown ],
+  if (revealInitializing) return;
+  revealInitializing = true;
+
+  prepareRevealSlides().then(() => {
+    deck = new Reveal(el, {
+      hash: false,
+      controls: true,
+      progress: true,
+      center: true,
+      transition: 'slide',
+      backgroundTransition: 'fade',
+      keyboard: true,
+      keyboardCondition: () => !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName),
+      overview: true,
+      touch: true,
+      // Reveal switches to its scroll reader below 435px by default. That
+      // mode disables navigation controls, including the custom arrows.
+      scrollActivationWidth: null,
+    });
+    Promise.resolve(deck.initialize()).then(() => {
+      revealReady = true;
+      layoutReveal();
+    }).catch((error) => {
+      revealInitializing = false;
+      console.error('Reveal initialization failed', error);
+    });
+  }).catch((error) => {
+    revealInitializing = false;
+    console.error('Reveal initialization failed', error);
   });
-  Promise.resolve(deck.initialize()).then(setupSlideControls);
 }
 
 // --- Config form setup (once) ---
@@ -347,7 +379,7 @@ function HomePanel({ api }) {
     homeContent.addEventListener('ready', stopReadyEvent);
     homeContent.hidden = false;
     initReveal();
-    const layout = () => requestAnimationFrame(() => deck?.layout());
+    const layout = () => requestAnimationFrame(layoutReveal);
     const subscriptions = [
       api.onDidDimensionsChange(layout),
       api.onDidVisibilityChange((event) => { if (event.isVisible) layout(); }),

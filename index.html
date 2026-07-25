@@ -42,9 +42,8 @@
         document.head.appendChild(s);
       }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/markdown.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.js"></script>
+    <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script crossorigin="anonymous" defer src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.js"></script>
     <script type="importmap">
       {
         "imports": {
@@ -66,7 +65,7 @@
     <div id="home-content" hidden>
       <div class="reveal">
         <div class="slides">
-          <section data-markdown="slides.md" data-separator-vertical="--"></section>
+          <section id="slides-markdown"></section>
 
           <section>
             <h2>Configure</h2>
@@ -106,10 +105,10 @@
             </div>
           </section>
         </div>
-      </div>
-      <div class="slide-controls" aria-label="Slide controls">
-        <button id="slide-prev" type="button" title="Previous slide" aria-label="Previous slide">&#8249;</button>
-        <button id="slide-next" type="button" title="Next slide" aria-label="Next slide">&#8250;</button>
+        <div class="slide-controls" aria-label="Slide controls">
+          <button id="slide-prev" class="navigate-prev" type="button" title="Previous slide" aria-label="Previous slide">&#8249;</button>
+          <button id="slide-next" class="navigate-next" type="button" title="Next slide" aria-label="Next slide">&#8250;</button>
+        </div>
       </div>
     </div>
 
@@ -158,6 +157,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260725.1"></script>
+    <script type="module" src="app.js?v=20260725.8"></script>
   </body>
 </html>
