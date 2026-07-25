@@ -99,6 +99,7 @@ const wanixSystem = document.getElementById('wanix-system');
 let systemReady = Boolean(wanixSystem?.isReady);
 const terminalLayer = document.getElementById('terminal-layer');
 const terminalSessions = new Map();
+const iframeSessions = new Map();
 wanixSystem?.addEventListener('ready', (event) => {
   if (event.target !== wanixSystem) return;
   systemReady = true;
@@ -316,6 +317,118 @@ function attachTerminalSession(id, anchor, api) {
   };
 }
 
+const DEFAULT_IFRAME_ALLOW = 'clipboard-read; clipboard-write';
+
+function createIframeSession(id, { src, title, allow = DEFAULT_IFRAME_ALLOW, allowFullscreen = false }) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'iframe-session';
+
+  const iframe = document.createElement('iframe');
+  iframe.className = 'iframe-panel';
+  iframe.src = src;
+  iframe.title = title;
+  iframe.allow = allow;
+  iframe.allowFullscreen = allowFullscreen;
+
+  wrapper.appendChild(iframe);
+  terminalLayer?.appendChild(wrapper);
+
+  const session = { id, wrapper, iframe, anchor: null, layout: null };
+  iframeSessions.set(id, session);
+  return session;
+}
+
+function getIframeSession(id, params) {
+  const session = iframeSessions.get(id);
+  if (session) {
+    if (params.title) session.iframe.title = params.title;
+    if (params.allow) session.iframe.allow = params.allow;
+    session.iframe.allowFullscreen = !!params.allowFullscreen;
+    return session;
+  }
+  return createIframeSession(id, params);
+}
+
+function destroyIframeSession(id) {
+  const session = iframeSessions.get(id);
+  if (!session) return;
+  iframeSessions.delete(id);
+  session.anchor = null;
+  session.wrapper.remove();
+}
+
+function layoutIframeSession(session, anchor, isVisible) {
+  if (!terminalLayer || !anchor || !isVisible) {
+    session.wrapper.classList.remove('visible');
+    session.layout = null;
+    return;
+  }
+
+  const bounds = anchor.getBoundingClientRect();
+  const layerBounds = terminalLayer.getBoundingClientRect();
+  if (bounds.width === 0 || bounds.height === 0) {
+    session.wrapper.classList.remove('visible');
+    session.layout = null;
+    return;
+  }
+
+  const nextLayout = {
+    left: bounds.left - layerBounds.left,
+    top: bounds.top - layerBounds.top,
+    width: bounds.width,
+    height: bounds.height,
+  };
+  const previousLayout = session.layout;
+  const layoutChanged = !previousLayout || Object.keys(nextLayout).some((key) =>
+    Math.abs(nextLayout[key] - previousLayout[key]) >= 0.5
+  );
+
+  if (layoutChanged) {
+    session.wrapper.style.left = `${nextLayout.left}px`;
+    session.wrapper.style.top = `${nextLayout.top}px`;
+    session.wrapper.style.width = `${nextLayout.width}px`;
+    session.wrapper.style.height = `${nextLayout.height}px`;
+    session.layout = nextLayout;
+  }
+  session.wrapper.classList.add('visible');
+}
+
+function attachIframeSession(id, params, anchor, api) {
+  const session = getIframeSession(id, params);
+  let updateFrame = 0;
+
+  const update = () => {
+    updateFrame = 0;
+    session.anchor = anchor;
+    const bounds = anchor.getBoundingClientRect();
+    const isVisible = anchor.isConnected && bounds.width > 0 && bounds.height > 0;
+    layoutIframeSession(session, anchor, isVisible);
+  };
+  const scheduleUpdate = () => {
+    if (!updateFrame) updateFrame = requestAnimationFrame(update);
+  };
+  const observer = new ResizeObserver(scheduleUpdate);
+  observer.observe(anchor);
+  const subscriptions = [
+    api.onDidDimensionsChange(scheduleUpdate),
+    api.onDidVisibilityChange(scheduleUpdate),
+    api.onDidLocationChange(scheduleUpdate),
+    api.onDidGroupChange(scheduleUpdate),
+  ];
+
+  scheduleUpdate();
+
+  return () => {
+    observer.disconnect();
+    if (updateFrame) cancelAnimationFrame(updateFrame);
+    for (const subscription of subscriptions) subscription.dispose();
+    if (session.anchor === anchor) {
+      session.anchor = null;
+      layoutIframeSession(session, null, false);
+    }
+  };
+}
+
 // --- Reveal.js ---
 const revealStates = new WeakMap();
 let slidesMarkdownPromise = null;
@@ -447,6 +560,7 @@ function addTerminalPanel(api, group) {
 
 let homeIdCounter = 0;
 let groupIdCounter = 0;
+let iframeIdCounter = 0;
 
 function addHomePanel(api, group) {
   const id = ++homeIdCounter;
@@ -474,15 +588,43 @@ function addGroupPanel(api, group) {
   return panel;
 }
 
+function addIframePanel(api, config, group) {
+  const id = ++iframeIdCounter;
+  const panel = api.addPanel({
+    id: `iframe-${id}`,
+    component: 'iframe',
+    params: { iframeId: id, ...config },
+    title: config.title,
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  panel.api.setActive();
+  return panel;
+}
+
+const IFRAME_PANEL_OPTIONS = {
+  codigo: { title: 'Codigo', src: 'https://codigo.dev' },
+  crush: { title: 'Crush', src: 'https://justwasm.github.io/crush/' },
+  rickroll: {
+    title: 'Rick Roll',
+    src: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+    allowFullscreen: true,
+  },
+};
+
 const PANEL_CREATION_OPTIONS = [
   { component: 'terminal', label: 'New Term' },
   { component: 'home', label: 'Home' },
   { component: 'group', label: 'Group' },
+  { component: 'codigo', label: 'Codigo' },
+  { component: 'crush', label: 'Crush' },
+  { component: 'rickroll', label: 'Rick Roll' },
 ];
 
 function addPanelByComponent(api, component, group) {
   if (component === 'terminal') return addTerminalPanel(api, group);
   if (component === 'group') return addGroupPanel(api, group);
+  if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
   return addHomePanel(api, group);
 }
 
@@ -563,6 +705,18 @@ function GroupPanel() {
   return React.createElement('div', { className: 'group-panel panel-content' },
     React.createElement('img', { src: 'group.png', alt: 'Gear Shell group' }),
   );
+}
+
+function IframePanel({ api, params }) {
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    return attachIframeSession(params.iframeId, params, wrapper, api);
+  }, [api, params.iframeId]);
+
+  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
 
 // Compact header action: tap creates a terminal, long-press opens extensions.
@@ -663,6 +817,8 @@ function App() {
     event.api.onDidRemovePanel((panel) => {
       const match = /^terminal-(\d+)$/.exec(panel.id);
       if (match) destroyTerminalSession(Number(match[1]));
+      const iframeMatch = /^iframe-(\d+)$/.exec(panel.id);
+      if (iframeMatch) destroyIframeSession(Number(iframeMatch[1]));
       requestAnimationFrame(() => setWorkspaceEmpty(event.api.panels.length === 0));
     });
     event.api.onDidAddPanel(() => setWorkspaceEmpty(false));
@@ -690,6 +846,7 @@ function App() {
         home: HomePanel,
         terminal: TerminalPanel,
         group: GroupPanel,
+        iframe: IframePanel,
       },
       rightHeaderActionsComponent: AddTerminalButton,
     }),
