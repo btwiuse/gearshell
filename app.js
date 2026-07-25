@@ -7,19 +7,24 @@ let debugErrorsDismissed = false;
 
 function showHomeDebugErrors() {
   if (!debugMode || debugErrorsDismissed) return;
-  const output = document.getElementById('home-debug-errors');
-  const dismiss = document.getElementById('home-debug-dismiss');
   const errors = window.homeDebugErrors || [];
-  if (!output || errors.length === 0) return;
-  output.textContent = errors.slice(-3).join('\n\n');
-  output.hidden = false;
-  if (dismiss) dismiss.hidden = false;
+  if (errors.length === 0) return;
+  for (const homeContent of document.querySelectorAll('.home-content')) {
+    const output = homeContent.querySelector('.home-debug-errors');
+    const dismiss = homeContent.querySelector('.home-debug-dismiss');
+    if (!output) continue;
+    output.textContent = errors.slice(-3).join('\n\n');
+    output.hidden = false;
+    if (dismiss) dismiss.hidden = false;
+  }
 }
 
 function dismissHomeDebugErrors() {
   debugErrorsDismissed = true;
-  document.getElementById('home-debug-errors')?.setAttribute('hidden', '');
-  document.getElementById('home-debug-dismiss')?.setAttribute('hidden', '');
+  for (const homeContent of document.querySelectorAll('.home-content')) {
+    homeContent.querySelector('.home-debug-errors')?.setAttribute('hidden', '');
+    homeContent.querySelector('.home-debug-dismiss')?.setAttribute('hidden', '');
+  }
 }
 
 function reportHomeError(context, error) {
@@ -305,23 +310,29 @@ function attachTerminalSession(id, anchor, api) {
 }
 
 // --- Reveal.js ---
-let deck = null;
-let revealReady = false;
-let revealInitializing = false;
+const revealStates = new WeakMap();
+let slidesMarkdownPromise = null;
 
-function layoutReveal() {
-  if (revealReady) deck?.layout();
+function loadSlidesMarkdown() {
+  if (!slidesMarkdownPromise) {
+    slidesMarkdownPromise = fetch('slides.md').then(async (response) => {
+      if (!response.ok) throw new Error(`Unable to load slides.md (${response.status})`);
+      return response.text();
+    });
+  }
+  return slidesMarkdownPromise;
 }
 
-async function prepareRevealSlides() {
-  const placeholder = document.getElementById('slides-markdown');
+function layoutReveal(homeContent) {
+  revealStates.get(homeContent)?.deck?.layout();
+}
+
+async function prepareRevealSlides(homeContent) {
+  const placeholder = homeContent.querySelector('[data-home-slides-markdown]');
   if (!placeholder) return;
 
-  const response = await fetch('slides.md');
-  if (!response.ok) throw new Error(`Unable to load slides.md (${response.status})`);
-
   const stack = document.createElement('section');
-  for (const source of (await response.text()).split(/^\s*--\s*$/m)) {
+  for (const source of (await loadSlidesMarkdown()).split(/^\s*--\s*$/m)) {
     const slide = document.createElement('section');
     slide.innerHTML = marked.parse(source);
     stack.appendChild(slide);
@@ -329,19 +340,23 @@ async function prepareRevealSlides() {
   placeholder.replaceWith(stack);
 }
 
-function initReveal() {
-  if (typeof Reveal === 'undefined') { requestAnimationFrame(initReveal); return; }
-  const el = document.querySelector('#home-content .reveal');
-  if (!el) { requestAnimationFrame(initReveal); return; }
-  if (deck) {
-    layoutReveal();
-    return;
-  }
-  if (revealInitializing) return;
-  revealInitializing = true;
+function initReveal(homeContent, api) {
+  const existing = revealStates.get(homeContent);
+  if (existing) return existing;
 
-  prepareRevealSlides().then(() => {
-    deck = new Reveal(el, {
+  const state = { deck: null, destroyed: false };
+  revealStates.set(homeContent, state);
+  state.ready = (async () => {
+    while (typeof Reveal === 'undefined') {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (state.destroyed) return;
+    }
+    await prepareRevealSlides(homeContent);
+    if (state.destroyed) return;
+
+    const el = homeContent.querySelector('.reveal');
+    if (!el) return;
+    state.deck = new Reveal(el, {
       hash: false,
       controls: true,
       progress: true,
@@ -349,62 +364,66 @@ function initReveal() {
       transition: 'slide',
       backgroundTransition: 'fade',
       keyboard: true,
-      keyboardCondition: () => !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName),
+      keyboardCondition: () => api.isActive &&
+        !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName),
       overview: true,
       touch: true,
       // Reveal switches to its scroll reader below 435px by default. That
       // mode disables navigation controls, including the custom arrows.
       scrollActivationWidth: null,
     });
-    Promise.resolve(deck.initialize()).then(() => {
-      revealReady = true;
-      layoutReveal();
-    }).catch((error) => {
-      revealInitializing = false;
-      reportHomeError('Reveal initialization failed', error);
-    });
-  }).catch((error) => {
-    revealInitializing = false;
-    reportHomeError('Reveal initialization failed', error);
+    await state.deck.initialize();
+    if (state.destroyed) return;
+    layoutReveal(homeContent);
+  })().catch((error) => {
+    if (!state.destroyed) reportHomeError('Reveal initialization failed', error);
   });
+  return state;
 }
 
-// --- Config form setup (once) ---
-function setupConfigForm() {
+function destroyReveal(homeContent) {
+  const state = revealStates.get(homeContent);
+  if (!state) return;
+  state.destroyed = true;
+  state.deck?.destroy();
+  revealStates.delete(homeContent);
+}
+
+// --- Config form setup ---
+function setupConfigForm(homeContent) {
   const cfg = loadConfig();
-  const cmdEl = document.getElementById('cfg-cmd');
-  const envEl = document.getElementById('cfg-env');
-  const autoEl = document.getElementById('cfg-auto-open');
+  const cmdEl = homeContent.querySelector('[data-config="cmd"]');
+  const envEl = homeContent.querySelector('[data-config="env"]');
+  const autoEl = homeContent.querySelector('[data-config="auto-open"]');
   if (!cmdEl) return;
   cmdEl.value = cfg.cmd;
   envEl.value = cfg.env;
   autoEl.checked = !!cfg.autoOpen;
 
-  document.getElementById('cfg-save').addEventListener('click', () => {
+  homeContent.querySelector('[data-config-action="save"]').addEventListener('click', () => {
     saveConfig({
-      cmd: document.getElementById('cfg-cmd').value.trim() || DEFAULT_CMD,
-      env: document.getElementById('cfg-env').value,
-      autoOpen: document.getElementById('cfg-auto-open').checked,
+      cmd: cmdEl.value.trim() || DEFAULT_CMD,
+      env: envEl.value,
+      autoOpen: autoEl.checked,
     });
-    const s = document.getElementById('cfg-status');
+    const s = homeContent.querySelector('[data-config="status"]');
     s.textContent = 'Saved!';
     s.style.color = '#3fb950';
     setTimeout(() => { s.textContent = ''; }, 2000);
   });
 
-  document.getElementById('cfg-reset').addEventListener('click', () => {
+  homeContent.querySelector('[data-config-action="reset"]').addEventListener('click', () => {
     localStorage.removeItem(CONFIG_KEY);
     const c = loadConfig();
     cmdEl.value = c.cmd;
     envEl.value = c.env;
     autoEl.checked = !!c.autoOpen;
-    const s = document.getElementById('cfg-status');
+    const s = homeContent.querySelector('[data-config="status"]');
     s.textContent = 'Reset to defaults.';
     s.style.color = '#8b949e';
     setTimeout(() => { s.textContent = ''; }, 2000);
   });
 }
-window.addEventListener('DOMContentLoaded', setupConfigForm);
 
 function addTerminalPanel(api, group) {
   const id = ++terminalIdCounter;
@@ -418,20 +437,19 @@ function addTerminalPanel(api, group) {
   panel.api.setActive();
 }
 
+let homeIdCounter = 0;
+
 function addHomePanel(api, group) {
-  const existing = api.getPanel('home');
-  if (existing) {
-    existing.api.setActive();
-    return;
-  }
+  const id = ++homeIdCounter;
   const panel = api.addPanel({
-    id: 'home',
+    id: `home-${id}`,
     component: 'home',
-    params: {},
+    params: { homeId: id },
     title: 'Home',
     ...(group && { position: { referenceGroup: group } }),
   });
   panel.api.setActive();
+  return panel;
 }
 
 function whenWanixReady(callback) {
@@ -450,13 +468,14 @@ function whenWanixReady(callback) {
 
 // ========== Components ==========
 
-// Home panel: keeps the existing Reveal DOM in the dockview panel.
+// Home panels each own a Reveal instance so they can be split and closed independently.
 function HomePanel({ api }) {
   const wrapperRef = useRef(null);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    const homeContent = document.getElementById('home-content');
+    const template = document.getElementById('home-template');
+    const homeContent = template?.content.firstElementChild?.cloneNode(true);
     if (!wrapper || !homeContent) return;
 
     wrapper.appendChild(homeContent);
@@ -465,12 +484,12 @@ function HomePanel({ api }) {
     // Reveal also emits a bubbling "ready" event. Keep it from waking wanix.
     const stopReadyEvent = (event) => event.stopPropagation();
     homeContent.addEventListener('ready', stopReadyEvent);
-    const dismiss = document.getElementById('home-debug-dismiss');
+    const dismiss = homeContent.querySelector('.home-debug-dismiss');
     dismiss?.addEventListener('click', dismissHomeDebugErrors);
-    homeContent.hidden = false;
+    setupConfigForm(homeContent);
     showHomeDebugErrors();
-    initReveal();
-    const layout = () => requestAnimationFrame(layoutReveal);
+    initReveal(homeContent, api);
+    const layout = () => requestAnimationFrame(() => layoutReveal(homeContent));
     const subscriptions = [
       api.onDidDimensionsChange(layout),
       api.onDidVisibilityChange((event) => { if (event.isVisible) layout(); }),
@@ -484,10 +503,8 @@ function HomePanel({ api }) {
       dismiss?.removeEventListener('click', dismissHomeDebugErrors);
       if (panelView) panelView.classList.remove('home-view');
       for (const subscription of subscriptions) subscription.dispose();
-      // A closed Dockview panel removes its wrapper. Park the persistent
-      // Reveal DOM outside that wrapper so a later Home panel can reuse it.
-      homeContent.hidden = true;
-      document.body.appendChild(homeContent);
+      destroyReveal(homeContent);
+      homeContent.remove();
     };
   }, [api]);
 
@@ -595,8 +612,8 @@ function App() {
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
 
-    // Add home panel first.
-    addHomePanel(event.api);
+    // Add the initial Home panel first.
+    const homePanel = addHomePanel(event.api);
 
     event.api.onDidRemovePanel((panel) => {
       const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -608,13 +625,9 @@ function App() {
     if (cfg.autoOpen) {
       whenWanixReady(() => {
         addTerminalPanel(event.api);
-        event.api.getPanel('home')?.api.setActive();
+        event.api.getPanel(homePanel.id)?.api.setActive();
       });
     }
-
-    // Set home as the active panel
-    const homePanel = event.api.getPanel('home');
-    if (homePanel) homePanel.api.setActive();
   }, []);
 
   return React.createElement(DockviewReact, {

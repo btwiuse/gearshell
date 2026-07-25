@@ -70,15 +70,16 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260725.7" />
+    <link rel="stylesheet" href="app.css?v=20260725.8" />
   </head>
   <body>
-    <div id="home-content" hidden>
-      <pre id="home-debug-errors" hidden aria-live="assertive"></pre>
-      <button id="home-debug-dismiss" type="button" aria-label="Dismiss debug errors" title="Dismiss debug errors" hidden>&times;</button>
+    <template id="home-template">
+      <div class="home-content">
+      <pre class="home-debug-errors" hidden aria-live="assertive"></pre>
+      <button class="home-debug-dismiss" type="button" aria-label="Dismiss debug errors" title="Dismiss debug errors" hidden>&times;</button>
       <div class="reveal">
         <div class="slides">
-          <section id="slides-markdown"></section>
+          <section data-home-slides-markdown></section>
 
           <section>
             <h2>Configure</h2>
@@ -87,14 +88,14 @@
                 <details open>
                   <summary><span>Startup command</span></summary>
                   <div class="body">
-                    <input id="cfg-cmd" type="text" placeholder="hush -rcfile /tmp/profile" spellcheck="false">
+                    <input data-config="cmd" type="text" placeholder="hush -rcfile /tmp/profile" spellcheck="false">
                   </div>
                 </details>
 
                 <details open>
                   <summary><span>Environment variables</span></summary>
                   <div class="body">
-                    <textarea id="cfg-env" placeholder="KEY=value&#10;TERM=xterm-256color" spellcheck="false"></textarea>
+                    <textarea data-config="env" placeholder="KEY=value&#10;TERM=xterm-256color" spellcheck="false"></textarea>
                     <div class="hint">One per line, KEY=value format</div>
                   </div>
                 </details>
@@ -103,7 +104,7 @@
                   <summary><span>Behavior</span></summary>
                   <div class="body">
                     <label class="cfg-toggle">
-                      <input id="cfg-auto-open" type="checkbox">
+                      <input data-config="auto-open" type="checkbox">
                       <span>Auto open new terminal on page load</span>
                     </label>
                   </div>
@@ -111,15 +112,16 @@
               </div>
 
               <div class="actions">
-                <button class="primary" id="cfg-save">Save</button>
-                <button id="cfg-reset">Reset</button>
+                <button class="primary" data-config-action="save">Save</button>
+                <button data-config-action="reset">Reset</button>
               </div>
-              <div class="hint" id="cfg-status" style="margin-top:6px"></div>
+              <div class="hint" data-config="status" style="margin-top:6px"></div>
             </div>
           </section>
         </div>
       </div>
     </div>
+    </template>
 
     <wanix-system
       id="wanix-system"
@@ -166,6 +168,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260725.15"></script>
+    <script type="module" src="app.js?v=20260725.17"></script>
   </body>
 </html>
