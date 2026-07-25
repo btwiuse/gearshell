@@ -3,14 +3,23 @@ import { createRoot } from 'react-dom/client';
 import { DockviewReact } from 'dockview-react';
 
 const debugMode = window.location.search.includes('debug');
+let debugErrorsDismissed = false;
 
 function showHomeDebugErrors() {
-  if (!debugMode) return;
+  if (!debugMode || debugErrorsDismissed) return;
   const output = document.getElementById('home-debug-errors');
+  const dismiss = document.getElementById('home-debug-dismiss');
   const errors = window.homeDebugErrors || [];
   if (!output || errors.length === 0) return;
   output.textContent = errors.slice(-3).join('\n\n');
   output.hidden = false;
+  if (dismiss) dismiss.hidden = false;
+}
+
+function dismissHomeDebugErrors() {
+  debugErrorsDismissed = true;
+  document.getElementById('home-debug-errors')?.setAttribute('hidden', '');
+  document.getElementById('home-debug-dismiss')?.setAttribute('hidden', '');
 }
 
 function reportHomeError(context, error) {
@@ -409,6 +418,8 @@ function HomePanel({ api }) {
     // Reveal also emits a bubbling "ready" event. Keep it from waking wanix.
     const stopReadyEvent = (event) => event.stopPropagation();
     homeContent.addEventListener('ready', stopReadyEvent);
+    const dismiss = document.getElementById('home-debug-dismiss');
+    dismiss?.addEventListener('click', dismissHomeDebugErrors);
     homeContent.hidden = false;
     showHomeDebugErrors();
     initReveal();
@@ -423,6 +434,7 @@ function HomePanel({ api }) {
 
     return () => {
       homeContent.removeEventListener('ready', stopReadyEvent);
+      dismiss?.removeEventListener('click', dismissHomeDebugErrors);
       if (panelView) panelView.classList.remove('home-view');
       for (const subscription of subscriptions) subscription.dispose();
     };

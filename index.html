@@ -70,11 +70,12 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260725.3" />
+    <link rel="stylesheet" href="app.css?v=20260725.4" />
   </head>
   <body>
     <div id="home-content" hidden>
       <pre id="home-debug-errors" hidden aria-live="assertive"></pre>
+      <button id="home-debug-dismiss" type="button" aria-label="Dismiss debug errors" title="Dismiss debug errors" hidden>&times;</button>
       <div class="reveal">
         <div class="slides">
           <section id="slides-markdown"></section>
@@ -165,6 +166,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260725.11"></script>
+    <script type="module" src="app.js?v=20260725.12"></script>
   </body>
 </html>
