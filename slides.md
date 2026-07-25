@@ -57,7 +57,3 @@ Open Core（AGPL）
 - Free: 本地沙盒运行时
 - Pro 订阅: 跨设备同步/云存储/AI 调用额度/远程执行
 - Enterprise: 商业许可证/私有化部署/企业级支持（SLA）/定制化集成
-
---
-
-<img src="./group.png" style="max-height:70vh" />

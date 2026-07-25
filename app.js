@@ -446,6 +446,7 @@ function addTerminalPanel(api, group) {
 }
 
 let homeIdCounter = 0;
+let groupIdCounter = 0;
 
 function addHomePanel(api, group) {
   const id = ++homeIdCounter;
@@ -454,6 +455,19 @@ function addHomePanel(api, group) {
     component: 'home',
     params: { homeId: id },
     title: 'Home',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  panel.api.setActive();
+  return panel;
+}
+
+function addGroupPanel(api, group) {
+  const id = ++groupIdCounter;
+  const panel = api.addPanel({
+    id: `group-${id}`,
+    component: 'group',
+    params: { groupId: id },
+    title: 'Group',
     ...(group && { position: { referenceGroup: group } }),
   });
   panel.api.setActive();
@@ -533,6 +547,12 @@ function TerminalPanel({ api, params }) {
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
 
+function GroupPanel() {
+  return React.createElement('div', { className: 'group-panel panel-content' },
+    React.createElement('img', { src: 'group.png', alt: 'Gear Shell group' }),
+  );
+}
+
 // Compact header action: tap creates a terminal, long-press opens extensions.
 function AddTerminalButton({ containerApi, group }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -609,6 +629,11 @@ function AddTerminalButton({ containerApi, group }) {
         role: 'menuitem',
         onClick: () => { setMenuOpen(false); addHomePanel(containerApi, group); },
       }, 'Home'),
+      React.createElement('button', {
+        type: 'button',
+        role: 'menuitem',
+        onClick: () => { setMenuOpen(false); addGroupPanel(containerApi, group); },
+      }, 'Group'),
     ),
   );
 }
@@ -657,6 +682,7 @@ function App() {
       components: {
         home: HomePanel,
         terminal: TerminalPanel,
+        group: GroupPanel,
       },
       rightHeaderActionsComponent: AddTerminalButton,
     }),

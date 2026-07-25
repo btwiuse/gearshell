@@ -30,6 +30,8 @@ wanix-term { flex: 1; min-width: 0; }
 .empty-workspace-actions { display: flex; justify-content: center; gap: 8px; }
 .empty-workspace-actions button { min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
 .empty-workspace-actions button:hover { background: #30363d; }
+.group-panel { display: grid; place-items: center; overflow: hidden; padding: 16px; background: #0d1117; }
+.group-panel img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 
 /* --- Reveal.js overrides --- */
 .home-content .reveal { height: 100%; width: 100%; container-type: size; }
