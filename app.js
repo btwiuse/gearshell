@@ -200,9 +200,14 @@ function layoutTerminalSession(session, anchor, isVisible) {
   });
 }
 
-function focusTerminalSession(session, anchor) {
+function focusTerminalSession(session, anchor, api) {
   requestAnimationFrame(() => {
-    if (session.anchor !== anchor || !session.wrapper.classList.contains('visible')) return;
+    if (
+      session.anchor !== anchor ||
+      !api.isActive ||
+      !api.isGroupActive ||
+      !session.wrapper.classList.contains('visible')
+    ) return;
     session.term._term?.focus();
   });
 }
@@ -230,10 +235,10 @@ function attachTerminalSession(id, anchor, api) {
     api.onDidDimensionsChange(update),
     api.onDidActiveChange((event) => {
       update();
-      if (event.isActive && api.isGroupActive) focusTerminalSession(session, anchor);
+      if (event.isActive) focusTerminalSession(session, anchor, api);
     }),
     api.onDidFocusChange((event) => {
-      if (event.isFocused) focusTerminalSession(session, anchor);
+      if (event.isFocused) focusTerminalSession(session, anchor, api);
     }),
     api.onDidVisibilityChange(update),
     api.onDidLocationChange(update),
@@ -241,7 +246,7 @@ function attachTerminalSession(id, anchor, api) {
   ];
 
   update();
-  if (api.isActive && api.isGroupActive) focusTerminalSession(session, anchor);
+  if (api.isActive) focusTerminalSession(session, anchor, api);
 
   return () => {
     observer.disconnect();
