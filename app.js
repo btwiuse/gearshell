@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { DockviewReact } from 'dockview-react';
+import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
+import { Bot, Code2, House, Music2, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -551,7 +552,7 @@ function addTerminalPanel(api, group) {
   const panel = api.addPanel({
     id: `terminal-${id}`,
     component: 'terminal',
-    params: { terminalId: id },
+    params: { terminalId: id, panelType: 'terminal' },
     title: `Term ${id}`,
     ...(group && { position: { referenceGroup: group } }),
   });
@@ -561,14 +562,28 @@ function addTerminalPanel(api, group) {
 let homeIdCounter = 0;
 let groupIdCounter = 0;
 let iframeIdCounter = 0;
+let settingsIdCounter = 0;
 
 function addHomePanel(api, group) {
   const id = ++homeIdCounter;
   const panel = api.addPanel({
     id: `home-${id}`,
     component: 'home',
-    params: { homeId: id },
+    params: { homeId: id, panelType: 'home' },
     title: 'Home',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  panel.api.setActive();
+  return panel;
+}
+
+function addSettingsPanel(api, group) {
+  const id = ++settingsIdCounter;
+  const panel = api.addPanel({
+    id: `settings-${id}`,
+    component: 'settings',
+    params: { settingsId: id, panelType: 'settings' },
+    title: 'Settings',
     ...(group && { position: { referenceGroup: group } }),
   });
   panel.api.setActive();
@@ -580,7 +595,7 @@ function addGroupPanel(api, group) {
   const panel = api.addPanel({
     id: `group-${id}`,
     component: 'group',
-    params: { groupId: id },
+    params: { groupId: id, panelType: 'group' },
     title: 'Group',
     ...(group && { position: { referenceGroup: group } }),
   });
@@ -593,7 +608,7 @@ function addIframePanel(api, config, group) {
   const panel = api.addPanel({
     id: `iframe-${id}`,
     component: 'iframe',
-    params: { iframeId: id, ...config },
+    params: { iframeId: id, panelType: config.panelType, ...config },
     title: config.title,
     ...(group && { position: { referenceGroup: group } }),
   });
@@ -602,27 +617,34 @@ function addIframePanel(api, config, group) {
 }
 
 const IFRAME_PANEL_OPTIONS = {
-  codigo: { title: 'Codigo', src: 'https://codigo.dev' },
-  crush: { title: 'Crush', src: 'https://justwasm.github.io/crush/' },
+  codigo: { title: 'Codigo', src: 'https://codigo.dev', panelType: 'codigo' },
+  crush: { title: 'Crush', src: 'https://justwasm.github.io/crush/', panelType: 'crush' },
   rickroll: {
     title: 'Rick Roll',
     src: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    panelType: 'rickroll',
     allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
     allowFullscreen: true,
   },
 };
 
 const PANEL_CREATION_OPTIONS = [
-  { component: 'terminal', label: 'New Term' },
-  { component: 'home', label: 'Home' },
-  { component: 'group', label: 'Group' },
-  { component: 'codigo', label: 'Codigo' },
-  { component: 'crush', label: 'Crush' },
-  { component: 'rickroll', label: 'Rick Roll' },
+  { component: 'terminal', label: 'Terminal', icon: Terminal },
+  { component: 'home', label: 'Home', icon: House },
+  { component: 'settings', label: 'Settings', icon: Settings },
+  { component: 'group', label: 'Group', icon: UsersRound },
+  { component: 'codigo', label: 'Codigo', icon: Code2 },
+  { component: 'crush', label: 'Crush', icon: Bot },
+  { component: 'rickroll', label: 'Rick Roll', icon: Music2 },
 ];
+
+const PANEL_ICONS = Object.fromEntries(
+  PANEL_CREATION_OPTIONS.map(({ component, icon }) => [component, icon]),
+);
 
 function addPanelByComponent(api, component, group) {
   if (component === 'terminal') return addTerminalPanel(api, group);
+  if (component === 'settings') return addSettingsPanel(api, group);
   if (component === 'group') return addGroupPanel(api, group);
   if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
   return addHomePanel(api, group);
@@ -662,7 +684,6 @@ function HomePanel({ api }) {
     homeContent.addEventListener('ready', stopReadyEvent);
     const dismiss = homeContent.querySelector('.home-debug-dismiss');
     dismiss?.addEventListener('click', dismissHomeDebugErrors);
-    setupConfigForm(homeContent);
     showHomeDebugErrors();
     initReveal(homeContent, api);
     const layout = () => requestAnimationFrame(() => layoutReveal(homeContent));
@@ -683,6 +704,23 @@ function HomePanel({ api }) {
       homeContent.remove();
     };
   }, [api]);
+
+  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+}
+
+function SettingsPanel() {
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    const template = document.getElementById('settings-template');
+    const settingsContent = template?.content.firstElementChild?.cloneNode(true);
+    if (!wrapper || !settingsContent) return;
+
+    wrapper.appendChild(settingsContent);
+    setupConfigForm(settingsContent);
+    return () => settingsContent.remove();
+  }, []);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
@@ -717,6 +755,14 @@ function IframePanel({ api, params }) {
   }, [api, params.iframeId]);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+}
+
+function PanelTab(props) {
+  const Icon = PANEL_ICONS[props.params.panelType] || Terminal;
+  return React.createElement('div', { className: 'panel-tab' },
+    React.createElement(Icon, { className: 'panel-tab-icon', size: 14, 'aria-hidden': true }),
+    React.createElement(DockviewDefaultTab, props),
+  );
 }
 
 // Compact header action: tap creates a terminal, long-press opens extensions.
@@ -783,7 +829,7 @@ function AddTerminalButton({ containerApi, group }) {
       onPointerLeave: clearPressTimer,
       onContextMenu: (event) => { event.preventDefault(); openMenu(); },
       onClick: createTerminal,
-    }, '+'),
+    }, React.createElement(Plus, { size: 18, 'aria-hidden': true })),
     menuOpen && React.createElement('div', { className: 'panel-action-menu', role: 'menu' },
       PANEL_CREATION_OPTIONS.map((option) =>
         React.createElement('button', {
@@ -794,7 +840,10 @@ function AddTerminalButton({ containerApi, group }) {
             setMenuOpen(false);
             addPanelByComponent(containerApi, option.component, group);
           },
-        }, option.label)
+        },
+        React.createElement(option.icon, { size: 16, 'aria-hidden': true }),
+        React.createElement('span', null, option.label),
+        )
       ),
     ),
   );
@@ -844,10 +893,12 @@ function App() {
       onReady,
       components: {
         home: HomePanel,
+        settings: SettingsPanel,
         terminal: TerminalPanel,
         group: GroupPanel,
         iframe: IframePanel,
       },
+      defaultTabComponent: PanelTab,
       rightHeaderActionsComponent: AddTerminalButton,
     }),
     workspaceEmpty && React.createElement('div', { className: 'empty-workspace' },
@@ -859,7 +910,10 @@ function App() {
               key: option.component,
               type: 'button',
               onClick: () => addPanelFromEmptyWorkspace(option.component),
-            }, option.label)
+            },
+            React.createElement(option.icon, { size: 18, 'aria-hidden': true }),
+            React.createElement('span', null, option.label),
+            )
           ),
         ),
       ),

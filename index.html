@@ -61,7 +61,8 @@
           "react": "https://esm.sh/react@18.2.0",
           "react-dom": "https://esm.sh/react-dom@18.2.0",
           "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-          "dockview-react": "https://esm.sh/dockview-react@7.0.4?deps=react@18.2.0,react-dom@18.2.0"
+          "dockview-react": "https://esm.sh/dockview-react@7.0.4?deps=react@18.2.0,react-dom@18.2.0",
+          "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
         }
       }
     </script>
@@ -70,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260725.13" />
+    <link rel="stylesheet" href="app.css?v=20260726.3" />
   </head>
   <body>
     <template id="home-template">
@@ -83,46 +84,49 @@
         <div class="slides">
           <section data-home-slides-markdown></section>
 
-          <section>
-            <h2>Configure</h2>
-            <div class="config-form">
-              <div class="config-scroll">
-                <details open>
-                  <summary><span>Startup command</span></summary>
-                  <div class="body">
-                    <input data-config="cmd" type="text" placeholder="hush -rcfile /tmp/profile" spellcheck="false">
-                  </div>
-                </details>
-
-                <details open>
-                  <summary><span>Environment variables</span></summary>
-                  <div class="body">
-                    <textarea data-config="env" placeholder="KEY=value&#10;TERM=xterm-256color" spellcheck="false"></textarea>
-                    <div class="hint">One per line, KEY=value format</div>
-                  </div>
-                </details>
-
-                <details open>
-                  <summary><span>Behavior</span></summary>
-                  <div class="body">
-                    <label class="cfg-toggle">
-                      <input data-config="auto-open" type="checkbox">
-                      <span>Auto open new terminal on page load</span>
-                    </label>
-                  </div>
-                </details>
-              </div>
-
-              <div class="actions">
-                <button class="primary" data-config-action="save">Save</button>
-                <button data-config-action="reset">Reset</button>
-              </div>
-              <div class="hint" data-config="status" style="margin-top:6px"></div>
-            </div>
-          </section>
         </div>
       </div>
     </div>
+    </template>
+
+    <template id="settings-template">
+      <div class="settings-panel panel-content">
+        <div class="settings-content">
+          <h1>Settings</h1>
+          <div class="config-form">
+            <details open>
+              <summary><span>Startup command</span></summary>
+              <div class="body">
+                <input data-config="cmd" type="text" placeholder="hush -rcfile /tmp/profile" spellcheck="false">
+              </div>
+            </details>
+
+            <details open>
+              <summary><span>Environment variables</span></summary>
+              <div class="body">
+                <textarea data-config="env" placeholder="KEY=value&#10;TERM=xterm-256color" spellcheck="false"></textarea>
+                <div class="hint">One per line, KEY=value format</div>
+              </div>
+            </details>
+
+            <details open>
+              <summary><span>Behavior</span></summary>
+              <div class="body">
+                <label class="cfg-toggle">
+                  <input data-config="auto-open" type="checkbox">
+                  <span>Auto open new terminal on page load</span>
+                </label>
+              </div>
+            </details>
+
+            <div class="actions">
+              <button class="primary" data-config-action="save">Save</button>
+              <button data-config-action="reset">Reset</button>
+            </div>
+            <div class="hint" data-config="status" style="margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
     </template>
 
     <wanix-system
@@ -170,6 +174,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260725.25"></script>
+    <script type="module" src="app.js?v=20260726.2"></script>
   </body>
 </html>

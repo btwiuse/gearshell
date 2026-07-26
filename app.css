@@ -26,14 +26,19 @@ wanix-term { flex: 1; min-width: 0; }
 .panel-action-button { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: none; background: transparent; color: #8b949e; cursor: pointer; font-size: 18px; flex-shrink: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .panel-action-button:hover { color: #c9d1d9; background: #1c2128; }
 .panel-action-menu { position: absolute; top: calc(100% + 4px); right: 4px; z-index: 100; min-width: 112px; padding: 4px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
-.panel-action-menu button { display: block; width: 100%; padding: 6px 8px; border: 0; border-radius: 3px; background: transparent; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
+.panel-action-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 3px; background: transparent; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
 .panel-action-menu button:hover { background: #30363d; }
+.panel-action-menu button svg { flex: 0 0 auto; color: #8b949e; }
 .empty-workspace { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; background: #0d1117; }
 .empty-workspace-card { width: min(280px, calc(100% - 32px)); padding: 20px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; text-align: center; }
 .empty-workspace-card p { margin: 0 0 16px; color: #8b949e; }
 .empty-workspace-actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
-.empty-workspace-actions button { width: 100%; min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
+.empty-workspace-actions button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
 .empty-workspace-actions button:hover { background: #30363d; }
+.empty-workspace-actions button svg { flex: 0 0 auto; color: #8b949e; }
+.panel-tab { display: flex; align-items: center; width: 100%; height: 100%; min-width: 0; }
+.panel-tab-icon { flex: 0 0 auto; margin: 0 6px 0 4px; color: #8b949e; }
+.panel-tab .dv-default-tab { min-width: 0; flex: 1; }
 .group-panel { overflow: auto; padding: 16px; background: #0d1117; -webkit-overflow-scrolling: touch; }
 .group-panel img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
 .iframe-panel { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
@@ -51,32 +56,31 @@ wanix-term { flex: 1; min-width: 0; }
 .home-content .reveal ul li::before { content: "\2192 "; color: #58a6ff; }
 .home-content .reveal .controls { color: #8b949e; }
 .home-content .reveal .progress { color: #58a6ff; height: 3px; }
-.home-content .reveal .config-form { width: 100%; max-width: 90%; text-align: left; }
-.home-content .reveal .config-scroll { overflow-y: auto; max-height: calc(100cqh - 180px); padding-right: 8px; }
-.home-content .reveal .config-scroll::-webkit-scrollbar { width: 4px; }
-.home-content .reveal .config-scroll::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
-.home-content .reveal .config-form label { display: block; font-size: 0.45em; color: #8b949e; margin-bottom: 2px; margin-top: 8px; }
-.home-content .reveal .config-form label:first-child { margin-top: 0; }
-.home-content .reveal .config-form input,
-.home-content .reveal .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 0.45em; padding: 5px 8px; border-radius: 4px; outline: none; }
-.home-content .reveal .config-form input:focus,
-.home-content .reveal .config-form textarea:focus { border-color: #58a6ff; }
-.home-content .reveal .config-form textarea { height: 240px; line-height: 1.4; box-sizing: border-box; }
-.home-content .reveal .config-form details { border: 1px solid #30363d; border-radius: 4px; margin-top: 6px; }
-.home-content .reveal .config-form details summary { display: flex; align-items: center; padding: 6px 10px; cursor: pointer; background: #161b22; border-radius: 4px; user-select: none; list-style: none; }
-.home-content .reveal .config-form details summary::-webkit-details-marker { display: none; }
-.home-content .reveal .config-form details summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; font-size: 0.7em; }
-.home-content .reveal .config-form details[open] summary::after { transform: rotate(90deg); }
-.home-content .reveal .config-form details summary span { font-size: 0.45em; color: #c9d1d9; }
-.home-content .reveal .config-form details .body { padding: 8px 10px; text-align: left; }
-.home-content .reveal .config-form .hint { font-size: 0.38em; color: #484f58; margin-top: 1px; }
-.home-content .reveal .config-form .actions { margin-top: 10px; display: flex; gap: 8px; }
-.home-content .reveal .config-form button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 5px 14px; border-radius: 4px; font-size: 0.45em; cursor: pointer; }
-.home-content .reveal .config-form button:hover { background: #30363d; }
-.home-content .reveal .config-form button.primary { background: #238636; border-color: #2ea043; color: #fff; }
-.home-content .reveal .config-form button.primary:hover { background: #2ea043; }
+.settings-panel { overflow: auto; padding: 24px; background: #0d1117; }
+.settings-content { width: min(680px, 100%); margin: 0 auto; }
+.settings-content h1 { margin: 0 0 18px; color: #c9d1d9; font-size: 20px; font-weight: 600; }
+.settings-panel .config-form { width: 100%; text-align: left; }
+.settings-panel .config-form input,
+.settings-panel .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; outline: none; }
+.settings-panel .config-form input:focus,
+.settings-panel .config-form textarea:focus { border-color: #58a6ff; }
+.settings-panel .config-form textarea { height: 180px; line-height: 1.4; box-sizing: border-box; resize: vertical; }
+.settings-panel .config-form details { border: 1px solid #30363d; border-radius: 4px; margin-top: 8px; }
+.settings-panel .config-form details:first-child { margin-top: 0; }
+.settings-panel .config-form details summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; user-select: none; list-style: none; }
+.settings-panel .config-form details summary::-webkit-details-marker { display: none; }
+.settings-panel .config-form details summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; }
+.settings-panel .config-form details[open] summary::after { transform: rotate(90deg); }
+.settings-panel .config-form details summary span { color: #c9d1d9; font-size: 13px; }
+.settings-panel .config-form details .body { padding: 10px; text-align: left; }
+.settings-panel .config-form .hint { font-size: 12px; color: #8b949e; margin-top: 4px; }
+.settings-panel .config-form .actions { margin-top: 12px; display: flex; gap: 8px; }
+.settings-panel .config-form button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 7px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.settings-panel .config-form button:hover { background: #30363d; }
+.settings-panel .config-form button.primary { background: #238636; border-color: #2ea043; color: #fff; }
+.settings-panel .config-form button.primary:hover { background: #2ea043; }
 
-.cfg-toggle { display: block; font-size: 0.45em; color: #c9d1d9; cursor: pointer; }
+.cfg-toggle { display: block; font-size: 13px; color: #c9d1d9; cursor: pointer; }
 .cfg-toggle input[type="checkbox"] { width: auto !important; height: auto !important; accent-color: #58a6ff; cursor: pointer; vertical-align: middle; margin-right: 6px; }
 
 /* Fix dockview theme for gap between tab bar and content */
