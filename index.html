@@ -71,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260726.3" />
+    <link rel="stylesheet" href="app.css?v=20260731.2" />
   </head>
   <body>
     <template id="home-template">
@@ -93,6 +93,32 @@
       <div class="settings-panel panel-content">
         <div class="settings-content">
           <h1>Settings</h1>
+          <p class="settings-lede">Manage the current workspace and its shell defaults.</p>
+          <details class="workspace-form" open>
+            <summary><span>Workspace</span></summary>
+            <div class="body">
+              <label for="workspace-active">Active workspace</label>
+              <select id="workspace-active" data-workspace="active"></select>
+
+              <label for="workspace-preset">Create from preset</label>
+              <div class="workspace-row">
+                <select id="workspace-preset" data-workspace="preset"></select>
+                <button type="button" data-workspace-action="create">Create</button>
+              </div>
+
+              <div class="workspace-actions">
+                <button type="button" data-workspace-action="duplicate">Duplicate</button>
+                <button type="button" data-workspace-action="export">Export JSON</button>
+                <button type="button" data-workspace-action="delete">Delete</button>
+              </div>
+
+              <label class="workspace-import">
+                <span>Import workspace JSON</span>
+                <input type="file" accept="application/json,.json" data-workspace="import">
+              </label>
+              <div class="hint" data-workspace="status" role="status" aria-live="polite"></div>
+            </div>
+          </details>
           <div class="config-form">
             <details open>
               <summary><span>Startup command</span></summary>
@@ -174,6 +200,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260726.2"></script>
+    <script type="module" src="app.js?v=20260731.2"></script>
   </body>
 </html>

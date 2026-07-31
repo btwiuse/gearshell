@@ -59,6 +59,22 @@ wanix-term { flex: 1; min-width: 0; }
 .settings-panel { overflow: auto; padding: 24px; background: #0d1117; }
 .settings-content { width: min(680px, 100%); margin: 0 auto; }
 .settings-content h1 { margin: 0 0 18px; color: #c9d1d9; font-size: 20px; font-weight: 600; }
+.settings-lede { margin: -8px 0 18px; color: #8b949e; font-size: 13px; }
+.workspace-form { margin: 0 0 14px; border: 1px solid #30363d; border-radius: 4px; }
+.workspace-form summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; color: #c9d1d9; font-size: 13px; user-select: none; list-style: none; }
+.workspace-form summary::-webkit-details-marker { display: none; }
+.workspace-form summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; }
+.workspace-form[open] summary::after { transform: rotate(90deg); }
+.workspace-form .body { padding: 10px; }
+.workspace-form label { display: block; margin: 10px 0 4px; color: #c9d1d9; font-size: 13px; }
+.workspace-form label:first-child { margin-top: 0; }
+.workspace-form select { width: 100%; min-height: 32px; padding: 6px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: inherit; }
+.workspace-row, .workspace-actions { display: flex; gap: 8px; }
+.workspace-row select { flex: 1; }
+.workspace-form button { min-height: 32px; padding: 6px 10px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
+.workspace-form button:hover { background: #30363d; }
+.workspace-actions { flex-wrap: wrap; margin-top: 10px; }
+.workspace-import input { display: block; width: 100%; margin-top: 4px; color: #8b949e; font: inherit; }
 .settings-panel .config-form { width: 100%; text-align: left; }
 .settings-panel .config-form input,
 .settings-panel .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; outline: none; }

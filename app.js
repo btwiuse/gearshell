@@ -65,16 +65,316 @@ const HUSH_ENV = {
 const DEFAULT_CMD = 'hush -rcfile /tmp/profile';
 const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', autoOpen: true };
+const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
+const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
+const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
+const WORKSPACE_SCHEMA_VERSION = 1;
+const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
+
+const WANIX_RUNTIME = {
+  wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.3.30',
+  moduleUrl: 'https://justwasm.github.io/wanix/dist/wanix.min.js',
+};
+
+const WORKSPACE_PRESETS = {
+  'hush-shell': {
+    name: 'Hush Shell',
+    description: 'The current Gear Shell environment with Hush and persistent OPFS storage.',
+    runtime: { ...WANIX_RUNTIME, debug: false },
+    binds: [
+      { id: 'task', type: 'ns', dst: 'task', src: '#task' },
+      { id: 'term', type: 'ns', dst: 'term', src: '#term' },
+      { id: 'web', type: 'ns', dst: 'web', src: '#web' },
+      { id: 'js', type: 'ns', dst: 'js', src: '#js' },
+      { id: 'opfs', type: 'ns', dst: 'opfs', src: '#web/opfs', perm: '0755' },
+      { id: 'tmp', type: 'ns', dst: 'tmp', src: '#ramfs' },
+    ],
+    tasks: [],
+  },
+  empty: {
+    name: 'Empty Namespace',
+    description: 'A blank in-memory Wanix namespace for composing binds and tasks.',
+    runtime: { ...WANIX_RUNTIME, debug: false },
+    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs/new' }],
+    tasks: [],
+  },
+  'js-worker': {
+    name: 'JavaScript Worker',
+    description: 'An inline JavaScript task that can be edited and started in the browser.',
+    runtime: { ...WANIX_RUNTIME, debug: false },
+    binds: [
+      { id: 'root', type: 'ns', dst: '.', src: '#ramfs/new' },
+      {
+        id: 'main-js',
+        type: 'file',
+        dst: 'main.js',
+        perm: '0766',
+        content: "console.log('Wanix JavaScript task started');",
+      },
+    ],
+    tasks: [{
+      id: 'main',
+      name: 'main.js',
+      cmd: 'main.js',
+      type: 'js',
+      env: '',
+      wd: '.',
+      fsys: '.',
+      term: false,
+      autoStart: true,
+    }],
+  },
+  'wasi-terminal': {
+    name: 'WASI Terminal',
+    description: 'A terminal-ready WASI task. Add a .wasm file before starting it.',
+    runtime: { ...WANIX_RUNTIME, debug: false },
+    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs/new' }],
+    tasks: [{
+      id: 'main',
+      name: 'main.wasm',
+      cmd: 'main.wasm',
+      type: 'wasi',
+      env: '',
+      wd: '.',
+      fsys: '.',
+      term: true,
+      autoStart: false,
+    }],
+  },
+};
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeShellConfig(config) {
+  return {
+    cmd: typeof config?.cmd === 'string' && config.cmd.trim() ? config.cmd.trim() : DEFAULT_CMD,
+    env: typeof config?.env === 'string' ? config.env : '',
+    autoOpen: config?.autoOpen !== false,
+  };
+}
+
+function readStoredJson(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStoredJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error(`Unable to save ${key}`, error);
+    return false;
+  }
+}
+
+function workspaceStorageKey(id) {
+  return `${WORKSPACE_KEY_PREFIX}${id}`;
+}
+
+function createWorkspaceId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `workspace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function createWorkspace(presetId = 'hush-shell', overrides = {}) {
+  const preset = WORKSPACE_PRESETS[presetId] || WORKSPACE_PRESETS.empty;
+  const now = new Date().toISOString();
+  const id = overrides.id || (presetId === 'hush-shell' ? 'hush-shell' : createWorkspaceId());
+  return {
+    version: WORKSPACE_SCHEMA_VERSION,
+    id,
+    name: overrides.name || preset.name,
+    description: overrides.description || preset.description,
+    presetId,
+    createdAt: overrides.createdAt || now,
+    updatedAt: now,
+    runtime: { ...clone(preset.runtime), ...overrides.runtime },
+    binds: clone(overrides.binds || preset.binds),
+    tasks: clone(overrides.tasks || preset.tasks),
+    shell: normalizeShellConfig(overrides.shell),
+    ui: { dockviewLayout: null, ...overrides.ui },
+  };
+}
+
+function migrateWorkspace(workspace) {
+  if (!workspace || typeof workspace !== 'object') return null;
+  if (!workspace.version) return createWorkspace(workspace.presetId || 'empty', workspace);
+  if (workspace.version > WORKSPACE_SCHEMA_VERSION) return null;
+  return {
+    ...createWorkspace(workspace.presetId || 'empty', workspace),
+    version: WORKSPACE_SCHEMA_VERSION,
+    updatedAt: workspace.updatedAt || new Date().toISOString(),
+  };
+}
+
+function loadWorkspace(id) {
+  const workspace = migrateWorkspace(readStoredJson(workspaceStorageKey(id), null));
+  return workspace;
+}
+
+function saveWorkspace(workspace) {
+  const next = migrateWorkspace(workspace);
+  if (!next) return false;
+  next.updatedAt = new Date().toISOString();
+  return writeStoredJson(workspaceStorageKey(next.id), next);
+}
+
+function loadWorkspaceIndex() {
+  const index = readStoredJson(WORKSPACE_INDEX_KEY, []);
+  return Array.isArray(index) ? index : [];
+}
+
+function saveWorkspaceIndex(index) {
+  return writeStoredJson(WORKSPACE_INDEX_KEY, index);
+}
+
+function workspaceIndexEntry(workspace) {
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    presetId: workspace.presetId,
+    updatedAt: workspace.updatedAt,
+  };
+}
+
+function updateWorkspaceIndex(workspace) {
+  const index = loadWorkspaceIndex();
+  const entry = workspaceIndexEntry(workspace);
+  const existingIndex = index.findIndex((item) => item.id === workspace.id);
+  if (existingIndex === -1) index.push(entry);
+  else index[existingIndex] = entry;
+  return saveWorkspaceIndex(index);
+}
+
+function notifyWorkspaceChange() {
+  window.dispatchEvent(new CustomEvent(WORKSPACE_CHANGED_EVENT));
+}
+
+function ensureWorkspaceStore() {
+  const index = loadWorkspaceIndex();
+  if (index.length > 0) return index;
+
+  const legacy = normalizeShellConfig(readStoredJson(CONFIG_KEY, DEFAULT_CONFIG));
+  const workspace = createWorkspace('hush-shell', { shell: legacy });
+  saveWorkspace(workspace);
+  const nextIndex = [workspaceIndexEntry(workspace)];
+  saveWorkspaceIndex(nextIndex);
+  try { localStorage.setItem(WORKSPACE_ACTIVE_KEY, workspace.id); } catch { /* no storage */ }
+  return nextIndex;
+}
+
+function getActiveWorkspaceId() {
+  const index = ensureWorkspaceStore();
+  try {
+    const activeId = localStorage.getItem(WORKSPACE_ACTIVE_KEY);
+    if (activeId && index.some((workspace) => workspace.id === activeId)) return activeId;
+  } catch { /* no storage */ }
+  return index[0]?.id || 'hush-shell';
+}
+
+function loadActiveWorkspace() {
+  return loadWorkspace(getActiveWorkspaceId()) || createWorkspace('hush-shell');
+}
+
+function setActiveWorkspaceId(id) {
+  const workspace = loadWorkspace(id);
+  if (!workspace) return false;
+  try { localStorage.setItem(WORKSPACE_ACTIVE_KEY, id); } catch { return false; }
+  notifyWorkspaceChange();
+  return true;
+}
+
+function createWorkspaceFromPreset(presetId) {
+  const preset = WORKSPACE_PRESETS[presetId] || WORKSPACE_PRESETS.empty;
+  const workspace = createWorkspace(presetId, {
+    id: createWorkspaceId(),
+    name: preset.name,
+  });
+  if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) return null;
+  setActiveWorkspaceId(workspace.id);
+  return workspace;
+}
+
+function duplicateWorkspace(id) {
+  const source = loadWorkspace(id);
+  if (!source) return null;
+  const workspace = createWorkspace(source.presetId, {
+    ...source,
+    id: createWorkspaceId(),
+    name: `${source.name} copy`,
+    createdAt: undefined,
+    updatedAt: undefined,
+  });
+  if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) return null;
+  setActiveWorkspaceId(workspace.id);
+  return workspace;
+}
+
+function deleteWorkspace(id) {
+  const index = loadWorkspaceIndex();
+  if (index.length <= 1 || id === 'hush-shell') return false;
+  let activeId = null;
+  try { activeId = localStorage.getItem(WORKSPACE_ACTIVE_KEY); } catch { /* no storage */ }
+  const nextIndex = index.filter((workspace) => workspace.id !== id);
+  if (nextIndex.length === index.length || !saveWorkspaceIndex(nextIndex)) return false;
+  try { localStorage.removeItem(workspaceStorageKey(id)); } catch { /* no storage */ }
+  if (activeId === id) {
+    try { localStorage.setItem(WORKSPACE_ACTIVE_KEY, nextIndex[0].id); } catch { /* no storage */ }
+  }
+  notifyWorkspaceChange();
+  return true;
+}
+
+function importWorkspace(serialized) {
+  let parsed;
+  try {
+    parsed = JSON.parse(serialized);
+  } catch {
+    throw new Error('The file is not valid JSON.');
+  }
+  const imported = migrateWorkspace(parsed);
+  if (!imported) throw new Error('The workspace version is not supported.');
+  const workspace = createWorkspace(imported.presetId, {
+    ...imported,
+    id: createWorkspaceId(),
+    name: `${imported.name} import`,
+    createdAt: undefined,
+    updatedAt: undefined,
+  });
+  if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) {
+    throw new Error('Unable to save the imported workspace.');
+  }
+  setActiveWorkspaceId(workspace.id);
+  return workspace;
+}
 
 // --- Config ---
 function loadConfig() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
-    return { ...DEFAULT_CONFIG, ...saved };
-  } catch { return { ...DEFAULT_CONFIG }; }
+  return normalizeShellConfig(loadActiveWorkspace().shell);
 }
 function saveConfig(cfg) {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+  const workspace = loadActiveWorkspace();
+  workspace.shell = normalizeShellConfig(cfg);
+  saveWorkspace(workspace);
+  updateWorkspaceIndex(workspace);
+  writeStoredJson(CONFIG_KEY, workspace.shell);
+  notifyWorkspaceChange();
+}
+function resetConfig() {
+  const workspace = loadActiveWorkspace();
+  workspace.shell = { ...DEFAULT_CONFIG };
+  saveWorkspace(workspace);
+  updateWorkspaceIndex(workspace);
+  try { localStorage.removeItem(CONFIG_KEY); } catch { /* no storage */ }
+  notifyWorkspaceChange();
+  return workspace.shell;
 }
 function buildEnv() {
   const cfg = loadConfig();
@@ -511,40 +811,129 @@ function destroyReveal(homeContent) {
   revealStates.delete(homeContent);
 }
 
-// --- Config form setup ---
-function setupConfigForm(homeContent) {
-  const cfg = loadConfig();
-  const cmdEl = homeContent.querySelector('[data-config="cmd"]');
-  const envEl = homeContent.querySelector('[data-config="env"]');
-  const autoEl = homeContent.querySelector('[data-config="auto-open"]');
+// --- Settings forms ---
+function setupConfigForm(settingsContent) {
+  const cmdEl = settingsContent.querySelector('[data-config="cmd"]');
+  const envEl = settingsContent.querySelector('[data-config="env"]');
+  const autoEl = settingsContent.querySelector('[data-config="auto-open"]');
   if (!cmdEl) return;
-  cmdEl.value = cfg.cmd;
-  envEl.value = cfg.env;
-  autoEl.checked = !!cfg.autoOpen;
 
-  homeContent.querySelector('[data-config-action="save"]').addEventListener('click', () => {
+  const populate = () => {
+    const cfg = loadConfig();
+    cmdEl.value = cfg.cmd;
+    envEl.value = cfg.env;
+    autoEl.checked = !!cfg.autoOpen;
+  };
+  populate();
+
+  settingsContent.querySelector('[data-config-action="save"]').addEventListener('click', () => {
     saveConfig({
       cmd: cmdEl.value.trim() || DEFAULT_CMD,
       env: envEl.value,
       autoOpen: autoEl.checked,
     });
-    const s = homeContent.querySelector('[data-config="status"]');
+    const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Saved!';
     s.style.color = '#3fb950';
     setTimeout(() => { s.textContent = ''; }, 2000);
   });
 
-  homeContent.querySelector('[data-config-action="reset"]').addEventListener('click', () => {
-    localStorage.removeItem(CONFIG_KEY);
-    const c = loadConfig();
+  settingsContent.querySelector('[data-config-action="reset"]').addEventListener('click', () => {
+    const c = resetConfig();
     cmdEl.value = c.cmd;
     envEl.value = c.env;
     autoEl.checked = !!c.autoOpen;
-    const s = homeContent.querySelector('[data-config="status"]');
+    const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Reset to defaults.';
     s.style.color = '#8b949e';
     setTimeout(() => { s.textContent = ''; }, 2000);
   });
+
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, populate);
+  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, populate);
+}
+
+function setupWorkspaceForm(settingsContent) {
+  const activeSelect = settingsContent.querySelector('[data-workspace="active"]');
+  const presetSelect = settingsContent.querySelector('[data-workspace="preset"]');
+  const importInput = settingsContent.querySelector('[data-workspace="import"]');
+  const status = settingsContent.querySelector('[data-workspace="status"]');
+  const deleteButton = settingsContent.querySelector('[data-workspace-action="delete"]');
+  if (!activeSelect || !presetSelect || !importInput || !status) return;
+
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const addOption = (select, value, label, selected) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.selected = selected;
+    select.appendChild(option);
+  };
+  const render = () => {
+    const activeId = getActiveWorkspaceId();
+    activeSelect.replaceChildren();
+    for (const workspace of ensureWorkspaceStore()) {
+      addOption(activeSelect, workspace.id, workspace.name, workspace.id === activeId);
+    }
+    presetSelect.replaceChildren();
+    for (const [id, preset] of Object.entries(WORKSPACE_PRESETS)) {
+      addOption(presetSelect, id, preset.name, id === 'hush-shell');
+    }
+    if (deleteButton) {
+      deleteButton.disabled = activeId === 'hush-shell' || activeSelect.options.length <= 1;
+    }
+  };
+
+  activeSelect.addEventListener('change', () => {
+    if (setActiveWorkspaceId(activeSelect.value)) setStatus('Workspace selected.');
+    else setStatus('Unable to select this workspace.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="create"]').addEventListener('click', () => {
+    const workspace = createWorkspaceFromPreset(presetSelect.value);
+    if (workspace) setStatus(`Created ${workspace.name}.`);
+    else setStatus('Unable to create workspace.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="duplicate"]').addEventListener('click', () => {
+    const workspace = duplicateWorkspace(getActiveWorkspaceId());
+    if (workspace) setStatus(`Created ${workspace.name}.`);
+    else setStatus('Unable to duplicate workspace.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="delete"]').addEventListener('click', () => {
+    const workspace = loadActiveWorkspace();
+    if (!window.confirm(`Delete ${workspace.name}?`)) return;
+    if (deleteWorkspace(workspace.id)) setStatus(`Deleted ${workspace.name}.`);
+    else setStatus('The default workspace cannot be deleted.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="export"]').addEventListener('click', () => {
+    const workspace = loadActiveWorkspace();
+    const blob = new Blob([JSON.stringify(workspace, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const download = document.createElement('a');
+    download.href = url;
+    download.download = `${workspace.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'workspace'}.json`;
+    download.click();
+    URL.revokeObjectURL(url);
+    setStatus('Workspace exported.');
+  });
+  importInput.addEventListener('change', async () => {
+    const [file] = importInput.files || [];
+    if (!file) return;
+    try {
+      const workspace = importWorkspace(await file.text());
+      setStatus(`Imported ${workspace.name}.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to import workspace.', true);
+    } finally {
+      importInput.value = '';
+    }
+  });
+
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
+  render();
+  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
 }
 
 function addTerminalPanel(api, group) {
@@ -718,8 +1107,13 @@ function SettingsPanel() {
     if (!wrapper || !settingsContent) return;
 
     wrapper.appendChild(settingsContent);
-    setupConfigForm(settingsContent);
-    return () => settingsContent.remove();
+    const disposeConfigForm = setupConfigForm(settingsContent);
+    const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
+    return () => {
+      disposeConfigForm?.();
+      disposeWorkspaceForm?.();
+      settingsContent.remove();
+    };
   }, []);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
