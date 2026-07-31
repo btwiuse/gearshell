@@ -255,7 +255,7 @@ function normalizeSystemBind(bind = {}) {
     dst: typeof bind.dst === 'string' ? bind.dst.trim() : '',
     src: typeof bind.src === 'string' ? bind.src.trim() : '',
     content: typeof bind.content === 'string' ? bind.content : '',
-    mode: typeof bind.mode === 'string' && bind.mode ? bind.mode : '0644',
+    mode: typeof bind.mode === 'string' ? bind.mode : '',
   };
 }
 
@@ -569,6 +569,57 @@ function updateWorkspaceBind(id, bind) {
     if (index !== -1) activeWorkspace.binds[index] = nextBind;
   });
   return workspace?.binds.find((item) => item.id === id) || null;
+}
+
+function validateSystemBind(bind) {
+  if (!SUPPORTED_SYSTEM_BIND_TYPES.includes(bind.type)) return 'Unsupported system mount type.';
+  if (!bind.dst) return 'A destination path is required.';
+  if (bind.dst.startsWith('/')) return 'Destination paths must not start with a slash.';
+  if (bind.type === 'ns' && !bind.src.startsWith('#')) return 'Namespace mounts must use a # system path.';
+  if ((bind.type === 'fetch' || bind.type === 'archive') && !bind.src) return `${bind.type} mounts require a source URL.`;
+  if (bind.type === 'file' && !bind.src && !bind.content) return 'Provide a URL or inline file content.';
+  if (bind.mode && !/^[0-7]{3,4}$/.test(bind.mode)) return 'Permissions must be an octal mode such as 0644.';
+  return null;
+}
+
+function updateWorkspaceSystem(mutator) {
+  return updateActiveWorkspace((workspace) => {
+    workspace.system = normalizeSystemConfig(workspace.system);
+    mutator(workspace.system, workspace);
+  });
+}
+
+function saveWorkspaceSystemSettings({ wasmUrl, profileContent }) {
+  const nextWasmUrl = wasmUrl.trim();
+  if (!nextWasmUrl) throw new Error('A Wanix wasm URL is required.');
+  return updateWorkspaceSystem((system, workspace) => {
+    workspace.runtime.wasmUrl = nextWasmUrl;
+    system.profile = normalizeSystemBind({ ...system.profile, content: profileContent });
+  });
+}
+
+function addWorkspaceSystemBind(bind) {
+  const nextBind = normalizeSystemBind(bind);
+  const error = validateSystemBind(nextBind);
+  if (error) throw new Error(error);
+  return updateWorkspaceSystem((system) => system.binds.push(nextBind));
+}
+
+function updateWorkspaceSystemBind(id, bind) {
+  const nextBind = normalizeSystemBind({ ...bind, id });
+  const error = validateSystemBind(nextBind);
+  if (error) throw new Error(error);
+  const workspace = updateWorkspaceSystem((system) => {
+    const index = system.binds.findIndex((item) => item.id === id);
+    if (index !== -1) system.binds[index] = nextBind;
+  });
+  return workspace?.system.binds.find((item) => item.id === id) || null;
+}
+
+function removeWorkspaceSystemBind(id) {
+  return updateWorkspaceSystem((system) => {
+    system.binds = system.binds.filter((bind) => bind.id !== id);
+  });
 }
 
 function addWorkspaceTask(task) {
@@ -1522,6 +1573,132 @@ function setupWorkspaceForm(settingsContent) {
   return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
 }
 
+function setupSystemForm(settingsContent) {
+  const wasmEl = settingsContent.querySelector('[data-system="wasm"]');
+  const profileEl = settingsContent.querySelector('[data-system="profile"]');
+  const list = settingsContent.querySelector('[data-system-bind-list]');
+  const typeEl = settingsContent.querySelector('[data-system-bind="type"]');
+  const dstEl = settingsContent.querySelector('[data-system-bind="dst"]');
+  const srcEl = settingsContent.querySelector('[data-system-bind="src"]');
+  const contentEl = settingsContent.querySelector('[data-system-bind="content"]');
+  const modeEl = settingsContent.querySelector('[data-system-bind="mode"]');
+  const status = settingsContent.querySelector('[data-system="status"]');
+  const saveButton = settingsContent.querySelector('[data-system-action="save"]');
+  const restartButton = settingsContent.querySelector('[data-system-action="restart"]');
+  const addButton = settingsContent.querySelector('[data-system-bind-action="add"]');
+  const cancelButton = settingsContent.querySelector('[data-system-bind-action="cancel"]');
+  if (!wasmEl || !profileEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
+
+  let editingBindId = null;
+
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const resetBindFields = () => {
+    editingBindId = null;
+    typeEl.value = 'ns';
+    dstEl.value = '';
+    srcEl.value = '';
+    contentEl.value = '';
+    modeEl.value = '';
+    addButton.textContent = 'Add system mount';
+    cancelButton.hidden = true;
+  };
+  const render = () => {
+    const workspace = loadActiveWorkspace();
+    wasmEl.value = workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl;
+    profileEl.value = workspace.system.profile.content;
+    list.replaceChildren();
+    for (const bind of workspace.system.binds) {
+      const item = document.createElement('div');
+      item.className = 'bind-item';
+      const details = document.createElement('div');
+      const path = document.createElement('span');
+      path.className = 'bind-item-path';
+      path.textContent = `${bind.dst} ← ${bind.src || 'inline content'}`;
+      path.title = path.textContent;
+      const meta = document.createElement('span');
+      meta.className = 'bind-item-meta';
+      meta.textContent = `${bind.type}${bind.mode ? ` · ${bind.mode}` : ''}`;
+      details.append(path, meta);
+      const actions = document.createElement('div');
+      actions.className = 'bind-item-actions';
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', () => {
+        editingBindId = bind.id;
+        typeEl.value = bind.type;
+        dstEl.value = bind.dst;
+        srcEl.value = bind.src;
+        contentEl.value = bind.content;
+        modeEl.value = bind.mode;
+        addButton.textContent = 'Save system mount';
+        cancelButton.hidden = false;
+        setStatus(`Editing ${bind.dst}. Save and restart to apply changes.`);
+        dstEl.focus();
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => {
+        if (editingBindId === bind.id) resetBindFields();
+        removeWorkspaceSystemBind(bind.id);
+        setStatus(`Removed ${bind.dst}. Restart to apply changes.`);
+      });
+      actions.append(edit, remove);
+      item.append(details, actions);
+      list.appendChild(item);
+    }
+  };
+  const saveSettings = () => {
+    saveWorkspaceSystemSettings({ wasmUrl: wasmEl.value, profileContent: profileEl.value });
+    setStatus('System settings saved. Restart the playground to apply changes.');
+  };
+
+  saveButton.addEventListener('click', () => {
+    try {
+      saveSettings();
+    } catch (error) {
+      setStatus(error.message || 'Unable to save system settings.', true);
+    }
+  });
+  restartButton.addEventListener('click', () => {
+    try {
+      saveSettings();
+      window.location.reload();
+    } catch (error) {
+      setStatus(error.message || 'Unable to save system settings.', true);
+    }
+  });
+  addButton.addEventListener('click', () => {
+    try {
+      const bind = {
+        type: typeEl.value,
+        dst: dstEl.value,
+        src: srcEl.value,
+        content: contentEl.value,
+        mode: modeEl.value,
+      };
+      if (editingBindId) updateWorkspaceSystemBind(editingBindId, bind);
+      else addWorkspaceSystemBind(bind);
+      setStatus(`${editingBindId ? 'Updated' : 'Added'} ${dstEl.value.trim()}. Restart to apply changes.`);
+      resetBindFields();
+    } catch (error) {
+      setStatus(error.message || 'Unable to save the system mount.', true);
+    }
+  });
+  cancelButton.addEventListener('click', () => {
+    resetBindFields();
+    setStatus('Edit cancelled.');
+  });
+
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
+  render();
+  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
+}
+
 function setupBindForm(settingsContent) {
   const list = settingsContent.querySelector('[data-bind-list]');
   const typeEl = settingsContent.querySelector('[data-bind="type"]');
@@ -1970,12 +2147,14 @@ function SettingsPanel({ containerApi }) {
     const disposeConfigForm = setupConfigForm(settingsContent);
     const disposeTerminalProfileForm = setupTerminalProfileForm(settingsContent);
     const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
+    const disposeSystemForm = setupSystemForm(settingsContent);
     const disposeBindForm = setupBindForm(settingsContent);
     const disposeTaskForm = setupTaskForm(settingsContent, containerApi);
     return () => {
       disposeConfigForm?.();
       disposeTerminalProfileForm?.();
       disposeWorkspaceForm?.();
+      disposeSystemForm?.();
       disposeBindForm?.();
       disposeTaskForm?.();
       settingsContent.remove();

@@ -132,8 +132,12 @@ wanix-term { flex: 1; min-width: 0; }
 .bind-fields label { color: #c9d1d9; font-size: 12px; }
 .bind-fields input, .bind-fields select, .bind-fields textarea { width: 100%; padding: 6px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .bind-fields textarea { grid-column: 1 / -1; min-height: 76px; resize: vertical; }
-.bind-fields label[for="bind-content"] { grid-column: 1 / -1; }
+.bind-fields label[for="bind-content"], .bind-fields label[for="system-bind-content"] { grid-column: 1 / -1; }
 @media (max-width: 460px) { .bind-fields { grid-template-columns: 1fr; } }
+.system-form > .body > label { display: block; margin: 10px 0 4px; color: #c9d1d9; font-size: 12px; }
+.system-form > .body > input, .system-form > .body > textarea { width: 100%; padding: 6px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.system-form > .body > textarea { min-height: 160px; resize: vertical; }
+.system-form h3 { margin: 16px 0 8px; color: #c9d1d9; font-size: 13px; font-weight: 600; }
 .task-form { margin: 0 0 14px; border: 1px solid #30363d; border-radius: 4px; }
 .task-form summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; color: #c9d1d9; font-size: 13px; user-select: none; list-style: none; }
 .task-form summary::-webkit-details-marker { display: none; }

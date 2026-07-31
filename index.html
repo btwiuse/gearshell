@@ -71,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260731.11" />
+    <link rel="stylesheet" href="app.css?v=20260731.12" />
   </head>
   <body>
     <template id="home-template">
@@ -123,6 +123,45 @@
                 <input type="file" accept="application/json,.json" data-workspace="import">
               </label>
               <div class="hint" data-workspace="status" role="status" aria-live="polite"></div>
+            </div>
+          </details>
+          <details class="bind-form system-form" open>
+            <summary><span>Runtime &amp; system</span></summary>
+            <div class="body">
+              <p class="hint">These mounts form the Wanix system filesystem. Save, then restart the playground to apply changes.</p>
+              <label for="system-wasm">Wanix wasm URL</label>
+              <input id="system-wasm" data-system="wasm" type="url" spellcheck="false">
+              <label for="system-profile">Boot profile (<code>tmp/profile</code>)</label>
+              <textarea id="system-profile" data-system="profile" spellcheck="false"></textarea>
+              <div class="workspace-actions">
+                <button type="button" data-system-action="save">Save system settings</button>
+                <button type="button" data-system-action="restart">Apply &amp; restart</button>
+              </div>
+
+              <h3>System mounts</h3>
+              <div class="bind-list" data-system-bind-list></div>
+              <div class="bind-fields">
+                <label for="system-bind-type">Type</label>
+                <select id="system-bind-type" data-system-bind="type">
+                  <option value="ns">Namespace</option>
+                  <option value="file">File</option>
+                  <option value="fetch">Fetch</option>
+                  <option value="archive">Archive</option>
+                </select>
+                <label for="system-bind-dst">Destination</label>
+                <input id="system-bind-dst" data-system-bind="dst" type="text" placeholder="hush or tmp/profile">
+                <label for="system-bind-src">Source URL or namespace</label>
+                <input id="system-bind-src" data-system-bind="src" type="text" placeholder="#ramfs or https://example.com/tool">
+                <label for="system-bind-content">Inline file content</label>
+                <textarea id="system-bind-content" data-system-bind="content" placeholder="Used by File mounts when no URL is supplied"></textarea>
+                <label for="system-bind-mode">Permissions</label>
+                <input id="system-bind-mode" data-system-bind="mode" type="text" value="0644" inputmode="numeric">
+              </div>
+              <div class="workspace-actions">
+                <button type="button" data-system-bind-action="add">Add system mount</button>
+                <button type="button" data-system-bind-action="cancel" hidden>Cancel edit</button>
+              </div>
+              <div class="hint" data-system="status" role="status" aria-live="polite"></div>
             </div>
           </details>
           <details class="terminal-profile-form" open>
@@ -253,6 +292,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260731.28"></script>
+    <script type="module" src="app.js?v=20260731.29"></script>
   </body>
 </html>
