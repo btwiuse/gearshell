@@ -71,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260731.2" />
+    <link rel="stylesheet" href="app.css?v=20260731.3" />
   </head>
   <body>
     <template id="home-template">
@@ -117,6 +117,33 @@
                 <input type="file" accept="application/json,.json" data-workspace="import">
               </label>
               <div class="hint" data-workspace="status" role="status" aria-live="polite"></div>
+            </div>
+          </details>
+          <details class="bind-form" open>
+            <summary><span>Mounts</span></summary>
+            <div class="body">
+              <p class="hint">Mounts are applied to each playground task in this workspace.</p>
+              <div class="bind-list" data-bind-list></div>
+              <div class="bind-fields">
+                <label for="bind-type">Type</label>
+                <select id="bind-type" data-bind="type">
+                  <option value="ns">Namespace</option>
+                  <option value="file">File</option>
+                  <option value="archive">Archive</option>
+                </select>
+                <label for="bind-dst">Destination</label>
+                <input id="bind-dst" data-bind="dst" type="text" placeholder="main.js or root">
+                <label for="bind-src">Source URL or namespace</label>
+                <input id="bind-src" data-bind="src" type="text" placeholder="#ramfs/new or https://example.com/app.wasm">
+                <label for="bind-content">Inline file content</label>
+                <textarea id="bind-content" data-bind="content" placeholder="Used by File mounts when no URL is supplied"></textarea>
+                <label for="bind-perm">Permissions</label>
+                <input id="bind-perm" data-bind="perm" type="text" value="0644" inputmode="numeric">
+              </div>
+              <div class="workspace-actions">
+                <button type="button" data-bind-action="add">Add mount</button>
+              </div>
+              <div class="hint" data-bind="status" role="status" aria-live="polite"></div>
             </div>
           </details>
           <div class="config-form">
@@ -200,6 +227,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260731.2"></script>
+    <script type="module" src="app.js?v=20260731.3"></script>
   </body>
 </html>

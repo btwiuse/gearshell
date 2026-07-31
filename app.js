@@ -70,6 +70,7 @@ const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
 const WORKSPACE_SCHEMA_VERSION = 1;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
+const SUPPORTED_BIND_TYPES = ['ns', 'file', 'archive'];
 
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.3.30',
@@ -155,6 +156,32 @@ function normalizeShellConfig(config) {
   };
 }
 
+function normalizeBind(bind = {}) {
+  const type = bind.type === 'fetch' ? 'file' : bind.type;
+  return {
+    id: typeof bind.id === 'string' && bind.id ? bind.id : createWorkspaceId(),
+    type: SUPPORTED_BIND_TYPES.includes(type) ? type : 'file',
+    dst: typeof bind.dst === 'string' ? bind.dst.trim() : '',
+    src: typeof bind.src === 'string' ? bind.src.trim() : '',
+    content: typeof bind.content === 'string' ? bind.content : '',
+    perm: typeof bind.perm === 'string' && bind.perm ? bind.perm : '0644',
+    union: typeof bind.union === 'string' && bind.union ? bind.union : 'after',
+  };
+}
+
+function validateBind(bind) {
+  if (!SUPPORTED_BIND_TYPES.includes(bind.type)) return 'Unsupported mount type.';
+  if (!bind.dst) return 'A destination path is required.';
+  if (bind.dst.startsWith('/')) return 'Destination paths must not start with a slash.';
+  if (bind.type === 'ns' && !bind.src.startsWith('#')) return 'Namespace mounts must use a # system path.';
+  if (bind.type === 'file' && !bind.src && !bind.content) {
+    return 'Provide a URL or inline file content.';
+  }
+  if (bind.type === 'archive' && !bind.src) return 'Archive mounts require a source URL.';
+  if (!/^[0-7]{3,4}$/.test(bind.perm)) return 'Permissions must be an octal mode such as 0644.';
+  return null;
+}
+
 function readStoredJson(key, fallback) {
   try {
     const value = localStorage.getItem(key);
@@ -196,7 +223,7 @@ function createWorkspace(presetId = 'hush-shell', overrides = {}) {
     createdAt: overrides.createdAt || now,
     updatedAt: now,
     runtime: { ...clone(preset.runtime), ...overrides.runtime },
-    binds: clone(overrides.binds || preset.binds),
+    binds: clone(overrides.binds || preset.binds).map(normalizeBind),
     tasks: clone(overrides.tasks || preset.tasks),
     shell: normalizeShellConfig(overrides.shell),
     ui: { dockviewLayout: null, ...overrides.ui },
@@ -353,6 +380,28 @@ function importWorkspace(serialized) {
   }
   setActiveWorkspaceId(workspace.id);
   return workspace;
+}
+
+function updateActiveWorkspace(mutator) {
+  const workspace = loadActiveWorkspace();
+  mutator(workspace);
+  workspace.binds = workspace.binds.map(normalizeBind);
+  if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) return null;
+  notifyWorkspaceChange();
+  return workspace;
+}
+
+function addWorkspaceBind(bind) {
+  const nextBind = normalizeBind(bind);
+  const error = validateBind(nextBind);
+  if (error) throw new Error(error);
+  return updateActiveWorkspace((workspace) => workspace.binds.push(nextBind));
+}
+
+function removeWorkspaceBind(id) {
+  return updateActiveWorkspace((workspace) => {
+    workspace.binds = workspace.binds.filter((bind) => bind.id !== id);
+  });
 }
 
 // --- Config ---
@@ -936,6 +985,83 @@ function setupWorkspaceForm(settingsContent) {
   return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
 }
 
+function setupBindForm(settingsContent) {
+  const list = settingsContent.querySelector('[data-bind-list]');
+  const typeEl = settingsContent.querySelector('[data-bind="type"]');
+  const dstEl = settingsContent.querySelector('[data-bind="dst"]');
+  const srcEl = settingsContent.querySelector('[data-bind="src"]');
+  const contentEl = settingsContent.querySelector('[data-bind="content"]');
+  const permEl = settingsContent.querySelector('[data-bind="perm"]');
+  const status = settingsContent.querySelector('[data-bind="status"]');
+  if (!list || !typeEl || !dstEl || !srcEl || !contentEl || !permEl || !status) return;
+
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const render = () => {
+    list.replaceChildren();
+    const workspace = loadActiveWorkspace();
+    if (workspace.binds.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'hint';
+      empty.textContent = 'No mounts yet.';
+      list.appendChild(empty);
+      return;
+    }
+    for (const bind of workspace.binds) {
+      const item = document.createElement('div');
+      item.className = 'bind-item';
+      const details = document.createElement('div');
+      const path = document.createElement('span');
+      path.className = 'bind-item-path';
+      path.textContent = `${bind.dst} ← ${bind.src || 'inline content'}`;
+      path.title = path.textContent;
+      const meta = document.createElement('span');
+      meta.className = 'bind-item-meta';
+      meta.textContent = `${bind.type} · ${bind.perm}`;
+      details.append(path, meta);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => {
+        removeWorkspaceBind(bind.id);
+        setStatus(`Removed ${bind.dst}.`);
+      });
+      item.append(details, remove);
+      list.appendChild(item);
+    }
+  };
+  const resetFields = () => {
+    typeEl.value = 'ns';
+    dstEl.value = '';
+    srcEl.value = '';
+    contentEl.value = '';
+    permEl.value = '0644';
+  };
+
+  settingsContent.querySelector('[data-bind-action="add"]').addEventListener('click', () => {
+    try {
+      const bind = addWorkspaceBind({
+        type: typeEl.value,
+        dst: dstEl.value,
+        src: srcEl.value,
+        content: contentEl.value,
+        perm: permEl.value,
+      });
+      if (!bind) throw new Error('Unable to save the mount.');
+      setStatus(`Added ${dstEl.value.trim()}.`);
+      resetFields();
+    } catch (error) {
+      setStatus(error.message || 'Unable to add mount.', true);
+    }
+  });
+
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
+  render();
+  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
+}
+
 function addTerminalPanel(api, group) {
   const id = ++terminalIdCounter;
   const panel = api.addPanel({
@@ -1109,9 +1235,11 @@ function SettingsPanel() {
     wrapper.appendChild(settingsContent);
     const disposeConfigForm = setupConfigForm(settingsContent);
     const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
+    const disposeBindForm = setupBindForm(settingsContent);
     return () => {
       disposeConfigForm?.();
       disposeWorkspaceForm?.();
+      disposeBindForm?.();
       settingsContent.remove();
     };
   }, []);

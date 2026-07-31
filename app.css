@@ -75,6 +75,25 @@ wanix-term { flex: 1; min-width: 0; }
 .workspace-form button:hover { background: #30363d; }
 .workspace-actions { flex-wrap: wrap; margin-top: 10px; }
 .workspace-import input { display: block; width: 100%; margin-top: 4px; color: #8b949e; font: inherit; }
+.bind-form { margin: 0 0 14px; border: 1px solid #30363d; border-radius: 4px; }
+.bind-form summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; color: #c9d1d9; font-size: 13px; user-select: none; list-style: none; }
+.bind-form summary::-webkit-details-marker { display: none; }
+.bind-form summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; }
+.bind-form[open] summary::after { transform: rotate(90deg); }
+.bind-form .body { padding: 10px; }
+.bind-form .hint { margin: 0 0 10px; color: #8b949e; font-size: 12px; }
+.bind-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.bind-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; }
+.bind-item-path { display: block; overflow: hidden; color: #c9d1d9; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.bind-item-meta { display: block; color: #8b949e; font-size: 11px; }
+.bind-item button, .bind-form .workspace-actions button { min-height: 30px; padding: 5px 9px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
+.bind-item button:hover, .bind-form .workspace-actions button:hover { background: #30363d; }
+.bind-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.bind-fields label { color: #c9d1d9; font-size: 12px; }
+.bind-fields input, .bind-fields select, .bind-fields textarea { width: 100%; padding: 6px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.bind-fields textarea { grid-column: 1 / -1; min-height: 76px; resize: vertical; }
+.bind-fields label[for="bind-content"] { grid-column: 1 / -1; }
+@media (max-width: 460px) { .bind-fields { grid-template-columns: 1fr; } }
 .settings-panel .config-form { width: 100%; text-align: left; }
 .settings-panel .config-form input,
 .settings-panel .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; outline: none; }
