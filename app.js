@@ -589,10 +589,13 @@ function updateWorkspaceSystem(mutator) {
   });
 }
 
-function saveWorkspaceSystemSettings({ wasmUrl, profileContent }) {
+function saveWorkspaceSystemSettings({ moduleUrl, wasmUrl, profileContent }) {
+  const nextModuleUrl = moduleUrl.trim();
   const nextWasmUrl = wasmUrl.trim();
+  if (!nextModuleUrl) throw new Error('A Wanix runtime module URL is required.');
   if (!nextWasmUrl) throw new Error('A Wanix wasm URL is required.');
   return updateWorkspaceSystem((system, workspace) => {
+    workspace.runtime.moduleUrl = nextModuleUrl;
     workspace.runtime.wasmUrl = nextWasmUrl;
     system.profile = normalizeSystemBind({ ...system.profile, content: profileContent });
   });
@@ -756,10 +759,9 @@ function createWanixBindElement(bind) {
   return element;
 }
 
-function createWanixSystem() {
+function createWanixSystem(workspace = loadActiveWorkspace()) {
   const host = document.getElementById('wanix-host');
   if (!host) throw new Error('Unable to find the Wanix host.');
-  const workspace = loadActiveWorkspace();
   const system = document.createElement('wanix-system');
   system.id = 'wanix-system';
   system.setAttribute('wasm', workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl);
@@ -777,7 +779,9 @@ function createWanixSystem() {
 
 // wanix elements inside dockview need an explicit system reference because
 // dockview isolates panel content from the wanix-system ancestor.
-const wanixSystem = createWanixSystem();
+const systemWorkspace = loadActiveWorkspace();
+await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
+const wanixSystem = createWanixSystem(systemWorkspace);
 let systemReady = Boolean(wanixSystem?.isReady);
 const terminalLayer = document.getElementById('terminal-layer');
 const terminalSessions = new Map();
@@ -1092,7 +1096,7 @@ function setWorkspaceTaskStatus(session, status, error = null) {
 }
 
 function wakeWorkspaceTaskSession(session) {
-  if (session.started) return;
+  if (!systemReady || session.started) return;
   session.started = true;
   queueMicrotask(async () => {
     try {
@@ -1574,6 +1578,7 @@ function setupWorkspaceForm(settingsContent) {
 }
 
 function setupSystemForm(settingsContent) {
+  const moduleEl = settingsContent.querySelector('[data-system="module"]');
   const wasmEl = settingsContent.querySelector('[data-system="wasm"]');
   const profileEl = settingsContent.querySelector('[data-system="profile"]');
   const list = settingsContent.querySelector('[data-system-bind-list]');
@@ -1587,7 +1592,7 @@ function setupSystemForm(settingsContent) {
   const restartButton = settingsContent.querySelector('[data-system-action="restart"]');
   const addButton = settingsContent.querySelector('[data-system-bind-action="add"]');
   const cancelButton = settingsContent.querySelector('[data-system-bind-action="cancel"]');
-  if (!wasmEl || !profileEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
+  if (!moduleEl || !wasmEl || !profileEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
 
   let editingBindId = null;
 
@@ -1607,6 +1612,7 @@ function setupSystemForm(settingsContent) {
   };
   const render = () => {
     const workspace = loadActiveWorkspace();
+    moduleEl.value = workspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl;
     wasmEl.value = workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl;
     profileEl.value = workspace.system.profile.content;
     list.replaceChildren();
@@ -1653,7 +1659,7 @@ function setupSystemForm(settingsContent) {
     }
   };
   const saveSettings = () => {
-    saveWorkspaceSystemSettings({ wasmUrl: wasmEl.value, profileContent: profileEl.value });
+    saveWorkspaceSystemSettings({ moduleUrl: moduleEl.value, wasmUrl: wasmEl.value, profileContent: profileEl.value });
     setStatus('System settings saved. Restart the playground to apply changes.');
   };
 
@@ -2077,15 +2083,16 @@ function restoreSavedPanels(api) {
 }
 
 function whenWanixReady(callback) {
+  const run = () => requestAnimationFrame(callback);
   if (systemReady) {
-    callback();
+    run();
     return;
   }
 
   const onReady = (event) => {
     if (event.target !== wanixSystem) return;
     wanixSystem.removeEventListener('ready', onReady);
-    callback();
+    run();
   };
   wanixSystem?.addEventListener('ready', onReady);
 }

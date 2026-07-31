@@ -66,11 +66,6 @@
         }
       }
     </script>
-    <script
-      type="module"
-      src="https://justwasm.github.io/wanix/dist/wanix.min.js"
-    ></script>
-
     <link rel="stylesheet" href="app.css?v=20260731.13" />
   </head>
   <body>
@@ -129,6 +124,8 @@
             <summary><span>Runtime &amp; system</span></summary>
             <div class="body">
               <p class="hint">These mounts form the Wanix system filesystem. Save, then restart the playground to apply changes.</p>
+              <label for="system-module">Wanix runtime module URL</label>
+              <input id="system-module" data-system="module" type="url" spellcheck="false">
               <label for="system-wasm">Wanix wasm URL</label>
               <input id="system-wasm" data-system="wasm" type="url" spellcheck="false">
               <label for="system-profile">Boot profile (<code>tmp/profile</code>)</label>
@@ -292,6 +289,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260731.29"></script>
+    <script type="module" src="app.js?v=20260731.32"></script>
   </body>
 </html>
