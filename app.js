@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Bot, ChevronLeft, CircleOff, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
+import { Bot, ChevronDown, CircleOff, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -1976,10 +1976,55 @@ function PanelTab(props) {
   );
 }
 
+function TerminalLaunchPicker({ className, iconSize, inMenu = false, onLaunch }) {
+  const [expanded, setExpanded] = useState(false);
+  const defaultProfile = getDefaultTerminalProfile();
+  const menuRole = inMenu ? 'menuitem' : undefined;
+
+  return React.createElement('div', { className: `terminal-launch-picker ${className}` },
+    React.createElement('div', { className: 'terminal-launch-row' },
+      React.createElement('button', {
+        className: 'terminal-launch-primary',
+        type: 'button',
+        role: menuRole,
+        title: terminalCommand(defaultProfile),
+        onClick: () => onLaunch(defaultProfile),
+      },
+      React.createElement(Terminal, { size: iconSize, 'aria-hidden': true }),
+      React.createElement('span', null, 'Terminal'),
+      ),
+      React.createElement('button', {
+        className: 'terminal-launch-toggle',
+        type: 'button',
+        'aria-label': expanded ? 'Hide terminal presets' : 'Show terminal presets',
+        'aria-expanded': expanded,
+        onClick: () => setExpanded((open) => !open),
+      }, React.createElement(ChevronDown, {
+        className: expanded ? 'terminal-launch-chevron open' : 'terminal-launch-chevron',
+        size: 14,
+        'aria-hidden': true,
+      })),
+    ),
+    expanded && React.createElement('div', { className: 'terminal-launch-options', role: inMenu ? 'menu' : undefined },
+      getTerminalProfiles().map((profile) =>
+        React.createElement('button', {
+          key: profile.id,
+          type: 'button',
+          role: menuRole,
+          title: terminalCommand(profile),
+          onClick: () => onLaunch(profile),
+        },
+        React.createElement(Terminal, { size: iconSize, 'aria-hidden': true }),
+        React.createElement('span', null, profile.name),
+        )
+      ),
+    ),
+  );
+}
+
 // Compact header action: tap creates a terminal, long-press opens extensions.
 function AddTerminalButton({ containerApi, group }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [terminalSubmenuOpen, setTerminalSubmenuOpen] = useState(false);
   const controlRef = useRef(null);
   const pressTimer = useRef(null);
   const longPress = useRef(false);
@@ -2043,41 +2088,15 @@ function AddTerminalButton({ containerApi, group }) {
       onClick: createTerminal,
     }, React.createElement(Plus, { size: 18, 'aria-hidden': true })),
     menuOpen && React.createElement('div', { className: 'panel-action-menu', role: 'menu' },
-      React.createElement('div', {
-        className: `panel-action-menu-group ${terminalSubmenuOpen ? 'open' : ''}`,
-        onPointerEnter: () => setTerminalSubmenuOpen(true),
-        onPointerLeave: () => setTerminalSubmenuOpen(false),
-      },
-      React.createElement('button', {
-        type: 'button',
-        role: 'menuitem',
-        'aria-haspopup': 'menu',
-        'aria-expanded': terminalSubmenuOpen,
-        onClick: () => setTerminalSubmenuOpen((open) => !open),
-      },
-      React.createElement(Terminal, { size: 16, 'aria-hidden': true }),
-      React.createElement('span', null, 'Terminal'),
-      React.createElement(ChevronLeft, { className: 'panel-action-menu-chevron', size: 14, 'aria-hidden': true }),
-      ),
-      React.createElement('div', { className: 'panel-action-submenu', role: 'menu' },
-        getTerminalProfiles().map((profile) =>
-          React.createElement('button', {
-            key: profile.id,
-            type: 'button',
-            role: 'menuitem',
-            title: terminalCommand(profile),
-            onClick: () => {
-              setMenuOpen(false);
-              setTerminalSubmenuOpen(false);
-              addTerminalPanel(containerApi, group, profile);
-            },
-          },
-          React.createElement(Terminal, { size: 16, 'aria-hidden': true }),
-          React.createElement('span', null, profile.name),
-          )
-        ),
-      ),
-      ),
+      React.createElement(TerminalLaunchPicker, {
+        className: 'panel-action-terminal-launch',
+        iconSize: 16,
+        inMenu: true,
+        onLaunch: (profile) => {
+          setMenuOpen(false);
+          addTerminalPanel(containerApi, group, profile);
+        },
+      }),
       PANEL_CREATION_OPTIONS.filter((option) => option.component !== 'terminal').map((option) =>
         React.createElement('button', {
           key: option.component,
@@ -2096,35 +2115,21 @@ function AddTerminalButton({ containerApi, group }) {
   );
 }
 
-function FallbackPage({ api, className }) {
+function FallbackPage({ containerApi, className }) {
   const addPanel = (component) => {
-    if (!api) return;
-    addPanelByComponent(api, component);
+    if (!containerApi) return;
+    addPanelByComponent(containerApi, component);
   };
 
   return React.createElement('div', { className },
     React.createElement('div', { className: 'empty-workspace-card' },
       React.createElement('p', null, 'No open panels'),
       React.createElement('div', { className: 'empty-workspace-actions' },
-        React.createElement('details', { className: 'empty-terminal-group' },
-          React.createElement('summary', null,
-            React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
-            React.createElement('span', null, 'Terminal'),
-          ),
-          React.createElement('div', { className: 'empty-terminal-options' },
-            getTerminalProfiles().map((profile) =>
-              React.createElement('button', {
-                key: profile.id,
-                type: 'button',
-                title: terminalCommand(profile),
-                onClick: () => api && addTerminalPanel(api, undefined, profile),
-              },
-              React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
-              React.createElement('span', null, profile.name),
-              )
-            ),
-          ),
-        ),
+        React.createElement(TerminalLaunchPicker, {
+          className: 'empty-terminal-launch',
+          iconSize: 18,
+          onLaunch: (profile) => containerApi && addTerminalPanel(containerApi, undefined, profile),
+        }),
         PANEL_CREATION_OPTIONS.filter((option) => !['terminal', 'fallback'].includes(option.component)).map((option) =>
           React.createElement('button', {
             key: option.component,
@@ -2140,8 +2145,8 @@ function FallbackPage({ api, className }) {
   );
 }
 
-function FallbackPanel({ api }) {
-  return React.createElement(FallbackPage, { api, className: 'fallback-panel panel-content' });
+function FallbackPanel({ containerApi }) {
+  return React.createElement(FallbackPage, { containerApi, className: 'fallback-panel panel-content' });
 }
 
 // Main application
