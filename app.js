@@ -695,9 +695,38 @@ function buildEnv(envText = loadConfig().env) {
 // --- Terminal ID counter ---
 let terminalIdCounter = 0;
 
+function createWanixBindElement(bind) {
+  const element = document.createElement('wanix-bind');
+  if (bind.type && bind.type !== 'ns') element.setAttribute('type', bind.type);
+  element.setAttribute('dst', bind.dst);
+  if (bind.src) element.setAttribute('src', bind.src);
+  if (bind.mode) element.setAttribute('mode', bind.mode);
+  if (bind.content) element.textContent = bind.content;
+  return element;
+}
+
+function createWanixSystem() {
+  const host = document.getElementById('wanix-host');
+  if (!host) throw new Error('Unable to find the Wanix host.');
+  const workspace = loadActiveWorkspace();
+  const system = document.createElement('wanix-system');
+  system.id = 'wanix-system';
+  system.setAttribute('wasm', workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl);
+
+  const appRoot = document.createElement('div');
+  appRoot.id = 'app-root';
+  const terminalLayer = document.createElement('div');
+  terminalLayer.id = 'terminal-layer';
+  system.append(appRoot, terminalLayer);
+  for (const bind of workspace.system.binds) system.appendChild(createWanixBindElement(bind));
+  system.appendChild(createWanixBindElement(workspace.system.profile));
+  host.replaceChildren(system);
+  return system;
+}
+
 // wanix elements inside dockview need an explicit system reference because
 // dockview isolates panel content from the wanix-system ancestor.
-const wanixSystem = document.getElementById('wanix-system');
+const wanixSystem = createWanixSystem();
 let systemReady = Boolean(wanixSystem?.isReady);
 const terminalLayer = document.getElementById('terminal-layer');
 const terminalSessions = new Map();

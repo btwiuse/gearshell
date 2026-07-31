@@ -251,52 +251,8 @@
       </div>
     </template>
 
-    <wanix-system
-      id="wanix-system"
-      wasm="https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.3.30"
-    >
-      <div id="app-root"></div>
-      <div id="terminal-layer"></div>
-      <wanix-bind dst="." src="#ramfs"></wanix-bind>
-      <wanix-bind dst="task" src="#task"></wanix-bind>
-      <wanix-bind dst="term" src="#term"></wanix-bind>
-      <wanix-bind dst="web" src="#web"></wanix-bind>
-      <wanix-bind dst="js" src="#js"></wanix-bind>
-      <wanix-bind dst="opfs" src="#web/opfs" mode="0755"></wanix-bind>
-      <wanix-bind dst="tmp" src="#ramfs"></wanix-bind>
-      <wanix-bind type="fetch" dst="hush" src="https://w9y.up.railway.app/go/github.com/btwiuse/hush/cmd/hush@v0.5.6" mode="0755"></wanix-bind>
-      <wanix-bind type="fetch" dst="w9y" src="https://w9y.up.railway.app/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.5" mode="0755"></wanix-bind>
-      <wanix-bind dst="tmp/profile" type="file" mode="0666">
-	function w9y_detect() {
-	  path="$LOCATION"
-	  OLDIFS=$IFS
-	  IFS='/'
+    <div id="wanix-host"></div>
 
-	  set -- $path
-
-	  IFS=$OLDIFS
-
-	  for x; do
-	    [[ -d $HOME/.w9y/$x ]] && continue
-	    /w9y mod apply -v "$x" && mkdir -p $HOME/.w9y/$x
-            [[ $? -eq 0 ]] || continue
-            if [[ $x = picoclaw ]]; then
-	      echo "[INFO] picoclaw successfully installed, type 'picoclaw' to get started"
-            fi
-            if [[ $x = crush ]]; then
-	      echo "[INFO] crush successfully installed, type 'crush' to get started"
-            fi
-	  done
-	}
-        function ensure_home() {
-          [[ -d $HOME ]] || mkdir -p $HOME
-        }
-        ensure_home
-        cd $HOME
-        w9y_detect
-      </wanix-bind>
-    </wanix-system>
-
-    <script type="module" src="app.js?v=20260731.27"></script>
+    <script type="module" src="app.js?v=20260731.28"></script>
   </body>
 </html>
