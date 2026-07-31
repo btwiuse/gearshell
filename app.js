@@ -2855,6 +2855,8 @@ function TerminalPanel({ api, params }) {
 
 function FilesPanel() {
   const fileInputRef = useRef(null);
+  const filesPanelRef = useRef(null);
+  const sidebarResizeRef = useRef(null);
   const [path, setPath] = useState('.');
   const [pathDraft, setPathDraft] = useState('/');
   const [entries, setEntries] = useState([]);
@@ -2865,6 +2867,37 @@ function FilesPanel() {
   const [entryName, setEntryName] = useState('');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(280);
+
+  useEffect(() => () => document.body.classList.remove('files-resizing'), []);
+
+  const startSidebarResize = (event) => {
+    if (event.button !== 0) return;
+    const panelBounds = filesPanelRef.current?.getBoundingClientRect();
+    if (!panelBounds) return;
+    event.preventDefault();
+    sidebarResizeRef.current = {
+      pointerId: event.pointerId,
+      panelLeft: panelBounds.left,
+      maxWidth: Math.max(190, panelBounds.width - 240),
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.body.classList.add('files-resizing');
+  };
+
+  const resizeSidebar = (event) => {
+    const resize = sidebarResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) return;
+    setSidebarWidth(Math.max(190, Math.min(resize.maxWidth, event.clientX - resize.panelLeft)));
+  };
+
+  const stopSidebarResize = (event) => {
+    const resize = sidebarResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) return;
+    sidebarResizeRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    document.body.classList.remove('files-resizing');
+  };
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -3021,7 +3054,11 @@ function FilesPanel() {
   };
 
   const dirty = selectedPath && contents !== savedContents;
-  return React.createElement('div', { className: 'files-panel panel-content' },
+  return React.createElement('div', {
+    ref: filesPanelRef,
+    className: 'files-panel panel-content',
+    style: { '--files-sidebar-width': `${sidebarWidth}px` },
+  },
     React.createElement('section', { className: 'files-sidebar' },
       React.createElement('div', { className: 'files-toolbar' },
         React.createElement('input', {
@@ -3065,6 +3102,18 @@ function FilesPanel() {
         !loading && entries.length === 0 && !status && React.createElement('p', { className: 'files-empty' }, 'Folder is empty.'),
       ),
     ),
+    React.createElement('div', {
+      className: 'files-resizer',
+      role: 'separator',
+      'aria-label': 'Resize file browser sidebar',
+      'aria-orientation': 'vertical',
+      'aria-valuemin': 190,
+      'aria-valuenow': Math.round(sidebarWidth),
+      onPointerDown: startSidebarResize,
+      onPointerMove: resizeSidebar,
+      onPointerUp: stopSidebarResize,
+      onPointerCancel: stopSidebarResize,
+    }),
     React.createElement('section', { className: 'files-editor' },
       selectedPath
         ? React.createElement(React.Fragment, null,
