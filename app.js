@@ -97,13 +97,12 @@ const DEFAULT_SYSTEM_CONFIG = {
     { id: 'tmp', type: 'ns', dst: 'tmp', src: '#ramfs' },
     { id: 'hush', type: 'fetch', dst: 'hush', src: 'https://w9y.up.railway.app/go/github.com/btwiuse/hush/cmd/hush@v0.5.6', mode: '0755' },
     { id: 'w9y', type: 'fetch', dst: 'w9y', src: 'https://w9y.up.railway.app/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.5', mode: '0755' },
-  ],
-  profile: {
-    id: 'boot-profile',
-    type: 'file',
-    dst: 'tmp/profile',
-    mode: '0666',
-    content: `function w9y_detect() {
+    {
+      id: 'boot-profile',
+      type: 'file',
+      dst: 'tmp/profile',
+      mode: '0666',
+      content: `function w9y_detect() {
   path="$LOCATION"
   OLDIFS=$IFS
   IFS='/'
@@ -131,7 +130,8 @@ ensure_home
 cd $HOME
 w9y_detect
 `,
-  },
+    },
+  ],
 };
 
 const WORKSPACE_PRESETS = {
@@ -261,11 +261,15 @@ function normalizeSystemBind(bind = {}) {
 
 function normalizeSystemConfig(system) {
   const defaults = clone(DEFAULT_SYSTEM_CONFIG);
+  const binds = Array.isArray(system?.binds)
+    ? system.binds.map(normalizeSystemBind)
+    : defaults.binds.map(normalizeSystemBind);
+  const legacyProfile = system?.profile;
+  if (legacyProfile && !binds.some((bind) => bind.id === 'boot-profile' || bind.dst === 'tmp/profile')) {
+    binds.push(normalizeSystemBind({ ...legacyProfile, id: 'boot-profile', type: 'file' }));
+  }
   return {
-    binds: Array.isArray(system?.binds)
-      ? system.binds.map(normalizeSystemBind)
-      : defaults.binds.map(normalizeSystemBind),
-    profile: normalizeSystemBind({ ...defaults.profile, ...system?.profile, id: 'boot-profile', type: 'file' }),
+    binds,
   };
 }
 
@@ -571,6 +575,17 @@ function updateWorkspaceBind(id, bind) {
   return workspace?.binds.find((item) => item.id === id) || null;
 }
 
+function reorderWorkspaceBinds(sourceId, targetId, placeAfter) {
+  return updateActiveWorkspace((workspace) => {
+    const sourceIndex = workspace.binds.findIndex((bind) => bind.id === sourceId);
+    const targetIndex = workspace.binds.findIndex((bind) => bind.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
+    const [source] = workspace.binds.splice(sourceIndex, 1);
+    const nextTargetIndex = workspace.binds.findIndex((bind) => bind.id === targetId);
+    workspace.binds.splice(nextTargetIndex + (placeAfter ? 1 : 0), 0, source);
+  });
+}
+
 function validateSystemBind(bind) {
   if (!SUPPORTED_SYSTEM_BIND_TYPES.includes(bind.type)) return 'Unsupported system mount type.';
   if (!bind.dst) return 'A destination path is required.';
@@ -589,7 +604,7 @@ function updateWorkspaceSystem(mutator) {
   });
 }
 
-function saveWorkspaceSystemSettings({ moduleUrl, wasmUrl, profileContent }) {
+function saveWorkspaceSystemSettings({ moduleUrl, wasmUrl }) {
   const nextModuleUrl = moduleUrl.trim();
   const nextWasmUrl = wasmUrl.trim();
   if (!nextModuleUrl) throw new Error('A Wanix runtime module URL is required.');
@@ -597,7 +612,6 @@ function saveWorkspaceSystemSettings({ moduleUrl, wasmUrl, profileContent }) {
   return updateWorkspaceSystem((system, workspace) => {
     workspace.runtime.moduleUrl = nextModuleUrl;
     workspace.runtime.wasmUrl = nextWasmUrl;
-    system.profile = normalizeSystemBind({ ...system.profile, content: profileContent });
   });
 }
 
@@ -622,6 +636,59 @@ function updateWorkspaceSystemBind(id, bind) {
 function removeWorkspaceSystemBind(id) {
   return updateWorkspaceSystem((system) => {
     system.binds = system.binds.filter((bind) => bind.id !== id);
+  });
+}
+
+function reorderWorkspaceSystemBinds(sourceId, targetId, placeAfter) {
+  return updateWorkspaceSystem((system) => {
+    const sourceIndex = system.binds.findIndex((bind) => bind.id === sourceId);
+    const targetIndex = system.binds.findIndex((bind) => bind.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
+    const [source] = system.binds.splice(sourceIndex, 1);
+    const nextTargetIndex = system.binds.findIndex((bind) => bind.id === targetId);
+    system.binds.splice(nextTargetIndex + (placeAfter ? 1 : 0), 0, source);
+  });
+}
+
+function makeBindItemDraggable(item, bind, { list, getDraggedId, setDraggedId, reorder, onReordered }) {
+  item.draggable = true;
+  item.title = 'Drag to reorder';
+  item.setAttribute('aria-label', `${bind.dst || 'Unnamed mount'}, draggable`);
+
+  const clearDropIndicators = () => {
+    for (const candidate of list.querySelectorAll('.bind-item.drop-before, .bind-item.drop-after')) {
+      candidate.classList.remove('drop-before', 'drop-after');
+    }
+  };
+  item.addEventListener('dragstart', (event) => {
+    setDraggedId(bind.id);
+    item.classList.add('dragging');
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', bind.id);
+    }
+  });
+  item.addEventListener('dragover', (event) => {
+    if (!getDraggedId() || getDraggedId() === bind.id) return;
+    event.preventDefault();
+    const placeAfter = event.clientY > item.getBoundingClientRect().top + item.offsetHeight / 2;
+    clearDropIndicators();
+    item.classList.add(placeAfter ? 'drop-after' : 'drop-before');
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  });
+  item.addEventListener('drop', (event) => {
+    const sourceId = getDraggedId();
+    if (!sourceId || sourceId === bind.id) return;
+    event.preventDefault();
+    const placeAfter = event.clientY > item.getBoundingClientRect().top + item.offsetHeight / 2;
+    clearDropIndicators();
+    setDraggedId(null);
+    if (reorder(sourceId, bind.id, placeAfter)) onReordered();
+  });
+  item.addEventListener('dragend', () => {
+    item.classList.remove('dragging');
+    clearDropIndicators();
+    setDraggedId(null);
   });
 }
 
@@ -772,7 +839,6 @@ function createWanixSystem(workspace = loadActiveWorkspace()) {
   terminalLayer.id = 'terminal-layer';
   system.append(appRoot, terminalLayer);
   for (const bind of workspace.system.binds) system.appendChild(createWanixBindElement(bind));
-  system.appendChild(createWanixBindElement(workspace.system.profile));
   host.replaceChildren(system);
   return system;
 }
@@ -1580,7 +1646,6 @@ function setupWorkspaceForm(settingsContent) {
 function setupSystemForm(settingsContent) {
   const moduleEl = settingsContent.querySelector('[data-system="module"]');
   const wasmEl = settingsContent.querySelector('[data-system="wasm"]');
-  const profileEl = settingsContent.querySelector('[data-system="profile"]');
   const list = settingsContent.querySelector('[data-system-bind-list]');
   const typeEl = settingsContent.querySelector('[data-system-bind="type"]');
   const dstEl = settingsContent.querySelector('[data-system-bind="dst"]');
@@ -1592,9 +1657,10 @@ function setupSystemForm(settingsContent) {
   const restartButton = settingsContent.querySelector('[data-system-action="restart"]');
   const addButton = settingsContent.querySelector('[data-system-bind-action="add"]');
   const cancelButton = settingsContent.querySelector('[data-system-bind-action="cancel"]');
-  if (!moduleEl || !wasmEl || !profileEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
+  if (!moduleEl || !wasmEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
 
   let editingBindId = null;
+  let draggedBindId = null;
 
   const setStatus = (message, isError = false) => {
     status.textContent = message;
@@ -1614,11 +1680,17 @@ function setupSystemForm(settingsContent) {
     const workspace = loadActiveWorkspace();
     moduleEl.value = workspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl;
     wasmEl.value = workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl;
-    profileEl.value = workspace.system.profile.content;
     list.replaceChildren();
     for (const bind of workspace.system.binds) {
       const item = document.createElement('div');
       item.className = 'bind-item';
+      makeBindItemDraggable(item, bind, {
+        list,
+        getDraggedId: () => draggedBindId,
+        setDraggedId: (id) => { draggedBindId = id; },
+        reorder: reorderWorkspaceSystemBinds,
+        onReordered: () => setStatus('System mount order saved. Restart to apply changes.'),
+      });
       const details = document.createElement('div');
       const path = document.createElement('span');
       path.className = 'bind-item-path';
@@ -1659,7 +1731,7 @@ function setupSystemForm(settingsContent) {
     }
   };
   const saveSettings = () => {
-    saveWorkspaceSystemSettings({ moduleUrl: moduleEl.value, wasmUrl: wasmEl.value, profileContent: profileEl.value });
+    saveWorkspaceSystemSettings({ moduleUrl: moduleEl.value, wasmUrl: wasmEl.value });
     setStatus('System settings saved. Restart the playground to apply changes.');
   };
 
@@ -1718,6 +1790,7 @@ function setupBindForm(settingsContent) {
   if (!list || !typeEl || !dstEl || !srcEl || !contentEl || !permEl || !status || !addButton || !cancelButton) return;
 
   let editingBindId = null;
+  let draggedBindId = null;
 
   const setStatus = (message, isError = false) => {
     status.textContent = message;
@@ -1736,6 +1809,13 @@ function setupBindForm(settingsContent) {
     for (const bind of workspace.binds) {
       const item = document.createElement('div');
       item.className = 'bind-item';
+      makeBindItemDraggable(item, bind, {
+        list,
+        getDraggedId: () => draggedBindId,
+        setDraggedId: (id) => { draggedBindId = id; },
+        reorder: reorderWorkspaceBinds,
+        onReordered: () => setStatus('Mount order saved.'),
+      });
       const details = document.createElement('div');
       const path = document.createElement('span');
       path.className = 'bind-item-path';

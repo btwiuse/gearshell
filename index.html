@@ -66,7 +66,7 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="app.css?v=20260731.13" />
+    <link rel="stylesheet" href="app.css?v=20260731.14" />
   </head>
   <body>
     <template id="home-template">
@@ -123,13 +123,11 @@
           <details class="bind-form system-form" open>
             <summary><span>Runtime &amp; system</span></summary>
             <div class="body">
-              <p class="hint">These mounts form the Wanix system filesystem. Save, then restart the playground to apply changes.</p>
+              <p class="hint">These mounts form the Wanix system filesystem. Use File mounts for inline files such as startup scripts. Drag entries to set their mount order. Save, then restart the playground to apply changes.</p>
               <label for="system-module">Wanix runtime module URL</label>
               <input id="system-module" data-system="module" type="url" spellcheck="false">
               <label for="system-wasm">Wanix wasm URL</label>
               <input id="system-wasm" data-system="wasm" type="url" spellcheck="false">
-              <label for="system-profile">Boot profile (<code>tmp/profile</code>)</label>
-              <textarea id="system-profile" data-system="profile" spellcheck="false"></textarea>
               <div class="workspace-actions">
                 <button type="button" data-system-action="save">Save system settings</button>
                 <button type="button" data-system-action="restart">Apply &amp; restart</button>
@@ -195,7 +193,7 @@
           <details class="bind-form" open>
             <summary><span>Mounts</span></summary>
             <div class="body">
-              <p class="hint">Mounts are applied to each playground task in this workspace.</p>
+              <p class="hint">Mounts are applied to each playground task in this workspace. Drag entries to set their mount order.</p>
               <div class="bind-list" data-bind-list></div>
               <div class="bind-fields">
                 <label for="bind-type">Type</label>
@@ -289,6 +287,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260731.32"></script>
+    <script type="module" src="app.js?v=20260731.34"></script>
   </body>
 </html>

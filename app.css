@@ -123,7 +123,11 @@ wanix-term { flex: 1; min-width: 0; }
 .bind-form .body { padding: 10px; }
 .bind-form .hint { margin: 0 0 10px; color: #8b949e; font-size: 12px; }
 .bind-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.bind-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; }
+.bind-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; cursor: grab; }
+.bind-item:active { cursor: grabbing; }
+.bind-item.dragging { opacity: 0.45; }
+.bind-item.drop-before { box-shadow: 0 -2px 0 #58a6ff; }
+.bind-item.drop-after { box-shadow: 0 2px 0 #58a6ff; }
 .bind-item-path { display: block; overflow: hidden; color: #c9d1d9; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
 .bind-item-meta { display: block; color: #8b949e; font-size: 11px; }
 .bind-item-actions { display: flex; gap: 6px; }
