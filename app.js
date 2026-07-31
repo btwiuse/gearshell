@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Bot, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
+import { Bot, ChevronLeft, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -73,6 +73,11 @@ const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
 const SUPPORTED_BIND_TYPES = ['ns', 'file', 'archive'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
+
+const BUILTIN_TERMINAL_PROFILES = [
+  { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
+  { id: 'crush', name: 'Crush', program: 'crush', args: '', type: 'gojs', env: '', wd: '', builtin: true },
+];
 
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.3.30',
@@ -151,10 +156,29 @@ function clone(value) {
 }
 
 function normalizeShellConfig(config) {
-  return {
+  const normalized = {
     cmd: typeof config?.cmd === 'string' && config.cmd.trim() ? config.cmd.trim() : DEFAULT_CMD,
     env: typeof config?.env === 'string' ? config.env : '',
     autoOpen: config?.autoOpen !== false,
+    terminalProfiles: Array.isArray(config?.terminalProfiles)
+      ? config.terminalProfiles.map(normalizeTerminalProfile).filter((profile) => profile.program)
+      : [],
+    defaultTerminalProfileId: typeof config?.defaultTerminalProfileId === 'string'
+      ? config.defaultTerminalProfileId
+      : 'hush',
+  };
+  return normalized;
+}
+
+function normalizeTerminalProfile(profile = {}) {
+  return {
+    id: typeof profile.id === 'string' && profile.id ? profile.id : createWorkspaceId(),
+    name: typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : 'Terminal',
+    program: typeof profile.program === 'string' ? profile.program.trim() : '',
+    args: typeof profile.args === 'string' ? profile.args.trim() : '',
+    type: SUPPORTED_TASK_TYPES.includes(profile.type) ? profile.type : 'gojs',
+    env: typeof profile.env === 'string' ? profile.env : '',
+    wd: typeof profile.wd === 'string' ? profile.wd.trim() : '',
   };
 }
 
@@ -506,11 +530,52 @@ function resetConfig() {
   notifyWorkspaceChange();
   return workspace.shell;
 }
-function buildEnv() {
-  const cfg = loadConfig();
+function getTerminalProfiles(config = loadConfig()) {
+  const hush = {
+    ...BUILTIN_TERMINAL_PROFILES[0],
+    program: config.cmd.split(/\s+/, 1)[0] || 'hush',
+    args: config.cmd.replace(/^\S+\s*/, ''),
+    env: config.env,
+    wd: '',
+  };
+  const configuredProfiles = new Map(config.terminalProfiles.map((profile) => [profile.id, profile]));
+  const builtinIds = new Set(BUILTIN_TERMINAL_PROFILES.map((profile) => profile.id));
+  const builtins = [hush, ...BUILTIN_TERMINAL_PROFILES.slice(1)].map((profile) => ({
+    ...profile,
+    ...configuredProfiles.get(profile.id),
+    builtin: true,
+  }));
+  return [
+    ...builtins,
+    ...config.terminalProfiles.filter((profile) => !builtinIds.has(profile.id)),
+  ];
+}
+
+function getDefaultTerminalProfile(config = loadConfig()) {
+  return getTerminalProfiles(config).find((profile) => profile.id === config.defaultTerminalProfileId)
+    || getTerminalProfiles(config)[0];
+}
+
+function terminalCommand(profile) {
+  return profile.cmd || [profile.program, profile.args].filter(Boolean).join(' ');
+}
+
+function saveTerminalProfiles(profiles, defaultProfileId) {
+  const config = loadConfig();
+  const normalizedProfiles = profiles.map(normalizeTerminalProfile);
+  const hush = normalizedProfiles.find((profile) => profile.id === 'hush');
+  saveConfig({
+    ...config,
+    terminalProfiles: normalizedProfiles,
+    defaultTerminalProfileId: defaultProfileId,
+    ...(hush ? { cmd: terminalCommand(hush) || DEFAULT_CMD, env: hush.env } : {}),
+  });
+}
+
+function buildEnv(envText = loadConfig().env) {
   const env = { ...HUSH_ENV };
-  if (cfg.env.trim()) {
-    for (const line of cfg.env.split('\n')) {
+  if (envText.trim()) {
+    for (const line of envText.split('\n')) {
       const trimmed = line.trim();
       if (trimmed) {
         const [key, ...rest] = trimmed.split('=');
@@ -571,15 +636,16 @@ document.addEventListener('touchend', restoreTerminalLayer, true);
 document.addEventListener('touchcancel', restoreTerminalLayer, true);
 window.addEventListener('blur', restoreTerminalLayer);
 
-function createTerminalSession(id) {
+function createTerminalSession(id, profile = getDefaultTerminalProfile()) {
   const wrapper = document.createElement('div');
   wrapper.className = 'terminal-session';
 
   const task = document.createElement('wanix-task');
   task.id = `repl-${id}`;
-  task.setAttribute('cmd', loadConfig().cmd || DEFAULT_CMD);
-  task.setAttribute('type', 'gojs');
-  task.setAttribute('env', buildEnv());
+  task.setAttribute('cmd', terminalCommand(profile) || DEFAULT_CMD);
+  task.setAttribute('type', profile.type || 'gojs');
+  task.setAttribute('env', buildEnv(profile.env));
+  if (profile.wd) task.setAttribute('wd', profile.wd);
   task.setAttribute('term', '');
   task.setAttribute('start', '');
   task.setAttribute('for', 'wanix-system');
@@ -598,13 +664,13 @@ function createTerminalSession(id) {
   wrapper.append(task, term);
   terminalLayer?.appendChild(wrapper);
 
-  const session = { id, wrapper, task, term, anchor: null, layout: null, started: false };
+  const session = { id, wrapper, task, term, anchor: null, layout: null, started: false, profile };
   terminalSessions.set(id, session);
   return session;
 }
 
-function getTerminalSession(id) {
-  return terminalSessions.get(id) || createTerminalSession(id);
+function getTerminalSession(id, profile) {
+  return terminalSessions.get(id) || createTerminalSession(id, profile);
 }
 
 function destroyTerminalSession(id) {
@@ -749,8 +815,8 @@ function attachOverlayTerminalSession(session, anchor, api) {
   };
 }
 
-function attachTerminalSession(id, anchor, api) {
-  return attachOverlayTerminalSession(getTerminalSession(id), anchor, api);
+function attachTerminalSession(id, profile, anchor, api) {
+  return attachOverlayTerminalSession(getTerminalSession(id, profile), anchor, api);
 }
 
 function createBindElement(bind) {
@@ -1073,10 +1139,23 @@ function setupConfigForm(settingsContent) {
   populate();
 
   settingsContent.querySelector('[data-config-action="save"]').addEventListener('click', () => {
+    const config = loadConfig();
+    const cmd = cmdEl.value.trim() || DEFAULT_CMD;
+    const terminalProfiles = config.terminalProfiles.map((profile) => {
+      if (profile.id !== 'hush') return profile;
+      return normalizeTerminalProfile({
+        ...profile,
+        program: cmd.split(/\s+/, 1)[0] || 'hush',
+        args: cmd.replace(/^\S+\s*/, ''),
+        env: envEl.value,
+      });
+    });
     saveConfig({
-      cmd: cmdEl.value.trim() || DEFAULT_CMD,
+      ...config,
+      cmd,
       env: envEl.value,
       autoOpen: autoEl.checked,
+      terminalProfiles,
     });
     const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Saved!';
@@ -1097,6 +1176,135 @@ function setupConfigForm(settingsContent) {
 
   window.addEventListener(WORKSPACE_CHANGED_EVENT, populate);
   return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, populate);
+}
+
+function setupTerminalProfileForm(settingsContent) {
+  const list = settingsContent.querySelector('[data-terminal-profile-list]');
+  const nameEl = settingsContent.querySelector('[data-terminal-profile="name"]');
+  const programEl = settingsContent.querySelector('[data-terminal-profile="program"]');
+  const argsEl = settingsContent.querySelector('[data-terminal-profile="args"]');
+  const typeEl = settingsContent.querySelector('[data-terminal-profile="type"]');
+  const wdEl = settingsContent.querySelector('[data-terminal-profile="wd"]');
+  const envEl = settingsContent.querySelector('[data-terminal-profile="env"]');
+  const status = settingsContent.querySelector('[data-terminal-profile="status"]');
+  const addButton = settingsContent.querySelector('[data-terminal-profile-action="add"]');
+  const cancelButton = settingsContent.querySelector('[data-terminal-profile-action="cancel"]');
+  if (!list || !nameEl || !programEl || !argsEl || !typeEl || !wdEl || !envEl || !status || !addButton || !cancelButton) return;
+
+  let editingProfileId = null;
+
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const render = () => {
+    list.replaceChildren();
+    const config = loadConfig();
+    for (const profile of getTerminalProfiles(config)) {
+      const item = document.createElement('div');
+      item.className = 'terminal-profile-item';
+      const details = document.createElement('div');
+      const name = document.createElement('span');
+      name.className = 'terminal-profile-name';
+      name.textContent = profile.name;
+      const meta = document.createElement('span');
+      meta.className = 'terminal-profile-meta';
+      meta.textContent = `${terminalCommand(profile)} · ${profile.type}${profile.id === 'hush' ? ' · shell defaults' : ''}`;
+      details.append(name, meta);
+      const actions = document.createElement('div');
+      actions.className = 'terminal-profile-actions';
+      const useDefault = document.createElement('button');
+      useDefault.type = 'button';
+      useDefault.textContent = config.defaultTerminalProfileId === profile.id ? 'Default' : 'Set default';
+      useDefault.disabled = config.defaultTerminalProfileId === profile.id;
+      useDefault.addEventListener('click', () => {
+        saveTerminalProfiles(config.terminalProfiles, profile.id);
+        setStatus(`${profile.name} is now the default terminal.`);
+      });
+      actions.appendChild(useDefault);
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', () => {
+        editingProfileId = profile.id;
+        nameEl.value = profile.name;
+        programEl.value = profile.program;
+        argsEl.value = profile.args;
+        typeEl.value = profile.type;
+        wdEl.value = profile.wd;
+        envEl.value = profile.env;
+        addButton.textContent = 'Save terminal preset';
+        cancelButton.hidden = false;
+        setStatus(`Editing ${profile.name}.`);
+        nameEl.focus();
+      });
+      actions.appendChild(edit);
+      if (!profile.builtin) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'Remove';
+        remove.addEventListener('click', () => {
+          if (editingProfileId === profile.id) resetFields();
+          const profiles = config.terminalProfiles.filter((item) => item.id !== profile.id);
+          saveTerminalProfiles(profiles, config.defaultTerminalProfileId === profile.id ? 'hush' : config.defaultTerminalProfileId);
+          setStatus(`Removed ${profile.name}.`);
+        });
+        actions.appendChild(remove);
+      }
+      item.append(details, actions);
+      list.appendChild(item);
+    }
+  };
+  const resetFields = () => {
+    editingProfileId = null;
+    nameEl.value = '';
+    programEl.value = '';
+    argsEl.value = '';
+    typeEl.value = 'gojs';
+    wdEl.value = '';
+    envEl.value = '';
+    addButton.textContent = 'Add terminal preset';
+    cancelButton.hidden = true;
+  };
+  addButton.addEventListener('click', () => {
+    try {
+      const profile = normalizeTerminalProfile({
+        id: editingProfileId || undefined,
+        name: nameEl.value,
+        program: programEl.value,
+        args: argsEl.value,
+        type: typeEl.value,
+        wd: wdEl.value,
+        env: envEl.value,
+      });
+      if (!profile.program) throw new Error('A program is required.');
+      const config = loadConfig();
+      if (getTerminalProfiles(config).some((item) =>
+        item.id !== editingProfileId && item.name.toLocaleLowerCase() === profile.name.toLocaleLowerCase()
+      )) {
+        throw new Error('A terminal preset with this name already exists.');
+      }
+      const hasExistingProfile = config.terminalProfiles.some((item) => item.id === editingProfileId);
+      const profiles = editingProfileId
+        ? hasExistingProfile
+          ? config.terminalProfiles.map((item) => item.id === editingProfileId ? profile : item)
+          : [...config.terminalProfiles, profile]
+        : [...config.terminalProfiles, profile];
+      const action = editingProfileId ? 'Updated' : 'Added';
+      saveTerminalProfiles(profiles, config.defaultTerminalProfileId);
+      setStatus(`${action} ${profile.name}.`);
+      resetFields();
+    } catch (error) {
+      setStatus(error.message || 'Unable to add terminal preset.', true);
+    }
+  });
+  cancelButton.addEventListener('click', () => {
+    resetFields();
+    setStatus('Edit cancelled.');
+  });
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
+  render();
+  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
 }
 
 function setupWorkspaceForm(settingsContent) {
@@ -1402,13 +1610,13 @@ function setupTaskForm(settingsContent, containerApi) {
   return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
 }
 
-function addTerminalPanel(api, group) {
+function addTerminalPanel(api, group, profile = getDefaultTerminalProfile()) {
   const id = ++terminalIdCounter;
   const panel = api.addPanel({
     id: `terminal-${id}`,
     component: 'terminal',
-    params: { terminalId: id, panelType: 'terminal' },
-    title: `Term ${id}`,
+    params: { terminalId: id, panelType: 'terminal', profile: clone(profile) },
+    title: `${profile.name || 'Terminal'} ${id}`,
     ...(group && { position: { referenceGroup: group } }),
   });
   panel.api.setActive();
@@ -1601,11 +1809,13 @@ function SettingsPanel({ containerApi }) {
 
     wrapper.appendChild(settingsContent);
     const disposeConfigForm = setupConfigForm(settingsContent);
+    const disposeTerminalProfileForm = setupTerminalProfileForm(settingsContent);
     const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
     const disposeBindForm = setupBindForm(settingsContent);
     const disposeTaskForm = setupTaskForm(settingsContent, containerApi);
     return () => {
       disposeConfigForm?.();
+      disposeTerminalProfileForm?.();
       disposeWorkspaceForm?.();
       disposeBindForm?.();
       disposeTaskForm?.();
@@ -1658,8 +1868,8 @@ function TerminalPanel({ api, params }) {
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    return attachTerminalSession(id, wrapper, api);
-  }, [id]);
+    return attachTerminalSession(id, params.profile, wrapper, api);
+  }, [id, params.profile]);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
@@ -1693,6 +1903,7 @@ function PanelTab(props) {
 // Compact header action: tap creates a terminal, long-press opens extensions.
 function AddTerminalButton({ containerApi, group }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [terminalSubmenuOpen, setTerminalSubmenuOpen] = useState(false);
   const controlRef = useRef(null);
   const pressTimer = useRef(null);
   const longPress = useRef(false);
@@ -1756,7 +1967,42 @@ function AddTerminalButton({ containerApi, group }) {
       onClick: createTerminal,
     }, React.createElement(Plus, { size: 18, 'aria-hidden': true })),
     menuOpen && React.createElement('div', { className: 'panel-action-menu', role: 'menu' },
-      PANEL_CREATION_OPTIONS.map((option) =>
+      React.createElement('div', {
+        className: `panel-action-menu-group ${terminalSubmenuOpen ? 'open' : ''}`,
+        onPointerEnter: () => setTerminalSubmenuOpen(true),
+        onPointerLeave: () => setTerminalSubmenuOpen(false),
+      },
+      React.createElement('button', {
+        type: 'button',
+        role: 'menuitem',
+        'aria-haspopup': 'menu',
+        'aria-expanded': terminalSubmenuOpen,
+        onClick: () => setTerminalSubmenuOpen((open) => !open),
+      },
+      React.createElement(Terminal, { size: 16, 'aria-hidden': true }),
+      React.createElement('span', null, 'Terminal'),
+      React.createElement(ChevronLeft, { className: 'panel-action-menu-chevron', size: 14, 'aria-hidden': true }),
+      ),
+      React.createElement('div', { className: 'panel-action-submenu', role: 'menu' },
+        getTerminalProfiles().map((profile) =>
+          React.createElement('button', {
+            key: profile.id,
+            type: 'button',
+            role: 'menuitem',
+            title: terminalCommand(profile),
+            onClick: () => {
+              setMenuOpen(false);
+              setTerminalSubmenuOpen(false);
+              addTerminalPanel(containerApi, group, profile);
+            },
+          },
+          React.createElement(Terminal, { size: 16, 'aria-hidden': true }),
+          React.createElement('span', null, profile.name),
+          )
+        ),
+      ),
+      ),
+      PANEL_CREATION_OPTIONS.filter((option) => option.component !== 'terminal').map((option) =>
         React.createElement('button', {
           key: option.component,
           type: 'button',
@@ -1833,7 +2079,26 @@ function App() {
       React.createElement('div', { className: 'empty-workspace-card' },
         React.createElement('p', null, 'No open panels'),
         React.createElement('div', { className: 'empty-workspace-actions' },
-          PANEL_CREATION_OPTIONS.map((option) =>
+          React.createElement('details', { className: 'empty-terminal-group' },
+            React.createElement('summary', null,
+              React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
+              React.createElement('span', null, 'Terminal'),
+            ),
+            React.createElement('div', { className: 'empty-terminal-options' },
+              getTerminalProfiles().map((profile) =>
+                React.createElement('button', {
+                  key: profile.id,
+                  type: 'button',
+                  title: terminalCommand(profile),
+                  onClick: () => addTerminalPanel(dockviewApi, undefined, profile),
+                },
+                React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
+                React.createElement('span', null, profile.name),
+                )
+              ),
+            ),
+          ),
+          PANEL_CREATION_OPTIONS.filter((option) => option.component !== 'terminal').map((option) =>
             React.createElement('button', {
               key: option.component,
               type: 'button',

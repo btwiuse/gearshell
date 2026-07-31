@@ -71,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260731.6" />
+    <link rel="stylesheet" href="app.css?v=20260731.8" />
   </head>
   <body>
     <template id="home-template">
@@ -123,6 +123,37 @@
                 <input type="file" accept="application/json,.json" data-workspace="import">
               </label>
               <div class="hint" data-workspace="status" role="status" aria-live="polite"></div>
+            </div>
+          </details>
+          <details class="terminal-profile-form" open>
+            <summary><span>Terminal launch presets</span></summary>
+            <div class="body">
+              <p class="hint">Choose a default or add a command with its startup arguments.</p>
+              <div class="terminal-profile-list" data-terminal-profile-list></div>
+              <div class="terminal-profile-fields">
+                <label for="terminal-profile-name">Name</label>
+                <input id="terminal-profile-name" data-terminal-profile="name" type="text" placeholder="My tool">
+                <label for="terminal-profile-program">Program</label>
+                <input id="terminal-profile-program" data-terminal-profile="program" type="text" placeholder="crush" spellcheck="false">
+                <label for="terminal-profile-args">Startup arguments</label>
+                <input id="terminal-profile-args" data-terminal-profile="args" type="text" placeholder="--help" spellcheck="false">
+                <label for="terminal-profile-type">Runtime</label>
+                <select id="terminal-profile-type" data-terminal-profile="type">
+                  <option value="gojs">Go + JavaScript</option>
+                  <option value="wasi">WASI</option>
+                  <option value="js">JavaScript</option>
+                  <option value="auto">Auto</option>
+                </select>
+                <label for="terminal-profile-wd">Working directory</label>
+                <input id="terminal-profile-wd" data-terminal-profile="wd" type="text" placeholder=".">
+                <label for="terminal-profile-env">Environment variables</label>
+                <textarea id="terminal-profile-env" data-terminal-profile="env" placeholder="KEY=value" spellcheck="false"></textarea>
+              </div>
+              <div class="workspace-actions">
+                <button type="button" data-terminal-profile-action="add">Add terminal preset</button>
+                <button type="button" data-terminal-profile-action="cancel" hidden>Cancel edit</button>
+              </div>
+              <div class="hint" data-terminal-profile="status" role="status" aria-live="polite"></div>
             </div>
           </details>
           <details class="bind-form" open>
@@ -191,14 +222,14 @@
           </details>
           <div class="config-form">
             <details open>
-              <summary><span>Startup command</span></summary>
+              <summary><span>Hush startup command</span></summary>
               <div class="body">
                 <input data-config="cmd" type="text" placeholder="hush -rcfile /tmp/profile" spellcheck="false">
               </div>
             </details>
 
             <details open>
-              <summary><span>Environment variables</span></summary>
+              <summary><span>Hush environment variables</span></summary>
               <div class="body">
                 <textarea data-config="env" placeholder="KEY=value&#10;TERM=xterm-256color" spellcheck="false"></textarea>
                 <div class="hint">One per line, KEY=value format</div>
@@ -271,6 +302,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260731.15"></script>
+    <script type="module" src="app.js?v=20260731.20"></script>
   </body>
 </html>

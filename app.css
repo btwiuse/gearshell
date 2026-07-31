@@ -29,6 +29,10 @@ wanix-term { flex: 1; min-width: 0; }
 .panel-action-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 3px; background: transparent; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
 .panel-action-menu button:hover { background: #30363d; }
 .panel-action-menu button svg { flex: 0 0 auto; color: #8b949e; }
+.panel-action-menu-group { position: relative; }
+.panel-action-menu-group > button .panel-action-menu-chevron { margin-left: auto; }
+.panel-action-submenu { position: absolute; top: -4px; right: calc(100% + 4px); display: none; min-width: 150px; padding: 4px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
+.panel-action-menu-group.open > .panel-action-submenu { display: block; }
 .empty-workspace { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; background: #0d1117; }
 .empty-workspace-card { width: min(280px, calc(100% - 32px)); padding: 20px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; text-align: center; }
 .empty-workspace-card p { margin: 0 0 16px; color: #8b949e; }
@@ -36,6 +40,12 @@ wanix-term { flex: 1; min-width: 0; }
 .empty-workspace-actions button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
 .empty-workspace-actions button:hover { background: #30363d; }
 .empty-workspace-actions button svg { flex: 0 0 auto; color: #8b949e; }
+.empty-terminal-group { border: 1px solid #30363d; border-radius: 4px; background: #161b22; }
+.empty-terminal-group summary { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 7px 12px; color: #c9d1d9; cursor: pointer; font: inherit; list-style: none; }
+.empty-terminal-group summary::-webkit-details-marker { display: none; }
+.empty-terminal-group summary::after { content: "\25B8"; margin-left: auto; color: #8b949e; transition: transform 0.15s; }
+.empty-terminal-group[open] summary::after { transform: rotate(90deg); }
+.empty-terminal-options { display: flex; flex-direction: column; gap: 6px; padding: 0 7px 7px; }
 .panel-tab { display: flex; align-items: center; width: 100%; height: 100%; min-width: 0; }
 .panel-tab-icon { flex: 0 0 auto; margin: 0 6px 0 4px; color: #8b949e; }
 .panel-tab .dv-default-tab { min-width: 0; flex: 1; }
@@ -75,6 +85,28 @@ wanix-term { flex: 1; min-width: 0; }
 .workspace-form button:hover { background: #30363d; }
 .workspace-actions { flex-wrap: wrap; margin-top: 10px; }
 .workspace-import input { display: block; width: 100%; margin-top: 4px; color: #8b949e; font: inherit; }
+.terminal-profile-form { margin: 0 0 14px; border: 1px solid #30363d; border-radius: 4px; }
+.terminal-profile-form summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; color: #c9d1d9; font-size: 13px; user-select: none; list-style: none; }
+.terminal-profile-form summary::-webkit-details-marker { display: none; }
+.terminal-profile-form summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; }
+.terminal-profile-form[open] summary::after { transform: rotate(90deg); }
+.terminal-profile-form .body { padding: 10px; }
+.terminal-profile-form .hint { margin: 0 0 10px; color: #8b949e; font-size: 12px; }
+.terminal-profile-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.terminal-profile-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; }
+.terminal-profile-name, .terminal-profile-meta { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.terminal-profile-name { color: #c9d1d9; font-size: 12px; }
+.terminal-profile-meta { color: #8b949e; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.terminal-profile-actions { display: flex; gap: 6px; }
+.terminal-profile-item button, .terminal-profile-form .workspace-actions button { min-height: 30px; padding: 5px 9px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
+.terminal-profile-item button:hover:not(:disabled), .terminal-profile-form .workspace-actions button:hover { background: #30363d; }
+.terminal-profile-item button:disabled { cursor: default; opacity: 0.65; }
+.terminal-profile-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.terminal-profile-fields label { color: #c9d1d9; font-size: 12px; }
+.terminal-profile-fields input, .terminal-profile-fields select, .terminal-profile-fields textarea { width: 100%; padding: 6px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.terminal-profile-fields textarea, .terminal-profile-fields label[for="terminal-profile-env"] { grid-column: 1 / -1; }
+.terminal-profile-fields textarea { min-height: 60px; resize: vertical; }
+@media (max-width: 460px) { .terminal-profile-fields { grid-template-columns: 1fr; } }
 .bind-form { margin: 0 0 14px; border: 1px solid #30363d; border-radius: 4px; }
 .bind-form summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; color: #c9d1d9; font-size: 13px; user-select: none; list-style: none; }
 .bind-form summary::-webkit-details-marker { display: none; }
