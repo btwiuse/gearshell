@@ -3057,9 +3057,15 @@ function FilesPanel() {
 
 function RuntimePanel() {
   const [snapshot, setSnapshot] = useState(null);
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     const workspace = loadActiveWorkspace();
     const taskSessions = [...workspaceTaskSessions.values()];
+    let kernelTaskEntries = 'Unavailable';
+    try {
+      const entries = await getWanixRoot().readDir('task');
+      kernelTaskEntries = String((Array.isArray(entries) ? entries : []).filter((entry) => entry !== 'new' && entry !== 'self').length);
+    } catch { /* The system may still be starting or the task namespace may be unavailable. */ }
+    const activeWorkspaceTasks = taskSessions.filter((session) => session.status === 'running' || session.status === 'starting').length;
     setSnapshot({
       ready: systemReady,
       moduleUrl: workspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl,
@@ -3067,10 +3073,11 @@ function RuntimePanel() {
       allowedOrigins: workspace.system.allowOrigins || 'None',
       systemMounts: workspace.system.binds.length,
       taskMounts: workspace.binds.length,
-      tasks: workspace.tasks.length,
+      configuredTasks: workspace.tasks.length,
       terminals: terminalSessions.size,
-      activeTasks: taskSessions.filter((session) => session.status === 'running' || session.status === 'starting').length,
+      activeTasks: terminalSessions.size + activeWorkspaceTasks,
       failedTasks: taskSessions.filter((session) => session.status === 'failed').length,
+      kernelTaskEntries,
     });
   }, []);
   useEffect(() => {
@@ -3087,8 +3094,9 @@ function RuntimePanel() {
     ['System', snapshot.ready ? 'Ready' : 'Starting'],
     ['System mounts', String(snapshot.systemMounts)],
     ['Task mounts', String(snapshot.taskMounts)],
-    ['Configured tasks', String(snapshot.tasks)],
-    ['Active tasks', String(snapshot.activeTasks)],
+    ['Configured task definitions', String(snapshot.configuredTasks)],
+    ['Active Wanix tasks', String(snapshot.activeTasks)],
+    ['Kernel task entries', snapshot.kernelTaskEntries],
     ['Failed tasks', String(snapshot.failedTasks)],
     ['Terminal sessions', String(snapshot.terminals)],
     ['Allowed origins', snapshot.allowedOrigins],
