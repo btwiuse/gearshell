@@ -738,6 +738,19 @@ function removeWorkspaceTask(id) {
   });
 }
 
+function updateWorkspaceTask(id, task) {
+  const current = loadActiveWorkspace().tasks.find((item) => item.id === id);
+  if (!current) return null;
+  const nextTask = normalizeTask({ ...current, ...task, id });
+  const error = validateTask(nextTask);
+  if (error) throw new Error(error);
+  const workspace = updateActiveWorkspace((activeWorkspace) => {
+    const index = activeWorkspace.tasks.findIndex((item) => item.id === id);
+    if (index !== -1) activeWorkspace.tasks[index] = nextTask;
+  });
+  return workspace?.tasks.find((item) => item.id === id) || null;
+}
+
 // --- Config ---
 function loadConfig() {
   return normalizeShellConfig(loadActiveWorkspace().shell);
@@ -2026,7 +2039,10 @@ function setupTaskForm(settingsContent, containerApi) {
   const autoStartEl = settingsContent.querySelector('[data-task="auto-start"]');
   const status = settingsContent.querySelector('[data-task="status"]');
   const addButton = settingsContent.querySelector('[data-task-action="add"]');
-  if (!list || !nameEl || !cmdEl || !typeEl || !wdEl || !envEl || !termEl || !autoStartEl || !status || !addButton) return;
+  const cancelButton = settingsContent.querySelector('[data-task-action="cancel"]');
+  if (!list || !nameEl || !cmdEl || !typeEl || !wdEl || !envEl || !termEl || !autoStartEl || !status || !addButton || !cancelButton) return;
+
+  let editingTaskId = null;
 
   const setStatus = (message, isError = false) => {
     status.textContent = message;
@@ -2069,19 +2085,38 @@ function setupTaskForm(settingsContent, containerApi) {
         addWorkspaceTaskPanel(containerApi, task, workspace);
         setStatus(`Started ${task.name}.`);
       });
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', () => {
+        editingTaskId = task.id;
+        nameEl.value = task.name;
+        cmdEl.value = task.cmd;
+        typeEl.value = task.type;
+        wdEl.value = task.wd;
+        envEl.value = task.env;
+        termEl.checked = task.term;
+        autoStartEl.checked = task.autoStart;
+        addButton.textContent = 'Save task';
+        cancelButton.hidden = false;
+        setStatus(`Editing ${task.name}. Changes apply to future runs.`);
+        nameEl.focus();
+      });
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.textContent = 'Remove';
       remove.addEventListener('click', () => {
+        if (editingTaskId === task.id) resetFields();
         removeWorkspaceTask(task.id);
         setStatus(`Removed ${task.name}.`);
       });
-      actions.append(run, remove);
+      actions.append(run, edit, remove);
       item.append(details, actions);
       list.appendChild(item);
     }
   };
   const resetFields = () => {
+    editingTaskId = null;
     nameEl.value = '';
     cmdEl.value = '';
     typeEl.value = 'auto';
@@ -2089,25 +2124,38 @@ function setupTaskForm(settingsContent, containerApi) {
     envEl.value = '';
     termEl.checked = true;
     autoStartEl.checked = false;
+    addButton.textContent = 'Add task';
+    cancelButton.hidden = true;
   };
 
   addButton.addEventListener('click', () => {
     try {
-      const task = addWorkspaceTask({
+      const currentTask = editingTaskId
+        ? loadActiveWorkspace().tasks.find((task) => task.id === editingTaskId)
+        : null;
+      const values = {
         name: nameEl.value.trim() || cmdEl.value.trim() || 'Task',
         cmd: cmdEl.value,
         type: typeEl.value,
         wd: wdEl.value,
         env: envEl.value,
+        fsys: currentTask?.fsys || '',
         term: termEl.checked,
         autoStart: autoStartEl.checked,
-      });
+      };
+      const task = editingTaskId
+        ? updateWorkspaceTask(editingTaskId, values)
+        : addWorkspaceTask(values);
       if (!task) throw new Error('Unable to save the task.');
-      setStatus(`Added ${nameEl.value.trim() || cmdEl.value.trim()}.`);
+      setStatus(`${editingTaskId ? 'Updated' : 'Added'} ${task.name}.`);
       resetFields();
     } catch (error) {
       setStatus(error.message || 'Unable to add task.', true);
     }
+  });
+  cancelButton.addEventListener('click', () => {
+    resetFields();
+    setStatus('Edit cancelled.');
   });
 
   window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
