@@ -518,19 +518,24 @@ function deleteWorkspace(id) {
   return true;
 }
 
-function importWorkspace(serialized) {
+function parseWorkspaceJson(serialized) {
   let parsed;
   try {
     parsed = JSON.parse(serialized);
   } catch {
-    throw new Error('The file is not valid JSON.');
+    throw new Error('Workspace JSON is invalid.');
   }
   const imported = migrateWorkspace(parsed);
   if (!imported) throw new Error('The workspace version is not supported.');
+  return imported;
+}
+
+function importWorkspace(serialized) {
+  const imported = parseWorkspaceJson(serialized);
   const workspace = createWorkspace(imported.presetId, {
     ...imported,
     id: createWorkspaceId(),
-    name: uniqueWorkspaceName(`${imported.name} import`),
+    name: uniqueWorkspaceName(imported.name),
     createdAt: undefined,
     updatedAt: undefined,
   });
@@ -538,6 +543,23 @@ function importWorkspace(serialized) {
     throw new Error('Unable to save the imported workspace.');
   }
   setActiveWorkspaceId(workspace.id);
+  return workspace;
+}
+
+function replaceActiveWorkspace(serialized) {
+  const current = loadActiveWorkspace();
+  const imported = parseWorkspaceJson(serialized);
+  const workspace = createWorkspace(imported.presetId, {
+    ...imported,
+    id: current.id,
+    name: uniqueWorkspaceName(imported.name, current.id),
+    createdAt: current.createdAt,
+    updatedAt: undefined,
+  });
+  if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) {
+    throw new Error('Unable to replace the current workspace.');
+  }
+  notifyWorkspaceChange();
   return workspace;
 }
 
@@ -1554,14 +1576,40 @@ function setupWorkspaceForm(settingsContent) {
   const activeSelect = settingsContent.querySelector('[data-workspace="active"]');
   const nameInput = settingsContent.querySelector('[data-workspace="name"]');
   const presetSelect = settingsContent.querySelector('[data-workspace="preset"]');
-  const importInput = settingsContent.querySelector('[data-workspace="import"]');
   const status = settingsContent.querySelector('[data-workspace="status"]');
+  const jsonEl = settingsContent.querySelector('[data-workspace="json"]');
+  const jsonStatus = settingsContent.querySelector('[data-workspace="json-status"]');
+  const jsonFileInput = settingsContent.querySelector('[data-workspace="json-file"]');
   const deleteButton = settingsContent.querySelector('[data-workspace-action="delete"]');
-  if (!activeSelect || !nameInput || !presetSelect || !importInput || !status) return;
+  if (!activeSelect || !nameInput || !presetSelect || !status || !jsonEl || !jsonStatus || !jsonFileInput) return;
+
+  let jsonDirty = false;
+  let jsonWorkspaceId = null;
 
   const setStatus = (message, isError = false) => {
     status.textContent = message;
     status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const setJsonStatus = (message, isError = false) => {
+    jsonStatus.textContent = message;
+    jsonStatus.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const validateJson = () => {
+    try {
+      const workspace = parseWorkspaceJson(jsonEl.value);
+      setJsonStatus(`${workspace.name} · v${workspace.version} · ${workspace.system.binds.length} system mounts · ${workspace.binds.length} mounts · ${workspace.tasks.length} tasks`);
+      return workspace;
+    } catch (error) {
+      setJsonStatus(error.message || 'Workspace JSON is invalid.', true);
+      return null;
+    }
+  };
+  const loadCurrentJson = () => {
+    const workspace = loadActiveWorkspace();
+    jsonEl.value = JSON.stringify(workspace, null, 2);
+    jsonWorkspaceId = workspace.id;
+    jsonDirty = false;
+    validateJson();
   };
   const addOption = (select, value, label, selected) => {
     const option = document.createElement('option');
@@ -1576,7 +1624,9 @@ function setupWorkspaceForm(settingsContent) {
     for (const workspace of ensureWorkspaceStore()) {
       addOption(activeSelect, workspace.id, workspace.name, workspace.id === activeId);
     }
-    nameInput.value = loadActiveWorkspace().name;
+    const workspace = loadActiveWorkspace();
+    nameInput.value = workspace.name;
+    if (!jsonDirty || jsonWorkspaceId !== workspace.id) loadCurrentJson();
     presetSelect.replaceChildren();
     for (const [id, preset] of Object.entries(WORKSPACE_PRESETS)) {
       addOption(presetSelect, id, preset.name, id === 'hush-shell');
@@ -1614,27 +1664,69 @@ function setupWorkspaceForm(settingsContent) {
     if (deleteWorkspace(workspace.id)) setStatus(`Deleted ${workspace.name}.`);
     else setStatus('The default workspace cannot be deleted.', true);
   });
-  settingsContent.querySelector('[data-workspace-action="export"]').addEventListener('click', () => {
-    const workspace = loadActiveWorkspace();
-    const blob = new Blob([JSON.stringify(workspace, null, 2)], { type: 'application/json' });
+  settingsContent.querySelector('[data-workspace-action="json-reset"]').addEventListener('click', () => {
+    loadCurrentJson();
+    setStatus('Loaded the saved workspace JSON.');
+  });
+  settingsContent.querySelector('[data-workspace-action="json-copy"]').addEventListener('click', async () => {
+    if (!validateJson()) return;
+    try {
+      await navigator.clipboard.writeText(jsonEl.value);
+      setStatus('Workspace JSON copied.');
+    } catch {
+      setStatus('Unable to copy. Select the JSON and copy it manually.', true);
+      jsonEl.focus();
+      jsonEl.select();
+    }
+  });
+  settingsContent.querySelector('[data-workspace-action="json-download"]').addEventListener('click', () => {
+    const workspace = validateJson();
+    if (!workspace) return;
+    const blob = new Blob([jsonEl.value], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const download = document.createElement('a');
     download.href = url;
     download.download = `${workspace.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'workspace'}.json`;
     download.click();
     URL.revokeObjectURL(url);
-    setStatus('Workspace exported.');
+    setStatus('Workspace JSON downloaded.');
   });
-  importInput.addEventListener('change', async () => {
-    const [file] = importInput.files || [];
+  jsonEl.addEventListener('input', () => {
+    jsonDirty = true;
+    validateJson();
+  });
+  jsonFileInput.addEventListener('change', async () => {
+    const [file] = jsonFileInput.files || [];
     if (!file) return;
     try {
-      const workspace = importWorkspace(await file.text());
-      setStatus(`Imported ${workspace.name}.`);
+      jsonEl.value = await file.text();
+      jsonDirty = true;
+      const workspace = validateJson();
+      if (workspace) setStatus(`Loaded ${workspace.name}. Review it, then choose how to apply it.`);
     } catch (error) {
-      setStatus(error.message || 'Unable to import workspace.', true);
+      setStatus(error.message || 'Unable to read workspace JSON.', true);
     } finally {
-      importInput.value = '';
+      jsonFileInput.value = '';
+    }
+  });
+  settingsContent.querySelector('[data-workspace-action="json-create"]').addEventListener('click', () => {
+    try {
+      const workspace = importWorkspace(jsonEl.value);
+      jsonDirty = false;
+      setStatus(`Created ${workspace.name} from JSON.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to create workspace.', true);
+    }
+  });
+  settingsContent.querySelector('[data-workspace-action="json-replace"]').addEventListener('click', () => {
+    const current = loadActiveWorkspace();
+    if (!window.confirm(`Replace ${current.name} with the JSON in this editor?`)) return;
+    try {
+      const workspace = replaceActiveWorkspace(jsonEl.value);
+      jsonDirty = false;
+      setStatus(`Replaced the current workspace with ${workspace.name}.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to replace workspace.', true);
     }
   });
 
