@@ -2654,7 +2654,7 @@ function addIframePanel(api, config, group) {
 const IFRAME_PANEL_OPTIONS = {
   browser: {
     title: 'Browser',
-    src: 'https://browser.gear.sh/',
+    src: '/browser/',
     panelType: 'browser',
     allow: 'clipboard-read; clipboard-write; fullscreen',
     allowFullscreen: true,
