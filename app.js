@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Bot, ChevronLeft, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
+import { Bot, ChevronLeft, CircleOff, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -1627,6 +1627,7 @@ let groupIdCounter = 0;
 let iframeIdCounter = 0;
 let settingsIdCounter = 0;
 let workspaceTaskPanelCounter = 0;
+let fallbackIdCounter = 0;
 
 function addHomePanel(api, group) {
   const id = ++homeIdCounter;
@@ -1648,6 +1649,19 @@ function addSettingsPanel(api, group) {
     component: 'settings',
     params: { settingsId: id, panelType: 'settings' },
     title: 'Settings',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  panel.api.setActive();
+  return panel;
+}
+
+function addFallbackPanel(api, group) {
+  const id = ++fallbackIdCounter;
+  const panel = api.addPanel({
+    id: `fallback-${id}`,
+    component: 'fallback',
+    params: { fallbackId: id, panelType: 'fallback' },
+    title: 'No panels',
     ...(group && { position: { referenceGroup: group } }),
   });
   panel.api.setActive();
@@ -1719,6 +1733,7 @@ const IFRAME_PANEL_OPTIONS = {
 
 const PANEL_CREATION_OPTIONS = [
   { component: 'terminal', label: 'Terminal', icon: Terminal },
+  { component: 'fallback', label: 'No panels', icon: CircleOff },
   { component: 'home', label: 'Home', icon: House },
   { component: 'settings', label: 'Settings', icon: Settings },
   { component: 'group', label: 'Group', icon: UsersRound },
@@ -1734,6 +1749,7 @@ PANEL_ICONS.task = Play;
 
 function addPanelByComponent(api, component, group) {
   if (component === 'terminal') return addTerminalPanel(api, group);
+  if (component === 'fallback') return addFallbackPanel(api, group);
   if (component === 'settings') return addSettingsPanel(api, group);
   if (component === 'group') return addGroupPanel(api, group);
   if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
@@ -2020,13 +2036,57 @@ function AddTerminalButton({ containerApi, group }) {
   );
 }
 
+function FallbackPage({ api, className }) {
+  const addPanel = (component) => {
+    if (!api) return;
+    addPanelByComponent(api, component);
+  };
+
+  return React.createElement('div', { className },
+    React.createElement('div', { className: 'empty-workspace-card' },
+      React.createElement('p', null, 'No open panels'),
+      React.createElement('div', { className: 'empty-workspace-actions' },
+        React.createElement('details', { className: 'empty-terminal-group' },
+          React.createElement('summary', null,
+            React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
+            React.createElement('span', null, 'Terminal'),
+          ),
+          React.createElement('div', { className: 'empty-terminal-options' },
+            getTerminalProfiles().map((profile) =>
+              React.createElement('button', {
+                key: profile.id,
+                type: 'button',
+                title: terminalCommand(profile),
+                onClick: () => api && addTerminalPanel(api, undefined, profile),
+              },
+              React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
+              React.createElement('span', null, profile.name),
+              )
+            ),
+          ),
+        ),
+        PANEL_CREATION_OPTIONS.filter((option) => !['terminal', 'fallback'].includes(option.component)).map((option) =>
+          React.createElement('button', {
+            key: option.component,
+            type: 'button',
+            onClick: () => addPanel(option.component),
+          },
+          React.createElement(option.icon, { size: 18, 'aria-hidden': true }),
+          React.createElement('span', null, option.label),
+          )
+        ),
+      ),
+    ),
+  );
+}
+
+function FallbackPanel({ api }) {
+  return React.createElement(FallbackPage, { api, className: 'fallback-panel panel-content' });
+}
+
 // Main application
 function App() {
-  const [dockviewApi, setDockviewApi] = useState(null);
-  const [workspaceEmpty, setWorkspaceEmpty] = useState(false);
-
   const onReady = useCallback((event) => {
-    setDockviewApi(event.api);
     // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
@@ -2041,9 +2101,10 @@ function App() {
       if (iframeMatch) destroyIframeSession(Number(iframeMatch[1]));
       const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
       if (workspaceTaskMatch) destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
-      requestAnimationFrame(() => setWorkspaceEmpty(event.api.panels.length === 0));
+      requestAnimationFrame(() => {
+        if (event.api.panels.length === 0) addFallbackPanel(event.api);
+      });
     });
-    event.api.onDidAddPanel(() => setWorkspaceEmpty(false));
 
     // Start configured processes only after Wanix is ready so they follow the
     // same allocation path as tasks opened from Settings.
@@ -2055,11 +2116,6 @@ function App() {
     });
   }, []);
 
-  const addPanelFromEmptyWorkspace = (component) => {
-    if (!dockviewApi) return;
-    addPanelByComponent(dockviewApi, component);
-  };
-
   return React.createElement(React.Fragment, null,
     React.createElement(DockviewReact, {
       className: 'dockview-theme-github-dark',
@@ -2067,6 +2123,7 @@ function App() {
       components: {
         home: HomePanel,
         settings: SettingsPanel,
+        fallback: FallbackPanel,
         task: WorkspaceTaskPanel,
         terminal: TerminalPanel,
         group: GroupPanel,
@@ -2075,42 +2132,6 @@ function App() {
       defaultTabComponent: PanelTab,
       rightHeaderActionsComponent: AddTerminalButton,
     }),
-    workspaceEmpty && React.createElement('div', { className: 'empty-workspace' },
-      React.createElement('div', { className: 'empty-workspace-card' },
-        React.createElement('p', null, 'No open panels'),
-        React.createElement('div', { className: 'empty-workspace-actions' },
-          React.createElement('details', { className: 'empty-terminal-group' },
-            React.createElement('summary', null,
-              React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
-              React.createElement('span', null, 'Terminal'),
-            ),
-            React.createElement('div', { className: 'empty-terminal-options' },
-              getTerminalProfiles().map((profile) =>
-                React.createElement('button', {
-                  key: profile.id,
-                  type: 'button',
-                  title: terminalCommand(profile),
-                  onClick: () => addTerminalPanel(dockviewApi, undefined, profile),
-                },
-                React.createElement(Terminal, { size: 18, 'aria-hidden': true }),
-                React.createElement('span', null, profile.name),
-                )
-              ),
-            ),
-          ),
-          PANEL_CREATION_OPTIONS.filter((option) => option.component !== 'terminal').map((option) =>
-            React.createElement('button', {
-              key: option.component,
-              type: 'button',
-              onClick: () => addPanelFromEmptyWorkspace(option.component),
-            },
-            React.createElement(option.icon, { size: 18, 'aria-hidden': true }),
-            React.createElement('span', null, option.label),
-            )
-          ),
-        ),
-      ),
-    ),
   );
 }
 
