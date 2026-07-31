@@ -71,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260731.5" />
+    <link rel="stylesheet" href="app.css?v=20260731.6" />
   </head>
   <body>
     <template id="home-template">
@@ -99,6 +99,12 @@
             <div class="body">
               <label for="workspace-active">Active workspace</label>
               <select id="workspace-active" data-workspace="active"></select>
+
+              <label for="workspace-name">Workspace name</label>
+              <div class="workspace-row">
+                <input id="workspace-name" data-workspace="name" type="text" maxlength="80" autocomplete="off">
+                <button type="button" data-workspace-action="rename">Rename</button>
+              </div>
 
               <label for="workspace-preset">Create from preset</label>
               <div class="workspace-row">
@@ -265,6 +271,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260731.14"></script>
+    <script type="module" src="app.js?v=20260731.15"></script>
   </body>
 </html>

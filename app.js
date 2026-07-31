@@ -294,6 +294,25 @@ function workspaceIndexEntry(workspace) {
   };
 }
 
+function normalizeWorkspaceName(name) {
+  return typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '';
+}
+
+function workspaceNameExists(name, excludedId = null) {
+  const target = normalizeWorkspaceName(name).toLocaleLowerCase();
+  return ensureWorkspaceStore().some((workspace) =>
+    workspace.id !== excludedId && normalizeWorkspaceName(workspace.name).toLocaleLowerCase() === target
+  );
+}
+
+function uniqueWorkspaceName(baseName, excludedId = null) {
+  const base = normalizeWorkspaceName(baseName) || 'Workspace';
+  if (!workspaceNameExists(base, excludedId)) return base;
+  let index = 2;
+  while (workspaceNameExists(`${base} ${index}`, excludedId)) index += 1;
+  return `${base} ${index}`;
+}
+
 function updateWorkspaceIndex(workspace) {
   const index = loadWorkspaceIndex();
   const entry = workspaceIndexEntry(workspace);
@@ -345,7 +364,7 @@ function createWorkspaceFromPreset(presetId) {
   const preset = WORKSPACE_PRESETS[presetId] || WORKSPACE_PRESETS.empty;
   const workspace = createWorkspace(presetId, {
     id: createWorkspaceId(),
-    name: preset.name,
+    name: uniqueWorkspaceName(preset.name),
   });
   if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) return null;
   setActiveWorkspaceId(workspace.id);
@@ -358,12 +377,26 @@ function duplicateWorkspace(id) {
   const workspace = createWorkspace(source.presetId, {
     ...source,
     id: createWorkspaceId(),
-    name: `${source.name} copy`,
+    name: uniqueWorkspaceName(`${source.name} copy`),
     createdAt: undefined,
     updatedAt: undefined,
   });
   if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) return null;
   setActiveWorkspaceId(workspace.id);
+  return workspace;
+}
+
+function renameWorkspace(id, name) {
+  const workspace = loadWorkspace(id);
+  const nextName = normalizeWorkspaceName(name);
+  if (!workspace) throw new Error('Workspace not found.');
+  if (!nextName) throw new Error('Workspace name is required.');
+  if (workspaceNameExists(nextName, id)) throw new Error(`A workspace named “${nextName}” already exists.`);
+  workspace.name = nextName;
+  if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) {
+    throw new Error('Unable to rename the workspace.');
+  }
+  notifyWorkspaceChange();
   return workspace;
 }
 
@@ -394,7 +427,7 @@ function importWorkspace(serialized) {
   const workspace = createWorkspace(imported.presetId, {
     ...imported,
     id: createWorkspaceId(),
-    name: `${imported.name} import`,
+    name: uniqueWorkspaceName(`${imported.name} import`),
     createdAt: undefined,
     updatedAt: undefined,
   });
@@ -1068,11 +1101,12 @@ function setupConfigForm(settingsContent) {
 
 function setupWorkspaceForm(settingsContent) {
   const activeSelect = settingsContent.querySelector('[data-workspace="active"]');
+  const nameInput = settingsContent.querySelector('[data-workspace="name"]');
   const presetSelect = settingsContent.querySelector('[data-workspace="preset"]');
   const importInput = settingsContent.querySelector('[data-workspace="import"]');
   const status = settingsContent.querySelector('[data-workspace="status"]');
   const deleteButton = settingsContent.querySelector('[data-workspace-action="delete"]');
-  if (!activeSelect || !presetSelect || !importInput || !status) return;
+  if (!activeSelect || !nameInput || !presetSelect || !importInput || !status) return;
 
   const setStatus = (message, isError = false) => {
     status.textContent = message;
@@ -1091,6 +1125,7 @@ function setupWorkspaceForm(settingsContent) {
     for (const workspace of ensureWorkspaceStore()) {
       addOption(activeSelect, workspace.id, workspace.name, workspace.id === activeId);
     }
+    nameInput.value = loadActiveWorkspace().name;
     presetSelect.replaceChildren();
     for (const [id, preset] of Object.entries(WORKSPACE_PRESETS)) {
       addOption(presetSelect, id, preset.name, id === 'hush-shell');
@@ -1103,6 +1138,14 @@ function setupWorkspaceForm(settingsContent) {
   activeSelect.addEventListener('change', () => {
     if (setActiveWorkspaceId(activeSelect.value)) setStatus('Workspace selected.');
     else setStatus('Unable to select this workspace.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="rename"]').addEventListener('click', () => {
+    try {
+      const workspace = renameWorkspace(getActiveWorkspaceId(), nameInput.value);
+      setStatus(`Renamed workspace to ${workspace.name}.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to rename workspace.', true);
+    }
   });
   settingsContent.querySelector('[data-workspace-action="create"]').addEventListener('click', () => {
     const workspace = createWorkspaceFromPreset(presetSelect.value);
