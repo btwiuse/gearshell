@@ -155,15 +155,21 @@
                   <option value="file">File</option>
                   <option value="fetch">Fetch</option>
                   <option value="archive">Archive</option>
+                  <option value="import">Remote namespace</option>
                 </select>
                 <label for="system-bind-dst">Destination</label>
                 <input id="system-bind-dst" data-system-bind="dst" type="text" placeholder="hush or tmp/profile">
                 <label for="system-bind-src">Source URL or namespace</label>
-                <input id="system-bind-src" data-system-bind="src" type="text" placeholder="#ramfs or https://example.com/tool">
+                <input id="system-bind-src" data-system-bind="src" type="text" placeholder="#ramfs, https://example.com/tool, or wss://host">
                 <label for="system-bind-content">Inline file content</label>
                 <textarea id="system-bind-content" data-system-bind="content" placeholder="Used by File mounts when no URL is supplied"></textarea>
                 <label for="system-bind-mode">Permissions</label>
                 <input id="system-bind-mode" data-system-bind="mode" type="text" value="0644" inputmode="numeric">
+                <label for="system-bind-union">Union position</label>
+                <select id="system-bind-union" data-system-bind="union">
+                  <option value="after">After earlier mounts</option>
+                  <option value="before">Before earlier mounts</option>
+                </select>
               </div>
               <div class="workspace-actions">
                 <button type="button" data-system-bind-action="add">Add system mount</button>
@@ -213,16 +219,23 @@
                 <select id="bind-type" data-bind="type">
                   <option value="ns">Namespace</option>
                   <option value="file">File</option>
+                  <option value="fetch">Fetch</option>
                   <option value="archive">Archive</option>
+                  <option value="import">Remote namespace</option>
                 </select>
                 <label for="bind-dst">Destination</label>
                 <input id="bind-dst" data-bind="dst" type="text" placeholder="main.js or root">
                 <label for="bind-src">Source URL or namespace</label>
-                <input id="bind-src" data-bind="src" type="text" placeholder="#ramfs or https://example.com/app.wasm">
+                <input id="bind-src" data-bind="src" type="text" placeholder="#ramfs, https://example.com/app.wasm, or wss://host">
                 <label for="bind-content">Inline file content</label>
                 <textarea id="bind-content" data-bind="content" placeholder="Used by File mounts when no URL is supplied"></textarea>
                 <label for="bind-perm">Permissions</label>
                 <input id="bind-perm" data-bind="perm" type="text" value="0644" inputmode="numeric">
+                <label for="bind-union">Union position</label>
+                <select id="bind-union" data-bind="union">
+                  <option value="after">After earlier mounts</option>
+                  <option value="before">Before earlier mounts</option>
+                </select>
               </div>
               <div class="workspace-actions">
                 <button type="button" data-bind-action="add">Add mount</button>
@@ -301,6 +314,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260731.38"></script>
+    <script type="module" src="app.js?v=20260731.39"></script>
   </body>
 </html>

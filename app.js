@@ -71,8 +71,9 @@ const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
 const WORKSPACE_SCHEMA_VERSION = 2;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
-const SUPPORTED_BIND_TYPES = ['ns', 'file', 'archive'];
-const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive'];
+const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
+const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
+const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
 const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'group', 'codigo', 'crush', 'rickroll'];
 
@@ -228,15 +229,14 @@ function normalizeTerminalProfile(profile = {}) {
 }
 
 function normalizeBind(bind = {}) {
-  const type = bind.type === 'fetch' ? 'file' : bind.type;
   return {
     id: typeof bind.id === 'string' && bind.id ? bind.id : createWorkspaceId(),
-    type: SUPPORTED_BIND_TYPES.includes(type) ? type : 'file',
+    type: SUPPORTED_BIND_TYPES.includes(bind.type) ? bind.type : 'file',
     dst: typeof bind.dst === 'string' ? bind.dst.trim() : '',
     src: typeof bind.src === 'string' ? bind.src.trim() : '',
     content: typeof bind.content === 'string' ? bind.content : '',
     perm: typeof bind.perm === 'string' && bind.perm ? bind.perm : '0644',
-    union: typeof bind.union === 'string' && bind.union ? bind.union : 'after',
+    union: SUPPORTED_UNION_MODES.includes(bind.union) ? bind.union : 'after',
   };
 }
 
@@ -263,6 +263,7 @@ function normalizeSystemBind(bind = {}) {
     src: typeof bind.src === 'string' ? bind.src.trim() : '',
     content: typeof bind.content === 'string' ? bind.content : '',
     mode: typeof bind.mode === 'string' ? bind.mode : '',
+    union: SUPPORTED_UNION_MODES.includes(bind.union) ? bind.union : 'after',
   };
 }
 
@@ -288,7 +289,10 @@ function validateBind(bind) {
   if (bind.type === 'file' && !bind.src && !bind.content) {
     return 'Provide a URL or inline file content.';
   }
-  if (bind.type === 'archive' && !bind.src) return 'Archive mounts require a source URL.';
+  if ((bind.type === 'fetch' || bind.type === 'archive' || bind.type === 'import') && !bind.src) {
+    return `${bind.type} mounts require a source URL.`;
+  }
+  if (!SUPPORTED_UNION_MODES.includes(bind.union)) return 'Union position must be before or after.';
   if (!/^[0-7]{3,4}$/.test(bind.perm)) return 'Permissions must be an octal mode such as 0644.';
   return null;
 }
@@ -624,8 +628,9 @@ function validateSystemBind(bind) {
   if (!bind.dst) return 'A destination path is required.';
   if (bind.dst.startsWith('/')) return 'Destination paths must not start with a slash.';
   if (bind.type === 'ns' && !bind.src.startsWith('#')) return 'Namespace mounts must use a # system path.';
-  if ((bind.type === 'fetch' || bind.type === 'archive') && !bind.src) return `${bind.type} mounts require a source URL.`;
+  if ((bind.type === 'fetch' || bind.type === 'archive' || bind.type === 'import') && !bind.src) return `${bind.type} mounts require a source URL.`;
   if (bind.type === 'file' && !bind.src && !bind.content) return 'Provide a URL or inline file content.';
+  if (!SUPPORTED_UNION_MODES.includes(bind.union)) return 'Union position must be before or after.';
   if (bind.mode && !/^[0-7]{3,4}$/.test(bind.mode)) return 'Permissions must be an octal mode such as 0644.';
   return null;
 }
@@ -868,6 +873,7 @@ function createWanixBindElement(bind) {
   element.setAttribute('dst', bind.dst);
   if (bind.src) element.setAttribute('src', bind.src);
   if (bind.mode) element.setAttribute('mode', bind.mode);
+  if (bind.union) element.setAttribute('union', bind.union);
   if (bind.content) element.textContent = bind.content;
   return element;
 }
@@ -1785,12 +1791,13 @@ function setupSystemForm(settingsContent) {
   const srcEl = settingsContent.querySelector('[data-system-bind="src"]');
   const contentEl = settingsContent.querySelector('[data-system-bind="content"]');
   const modeEl = settingsContent.querySelector('[data-system-bind="mode"]');
+  const unionEl = settingsContent.querySelector('[data-system-bind="union"]');
   const status = settingsContent.querySelector('[data-system="status"]');
   const saveButton = settingsContent.querySelector('[data-system-action="save"]');
   const restartButton = settingsContent.querySelector('[data-system-action="restart"]');
   const addButton = settingsContent.querySelector('[data-system-bind-action="add"]');
   const cancelButton = settingsContent.querySelector('[data-system-bind-action="cancel"]');
-  if (!moduleEl || !wasmEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
+  if (!moduleEl || !wasmEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !unionEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
 
   let editingBindId = null;
   let draggedBindId = null;
@@ -1806,6 +1813,7 @@ function setupSystemForm(settingsContent) {
     srcEl.value = '';
     contentEl.value = '';
     modeEl.value = '';
+    unionEl.value = 'after';
     addButton.textContent = 'Add system mount';
     cancelButton.hidden = true;
   };
@@ -1831,7 +1839,7 @@ function setupSystemForm(settingsContent) {
       path.title = path.textContent;
       const meta = document.createElement('span');
       meta.className = 'bind-item-meta';
-      meta.textContent = `${bind.type}${bind.mode ? ` · ${bind.mode}` : ''}`;
+      meta.textContent = `${bind.type}${bind.mode ? ` · ${bind.mode}` : ''} · ${bind.union}`;
       details.append(path, meta);
       const actions = document.createElement('div');
       actions.className = 'bind-item-actions';
@@ -1845,6 +1853,7 @@ function setupSystemForm(settingsContent) {
         srcEl.value = bind.src;
         contentEl.value = bind.content;
         modeEl.value = bind.mode;
+        unionEl.value = bind.union;
         addButton.textContent = 'Save system mount';
         cancelButton.hidden = false;
         setStatus(`Editing ${bind.dst}. Save and restart to apply changes.`);
@@ -1891,6 +1900,7 @@ function setupSystemForm(settingsContent) {
         src: srcEl.value,
         content: contentEl.value,
         mode: modeEl.value,
+        union: unionEl.value,
       };
       if (editingBindId) updateWorkspaceSystemBind(editingBindId, bind);
       else addWorkspaceSystemBind(bind);
@@ -1917,10 +1927,11 @@ function setupBindForm(settingsContent) {
   const srcEl = settingsContent.querySelector('[data-bind="src"]');
   const contentEl = settingsContent.querySelector('[data-bind="content"]');
   const permEl = settingsContent.querySelector('[data-bind="perm"]');
+  const unionEl = settingsContent.querySelector('[data-bind="union"]');
   const status = settingsContent.querySelector('[data-bind="status"]');
   const addButton = settingsContent.querySelector('[data-bind-action="add"]');
   const cancelButton = settingsContent.querySelector('[data-bind-action="cancel"]');
-  if (!list || !typeEl || !dstEl || !srcEl || !contentEl || !permEl || !status || !addButton || !cancelButton) return;
+  if (!list || !typeEl || !dstEl || !srcEl || !contentEl || !permEl || !unionEl || !status || !addButton || !cancelButton) return;
 
   let editingBindId = null;
   let draggedBindId = null;
@@ -1956,7 +1967,7 @@ function setupBindForm(settingsContent) {
       path.title = path.textContent;
       const meta = document.createElement('span');
       meta.className = 'bind-item-meta';
-      meta.textContent = `${bind.type} · ${bind.perm}`;
+      meta.textContent = `${bind.type} · ${bind.perm} · ${bind.union}`;
       details.append(path, meta);
       const actions = document.createElement('div');
       actions.className = 'bind-item-actions';
@@ -1970,6 +1981,7 @@ function setupBindForm(settingsContent) {
         srcEl.value = bind.src;
         contentEl.value = bind.content;
         permEl.value = bind.perm;
+        unionEl.value = bind.union;
         addButton.textContent = 'Save mount';
         cancelButton.hidden = false;
         setStatus(`Editing ${bind.dst}.`);
@@ -1995,6 +2007,7 @@ function setupBindForm(settingsContent) {
     srcEl.value = '';
     contentEl.value = '';
     permEl.value = '0644';
+    unionEl.value = 'after';
     addButton.textContent = 'Add mount';
     cancelButton.hidden = true;
   };
@@ -2007,6 +2020,7 @@ function setupBindForm(settingsContent) {
         src: srcEl.value,
         content: contentEl.value,
         perm: permEl.value,
+        union: unionEl.value,
       };
       const bind = editingBindId
         ? updateWorkspaceBind(editingBindId, values)
