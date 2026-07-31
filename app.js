@@ -300,6 +300,7 @@ function normalizeSystemConfig(system) {
   }
   return {
     binds,
+    allowOrigins: typeof system?.allowOrigins === 'string' ? system.allowOrigins.trim().replace(/[\s,]+/g, ' ') : '',
   };
 }
 
@@ -773,7 +774,7 @@ function updateWorkspaceSystem(mutator) {
   });
 }
 
-function saveWorkspaceSystemSettings({ moduleUrl, wasmUrl }) {
+function saveWorkspaceSystemSettings({ moduleUrl, wasmUrl, allowOrigins }) {
   const nextModuleUrl = moduleUrl.trim();
   const nextWasmUrl = wasmUrl.trim();
   if (!nextModuleUrl) throw new Error('A Wanix runtime module URL is required.');
@@ -781,6 +782,7 @@ function saveWorkspaceSystemSettings({ moduleUrl, wasmUrl }) {
   return updateWorkspaceSystem((system, workspace) => {
     workspace.runtime.moduleUrl = nextModuleUrl;
     workspace.runtime.wasmUrl = nextWasmUrl;
+    system.allowOrigins = typeof allowOrigins === 'string' ? allowOrigins.trim().replace(/[\s,]+/g, ' ') : '';
   });
 }
 
@@ -1015,6 +1017,7 @@ function createWanixSystem(workspace = loadActiveWorkspace()) {
   const system = document.createElement('wanix-system');
   system.id = 'wanix-system';
   system.setAttribute('wasm', workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl);
+  if (workspace.system.allowOrigins) system.setAttribute('allow-origins', workspace.system.allowOrigins);
 
   const appRoot = document.createElement('div');
   appRoot.id = 'app-root';
@@ -2071,6 +2074,8 @@ function setupWorkspaceForm(settingsContent) {
 function setupSystemForm(settingsContent) {
   const moduleEl = settingsContent.querySelector('[data-system="module"]');
   const wasmEl = settingsContent.querySelector('[data-system="wasm"]');
+  const allowOriginsEl = settingsContent.querySelector('[data-system="allow-origins"]');
+  const shareUrlEl = settingsContent.querySelector('[data-system="share-url"]');
   const list = settingsContent.querySelector('[data-system-bind-list]');
   const typeEl = settingsContent.querySelector('[data-system-bind="type"]');
   const dstEl = settingsContent.querySelector('[data-system-bind="dst"]');
@@ -2081,9 +2086,10 @@ function setupSystemForm(settingsContent) {
   const status = settingsContent.querySelector('[data-system="status"]');
   const saveButton = settingsContent.querySelector('[data-system-action="save"]');
   const restartButton = settingsContent.querySelector('[data-system-action="restart"]');
+  const copyShareButton = settingsContent.querySelector('[data-system-action="copy-share"]');
   const addButton = settingsContent.querySelector('[data-system-bind-action="add"]');
   const cancelButton = settingsContent.querySelector('[data-system-bind-action="cancel"]');
-  if (!moduleEl || !wasmEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !unionEl || !status || !saveButton || !restartButton || !addButton || !cancelButton) return;
+  if (!moduleEl || !wasmEl || !allowOriginsEl || !shareUrlEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !unionEl || !status || !saveButton || !restartButton || !copyShareButton || !addButton || !cancelButton) return;
 
   let editingBindId = null;
   let draggedBindId = null;
@@ -2107,6 +2113,10 @@ function setupSystemForm(settingsContent) {
     const workspace = loadActiveWorkspace();
     moduleEl.value = workspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl;
     wasmEl.value = workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl;
+    allowOriginsEl.value = workspace.system.allowOrigins || '';
+    const shareUrl = new URL(window.location.href);
+    shareUrl.hash = 'wanix-system';
+    shareUrlEl.value = shareUrl.href;
     list.replaceChildren();
     for (const bind of workspace.system.binds) {
       const item = document.createElement('div');
@@ -2159,7 +2169,7 @@ function setupSystemForm(settingsContent) {
     }
   };
   const saveSettings = () => {
-    saveWorkspaceSystemSettings({ moduleUrl: moduleEl.value, wasmUrl: wasmEl.value });
+    saveWorkspaceSystemSettings({ moduleUrl: moduleEl.value, wasmUrl: wasmEl.value, allowOrigins: allowOriginsEl.value });
     setStatus('System settings saved. Restart the playground to apply changes.');
   };
 
@@ -2176,6 +2186,16 @@ function setupSystemForm(settingsContent) {
       window.location.reload();
     } catch (error) {
       setStatus(error.message || 'Unable to save system settings.', true);
+    }
+  });
+  copyShareButton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrlEl.value);
+      setStatus('Namespace share URL copied.');
+    } catch {
+      shareUrlEl.focus();
+      shareUrlEl.select();
+      setStatus('Select the share URL and copy it manually.', true);
     }
   });
   addButton.addEventListener('click', () => {

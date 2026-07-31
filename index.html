@@ -160,6 +160,14 @@
               <input id="system-module" data-system="module" type="url" spellcheck="false">
               <label for="system-wasm">Wanix wasm URL</label>
               <input id="system-wasm" data-system="wasm" type="url" spellcheck="false">
+              <label for="system-allow-origins">Allowed import origins</label>
+              <input id="system-allow-origins" data-system="allow-origins" type="text" placeholder="https://playground.example or *" spellcheck="false">
+              <label for="system-share-url">Namespace share URL</label>
+              <div class="workspace-row">
+                <input id="system-share-url" data-system="share-url" type="url" readonly spellcheck="false">
+                <button type="button" data-system-action="copy-share">Copy</button>
+              </div>
+              <p class="hint">Allow the importing page origin, then restart. Add a Remote namespace System mount on the other workspace with this share URL as its source.</p>
               <div class="workspace-actions">
                 <button type="button" data-system-action="save">Save system settings</button>
                 <button type="button" data-system-action="restart">Apply &amp; restart</button>
@@ -334,6 +342,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260731.42"></script>
+    <script type="module" src="app.js?v=20260731.43"></script>
   </body>
 </html>
