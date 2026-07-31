@@ -1014,7 +1014,7 @@ function createWanixBindElement(bind) {
 function createWanixSystem(workspace = loadActiveWorkspace()) {
   const host = document.getElementById('wanix-host');
   if (!host) throw new Error('Unable to find the Wanix host.');
-  const system = document.createElement('wanix-system');
+  const system = document.createElement('wanix-namespace');
   system.id = 'wanix-system';
   system.setAttribute('wasm', workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl);
   if (workspace.system.allowOrigins) system.setAttribute('allow-origins', workspace.system.allowOrigins);
@@ -1030,7 +1030,7 @@ function createWanixSystem(workspace = loadActiveWorkspace()) {
 }
 
 // wanix elements inside dockview need an explicit system reference because
-// dockview isolates panel content from the wanix-system ancestor.
+// Dockview isolates panel content from the Wanix namespace ancestor.
 const systemWorkspace = loadActiveWorkspace();
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
 const wanixSystem = createWanixSystem(systemWorkspace);
@@ -1169,7 +1169,7 @@ function destroyTerminalSession(id) {
 function wakeTerminalSession(session) {
   if (!systemReady || session.started) return;
   session.started = true;
-  // Current wanix-system emits `ready` to child elements created before the
+  // Current Wanix namespace emits `ready` to child elements created before the
   // system booted. Let that listener start the first shell. Elements created
   // after boot miss that event and need the explicit wake below. Newer Wanix
   // runtimes self-activate, so they never need it.
