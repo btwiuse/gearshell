@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
+import { ArrowRight, ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -2789,6 +2789,7 @@ function TerminalPanel({ api, params }) {
 function FilesPanel() {
   const fileInputRef = useRef(null);
   const [path, setPath] = useState('.');
+  const [pathDraft, setPathDraft] = useState('/');
   const [entries, setEntries] = useState([]);
   const [selectedPath, setSelectedPath] = useState(null);
   const [contents, setContents] = useState('');
@@ -2822,6 +2823,18 @@ function FilesPanel() {
     wanixSystem?.addEventListener('ready', retry);
     return () => wanixSystem?.removeEventListener('ready', retry);
   }, [refresh]);
+
+  useEffect(() => {
+    setPathDraft(path === '.' ? '/' : `/${path}`);
+  }, [path]);
+
+  const navigateToPath = () => {
+    const nextPath = normalizeFilesystemPath(pathDraft);
+    setPath(nextPath);
+    setSelectedPath(null);
+    setContents('');
+    setSavedContents('');
+  };
 
   const openEntry = async (entry) => {
     const nextPath = filesystemPathJoin(path, entry.name);
@@ -2944,8 +2957,15 @@ function FilesPanel() {
   return React.createElement('div', { className: 'files-panel panel-content' },
     React.createElement('section', { className: 'files-sidebar' },
       React.createElement('div', { className: 'files-toolbar' },
-        React.createElement('code', { title: path }, path === '.' ? '/' : `/${path}`),
+        React.createElement('input', {
+          value: pathDraft,
+          'aria-label': 'Filesystem path',
+          spellCheck: false,
+          onChange: (event) => setPathDraft(event.target.value),
+          onKeyDown: (event) => { if (event.key === 'Enter') navigateToPath(); },
+        }),
         React.createElement('div', { className: 'files-toolbar-actions' },
+          React.createElement('button', { type: 'button', title: 'Go to path', 'aria-label': 'Go to path', onClick: navigateToPath }, React.createElement(ArrowRight, { size: 15, 'aria-hidden': true })),
           React.createElement('button', { type: 'button', title: 'Parent folder', 'aria-label': 'Parent folder', disabled: path === '.', onClick: () => setPath(filesystemPathParent(path)) }, React.createElement(ArrowUp, { size: 15, 'aria-hidden': true })),
           React.createElement('button', { type: 'button', title: 'Refresh files', 'aria-label': 'Refresh files', onClick: refresh }, React.createElement(RefreshCw, { className: loading ? 'files-spinning' : '', size: 15, 'aria-hidden': true })),
           React.createElement('button', { type: 'button', title: 'Upload files', 'aria-label': 'Upload files', onClick: () => fileInputRef.current?.click() }, React.createElement(Upload, { size: 15, 'aria-hidden': true })),
