@@ -917,6 +917,7 @@ window.addEventListener('blur', restoreTerminalLayer);
 function createTerminalSession(id, profile = getDefaultTerminalProfile()) {
   const wrapper = document.createElement('div');
   wrapper.className = 'terminal-session';
+  const waitsForSystemReady = !systemReady;
 
   const task = document.createElement('wanix-task');
   task.id = `repl-${id}`;
@@ -942,7 +943,18 @@ function createTerminalSession(id, profile = getDefaultTerminalProfile()) {
   wrapper.append(task, term);
   terminalLayer?.appendChild(wrapper);
 
-  const session = { id, wrapper, task, term, anchor: null, layout: null, started: false, profile };
+  const session = {
+    id,
+    wrapper,
+    task,
+    term,
+    anchor: null,
+    layout: null,
+    started: false,
+    profile,
+    waitsForSystemReady,
+    autoActivates: '_connectStarted' in task,
+  };
   terminalSessions.set(id, session);
   return session;
 }
@@ -962,6 +974,11 @@ function destroyTerminalSession(id) {
 function wakeTerminalSession(session) {
   if (!systemReady || session.started) return;
   session.started = true;
+  // Current wanix-system emits `ready` to child elements created before the
+  // system booted. Let that listener start the first shell. Elements created
+  // after boot miss that event and need the explicit wake below. Newer Wanix
+  // runtimes self-activate, so they never need it.
+  if (session.waitsForSystemReady || session.autoActivates) return;
   queueMicrotask(() => {
     session.task._awake?.();
     session.term._awake?.();
