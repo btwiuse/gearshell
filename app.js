@@ -1160,40 +1160,25 @@ function destroyReveal(homeContent) {
 
 // --- Settings forms ---
 function setupConfigForm(settingsContent) {
-  const cmdEl = settingsContent.querySelector('[data-config="cmd"]');
-  const envEl = settingsContent.querySelector('[data-config="env"]');
   const startupEls = [...settingsContent.querySelectorAll('[data-config-startup]')];
   const restoreTabsEl = settingsContent.querySelector('[data-config="restore-tabs"]');
-  if (!cmdEl) return;
+  const saveButton = settingsContent.querySelector('[data-config-action="save"]');
+  const resetButton = settingsContent.querySelector('[data-config-action="reset"]');
+  if (!saveButton || !resetButton) return;
 
   const populate = () => {
     const cfg = loadConfig();
-    cmdEl.value = cfg.cmd;
-    envEl.value = cfg.env;
     for (const input of startupEls) input.checked = cfg.startupPanels.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
   };
   populate();
 
-  settingsContent.querySelector('[data-config-action="save"]').addEventListener('click', () => {
+  saveButton.addEventListener('click', () => {
     const config = loadConfig();
-    const cmd = cmdEl.value.trim() || DEFAULT_CMD;
-    const terminalProfiles = config.terminalProfiles.map((profile) => {
-      if (profile.id !== 'hush') return profile;
-      return normalizeTerminalProfile({
-        ...profile,
-        program: cmd.split(/\s+/, 1)[0] || 'hush',
-        args: cmd.replace(/^\S+\s*/, ''),
-        env: envEl.value,
-      });
-    });
     saveConfig({
       ...config,
-      cmd,
-      env: envEl.value,
       startupPanels: startupEls.filter((input) => input.checked).map((input) => input.value),
       restoreTabs: restoreTabsEl?.checked === true,
-      terminalProfiles,
     });
     const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Saved!';
@@ -1201,10 +1186,8 @@ function setupConfigForm(settingsContent) {
     setTimeout(() => { s.textContent = ''; }, 2000);
   });
 
-  settingsContent.querySelector('[data-config-action="reset"]').addEventListener('click', () => {
+  resetButton.addEventListener('click', () => {
     const c = resetConfig();
-    cmdEl.value = c.cmd;
-    envEl.value = c.env;
     for (const input of startupEls) input.checked = c.startupPanels.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
     const s = settingsContent.querySelector('[data-config="status"]');
