@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Bot, ChevronDown, CircleOff, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
+import { ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -77,7 +77,7 @@ const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
-const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'group', 'codigo', 'crush', 'rickroll'];
+const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'files', 'group', 'codigo', 'crush', 'rickroll'];
 
 const BUILTIN_TERMINAL_PROFILES = [
   { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
@@ -1042,6 +1042,37 @@ wanixSystem?.addEventListener('ready', (event) => {
   for (const session of terminalSessions.values()) wakeTerminalSession(session);
   for (const session of workspaceTaskSessions.values()) wakeWorkspaceTaskSession(session);
 });
+
+function getWanixRoot() {
+  if (!systemReady || !wanixSystem?.root) throw new Error('Wanix system is still starting.');
+  return wanixSystem.root;
+}
+
+function normalizeFilesystemPath(path = '.') {
+  const parts = [];
+  for (const part of String(path).split('/')) {
+    if (!part || part === '.') continue;
+    if (part === '..') parts.pop();
+    else parts.push(part);
+  }
+  return parts.join('/') || '.';
+}
+
+function filesystemPathJoin(base, name) {
+  return normalizeFilesystemPath(base === '.' ? name : `${base}/${name}`);
+}
+
+function filesystemPathParent(path) {
+  const parts = normalizeFilesystemPath(path).split('/').filter((part) => part && part !== '.');
+  parts.pop();
+  return parts.join('/') || '.';
+}
+
+function decodeFilesystemText(contents) {
+  const bytes = contents instanceof Uint8Array ? contents : new Uint8Array(contents);
+  if (bytes.byteLength > 1024 * 1024) throw new Error('Files larger than 1 MiB cannot be opened in this editor.');
+  return new TextDecoder().decode(bytes);
+}
 
 function hideTerminalLayer() {
   terminalLayer?.classList.add('dragging');
@@ -2449,6 +2480,7 @@ let homeIdCounter = 0;
 let groupIdCounter = 0;
 let iframeIdCounter = 0;
 let settingsIdCounter = 0;
+let filesIdCounter = 0;
 let workspaceTaskPanelCounter = 0;
 let fallbackIdCounter = 0;
 
@@ -2476,6 +2508,20 @@ function addSettingsPanel(api, group) {
     ...(group && { position: { referenceGroup: group } }),
   });
   rememberOpenPanel(panel, { component: 'settings' });
+  panel.api.setActive();
+  return panel;
+}
+
+function addFilesPanel(api, group) {
+  const id = ++filesIdCounter;
+  const panel = api.addPanel({
+    id: `files-${id}`,
+    component: 'files',
+    params: { filesId: id, panelType: 'files' },
+    title: 'Files',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  rememberOpenPanel(panel, { component: 'files' });
   panel.api.setActive();
   return panel;
 }
@@ -2565,6 +2611,7 @@ const PANEL_CREATION_OPTIONS = [
   { component: 'fallback', label: 'No panels', icon: CircleOff },
   { component: 'home', label: 'Home', icon: House },
   { component: 'settings', label: 'Settings', icon: Settings },
+  { component: 'files', label: 'Files', icon: FolderOpen },
   { component: 'group', label: 'Group', icon: UsersRound },
   { component: 'codigo', label: 'Codigo', icon: Code2 },
   { component: 'crush', label: 'Crush', icon: Bot },
@@ -2580,6 +2627,7 @@ function addPanelByComponent(api, component, group) {
   if (component === 'terminal') return addTerminalPanel(api, group);
   if (component === 'fallback') return addFallbackPanel(api, group);
   if (component === 'settings') return addSettingsPanel(api, group);
+  if (component === 'files') return addFilesPanel(api, group);
   if (component === 'group') return addGroupPanel(api, group);
   if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
   return addHomePanel(api, group);
@@ -2736,6 +2784,218 @@ function TerminalPanel({ api, params }) {
   }, [id, params.profile]);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+}
+
+function FilesPanel() {
+  const fileInputRef = useRef(null);
+  const [path, setPath] = useState('.');
+  const [entries, setEntries] = useState([]);
+  const [selectedPath, setSelectedPath] = useState(null);
+  const [contents, setContents] = useState('');
+  const [savedContents, setSavedContents] = useState('');
+  const [creating, setCreating] = useState(null);
+  const [entryName, setEntryName] = useState('');
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const names = await getWanixRoot().readDir(path);
+      const next = (Array.isArray(names) ? names : []).map((entry) => {
+        const isDirectory = entry.endsWith('/');
+        return { name: entry.replace(/\/$/, ''), isDirectory };
+      }).sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name));
+      setEntries(next);
+      setStatus('');
+    } catch (error) {
+      setEntries([]);
+      setStatus(error.message || 'Unable to read this directory.');
+    } finally {
+      setLoading(false);
+    }
+  }, [path]);
+
+  useEffect(() => {
+    refresh();
+    const retry = () => refresh();
+    wanixSystem?.addEventListener('ready', retry);
+    return () => wanixSystem?.removeEventListener('ready', retry);
+  }, [refresh]);
+
+  const openEntry = async (entry) => {
+    const nextPath = filesystemPathJoin(path, entry.name);
+    if (entry.isDirectory) {
+      setPath(nextPath);
+      setSelectedPath(null);
+      setContents('');
+      setSavedContents('');
+      return;
+    }
+    try {
+      const text = decodeFilesystemText(await getWanixRoot().readFile(nextPath));
+      setSelectedPath(nextPath);
+      setContents(text);
+      setSavedContents(text);
+      setStatus('');
+    } catch (error) {
+      setStatus(error.message || 'Unable to open this file.');
+    }
+  };
+
+  const createEntry = async () => {
+    const name = entryName.trim();
+    if (!name || name.includes('/') || name === '.' || name === '..') {
+      setStatus('Enter a name without a path separator.');
+      return;
+    }
+    try {
+      const entryPath = filesystemPathJoin(path, name);
+      const root = getWanixRoot();
+      if (creating === 'rename-file' && selectedPath) {
+        await root.rename(selectedPath, filesystemPathJoin(filesystemPathParent(selectedPath), name));
+        setSelectedPath(filesystemPathJoin(filesystemPathParent(selectedPath), name));
+      } else if (creating === 'rename-folder') {
+        const nextPath = filesystemPathJoin(filesystemPathParent(path), name);
+        await root.rename(path, nextPath);
+        setPath(nextPath);
+      } else if (creating === 'folder') {
+        await root.makeDir(entryPath);
+      } else {
+        await root.writeFile(entryPath, '');
+      }
+      setCreating(null);
+      setEntryName('');
+      await refresh();
+      if (creating === 'file') await openEntry({ name, isDirectory: false });
+    } catch (error) {
+      setStatus(error.message || 'Unable to create this entry.');
+    }
+  };
+
+  const saveFile = async () => {
+    if (!selectedPath) return;
+    try {
+      await getWanixRoot().writeFile(selectedPath, contents);
+      setSavedContents(contents);
+      await refresh();
+      setStatus('Saved.');
+    } catch (error) {
+      setStatus(error.message || 'Unable to save this file.');
+    }
+  };
+
+  const removeFile = async () => {
+    if (!selectedPath || !window.confirm(`Delete ${selectedPath}?`)) return;
+    try {
+      await getWanixRoot().remove(selectedPath);
+      setSelectedPath(null);
+      setContents('');
+      setSavedContents('');
+      setStatus('Deleted.');
+      await refresh();
+    } catch (error) {
+      setStatus(error.message || 'Unable to delete this file.');
+    }
+  };
+
+  const removeDirectory = async () => {
+    if (path === '.' || !window.confirm(`Delete the empty folder /${path}?`)) return;
+    try {
+      const parent = filesystemPathParent(path);
+      await getWanixRoot().remove(path);
+      setPath(parent);
+      setSelectedPath(null);
+      setContents('');
+      setSavedContents('');
+      setStatus('Deleted empty folder.');
+    } catch (error) {
+      setStatus(error.message || 'Only empty folders can be deleted here.');
+    }
+  };
+
+  const uploadFiles = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+    try {
+      const root = getWanixRoot();
+      for (const file of files) {
+        await root.writeFile(filesystemPathJoin(path, file.name), new Uint8Array(await file.arrayBuffer()));
+      }
+      await refresh();
+      setStatus(`Uploaded ${files.length} file${files.length === 1 ? '' : 's'}.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to upload these files.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const downloadFile = () => {
+    if (!selectedPath) return;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([contents], { type: 'application/octet-stream' }));
+    link.download = selectedPath.split('/').pop() || 'download';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  const dirty = selectedPath && contents !== savedContents;
+  return React.createElement('div', { className: 'files-panel panel-content' },
+    React.createElement('section', { className: 'files-sidebar' },
+      React.createElement('div', { className: 'files-toolbar' },
+        React.createElement('code', { title: path }, path === '.' ? '/' : `/${path}`),
+        React.createElement('div', { className: 'files-toolbar-actions' },
+          React.createElement('button', { type: 'button', title: 'Parent folder', 'aria-label': 'Parent folder', disabled: path === '.', onClick: () => setPath(filesystemPathParent(path)) }, React.createElement(ArrowUp, { size: 15, 'aria-hidden': true })),
+          React.createElement('button', { type: 'button', title: 'Refresh files', 'aria-label': 'Refresh files', onClick: refresh }, React.createElement(RefreshCw, { className: loading ? 'files-spinning' : '', size: 15, 'aria-hidden': true })),
+          React.createElement('button', { type: 'button', title: 'Upload files', 'aria-label': 'Upload files', onClick: () => fileInputRef.current?.click() }, React.createElement(Upload, { size: 15, 'aria-hidden': true })),
+          React.createElement('button', { type: 'button', title: 'New file', 'aria-label': 'New file', onClick: () => { setCreating('file'); setEntryName(''); } }, React.createElement(FilePlus2, { size: 15, 'aria-hidden': true })),
+          React.createElement('button', { type: 'button', title: 'New folder', 'aria-label': 'New folder', onClick: () => { setCreating('folder'); setEntryName(''); } }, React.createElement(FolderPlus, { size: 15, 'aria-hidden': true })),
+          path !== '.' && React.createElement(React.Fragment, null,
+            React.createElement('button', { type: 'button', title: 'Rename folder', 'aria-label': 'Rename folder', onClick: () => { setCreating('rename-folder'); setEntryName(path.split('/').pop() || ''); } }, React.createElement(Pencil, { size: 15, 'aria-hidden': true })),
+            React.createElement('button', { type: 'button', title: 'Delete empty folder', 'aria-label': 'Delete empty folder', onClick: removeDirectory }, React.createElement(Trash2, { size: 15, 'aria-hidden': true })),
+          ),
+        ),
+      ),
+      React.createElement('input', { ref: fileInputRef, className: 'files-upload-input', type: 'file', multiple: true, onChange: uploadFiles }),
+      creating && React.createElement('div', { className: 'files-create' },
+        React.createElement('input', { autoFocus: true, value: entryName, placeholder: creating.includes('folder') ? 'folder name' : 'file name', onChange: (event) => setEntryName(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter') createEntry(); if (event.key === 'Escape') setCreating(null); } }),
+        React.createElement('button', { type: 'button', title: `Create ${creating}`, 'aria-label': `Create ${creating}`, onClick: createEntry }, React.createElement(Check, { size: 15, 'aria-hidden': true })),
+        React.createElement('button', { type: 'button', title: 'Cancel', 'aria-label': 'Cancel', onClick: () => setCreating(null) }, React.createElement(X, { size: 15, 'aria-hidden': true })),
+      ),
+      React.createElement('div', { className: 'files-list', role: 'list' },
+        entries.map((entry) => React.createElement('button', {
+          key: `${entry.isDirectory ? 'd' : 'f'}:${entry.name}`,
+          type: 'button',
+          role: 'listitem',
+          className: selectedPath === filesystemPathJoin(path, entry.name) ? 'selected' : '',
+          title: entry.name,
+          onClick: () => openEntry(entry),
+        },
+        React.createElement(entry.isDirectory ? FolderOpen : FileCode2, { size: 15, 'aria-hidden': true }),
+        React.createElement('span', null, entry.name),
+        )),
+        !loading && entries.length === 0 && !status && React.createElement('p', { className: 'files-empty' }, 'Folder is empty.'),
+      ),
+    ),
+    React.createElement('section', { className: 'files-editor' },
+      selectedPath
+        ? React.createElement(React.Fragment, null,
+          React.createElement('div', { className: 'files-editor-toolbar' },
+            React.createElement('code', { title: selectedPath }, `/${selectedPath}`),
+            React.createElement('div', { className: 'files-toolbar-actions' },
+              React.createElement('button', { type: 'button', title: 'Save file', 'aria-label': 'Save file', disabled: !dirty, onClick: saveFile }, React.createElement(Save, { size: 15, 'aria-hidden': true })),
+              React.createElement('button', { type: 'button', title: 'Download file', 'aria-label': 'Download file', onClick: downloadFile }, React.createElement(Download, { size: 15, 'aria-hidden': true })),
+              React.createElement('button', { type: 'button', title: 'Rename file', 'aria-label': 'Rename file', onClick: () => { setCreating('rename-file'); setEntryName(selectedPath.split('/').pop() || ''); } }, React.createElement(Pencil, { size: 15, 'aria-hidden': true })),
+              React.createElement('button', { type: 'button', title: 'Delete file', 'aria-label': 'Delete file', onClick: removeFile }, React.createElement(Trash2, { size: 15, 'aria-hidden': true })),
+            ),
+          ),
+          React.createElement('textarea', { value: contents, spellCheck: false, 'aria-label': `Contents of ${selectedPath}`, onChange: (event) => setContents(event.target.value) }),
+        )
+        : React.createElement('div', { className: 'files-editor-empty' }, React.createElement(FileCode2, { size: 28, 'aria-hidden': true })),
+      status && React.createElement('div', { className: 'files-status', role: 'status' }, status),
+    ),
+  );
 }
 
 function GroupPanel() {
@@ -2979,6 +3239,7 @@ function App() {
       components: {
         home: HomePanel,
         settings: SettingsPanel,
+        files: FilesPanel,
         fallback: FallbackPanel,
         task: WorkspaceTaskPanel,
         terminal: TerminalPanel,
