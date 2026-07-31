@@ -136,7 +136,7 @@
           <details class="bind-form system-form" open>
             <summary><span>Runtime &amp; system</span></summary>
             <div class="body">
-              <p class="hint">These mounts form the Wanix system filesystem. Use File mounts for inline files such as startup scripts. Drag entries to set their mount order. Save, then restart the playground to apply changes.</p>
+              <p class="hint">These mounts form the shared Wanix system filesystem. Every workspace task inherits them. Use File mounts for inline files such as startup scripts. Drag entries to set their mount order. Save, then restart the playground to apply changes.</p>
               <label for="system-module">Wanix runtime module URL</label>
               <input id="system-module" data-system="module" type="url" spellcheck="false">
               <label for="system-wasm">Wanix wasm URL</label>
@@ -204,9 +204,9 @@
             </div>
           </details>
           <details class="bind-form" open>
-            <summary><span>Mounts</span></summary>
+            <summary><span>Task mounts</span></summary>
             <div class="body">
-              <p class="hint">Mounts are applied to each playground task in this workspace. Drag entries to set their mount order.</p>
+              <p class="hint">These mounts are applied after the inherited System mounts, only to tasks in this workspace. Use them for project files, archives, and task-specific overlays. Drag entries to set their mount order.</p>
               <div class="bind-list" data-bind-list></div>
               <div class="bind-fields">
                 <label for="bind-type">Type</label>
@@ -300,6 +300,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260731.36"></script>
+    <script type="module" src="app.js?v=20260731.37"></script>
   </body>
 </html>

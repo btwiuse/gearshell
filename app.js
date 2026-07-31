@@ -68,7 +68,7 @@ const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', startupPanels: [], restoreTa
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
 const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
-const WORKSPACE_SCHEMA_VERSION = 1;
+const WORKSPACE_SCHEMA_VERSION = 2;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
 const SUPPORTED_BIND_TYPES = ['ns', 'file', 'archive'];
@@ -139,21 +139,14 @@ const WORKSPACE_PRESETS = {
     name: 'Hush Shell',
     description: 'The current Gear Shell environment with Hush and persistent OPFS storage.',
     runtime: { ...WANIX_RUNTIME, debug: false },
-    binds: [
-      { id: 'task', type: 'ns', dst: 'task', src: '#task' },
-      { id: 'term', type: 'ns', dst: 'term', src: '#term' },
-      { id: 'web', type: 'ns', dst: 'web', src: '#web' },
-      { id: 'js', type: 'ns', dst: 'js', src: '#js' },
-      { id: 'opfs', type: 'ns', dst: 'opfs', src: '#web/opfs', perm: '0755' },
-      { id: 'tmp', type: 'ns', dst: 'tmp', src: '#ramfs' },
-    ],
+    binds: [],
     tasks: [],
   },
   empty: {
     name: 'Empty Namespace',
     description: 'A blank in-memory Wanix namespace for composing binds and tasks.',
     runtime: { ...WANIX_RUNTIME, debug: false },
-    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs' }],
+    binds: [],
     tasks: [],
   },
   'js-worker': {
@@ -161,7 +154,6 @@ const WORKSPACE_PRESETS = {
     description: 'An inline JavaScript task that can be edited and started in the browser.',
     runtime: { ...WANIX_RUNTIME, debug: false },
     binds: [
-      { id: 'root', type: 'ns', dst: '.', src: '#ramfs' },
       {
         id: 'main-js',
         type: 'file',
@@ -186,7 +178,7 @@ const WORKSPACE_PRESETS = {
     name: 'WASI Terminal',
     description: 'A terminal-ready WASI task. Add a .wasm file before starting it.',
     runtime: { ...WANIX_RUNTIME, debug: false },
-    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs' }],
+    binds: [],
     tasks: [{
       id: 'main',
       name: 'main.wasm',
@@ -246,6 +238,21 @@ function normalizeBind(bind = {}) {
     perm: typeof bind.perm === 'string' && bind.perm ? bind.perm : '0644',
     union: typeof bind.union === 'string' && bind.union ? bind.union : 'after',
   };
+}
+
+const LEGACY_SYSTEM_MIRROR_BINDS = new Map([
+  ['task', { dst: 'task', src: '#task' }],
+  ['term', { dst: 'term', src: '#term' }],
+  ['web', { dst: 'web', src: '#web' }],
+  ['js', { dst: 'js', src: '#js' }],
+  ['opfs', { dst: 'opfs', src: '#web/opfs' }],
+  ['tmp', { dst: 'tmp', src: '#ramfs' }],
+  ['root', { dst: '.', src: '#ramfs' }],
+]);
+
+function isLegacySystemMirrorBind(bind) {
+  const expected = LEGACY_SYSTEM_MIRROR_BINDS.get(bind.id);
+  return bind.type === 'ns' && expected?.dst === bind.dst && expected.src === bind.src;
 }
 
 function normalizeSystemBind(bind = {}) {
@@ -360,11 +367,15 @@ function migrateWorkspace(workspace) {
   if (!workspace || typeof workspace !== 'object') return null;
   if (!workspace.version) return createWorkspace(workspace.presetId || 'empty', workspace);
   if (workspace.version > WORKSPACE_SCHEMA_VERSION) return null;
-  return {
+  const migrated = {
     ...createWorkspace(workspace.presetId || 'empty', workspace),
     version: WORKSPACE_SCHEMA_VERSION,
     updatedAt: workspace.updatedAt || new Date().toISOString(),
   };
+  if (workspace.version < 2) {
+    migrated.binds = migrated.binds.filter((bind) => !isLegacySystemMirrorBind(bind));
+  }
+  return migrated;
 }
 
 function loadWorkspace(id) {
