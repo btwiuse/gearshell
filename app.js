@@ -62,7 +62,8 @@ const HUSH_ENV = {
   GOMEMLIMIT: '384MiB',
   GOGC: '70',
 };
-const DEFAULT_CMD = 'hush -rcfile /tmp/profile';
+const LEGACY_DEFAULT_CMD = 'hush -rcfile /tmp/profile';
+const DEFAULT_CMD = 'hush -rcfile /profile';
 const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', startupPanels: [], restoreTabs: false };
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
@@ -70,7 +71,7 @@ const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
 const WORKSPACE_PRESET_INDEX_KEY = 'gear-shell-workspace-preset-index';
 const WORKSPACE_PRESET_KEY_PREFIX = 'gear-shell-workspace-preset:';
-const WORKSPACE_SCHEMA_VERSION = 2;
+const WORKSPACE_SCHEMA_VERSION = 3;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
 const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
@@ -91,19 +92,19 @@ const WANIX_RUNTIME = {
 
 const DEFAULT_SYSTEM_CONFIG = {
   binds: [
-    { id: 'root', type: 'ns', dst: '.', src: '#ramfs' },
+    { id: 'root', type: 'ns', dst: '.', src: '#ramfs/new' },
     { id: 'task', type: 'ns', dst: 'task', src: '#task' },
     { id: 'term', type: 'ns', dst: 'term', src: '#term' },
     { id: 'web', type: 'ns', dst: 'web', src: '#web' },
     { id: 'js', type: 'ns', dst: 'js', src: '#js' },
     { id: 'opfs', type: 'ns', dst: 'opfs', src: '#web/opfs', mode: '0755' },
-    { id: 'tmp', type: 'ns', dst: 'tmp', src: '#ramfs' },
+    { id: 'tmp', type: 'ns', dst: 'tmp', src: '#ramfs/new' },
     { id: 'hush', type: 'fetch', dst: 'hush', src: 'https://w9y.up.railway.app/go/github.com/btwiuse/hush/cmd/hush@v0.5.6', mode: '0755' },
     { id: 'w9y', type: 'fetch', dst: 'w9y', src: 'https://w9y.up.railway.app/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.5', mode: '0755' },
     {
       id: 'boot-profile',
       type: 'file',
-      dst: 'tmp/profile',
+      dst: 'profile',
       mode: '0666',
       content: `function w9y_detect() {
   path="$LOCATION"
@@ -229,12 +230,16 @@ function normalizeShellConfig(config) {
       : [],
     restoreTabs: config?.restoreTabs === true,
     terminalProfiles: Array.isArray(config?.terminalProfiles)
-      ? config.terminalProfiles.map(normalizeTerminalProfile).filter((profile) => profile.program)
+      ? config.terminalProfiles
+        .map(normalizeTerminalProfile)
+        .map(migrateLegacyHushTerminalProfile)
+        .filter((profile) => profile.program)
       : [],
     defaultTerminalProfileId: typeof config?.defaultTerminalProfileId === 'string'
       ? config.defaultTerminalProfileId
       : 'hush',
   };
+  if (normalized.cmd === LEGACY_DEFAULT_CMD) normalized.cmd = DEFAULT_CMD;
   return normalized;
 }
 
@@ -248,6 +253,13 @@ function normalizeTerminalProfile(profile = {}) {
     env: typeof profile.env === 'string' ? profile.env : '',
     wd: typeof profile.wd === 'string' ? profile.wd.trim() : '',
   };
+}
+
+function migrateLegacyHushTerminalProfile(profile) {
+  if (profile.id !== 'hush' || profile.program !== 'hush' || profile.args !== '-rcfile /tmp/profile') {
+    return profile;
+  }
+  return { ...profile, args: '-rcfile /profile' };
 }
 
 function normalizeBind(bind = {}) {
@@ -271,6 +283,8 @@ const LEGACY_SYSTEM_MIRROR_BINDS = new Map([
   ['tmp', { dst: 'tmp', src: '#ramfs' }],
   ['root', { dst: '.', src: '#ramfs' }],
 ]);
+
+const LEGACY_RAMFS_MOUNT_IDS = new Set(['root', 'tmp']);
 
 function isLegacySystemMirrorBind(bind) {
   const expected = LEGACY_SYSTEM_MIRROR_BINDS.get(bind.id);
@@ -297,6 +311,14 @@ function normalizeSystemConfig(system) {
   const legacyProfile = system?.profile;
   if (legacyProfile && !binds.some((bind) => bind.id === 'boot-profile' || bind.dst === 'tmp/profile')) {
     binds.push(normalizeSystemBind({ ...legacyProfile, id: 'boot-profile', type: 'file' }));
+  }
+  for (const bind of binds) {
+    if (bind.id === 'boot-profile' && bind.type === 'file' && bind.dst === 'tmp/profile') {
+      bind.dst = 'profile';
+    }
+    if (bind.type === 'ns' && LEGACY_RAMFS_MOUNT_IDS.has(bind.id) && bind.src === '#ramfs') {
+      bind.src = '#ramfs/new';
+    }
   }
   return {
     binds,
@@ -1005,7 +1027,7 @@ function createWanixBindElement(bind) {
   if (bind.type && bind.type !== 'ns') element.setAttribute('type', bind.type);
   element.setAttribute('dst', bind.dst);
   if (bind.src) element.setAttribute('src', bind.src);
-  if (bind.mode) element.setAttribute('mode', bind.mode);
+  if (bind.mode) element.setAttribute('perm', bind.mode);
   if (bind.union) element.setAttribute('union', bind.union);
   if (bind.content) element.textContent = bind.content;
   return element;
