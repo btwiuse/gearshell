@@ -68,6 +68,8 @@ const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', startupPanels: [], restoreTa
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
 const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
+const WORKSPACE_PRESET_INDEX_KEY = 'gear-shell-workspace-preset-index';
+const WORKSPACE_PRESET_KEY_PREFIX = 'gear-shell-workspace-preset:';
 const WORKSPACE_SCHEMA_VERSION = 2;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
@@ -193,6 +195,26 @@ const WORKSPACE_PRESETS = {
     }],
   },
 };
+
+function normalizePresetDescription(description) {
+  return typeof description === 'string' ? description.trim() : '';
+}
+
+function normalizeCustomWorkspacePreset(preset = {}) {
+  const template = preset.template && typeof preset.template === 'object' ? preset.template : preset;
+  return {
+    id: typeof preset.id === 'string' && preset.id ? preset.id : `custom-${createWorkspaceId()}`,
+    name: normalizeWorkspaceName(preset.name) || 'Untitled preset',
+    description: normalizePresetDescription(preset.description),
+    createdAt: typeof preset.createdAt === 'string' ? preset.createdAt : new Date().toISOString(),
+    updatedAt: typeof preset.updatedAt === 'string' ? preset.updatedAt : new Date().toISOString(),
+    runtime: { ...WANIX_RUNTIME, ...clone(template.runtime || {}) },
+    system: normalizeSystemConfig(template.system),
+    binds: Array.isArray(template.binds) ? template.binds.map(normalizeBind) : [],
+    tasks: Array.isArray(template.tasks) ? template.tasks.map(normalizeTask) : [],
+    shell: normalizeShellConfig(template.shell),
+  };
+}
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -341,13 +363,122 @@ function workspaceStorageKey(id) {
   return `${WORKSPACE_KEY_PREFIX}${id}`;
 }
 
+function workspacePresetStorageKey(id) {
+  return `${WORKSPACE_PRESET_KEY_PREFIX}${id}`;
+}
+
 function createWorkspaceId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `workspace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function loadWorkspacePresetIndex() {
+  const index = readStoredJson(WORKSPACE_PRESET_INDEX_KEY, []);
+  return Array.isArray(index) ? index : [];
+}
+
+function saveWorkspacePresetIndex(index) {
+  return writeStoredJson(WORKSPACE_PRESET_INDEX_KEY, index);
+}
+
+function loadCustomWorkspacePreset(id) {
+  if (typeof id !== 'string' || !id.startsWith('custom-')) return null;
+  const preset = readStoredJson(workspacePresetStorageKey(id), null);
+  return preset ? normalizeCustomWorkspacePreset(preset) : null;
+}
+
+function getWorkspacePreset(presetId) {
+  return WORKSPACE_PRESETS[presetId] || loadCustomWorkspacePreset(presetId) || WORKSPACE_PRESETS.empty;
+}
+
+function listWorkspacePresets() {
+  const builtins = Object.entries(WORKSPACE_PRESETS).map(([id, preset]) => ({
+    id,
+    name: preset.name,
+    description: preset.description,
+    builtin: true,
+  }));
+  const custom = loadWorkspacePresetIndex()
+    .map((entry) => loadCustomWorkspacePreset(entry.id))
+    .filter(Boolean)
+    .map((preset) => ({
+      id: preset.id,
+      name: preset.name,
+      description: preset.description,
+      builtin: false,
+      updatedAt: preset.updatedAt,
+    }));
+  return [...builtins, ...custom];
+}
+
+function workspacePresetNameExists(name, excludedId = null) {
+  const target = normalizeWorkspaceName(name).toLocaleLowerCase();
+  return listWorkspacePresets().some((preset) =>
+    preset.id !== excludedId && normalizeWorkspaceName(preset.name).toLocaleLowerCase() === target
+  );
+}
+
+function uniqueWorkspacePresetName(baseName, excludedId = null) {
+  const base = normalizeWorkspaceName(baseName) || 'Preset';
+  if (!workspacePresetNameExists(base, excludedId)) return base;
+  let index = 2;
+  while (workspacePresetNameExists(`${base} ${index}`, excludedId)) index += 1;
+  return `${base} ${index}`;
+}
+
+function workspacePresetTemplate(workspace) {
+  return {
+    runtime: clone(workspace.runtime),
+    system: clone(workspace.system),
+    binds: clone(workspace.binds),
+    tasks: clone(workspace.tasks),
+    shell: clone(workspace.shell),
+  };
+}
+
+function saveCustomWorkspacePreset(id, { name, description, workspace } = {}) {
+  const existing = id ? loadCustomWorkspacePreset(id) : null;
+  if (id && !existing) throw new Error('Preset not found.');
+  const nextName = normalizeWorkspaceName(name);
+  if (!nextName) throw new Error('A preset name is required.');
+  if (workspacePresetNameExists(nextName, id || null)) {
+    throw new Error(`A preset named “${nextName}” already exists.`);
+  }
+  const now = new Date().toISOString();
+  const preset = normalizeCustomWorkspacePreset({
+    ...existing,
+    id: existing?.id || `custom-${createWorkspaceId()}`,
+    name: nextName,
+    description: normalizePresetDescription(description),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+    template: workspace ? workspacePresetTemplate(workspace) : existing,
+  });
+  if (!writeStoredJson(workspacePresetStorageKey(preset.id), preset)) {
+    throw new Error('Unable to save the preset.');
+  }
+  const index = loadWorkspacePresetIndex();
+  const entry = { id: preset.id, name: preset.name, description: preset.description, updatedAt: preset.updatedAt };
+  const entryIndex = index.findIndex((item) => item.id === preset.id);
+  if (entryIndex === -1) index.push(entry);
+  else index[entryIndex] = entry;
+  if (!saveWorkspacePresetIndex(index)) throw new Error('Unable to save the preset library.');
+  notifyWorkspaceChange();
+  return preset;
+}
+
+function removeCustomWorkspacePreset(id) {
+  const preset = loadCustomWorkspacePreset(id);
+  if (!preset) return false;
+  const index = loadWorkspacePresetIndex().filter((entry) => entry.id !== id);
+  if (!saveWorkspacePresetIndex(index)) return false;
+  try { localStorage.removeItem(workspacePresetStorageKey(id)); } catch { return false; }
+  notifyWorkspaceChange();
+  return true;
+}
+
 function createWorkspace(presetId = 'hush-shell', overrides = {}) {
-  const preset = WORKSPACE_PRESETS[presetId] || WORKSPACE_PRESETS.empty;
+  const preset = getWorkspacePreset(presetId);
   const now = new Date().toISOString();
   const id = overrides.id || (presetId === 'hush-shell' ? 'hush-shell' : createWorkspaceId());
   return {
@@ -479,7 +610,7 @@ function setActiveWorkspaceId(id) {
 }
 
 function createWorkspaceFromPreset(presetId) {
-  const preset = WORKSPACE_PRESETS[presetId] || WORKSPACE_PRESETS.empty;
+  const preset = getWorkspacePreset(presetId);
   const workspace = createWorkspace(presetId, {
     id: createWorkspaceId(),
     name: uniqueWorkspaceName(preset.name),
@@ -1619,6 +1750,130 @@ function setupTerminalProfileForm(settingsContent) {
   return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
 }
 
+function setupPresetLibrary(settingsContent) {
+  const list = settingsContent.querySelector('[data-preset-library-list]');
+  const nameEl = settingsContent.querySelector('[data-preset-library="name"]');
+  const descriptionEl = settingsContent.querySelector('[data-preset-library="description"]');
+  const status = settingsContent.querySelector('[data-preset-library="status"]');
+  const saveButton = settingsContent.querySelector('[data-preset-library-action="save"]');
+  const updateButton = settingsContent.querySelector('[data-preset-library-action="update"]');
+  const cancelButton = settingsContent.querySelector('[data-preset-library-action="cancel"]');
+  if (!list || !nameEl || !descriptionEl || !status || !saveButton || !updateButton || !cancelButton) return;
+
+  let editingPresetId = null;
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const resetFields = () => {
+    editingPresetId = null;
+    const workspace = loadActiveWorkspace();
+    nameEl.value = uniqueWorkspacePresetName(`${workspace.name} preset`);
+    descriptionEl.value = workspace.description || '';
+    saveButton.textContent = 'Save current workspace as preset';
+    updateButton.hidden = true;
+    cancelButton.hidden = true;
+  };
+  const startEditing = (preset) => {
+    editingPresetId = preset.id;
+    nameEl.value = preset.name;
+    descriptionEl.value = preset.description;
+    saveButton.textContent = 'Save preset details';
+    updateButton.hidden = false;
+    cancelButton.hidden = false;
+    setStatus(`Editing ${preset.name}.`);
+    nameEl.focus();
+  };
+  const render = () => {
+    list.replaceChildren();
+    const presets = listWorkspacePresets().filter((preset) => !preset.builtin);
+    if (presets.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'hint';
+      empty.textContent = 'No custom presets yet.';
+      list.appendChild(empty);
+      return;
+    }
+    for (const preset of presets) {
+      const item = document.createElement('div');
+      item.className = 'preset-library-item';
+      const details = document.createElement('div');
+      const name = document.createElement('span');
+      name.className = 'preset-library-name';
+      name.textContent = preset.name;
+      const meta = document.createElement('span');
+      meta.className = 'preset-library-meta';
+      meta.textContent = preset.description || 'Reusable workspace snapshot';
+      details.append(name, meta);
+      const actions = document.createElement('div');
+      actions.className = 'preset-library-actions';
+      const create = document.createElement('button');
+      create.type = 'button';
+      create.textContent = 'Create';
+      create.addEventListener('click', () => {
+        const workspace = createWorkspaceFromPreset(preset.id);
+        if (workspace) setStatus(`Created ${workspace.name} from ${preset.name}.`);
+        else setStatus('Unable to create a workspace from this preset.', true);
+      });
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', () => {
+        const current = loadCustomWorkspacePreset(preset.id);
+        if (current) startEditing(current);
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => {
+        if (!window.confirm(`Remove preset ${preset.name}? Existing workspaces will not be affected.`)) return;
+        if (editingPresetId === preset.id) resetFields();
+        if (removeCustomWorkspacePreset(preset.id)) setStatus(`Removed ${preset.name}.`);
+        else setStatus('Unable to remove the preset.', true);
+      });
+      actions.append(create, edit, remove);
+      item.append(details, actions);
+      list.appendChild(item);
+    }
+  };
+
+  saveButton.addEventListener('click', () => {
+    try {
+      const preset = saveCustomWorkspacePreset(editingPresetId, {
+        name: nameEl.value,
+        description: descriptionEl.value,
+        workspace: editingPresetId ? undefined : loadActiveWorkspace(),
+      });
+      const message = editingPresetId ? `Saved details for ${preset.name}.` : `Saved ${preset.name}.`;
+      resetFields();
+      setStatus(message);
+    } catch (error) {
+      setStatus(error.message || 'Unable to save the preset.', true);
+    }
+  });
+  updateButton.addEventListener('click', () => {
+    try {
+      const preset = saveCustomWorkspacePreset(editingPresetId, {
+        name: nameEl.value,
+        description: descriptionEl.value,
+        workspace: loadActiveWorkspace(),
+      });
+      setStatus(`Updated ${preset.name} from the current workspace.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to update the preset.', true);
+    }
+  });
+  cancelButton.addEventListener('click', () => {
+    resetFields();
+    setStatus('Edit cancelled.');
+  });
+
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
+  resetFields();
+  render();
+  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
+}
+
 function setupWorkspaceForm(settingsContent) {
   const activeSelect = settingsContent.querySelector('[data-workspace="active"]');
   const nameInput = settingsContent.querySelector('[data-workspace="name"]');
@@ -1675,8 +1930,8 @@ function setupWorkspaceForm(settingsContent) {
     nameInput.value = workspace.name;
     if (!jsonDirty || jsonWorkspaceId !== workspace.id) loadCurrentJson();
     presetSelect.replaceChildren();
-    for (const [id, preset] of Object.entries(WORKSPACE_PRESETS)) {
-      addOption(presetSelect, id, preset.name, id === 'hush-shell');
+    for (const preset of listWorkspacePresets()) {
+      addOption(presetSelect, preset.id, preset.name, preset.id === 'hush-shell');
     }
     if (deleteButton) {
       deleteButton.disabled = activeId === 'hush-shell' || activeSelect.options.length <= 1;
@@ -2416,6 +2671,7 @@ function SettingsPanel({ containerApi }) {
     const disposeConfigForm = setupConfigForm(settingsContent);
     const disposeTerminalProfileForm = setupTerminalProfileForm(settingsContent);
     const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
+    const disposePresetLibrary = setupPresetLibrary(settingsContent);
     const disposeSystemForm = setupSystemForm(settingsContent);
     const disposeBindForm = setupBindForm(settingsContent);
     const disposeTaskForm = setupTaskForm(settingsContent, containerApi);
@@ -2423,6 +2679,7 @@ function SettingsPanel({ containerApi }) {
       disposeConfigForm?.();
       disposeTerminalProfileForm?.();
       disposeWorkspaceForm?.();
+      disposePresetLibrary?.();
       disposeSystemForm?.();
       disposeBindForm?.();
       disposeTaskForm?.();
