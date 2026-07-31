@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -78,7 +78,7 @@ const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
-const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'files', 'runtime', 'group', 'codigo', 'crush', 'rickroll'];
+const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'files', 'runtime', 'group', 'browser', 'codigo', 'crush', 'rickroll'];
 
 const BUILTIN_TERMINAL_PROFILES = [
   { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
@@ -2652,6 +2652,13 @@ function addIframePanel(api, config, group) {
 }
 
 const IFRAME_PANEL_OPTIONS = {
+  browser: {
+    title: 'Browser',
+    src: 'https://browser.gear.sh/',
+    panelType: 'browser',
+    allow: 'clipboard-read; clipboard-write; fullscreen',
+    allowFullscreen: true,
+  },
   codigo: { title: 'Codigo', src: 'https://codigo.dev', panelType: 'codigo' },
   crush: { title: 'Crush', src: 'https://justwasm.github.io/crush/', panelType: 'crush' },
   rickroll: {
@@ -2671,6 +2678,7 @@ const PANEL_CREATION_OPTIONS = [
   { component: 'files', label: 'Files', icon: FolderOpen },
   { component: 'runtime', label: 'Runtime', icon: Activity },
   { component: 'group', label: 'Group', icon: UsersRound },
+  { component: 'browser', label: 'Browser', icon: Globe2 },
   { component: 'codigo', label: 'Codigo', icon: Code2 },
   { component: 'crush', label: 'Crush', icon: Bot },
   { component: 'rickroll', label: 'Rick Roll', icon: Music2 },
