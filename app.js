@@ -1267,9 +1267,10 @@ function setupTaskForm(settingsContent, containerApi) {
   const wdEl = settingsContent.querySelector('[data-task="wd"]');
   const envEl = settingsContent.querySelector('[data-task="env"]');
   const termEl = settingsContent.querySelector('[data-task="term"]');
+  const autoStartEl = settingsContent.querySelector('[data-task="auto-start"]');
   const status = settingsContent.querySelector('[data-task="status"]');
   const addButton = settingsContent.querySelector('[data-task-action="add"]');
-  if (!list || !nameEl || !cmdEl || !typeEl || !wdEl || !envEl || !termEl || !status || !addButton) return;
+  if (!list || !nameEl || !cmdEl || !typeEl || !wdEl || !envEl || !termEl || !autoStartEl || !status || !addButton) return;
 
   const setStatus = (message, isError = false) => {
     status.textContent = message;
@@ -1295,7 +1296,7 @@ function setupTaskForm(settingsContent, containerApi) {
       name.title = task.cmd;
       const meta = document.createElement('span');
       meta.className = 'task-item-meta';
-      meta.textContent = `${task.type} · ${task.term ? 'terminal' : 'headless'} · ${task.cmd}`;
+      meta.textContent = `${task.type} · ${task.term ? 'terminal' : 'headless'}${task.autoStart ? ' · auto-start' : ''} · ${task.cmd}`;
       meta.title = meta.textContent;
       details.append(name, meta);
 
@@ -1331,6 +1332,7 @@ function setupTaskForm(settingsContent, containerApi) {
     wdEl.value = '.';
     envEl.value = '';
     termEl.checked = true;
+    autoStartEl.checked = false;
   };
 
   addButton.addEventListener('click', () => {
@@ -1342,6 +1344,7 @@ function setupTaskForm(settingsContent, containerApi) {
         wd: wdEl.value,
         env: envEl.value,
         term: termEl.checked,
+        autoStart: autoStartEl.checked,
       });
       if (!task) throw new Error('Unable to save the task.');
       setStatus(`Added ${nameEl.value.trim() || cmdEl.value.trim()}.`);
@@ -1416,6 +1419,13 @@ function addWorkspaceTaskPanel(api, task, workspace = loadActiveWorkspace(), gro
   });
   panel.api.setActive();
   return panel;
+}
+
+function autoStartWorkspaceTasks(api) {
+  const workspace = loadActiveWorkspace();
+  for (const task of workspace.tasks) {
+    if (task.autoStart) addWorkspaceTaskPanel(api, task, workspace);
+  }
 }
 
 function addGroupPanel(api, group) {
@@ -1746,14 +1756,14 @@ function App() {
     });
     event.api.onDidAddPanel(() => setWorkspaceEmpty(false));
 
-    // Auto-open only after wanix is ready so it follows the same path as new tabs.
+    // Start configured processes only after Wanix is ready so they follow the
+    // same allocation path as tasks opened from Settings.
     const cfg = loadConfig();
-    if (cfg.autoOpen) {
-      whenWanixReady(() => {
-        addTerminalPanel(event.api);
-        event.api.getPanel(homePanel.id)?.api.setActive();
-      });
-    }
+    whenWanixReady(() => {
+      if (cfg.autoOpen) addTerminalPanel(event.api);
+      autoStartWorkspaceTasks(event.api);
+      event.api.getPanel(homePanel.id)?.api.setActive();
+    });
   }, []);
 
   const addPanelFromEmptyWorkspace = (component) => {
