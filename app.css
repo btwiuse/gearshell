@@ -94,6 +94,35 @@ wanix-term { flex: 1; min-width: 0; }
 .bind-fields textarea { grid-column: 1 / -1; min-height: 76px; resize: vertical; }
 .bind-fields label[for="bind-content"] { grid-column: 1 / -1; }
 @media (max-width: 460px) { .bind-fields { grid-template-columns: 1fr; } }
+.task-form { margin: 0 0 14px; border: 1px solid #30363d; border-radius: 4px; }
+.task-form summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; color: #c9d1d9; font-size: 13px; user-select: none; list-style: none; }
+.task-form summary::-webkit-details-marker { display: none; }
+.task-form summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; }
+.task-form[open] summary::after { transform: rotate(90deg); }
+.task-form .body { padding: 10px; }
+.task-form .hint { margin: 0 0 10px; color: #8b949e; font-size: 12px; }
+.task-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.task-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; }
+.task-item-name, .task-item-meta { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-item-name { color: #c9d1d9; font-size: 12px; }
+.task-item-meta { color: #8b949e; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.task-item-actions { display: flex; gap: 6px; }
+.task-item button, .task-form .workspace-actions button { min-height: 30px; padding: 5px 9px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
+.task-item button:hover, .task-form .workspace-actions button:hover { background: #30363d; }
+.task-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.task-fields label { color: #c9d1d9; font-size: 12px; }
+.task-fields input, .task-fields select, .task-fields textarea { width: 100%; padding: 6px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.task-fields textarea, .task-fields label[for="task-env"], .task-fields .task-toggle { grid-column: 1 / -1; }
+.task-fields textarea { min-height: 76px; resize: vertical; }
+.task-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.task-toggle input { width: auto; accent-color: #58a6ff; }
+.task-headless { display: grid; align-content: center; justify-items: center; gap: 8px; padding: 24px; overflow: auto; background: #0d1117; text-align: center; }
+.task-headless h2 { margin: 0; color: #c9d1d9; font-size: 18px; }
+.task-headless p { max-width: 400px; margin: 0; color: #8b949e; font-size: 13px; line-height: 1.5; }
+.task-headless-status { padding: 3px 8px; border: 1px solid #30363d; border-radius: 999px; color: #8b949e; font: 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-transform: uppercase; }
+.task-headless-status.running { border-color: #238636; color: #3fb950; }
+.task-headless-status.failed { border-color: #da3633; color: #f85149; }
+@media (max-width: 460px) { .task-fields { grid-template-columns: 1fr; } }
 .settings-panel .config-form { width: 100%; text-align: left; }
 .settings-panel .config-form input,
 .settings-panel .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; outline: none; }

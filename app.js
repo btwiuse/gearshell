@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Bot, Code2, House, Music2, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
+import { Bot, Code2, House, Music2, Play, Plus, Settings, Terminal, UsersRound } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -70,7 +70,9 @@ const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
 const WORKSPACE_SCHEMA_VERSION = 1;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
+const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
 const SUPPORTED_BIND_TYPES = ['ns', 'file', 'archive'];
+const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
 
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.3.30',
@@ -96,7 +98,7 @@ const WORKSPACE_PRESETS = {
     name: 'Empty Namespace',
     description: 'A blank in-memory Wanix namespace for composing binds and tasks.',
     runtime: { ...WANIX_RUNTIME, debug: false },
-    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs/new' }],
+    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs' }],
     tasks: [],
   },
   'js-worker': {
@@ -104,7 +106,7 @@ const WORKSPACE_PRESETS = {
     description: 'An inline JavaScript task that can be edited and started in the browser.',
     runtime: { ...WANIX_RUNTIME, debug: false },
     binds: [
-      { id: 'root', type: 'ns', dst: '.', src: '#ramfs/new' },
+      { id: 'root', type: 'ns', dst: '.', src: '#ramfs' },
       {
         id: 'main-js',
         type: 'file',
@@ -129,7 +131,7 @@ const WORKSPACE_PRESETS = {
     name: 'WASI Terminal',
     description: 'A terminal-ready WASI task. Add a .wasm file before starting it.',
     runtime: { ...WANIX_RUNTIME, debug: false },
-    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs/new' }],
+    binds: [{ id: 'root', type: 'ns', dst: '.', src: '#ramfs' }],
     tasks: [{
       id: 'main',
       name: 'main.wasm',
@@ -182,6 +184,27 @@ function validateBind(bind) {
   return null;
 }
 
+function normalizeTask(task = {}) {
+  return {
+    id: typeof task.id === 'string' && task.id ? task.id : createWorkspaceId(),
+    name: typeof task.name === 'string' && task.name ? task.name : 'Task',
+    cmd: typeof task.cmd === 'string' ? task.cmd.trim() : '',
+    type: SUPPORTED_TASK_TYPES.includes(task.type) ? task.type : 'auto',
+    env: typeof task.env === 'string' ? task.env : '',
+    wd: typeof task.wd === 'string' ? task.wd.trim() : '',
+    fsys: typeof task.fsys === 'string' ? task.fsys.trim() : '',
+    term: task.term !== false,
+    autoStart: task.autoStart === true,
+  };
+}
+
+function validateTask(task) {
+  if (!task.cmd) return 'A command is required.';
+  if (!SUPPORTED_TASK_TYPES.includes(task.type)) return 'Unsupported task type.';
+  if (task.wd.startsWith('/')) return 'Working directories must not start with a slash.';
+  return null;
+}
+
 function readStoredJson(key, fallback) {
   try {
     const value = localStorage.getItem(key);
@@ -224,7 +247,7 @@ function createWorkspace(presetId = 'hush-shell', overrides = {}) {
     updatedAt: now,
     runtime: { ...clone(preset.runtime), ...overrides.runtime },
     binds: clone(overrides.binds || preset.binds).map(normalizeBind),
-    tasks: clone(overrides.tasks || preset.tasks),
+    tasks: clone(overrides.tasks || preset.tasks).map(normalizeTask),
     shell: normalizeShellConfig(overrides.shell),
     ui: { dockviewLayout: null, ...overrides.ui },
   };
@@ -386,6 +409,7 @@ function updateActiveWorkspace(mutator) {
   const workspace = loadActiveWorkspace();
   mutator(workspace);
   workspace.binds = workspace.binds.map(normalizeBind);
+  workspace.tasks = workspace.tasks.map(normalizeTask);
   if (!saveWorkspace(workspace) || !updateWorkspaceIndex(workspace)) return null;
   notifyWorkspaceChange();
   return workspace;
@@ -401,6 +425,19 @@ function addWorkspaceBind(bind) {
 function removeWorkspaceBind(id) {
   return updateActiveWorkspace((workspace) => {
     workspace.binds = workspace.binds.filter((bind) => bind.id !== id);
+  });
+}
+
+function addWorkspaceTask(task) {
+  const nextTask = normalizeTask(task);
+  const error = validateTask(nextTask);
+  if (error) throw new Error(error);
+  return updateActiveWorkspace((workspace) => workspace.tasks.push(nextTask));
+}
+
+function removeWorkspaceTask(id) {
+  return updateActiveWorkspace((workspace) => {
+    workspace.tasks = workspace.tasks.filter((task) => task.id !== id);
   });
 }
 
@@ -449,11 +486,13 @@ const wanixSystem = document.getElementById('wanix-system');
 let systemReady = Boolean(wanixSystem?.isReady);
 const terminalLayer = document.getElementById('terminal-layer');
 const terminalSessions = new Map();
+const workspaceTaskSessions = new Map();
 const iframeSessions = new Map();
 wanixSystem?.addEventListener('ready', (event) => {
   if (event.target !== wanixSystem) return;
   systemReady = true;
   for (const session of terminalSessions.values()) wakeTerminalSession(session);
+  for (const session of workspaceTaskSessions.values()) wakeWorkspaceTaskSession(session);
 });
 
 function hideTerminalLayer() {
@@ -599,8 +638,7 @@ function focusTerminalSession(session, anchor, api, deferred = true) {
   else focus();
 }
 
-function attachTerminalSession(id, anchor, api) {
-  const session = getTerminalSession(id);
+function attachOverlayTerminalSession(session, anchor, api) {
   let updateFrame = 0;
 
   const update = () => {
@@ -665,6 +703,121 @@ function attachTerminalSession(id, anchor, api) {
       layoutTerminalSession(session, null, false);
     }
   };
+}
+
+function attachTerminalSession(id, anchor, api) {
+  return attachOverlayTerminalSession(getTerminalSession(id), anchor, api);
+}
+
+function createBindElement(bind) {
+  const element = document.createElement('wanix-bind');
+  element.setAttribute('dst', bind.dst);
+  element.setAttribute('type', bind.type);
+  element.setAttribute('perm', bind.perm);
+  element.setAttribute('union', bind.union);
+  if (bind.src) element.setAttribute('src', bind.src);
+  if (bind.content) element.textContent = bind.content;
+  return element;
+}
+
+function taskEnvironment(env) {
+  return env.split('\n').map((line) => line.trim()).filter(Boolean).join(' ');
+}
+
+function createWorkspaceTaskSession(id, taskDefinition, workspace) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'terminal-session';
+
+  const task = document.createElement('wanix-task');
+  task.id = `workspace-task-${id}`;
+  task.setAttribute('cmd', taskDefinition.cmd);
+  task.setAttribute('type', taskDefinition.type);
+  task.setAttribute('start', '');
+  task.setAttribute('for', 'wanix-system');
+  if (taskDefinition.wd) task.setAttribute('wd', taskDefinition.wd);
+  if (taskDefinition.env.trim()) task.setAttribute('env', taskEnvironment(taskDefinition.env));
+  if (taskDefinition.term) task.setAttribute('term', '');
+  for (const bind of workspace.binds) task.appendChild(createBindElement(bind));
+
+  let term = null;
+  if (taskDefinition.term) {
+    const winchBind = document.createElement('wanix-bind');
+    winchBind.setAttribute('dst', 'winch');
+    winchBind.setAttribute('src', '#task/self/term/winch');
+    task.appendChild(winchBind);
+
+    term = document.createElement('wanix-term');
+    term.setAttribute('raw', '');
+    term.setAttribute('no-scrollbar', '');
+    term.setAttribute('path', `#task/${task.id}/term`);
+    term.setAttribute('for', 'wanix-system');
+    wrapper.append(task, term);
+  } else {
+    wrapper.append(task);
+  }
+  terminalLayer?.appendChild(wrapper);
+
+  const session = {
+    id,
+    wrapper,
+    task,
+    term,
+    anchor: null,
+    layout: null,
+    started: false,
+    taskDefinition,
+    error: null,
+  };
+  task.addEventListener('error', (event) => {
+    setWorkspaceTaskStatus(session, 'failed', event.detail?.error || event.detail || event);
+  });
+  workspaceTaskSessions.set(id, session);
+  return session;
+}
+
+function getWorkspaceTaskSession(id, taskDefinition, workspace) {
+  return workspaceTaskSessions.get(id) || createWorkspaceTaskSession(id, taskDefinition, workspace);
+}
+
+function destroyWorkspaceTaskSession(id) {
+  const session = workspaceTaskSessions.get(id);
+  if (!session) return;
+  workspaceTaskSessions.delete(id);
+  session.anchor = null;
+  session.wrapper.remove();
+}
+
+function setWorkspaceTaskStatus(session, status, error = null) {
+  session.status = status;
+  session.error = error;
+  session.task.dispatchEvent(new CustomEvent(WORKSPACE_TASK_STATUS_EVENT, {
+    detail: { status, error },
+  }));
+}
+
+function wakeWorkspaceTaskSession(session) {
+  if (session.started) return;
+  session.started = true;
+  queueMicrotask(async () => {
+    try {
+      setWorkspaceTaskStatus(session, 'starting');
+      await session.task._awake?.();
+      await session.term?._awake?.();
+      setWorkspaceTaskStatus(session, 'running');
+    } catch (error) {
+      setWorkspaceTaskStatus(session, 'failed', error);
+      console.error('Workspace task failed to start', error);
+    }
+  });
+}
+
+function attachWorkspaceTaskSession(id, taskDefinition, workspace, anchor, api) {
+  const session = getWorkspaceTaskSession(id, taskDefinition, workspace);
+  if (!session.term) {
+    wakeWorkspaceTaskSession(session);
+    return () => {};
+  }
+  return attachOverlayTerminalSession(session, anchor, api);
 }
 
 const DEFAULT_IFRAME_ALLOW = 'clipboard-read; clipboard-write';
@@ -1062,6 +1215,103 @@ function setupBindForm(settingsContent) {
   return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
 }
 
+function setupTaskForm(settingsContent, containerApi) {
+  const list = settingsContent.querySelector('[data-task-list]');
+  const nameEl = settingsContent.querySelector('[data-task="name"]');
+  const cmdEl = settingsContent.querySelector('[data-task="cmd"]');
+  const typeEl = settingsContent.querySelector('[data-task="type"]');
+  const wdEl = settingsContent.querySelector('[data-task="wd"]');
+  const envEl = settingsContent.querySelector('[data-task="env"]');
+  const termEl = settingsContent.querySelector('[data-task="term"]');
+  const status = settingsContent.querySelector('[data-task="status"]');
+  const addButton = settingsContent.querySelector('[data-task-action="add"]');
+  if (!list || !nameEl || !cmdEl || !typeEl || !wdEl || !envEl || !termEl || !status || !addButton) return;
+
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const render = () => {
+    list.replaceChildren();
+    const workspace = loadActiveWorkspace();
+    if (workspace.tasks.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'hint';
+      empty.textContent = 'No tasks yet.';
+      list.appendChild(empty);
+      return;
+    }
+    for (const task of workspace.tasks) {
+      const item = document.createElement('div');
+      item.className = 'task-item';
+      const details = document.createElement('div');
+      const name = document.createElement('span');
+      name.className = 'task-item-name';
+      name.textContent = task.name;
+      name.title = task.cmd;
+      const meta = document.createElement('span');
+      meta.className = 'task-item-meta';
+      meta.textContent = `${task.type} · ${task.term ? 'terminal' : 'headless'} · ${task.cmd}`;
+      meta.title = meta.textContent;
+      details.append(name, meta);
+
+      const actions = document.createElement('div');
+      actions.className = 'task-item-actions';
+      const run = document.createElement('button');
+      run.type = 'button';
+      run.textContent = 'Run';
+      run.addEventListener('click', () => {
+        if (!containerApi) {
+          setStatus('The task host is not available.', true);
+          return;
+        }
+        addWorkspaceTaskPanel(containerApi, task, workspace);
+        setStatus(`Started ${task.name}.`);
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => {
+        removeWorkspaceTask(task.id);
+        setStatus(`Removed ${task.name}.`);
+      });
+      actions.append(run, remove);
+      item.append(details, actions);
+      list.appendChild(item);
+    }
+  };
+  const resetFields = () => {
+    nameEl.value = '';
+    cmdEl.value = '';
+    typeEl.value = 'auto';
+    wdEl.value = '.';
+    envEl.value = '';
+    termEl.checked = true;
+  };
+
+  addButton.addEventListener('click', () => {
+    try {
+      const task = addWorkspaceTask({
+        name: nameEl.value.trim() || cmdEl.value.trim() || 'Task',
+        cmd: cmdEl.value,
+        type: typeEl.value,
+        wd: wdEl.value,
+        env: envEl.value,
+        term: termEl.checked,
+      });
+      if (!task) throw new Error('Unable to save the task.');
+      setStatus(`Added ${nameEl.value.trim() || cmdEl.value.trim()}.`);
+      resetFields();
+    } catch (error) {
+      setStatus(error.message || 'Unable to add task.', true);
+    }
+  });
+
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
+  render();
+  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
+}
+
 function addTerminalPanel(api, group) {
   const id = ++terminalIdCounter;
   const panel = api.addPanel({
@@ -1078,6 +1328,7 @@ let homeIdCounter = 0;
 let groupIdCounter = 0;
 let iframeIdCounter = 0;
 let settingsIdCounter = 0;
+let workspaceTaskPanelCounter = 0;
 
 function addHomePanel(api, group) {
   const id = ++homeIdCounter;
@@ -1099,6 +1350,24 @@ function addSettingsPanel(api, group) {
     component: 'settings',
     params: { settingsId: id, panelType: 'settings' },
     title: 'Settings',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  panel.api.setActive();
+  return panel;
+}
+
+function addWorkspaceTaskPanel(api, task, workspace = loadActiveWorkspace(), group) {
+  const sessionId = ++workspaceTaskPanelCounter;
+  const panel = api.addPanel({
+    id: `workspace-task-${sessionId}`,
+    component: 'task',
+    params: {
+      sessionId,
+      task: clone(task),
+      workspaceId: workspace.id,
+      panelType: 'task',
+    },
+    title: task.name || task.cmd,
     ...(group && { position: { referenceGroup: group } }),
   });
   panel.api.setActive();
@@ -1156,6 +1425,7 @@ const PANEL_CREATION_OPTIONS = [
 const PANEL_ICONS = Object.fromEntries(
   PANEL_CREATION_OPTIONS.map(({ component, icon }) => [component, icon]),
 );
+PANEL_ICONS.task = Play;
 
 function addPanelByComponent(api, component, group) {
   if (component === 'terminal') return addTerminalPanel(api, group);
@@ -1223,7 +1493,7 @@ function HomePanel({ api }) {
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
 
-function SettingsPanel() {
+function SettingsPanel({ containerApi }) {
   const wrapperRef = useRef(null);
 
   useEffect(() => {
@@ -1236,14 +1506,50 @@ function SettingsPanel() {
     const disposeConfigForm = setupConfigForm(settingsContent);
     const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
     const disposeBindForm = setupBindForm(settingsContent);
+    const disposeTaskForm = setupTaskForm(settingsContent, containerApi);
     return () => {
       disposeConfigForm?.();
       disposeWorkspaceForm?.();
       disposeBindForm?.();
+      disposeTaskForm?.();
       settingsContent.remove();
     };
   }, []);
 
+  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+}
+
+function WorkspaceTaskPanel({ api, params }) {
+  const wrapperRef = useRef(null);
+  const hasTerminal = params.task.term;
+  const [taskStatus, setTaskStatus] = useState({ status: 'created', error: null });
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const workspace = loadWorkspace(params.workspaceId) || loadActiveWorkspace();
+    const session = getWorkspaceTaskSession(params.sessionId, params.task, workspace);
+    const updateStatus = (event) => setTaskStatus(event.detail);
+    session.task.addEventListener(WORKSPACE_TASK_STATUS_EVENT, updateStatus);
+    setTaskStatus({ status: session.status || 'created', error: session.error || null });
+    const detach = attachWorkspaceTaskSession(params.sessionId, params.task, workspace, wrapper, api);
+    return () => {
+      session.task.removeEventListener(WORKSPACE_TASK_STATUS_EVENT, updateStatus);
+      detach?.();
+    };
+  }, [api, params.sessionId]);
+
+  if (!hasTerminal) {
+    return React.createElement('div', { ref: wrapperRef, className: 'task-headless panel-content' },
+      React.createElement('h2', null, params.task.name),
+      React.createElement('p', null, taskStatus.status === 'failed'
+        ? taskStatus.error?.message || 'Task failed to start.'
+        : taskStatus.status === 'starting'
+          ? 'Starting task…'
+          : 'Task started without a terminal. Its output is available in the browser console.'),
+      React.createElement('span', { className: `task-headless-status ${taskStatus.status}` }, taskStatus.status),
+    );
+  }
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
 
@@ -1390,6 +1696,8 @@ function App() {
       if (match) destroyTerminalSession(Number(match[1]));
       const iframeMatch = /^iframe-(\d+)$/.exec(panel.id);
       if (iframeMatch) destroyIframeSession(Number(iframeMatch[1]));
+      const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
+      if (workspaceTaskMatch) destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
       requestAnimationFrame(() => setWorkspaceEmpty(event.api.panels.length === 0));
     });
     event.api.onDidAddPanel(() => setWorkspaceEmpty(false));
@@ -1416,6 +1724,7 @@ function App() {
       components: {
         home: HomePanel,
         settings: SettingsPanel,
+        task: WorkspaceTaskPanel,
         terminal: TerminalPanel,
         group: GroupPanel,
         iframe: IframePanel,

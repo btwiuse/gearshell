@@ -71,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260731.3" />
+    <link rel="stylesheet" href="app.css?v=20260731.5" />
   </head>
   <body>
     <template id="home-template">
@@ -134,7 +134,7 @@
                 <label for="bind-dst">Destination</label>
                 <input id="bind-dst" data-bind="dst" type="text" placeholder="main.js or root">
                 <label for="bind-src">Source URL or namespace</label>
-                <input id="bind-src" data-bind="src" type="text" placeholder="#ramfs/new or https://example.com/app.wasm">
+                <input id="bind-src" data-bind="src" type="text" placeholder="#ramfs or https://example.com/app.wasm">
                 <label for="bind-content">Inline file content</label>
                 <textarea id="bind-content" data-bind="content" placeholder="Used by File mounts when no URL is supplied"></textarea>
                 <label for="bind-perm">Permissions</label>
@@ -144,6 +144,38 @@
                 <button type="button" data-bind-action="add">Add mount</button>
               </div>
               <div class="hint" data-bind="status" role="status" aria-live="polite"></div>
+            </div>
+          </details>
+          <details class="task-form" open>
+            <summary><span>Tasks</span></summary>
+            <div class="body">
+              <p class="hint">Tasks run in a private namespace with this workspace's mounts.</p>
+              <div class="task-list" data-task-list></div>
+              <div class="task-fields">
+                <label for="task-name">Name</label>
+                <input id="task-name" data-task="name" type="text" placeholder="main.js">
+                <label for="task-cmd">Command</label>
+                <input id="task-cmd" data-task="cmd" type="text" placeholder="main.js" spellcheck="false">
+                <label for="task-type">Type</label>
+                <select id="task-type" data-task="type">
+                  <option value="auto">Auto</option>
+                  <option value="gojs">Go + JavaScript</option>
+                  <option value="wasi">WASI</option>
+                  <option value="js">JavaScript</option>
+                </select>
+                <label for="task-wd">Working directory</label>
+                <input id="task-wd" data-task="wd" type="text" value="." placeholder=".">
+                <label for="task-env">Environment variables</label>
+                <textarea id="task-env" data-task="env" placeholder="KEY=value&#10;TERM=xterm-256color" spellcheck="false"></textarea>
+                <label class="task-toggle">
+                  <input data-task="term" type="checkbox" checked>
+                  <span>Open an interactive terminal</span>
+                </label>
+              </div>
+              <div class="workspace-actions">
+                <button type="button" data-task-action="add">Add task</button>
+              </div>
+              <div class="hint" data-task="status" role="status" aria-live="polite"></div>
             </div>
           </details>
           <div class="config-form">
@@ -188,6 +220,7 @@
     >
       <div id="app-root"></div>
       <div id="terminal-layer"></div>
+      <wanix-bind dst="." src="#ramfs"></wanix-bind>
       <wanix-bind dst="task" src="#task"></wanix-bind>
       <wanix-bind dst="term" src="#term"></wanix-bind>
       <wanix-bind dst="web" src="#web"></wanix-bind>
@@ -227,6 +260,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260731.3"></script>
+    <script type="module" src="app.js?v=20260731.12"></script>
   </body>
 </html>
