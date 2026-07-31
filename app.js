@@ -72,6 +72,7 @@ const WORKSPACE_SCHEMA_VERSION = 1;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
 const SUPPORTED_BIND_TYPES = ['ns', 'file', 'archive'];
+const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
 const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'group', 'codigo', 'crush', 'rickroll'];
 
@@ -83,6 +84,54 @@ const BUILTIN_TERMINAL_PROFILES = [
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.3.30',
   moduleUrl: 'https://justwasm.github.io/wanix/dist/wanix.min.js',
+};
+
+const DEFAULT_SYSTEM_CONFIG = {
+  binds: [
+    { id: 'root', type: 'ns', dst: '.', src: '#ramfs' },
+    { id: 'task', type: 'ns', dst: 'task', src: '#task' },
+    { id: 'term', type: 'ns', dst: 'term', src: '#term' },
+    { id: 'web', type: 'ns', dst: 'web', src: '#web' },
+    { id: 'js', type: 'ns', dst: 'js', src: '#js' },
+    { id: 'opfs', type: 'ns', dst: 'opfs', src: '#web/opfs', mode: '0755' },
+    { id: 'tmp', type: 'ns', dst: 'tmp', src: '#ramfs' },
+    { id: 'hush', type: 'fetch', dst: 'hush', src: 'https://w9y.up.railway.app/go/github.com/btwiuse/hush/cmd/hush@v0.5.6', mode: '0755' },
+    { id: 'w9y', type: 'fetch', dst: 'w9y', src: 'https://w9y.up.railway.app/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.5', mode: '0755' },
+  ],
+  profile: {
+    id: 'boot-profile',
+    type: 'file',
+    dst: 'tmp/profile',
+    mode: '0666',
+    content: `function w9y_detect() {
+  path="$LOCATION"
+  OLDIFS=$IFS
+  IFS='/'
+
+  set -- $path
+
+  IFS=$OLDIFS
+
+  for x; do
+    [[ -d $HOME/.w9y/$x ]] && continue
+    /w9y mod apply -v "$x" && mkdir -p $HOME/.w9y/$x
+    [[ $? -eq 0 ]] || continue
+    if [[ $x = picoclaw ]]; then
+      echo "[INFO] picoclaw successfully installed, type 'picoclaw' to get started"
+    fi
+    if [[ $x = crush ]]; then
+      echo "[INFO] crush successfully installed, type 'crush' to get started"
+    fi
+  done
+}
+function ensure_home() {
+  [[ -d $HOME ]] || mkdir -p $HOME
+}
+ensure_home
+cd $HOME
+w9y_detect
+`,
+  },
 };
 
 const WORKSPACE_PRESETS = {
@@ -199,6 +248,27 @@ function normalizeBind(bind = {}) {
   };
 }
 
+function normalizeSystemBind(bind = {}) {
+  return {
+    id: typeof bind.id === 'string' && bind.id ? bind.id : createWorkspaceId(),
+    type: SUPPORTED_SYSTEM_BIND_TYPES.includes(bind.type) ? bind.type : 'file',
+    dst: typeof bind.dst === 'string' ? bind.dst.trim() : '',
+    src: typeof bind.src === 'string' ? bind.src.trim() : '',
+    content: typeof bind.content === 'string' ? bind.content : '',
+    mode: typeof bind.mode === 'string' && bind.mode ? bind.mode : '0644',
+  };
+}
+
+function normalizeSystemConfig(system) {
+  const defaults = clone(DEFAULT_SYSTEM_CONFIG);
+  return {
+    binds: Array.isArray(system?.binds)
+      ? system.binds.map(normalizeSystemBind)
+      : defaults.binds.map(normalizeSystemBind),
+    profile: normalizeSystemBind({ ...defaults.profile, ...system?.profile, id: 'boot-profile', type: 'file' }),
+  };
+}
+
 function validateBind(bind) {
   if (!SUPPORTED_BIND_TYPES.includes(bind.type)) return 'Unsupported mount type.';
   if (!bind.dst) return 'A destination path is required.';
@@ -274,6 +344,7 @@ function createWorkspace(presetId = 'hush-shell', overrides = {}) {
     createdAt: overrides.createdAt || now,
     updatedAt: now,
     runtime: { ...clone(preset.runtime), ...overrides.runtime },
+    system: normalizeSystemConfig(overrides.system || preset.system),
     binds: clone(overrides.binds || preset.binds).map(normalizeBind),
     tasks: clone(overrides.tasks || preset.tasks).map(normalizeTask),
     shell: normalizeShellConfig(overrides.shell),
