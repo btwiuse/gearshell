@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { ArrowRight, ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -77,7 +77,7 @@ const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
-const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'files', 'group', 'codigo', 'crush', 'rickroll'];
+const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'files', 'runtime', 'group', 'codigo', 'crush', 'rickroll'];
 
 const BUILTIN_TERMINAL_PROFILES = [
   { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
@@ -2501,6 +2501,7 @@ let groupIdCounter = 0;
 let iframeIdCounter = 0;
 let settingsIdCounter = 0;
 let filesIdCounter = 0;
+let runtimeIdCounter = 0;
 let workspaceTaskPanelCounter = 0;
 let fallbackIdCounter = 0;
 
@@ -2542,6 +2543,20 @@ function addFilesPanel(api, group) {
     ...(group && { position: { referenceGroup: group } }),
   });
   rememberOpenPanel(panel, { component: 'files' });
+  panel.api.setActive();
+  return panel;
+}
+
+function addRuntimePanel(api, group) {
+  const id = ++runtimeIdCounter;
+  const panel = api.addPanel({
+    id: `runtime-${id}`,
+    component: 'runtime',
+    params: { runtimeId: id, panelType: 'runtime' },
+    title: 'Runtime',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  rememberOpenPanel(panel, { component: 'runtime' });
   panel.api.setActive();
   return panel;
 }
@@ -2632,6 +2647,7 @@ const PANEL_CREATION_OPTIONS = [
   { component: 'home', label: 'Home', icon: House },
   { component: 'settings', label: 'Settings', icon: Settings },
   { component: 'files', label: 'Files', icon: FolderOpen },
+  { component: 'runtime', label: 'Runtime', icon: Activity },
   { component: 'group', label: 'Group', icon: UsersRound },
   { component: 'codigo', label: 'Codigo', icon: Code2 },
   { component: 'crush', label: 'Crush', icon: Bot },
@@ -2648,6 +2664,7 @@ function addPanelByComponent(api, component, group) {
   if (component === 'fallback') return addFallbackPanel(api, group);
   if (component === 'settings') return addSettingsPanel(api, group);
   if (component === 'files') return addFilesPanel(api, group);
+  if (component === 'runtime') return addRuntimePanel(api, group);
   if (component === 'group') return addGroupPanel(api, group);
   if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
   return addHomePanel(api, group);
@@ -3038,6 +3055,63 @@ function FilesPanel() {
   );
 }
 
+function RuntimePanel() {
+  const [snapshot, setSnapshot] = useState(null);
+  const refresh = useCallback(() => {
+    const workspace = loadActiveWorkspace();
+    const taskSessions = [...workspaceTaskSessions.values()];
+    setSnapshot({
+      ready: systemReady,
+      moduleUrl: workspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl,
+      wasmUrl: workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl,
+      allowedOrigins: workspace.system.allowOrigins || 'None',
+      systemMounts: workspace.system.binds.length,
+      taskMounts: workspace.binds.length,
+      tasks: workspace.tasks.length,
+      terminals: terminalSessions.size,
+      activeTasks: taskSessions.filter((session) => session.status === 'running' || session.status === 'starting').length,
+      failedTasks: taskSessions.filter((session) => session.status === 'failed').length,
+    });
+  }, []);
+  useEffect(() => {
+    refresh();
+    const timer = setInterval(refresh, 1000);
+    window.addEventListener(WORKSPACE_CHANGED_EVENT, refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener(WORKSPACE_CHANGED_EVENT, refresh);
+    };
+  }, [refresh]);
+  if (!snapshot) return null;
+  const items = [
+    ['System', snapshot.ready ? 'Ready' : 'Starting'],
+    ['System mounts', String(snapshot.systemMounts)],
+    ['Task mounts', String(snapshot.taskMounts)],
+    ['Configured tasks', String(snapshot.tasks)],
+    ['Active tasks', String(snapshot.activeTasks)],
+    ['Failed tasks', String(snapshot.failedTasks)],
+    ['Terminal sessions', String(snapshot.terminals)],
+    ['Allowed origins', snapshot.allowedOrigins],
+  ];
+  return React.createElement('div', { className: 'runtime-panel panel-content' },
+    React.createElement('div', { className: 'runtime-header' },
+      React.createElement(Activity, { size: 20, 'aria-hidden': true }),
+      React.createElement('h2', null, 'Runtime diagnostics'),
+      React.createElement('button', { type: 'button', title: 'Refresh diagnostics', 'aria-label': 'Refresh diagnostics', onClick: refresh }, React.createElement(RefreshCw, { size: 15, 'aria-hidden': true })),
+    ),
+    React.createElement('dl', { className: 'runtime-grid' }, items.flatMap(([label, value]) => [
+      React.createElement('dt', { key: `${label}-label` }, label),
+      React.createElement('dd', { key: `${label}-value`, className: label === 'System' && snapshot.ready ? 'ready' : '' }, value),
+    ])),
+    React.createElement('section', { className: 'runtime-source' },
+      React.createElement('span', null, 'Runtime module'),
+      React.createElement('code', { title: snapshot.moduleUrl }, snapshot.moduleUrl),
+      React.createElement('span', null, 'Wasm module'),
+      React.createElement('code', { title: snapshot.wasmUrl }, snapshot.wasmUrl),
+    ),
+  );
+}
+
 function GroupPanel() {
   return React.createElement('div', { className: 'group-panel panel-content' },
     React.createElement('img', { src: 'group.png', alt: 'Gear Shell group' }),
@@ -3280,6 +3354,7 @@ function App() {
         home: HomePanel,
         settings: SettingsPanel,
         files: FilesPanel,
+        runtime: RuntimePanel,
         fallback: FallbackPanel,
         task: WorkspaceTaskPanel,
         terminal: TerminalPanel,
