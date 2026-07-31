@@ -64,7 +64,7 @@ const HUSH_ENV = {
 };
 const DEFAULT_CMD = 'hush -rcfile /tmp/profile';
 const CONFIG_KEY = 'gear-shell-config';
-const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', autoOpen: true };
+const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', startupPanels: [], restoreTabs: false };
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
 const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
@@ -73,6 +73,7 @@ const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
 const SUPPORTED_BIND_TYPES = ['ns', 'file', 'archive'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
+const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'group', 'codigo', 'crush', 'rickroll'];
 
 const BUILTIN_TERMINAL_PROFILES = [
   { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
@@ -159,7 +160,10 @@ function normalizeShellConfig(config) {
   const normalized = {
     cmd: typeof config?.cmd === 'string' && config.cmd.trim() ? config.cmd.trim() : DEFAULT_CMD,
     env: typeof config?.env === 'string' ? config.env : '',
-    autoOpen: config?.autoOpen !== false,
+    startupPanels: Array.isArray(config?.startupPanels)
+      ? [...new Set(config.startupPanels.filter((panel) => STARTUP_PANEL_TYPES.includes(panel)))]
+      : [],
+    restoreTabs: config?.restoreTabs === true,
     terminalProfiles: Array.isArray(config?.terminalProfiles)
       ? config.terminalProfiles.map(normalizeTerminalProfile).filter((profile) => profile.program)
       : [],
@@ -530,6 +534,37 @@ function resetConfig() {
   notifyWorkspaceChange();
   return workspace.shell;
 }
+
+const openPanelSnapshots = new Map();
+
+function persistOpenPanels() {
+  const workspace = loadActiveWorkspace();
+  workspace.ui = {
+    ...workspace.ui,
+    openPanels: [...openPanelSnapshots.values()].map(clone),
+  };
+  saveWorkspace(workspace);
+  updateWorkspaceIndex(workspace);
+}
+
+function rememberOpenPanel(panel, snapshot) {
+  openPanelSnapshots.set(panel.id, snapshot);
+  persistOpenPanels();
+}
+
+function forgetOpenPanel(panelId) {
+  if (!openPanelSnapshots.delete(panelId)) return;
+  persistOpenPanels();
+}
+
+function getSavedOpenPanels() {
+  const panels = loadActiveWorkspace().ui?.openPanels;
+  if (!Array.isArray(panels)) return [];
+  return panels.filter((panel) => panel && typeof panel === 'object' &&
+    (STARTUP_PANEL_TYPES.includes(panel.component) || panel.component === 'fallback' || panel.component === 'task')
+  );
+}
+
 function getTerminalProfiles(config = loadConfig()) {
   const hush = {
     ...BUILTIN_TERMINAL_PROFILES[0],
@@ -1127,14 +1162,16 @@ function destroyReveal(homeContent) {
 function setupConfigForm(settingsContent) {
   const cmdEl = settingsContent.querySelector('[data-config="cmd"]');
   const envEl = settingsContent.querySelector('[data-config="env"]');
-  const autoEl = settingsContent.querySelector('[data-config="auto-open"]');
+  const startupEls = [...settingsContent.querySelectorAll('[data-config-startup]')];
+  const restoreTabsEl = settingsContent.querySelector('[data-config="restore-tabs"]');
   if (!cmdEl) return;
 
   const populate = () => {
     const cfg = loadConfig();
     cmdEl.value = cfg.cmd;
     envEl.value = cfg.env;
-    autoEl.checked = !!cfg.autoOpen;
+    for (const input of startupEls) input.checked = cfg.startupPanels.includes(input.value);
+    if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
   };
   populate();
 
@@ -1154,7 +1191,8 @@ function setupConfigForm(settingsContent) {
       ...config,
       cmd,
       env: envEl.value,
-      autoOpen: autoEl.checked,
+      startupPanels: startupEls.filter((input) => input.checked).map((input) => input.value),
+      restoreTabs: restoreTabsEl?.checked === true,
       terminalProfiles,
     });
     const s = settingsContent.querySelector('[data-config="status"]');
@@ -1167,7 +1205,8 @@ function setupConfigForm(settingsContent) {
     const c = resetConfig();
     cmdEl.value = c.cmd;
     envEl.value = c.env;
-    autoEl.checked = !!c.autoOpen;
+    for (const input of startupEls) input.checked = c.startupPanels.includes(input.value);
+    if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
     const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Reset to defaults.';
     s.style.color = '#8b949e';
@@ -1619,6 +1658,7 @@ function addTerminalPanel(api, group, profile = getDefaultTerminalProfile()) {
     title: `${profile.name || 'Terminal'} ${id}`,
     ...(group && { position: { referenceGroup: group } }),
   });
+  rememberOpenPanel(panel, { component: 'terminal', profile: clone(profile) });
   panel.api.setActive();
 }
 
@@ -1638,6 +1678,7 @@ function addHomePanel(api, group) {
     title: 'Home',
     ...(group && { position: { referenceGroup: group } }),
   });
+  rememberOpenPanel(panel, { component: 'home' });
   panel.api.setActive();
   return panel;
 }
@@ -1651,6 +1692,7 @@ function addSettingsPanel(api, group) {
     title: 'Settings',
     ...(group && { position: { referenceGroup: group } }),
   });
+  rememberOpenPanel(panel, { component: 'settings' });
   panel.api.setActive();
   return panel;
 }
@@ -1664,6 +1706,7 @@ function addFallbackPanel(api, group) {
     title: 'No panels',
     ...(group && { position: { referenceGroup: group } }),
   });
+  rememberOpenPanel(panel, { component: 'fallback' });
   panel.api.setActive();
   return panel;
 }
@@ -1682,6 +1725,7 @@ function addWorkspaceTaskPanel(api, task, workspace = loadActiveWorkspace(), gro
     title: task.name || task.cmd,
     ...(group && { position: { referenceGroup: group } }),
   });
+  rememberOpenPanel(panel, { component: 'task', task: clone(task), workspaceId: workspace.id });
   panel.api.setActive();
   return panel;
 }
@@ -1702,6 +1746,7 @@ function addGroupPanel(api, group) {
     title: 'Group',
     ...(group && { position: { referenceGroup: group } }),
   });
+  rememberOpenPanel(panel, { component: 'group' });
   panel.api.setActive();
   return panel;
 }
@@ -1715,6 +1760,7 @@ function addIframePanel(api, config, group) {
     title: config.title,
     ...(group && { position: { referenceGroup: group } }),
   });
+  rememberOpenPanel(panel, { component: config.panelType });
   panel.api.setActive();
   return panel;
 }
@@ -1754,6 +1800,20 @@ function addPanelByComponent(api, component, group) {
   if (component === 'group') return addGroupPanel(api, group);
   if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
   return addHomePanel(api, group);
+}
+
+function restoreSavedPanels(api) {
+  const panels = getSavedOpenPanels();
+  for (const panel of panels) {
+    if (panel.component === 'terminal') {
+      addTerminalPanel(api, undefined, panel.profile || getDefaultTerminalProfile());
+    } else if (panel.component === 'task' && panel.task) {
+      addWorkspaceTaskPanel(api, panel.task, loadWorkspace(panel.workspaceId) || loadActiveWorkspace());
+    } else {
+      addPanelByComponent(api, panel.component);
+    }
+  }
+  return panels.length > 0;
 }
 
 function whenWanixReady(callback) {
@@ -2091,9 +2151,6 @@ function App() {
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
 
-    // Add the initial Home panel first.
-    const homePanel = addHomePanel(event.api);
-
     event.api.onDidRemovePanel((panel) => {
       const match = /^terminal-(\d+)$/.exec(panel.id);
       if (match) destroyTerminalSession(Number(match[1]));
@@ -2101,18 +2158,24 @@ function App() {
       if (iframeMatch) destroyIframeSession(Number(iframeMatch[1]));
       const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
       if (workspaceTaskMatch) destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
+      forgetOpenPanel(panel.id);
       requestAnimationFrame(() => {
         if (event.api.panels.length === 0) addFallbackPanel(event.api);
       });
     });
 
-    // Start configured processes only after Wanix is ready so they follow the
-    // same allocation path as tasks opened from Settings.
     const cfg = loadConfig();
+    const restored = cfg.restoreTabs && restoreSavedPanels(event.api);
+    if (!restored) {
+      for (const component of cfg.startupPanels) addPanelByComponent(event.api, component);
+    }
+    if (event.api.panels.length === 0) addFallbackPanel(event.api);
+
+    // Start configured processes only after Wanix is ready so they follow the
+    // same allocation path as tasks opened from Settings. Restored task tabs
+    // already represent the prior session, so do not create duplicates.
     whenWanixReady(() => {
-      if (cfg.autoOpen) addTerminalPanel(event.api);
-      autoStartWorkspaceTasks(event.api);
-      event.api.getPanel(homePanel.id)?.api.setActive();
+      if (!restored) autoStartWorkspaceTasks(event.api);
     });
   }, []);
 

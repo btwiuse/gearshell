@@ -181,6 +181,8 @@ wanix-term { flex: 1; min-width: 0; }
 
 .cfg-toggle { display: block; font-size: 13px; color: #c9d1d9; cursor: pointer; }
 .cfg-toggle input[type="checkbox"] { width: auto !important; height: auto !important; accent-color: #58a6ff; cursor: pointer; vertical-align: middle; margin-right: 6px; }
+.cfg-startup-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0 14px; }
+@media (max-width: 460px) { .cfg-startup-panels { grid-template-columns: 1fr; } }
 
 /* Fix dockview theme for gap between tab bar and content */
 .dockview-theme-github-dark .dv-groupview {

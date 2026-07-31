@@ -71,7 +71,7 @@
       src="https://justwasm.github.io/wanix/dist/wanix.min.js"
     ></script>
 
-    <link rel="stylesheet" href="app.css?v=20260731.8" />
+    <link rel="stylesheet" href="app.css?v=20260731.10" />
   </head>
   <body>
     <template id="home-template">
@@ -239,9 +239,19 @@
             <details open>
               <summary><span>Behavior</span></summary>
               <div class="body">
+                <p class="hint">Open these panels when a session is not restored.</p>
+                <div class="cfg-startup-panels">
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="home"><span>Home</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="terminal"><span>Terminal</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="settings"><span>Settings</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="group"><span>Group</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="codigo"><span>Codigo</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="crush"><span>Crush</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="rickroll"><span>Rick Roll</span></label>
+                </div>
                 <label class="cfg-toggle">
-                  <input data-config="auto-open" type="checkbox">
-                  <span>Auto open new terminal on page load</span>
+                  <input data-config="restore-tabs" type="checkbox">
+                  <span>Restore tabs from the previous session</span>
                 </label>
               </div>
             </details>
@@ -302,6 +312,6 @@
       </wanix-bind>
     </wanix-system>
 
-    <script type="module" src="app.js?v=20260731.22"></script>
+    <script type="module" src="app.js?v=20260731.24"></script>
   </body>
 </html>
