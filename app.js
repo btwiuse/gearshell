@@ -87,7 +87,7 @@ const BUILTIN_TERMINAL_PROFILES = [
 
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0',
-  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@main/dist/wanix.min.js',
+  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@9ceae50b35558ddf8e9f3862fa3c4aa9e8b4097d/dist/wanix.min.js',
 };
 
 const DEFAULT_SYSTEM_CONFIG = {
