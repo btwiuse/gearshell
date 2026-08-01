@@ -2868,8 +2868,18 @@ function FilesPanel() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [sidebarHeight, setSidebarHeight] = useState(220);
+  const [stackedLayout, setStackedLayout] = useState(() => window.matchMedia('(max-width: 560px)').matches);
 
-  useEffect(() => () => document.body.classList.remove('files-resizing'), []);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 560px)');
+    const updateLayout = () => setStackedLayout(media.matches);
+    updateLayout();
+    media.addEventListener('change', updateLayout);
+    return () => media.removeEventListener('change', updateLayout);
+  }, []);
+
+  useEffect(() => () => document.body.classList.remove('files-resizing', 'files-resizing-row'), []);
 
   const startSidebarResize = (event) => {
     if (event.button !== 0) return;
@@ -2878,17 +2888,28 @@ function FilesPanel() {
     event.preventDefault();
     sidebarResizeRef.current = {
       pointerId: event.pointerId,
+      stacked: stackedLayout,
       panelLeft: panelBounds.left,
-      maxWidth: Math.max(190, panelBounds.width - 240),
+      panelTop: panelBounds.top,
+      maxSize: stackedLayout
+        ? Math.max(130, panelBounds.height - 180)
+        : Math.max(190, panelBounds.width - 240),
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-    document.body.classList.add('files-resizing');
+    document.body.classList.add(stackedLayout ? 'files-resizing-row' : 'files-resizing');
   };
 
   const resizeSidebar = (event) => {
     const resize = sidebarResizeRef.current;
     if (!resize || resize.pointerId !== event.pointerId) return;
-    setSidebarWidth(Math.max(190, Math.min(resize.maxWidth, event.clientX - resize.panelLeft)));
+    const nextSize = resize.stacked
+      ? event.clientY - resize.panelTop
+      : event.clientX - resize.panelLeft;
+    if (resize.stacked) {
+      setSidebarHeight(Math.max(130, Math.min(resize.maxSize, nextSize)));
+    } else {
+      setSidebarWidth(Math.max(190, Math.min(resize.maxSize, nextSize)));
+    }
   };
 
   const stopSidebarResize = (event) => {
@@ -2896,7 +2917,7 @@ function FilesPanel() {
     if (!resize || resize.pointerId !== event.pointerId) return;
     sidebarResizeRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    document.body.classList.remove('files-resizing');
+    document.body.classList.remove('files-resizing', 'files-resizing-row');
   };
 
   const refresh = useCallback(async () => {
@@ -3057,7 +3078,10 @@ function FilesPanel() {
   return React.createElement('div', {
     ref: filesPanelRef,
     className: 'files-panel panel-content',
-    style: { '--files-sidebar-width': `${sidebarWidth}px` },
+    style: {
+      '--files-sidebar-width': `${sidebarWidth}px`,
+      '--files-sidebar-height': `${sidebarHeight}px`,
+    },
   },
     React.createElement('section', { className: 'files-sidebar' },
       React.createElement('div', { className: 'files-toolbar' },
@@ -3105,10 +3129,10 @@ function FilesPanel() {
     React.createElement('div', {
       className: 'files-resizer',
       role: 'separator',
-      'aria-label': 'Resize file browser sidebar',
-      'aria-orientation': 'vertical',
-      'aria-valuemin': 190,
-      'aria-valuenow': Math.round(sidebarWidth),
+      'aria-label': stackedLayout ? 'Resize file browser file list height' : 'Resize file browser sidebar',
+      'aria-orientation': stackedLayout ? 'horizontal' : 'vertical',
+      'aria-valuemin': stackedLayout ? 130 : 190,
+      'aria-valuenow': Math.round(stackedLayout ? sidebarHeight : sidebarWidth),
       onPointerDown: startSidebarResize,
       onPointerMove: resizeSidebar,
       onPointerUp: stopSidebarResize,

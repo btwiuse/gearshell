@@ -225,6 +225,7 @@ wanix-term { flex: 1; min-width: 0; }
 .files-resizer::before { position: absolute; top: 0; bottom: 0; left: 2px; width: 1px; background: #30363d; content: ''; }
 .files-resizer:hover::before, .files-resizing .files-resizer::before { width: 2px; left: 2px; background: #58a6ff; }
 .files-resizing { cursor: col-resize; user-select: none; }
+.files-resizing-row { cursor: row-resize; user-select: none; }
 .files-toolbar, .files-editor-toolbar { min-height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border-bottom: 1px solid #30363d; }
 .files-toolbar code, .files-editor-toolbar code { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .files-toolbar input { min-width: 0; flex: 1; height: 26px; padding: 3px 5px; border: 1px solid transparent; border-radius: 3px; outline: 0; background: transparent; color: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
@@ -247,7 +248,13 @@ wanix-term { flex: 1; min-width: 0; }
 .files-status { min-height: 28px; padding: 6px 10px; border-top: 1px solid #30363d; color: #8b949e; font-size: 12px; }
 .files-spinning { animation: files-spin 0.8s linear infinite; }
 @keyframes files-spin { to { transform: rotate(360deg); } }
-@media (max-width: 560px) { .files-panel { grid-template-columns: 1fr; grid-template-rows: minmax(130px, 36%) minmax(0, 1fr); } .files-sidebar { border-bottom: 1px solid #30363d; } .files-resizer { display: none; } }
+@media (max-width: 560px) {
+  .files-panel { grid-template-columns: 1fr; grid-template-rows: minmax(130px, var(--files-sidebar-height, 220px)) 6px minmax(0, 1fr); }
+  .files-sidebar { border-bottom: 0; }
+  .files-resizer { cursor: row-resize; }
+  .files-resizer::before { top: 2px; right: 0; bottom: auto; left: 0; width: auto; height: 1px; }
+  .files-resizer:hover::before, .files-resizing-row .files-resizer::before { top: 2px; right: 0; left: 0; width: auto; height: 2px; background: #58a6ff; }
+}
 .runtime-panel { overflow: auto; padding: 22px; background: #0d1117; color: #c9d1d9; }
 .runtime-header { display: flex; align-items: center; gap: 8px; max-width: 680px; margin: 0 auto 18px; }
 .runtime-header h2 { margin: 0; font-size: 17px; }
