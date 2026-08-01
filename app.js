@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, CircleOff, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, Music2, Pencil, Play, Plus, RefreshCw, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -2620,7 +2620,7 @@ function addFallbackPanel(api, group) {
     id: `fallback-${id}`,
     component: 'fallback',
     params: { fallbackId: id, panelType: 'fallback' },
-    title: 'No panels',
+    title: 'Launcher',
     ...(group && { position: { referenceGroup: group } }),
   });
   rememberOpenPanel(panel, { component: 'fallback' });
@@ -2703,7 +2703,7 @@ const IFRAME_PANEL_OPTIONS = {
 
 const PANEL_CREATION_OPTIONS = [
   { component: 'terminal', label: 'Terminal', icon: Terminal },
-  { component: 'fallback', label: 'No panels', icon: CircleOff },
+  { component: 'fallback', label: 'Launcher', icon: Rocket },
   { component: 'home', label: 'Home', icon: House },
   { component: 'settings', label: 'Settings', icon: Settings },
   { component: 'files', label: 'Files', icon: FolderOpen },
@@ -3460,7 +3460,7 @@ function FallbackPage({ containerApi, className }) {
 
   return React.createElement('div', { className },
     React.createElement('div', { className: 'empty-workspace-card' },
-      React.createElement('p', null, 'No open panels'),
+      React.createElement('p', null, 'Task Launcher'),
       React.createElement('div', { className: 'empty-workspace-actions' },
         React.createElement(TerminalLaunchPicker, {
           className: 'empty-terminal-launch',
