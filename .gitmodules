@@ -1,3 +1,6 @@
 [submodule "browser"]
 	path = browser
 	url = https://github.com/btwiuse/gear-browser.git
+[submodule "isolation"]
+	path = isolation
+	url = https://github.com/btwiuse/gear-isolation.git
