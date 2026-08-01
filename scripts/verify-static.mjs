@@ -9,7 +9,7 @@ const css = readFileSync(new URL('app.css', root), 'utf8');
 const syntax = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: app, encoding: 'utf8' });
 if (syntax.status !== 0) throw new Error(syntax.stderr || 'app.js syntax check failed');
 
-for (const marker of ['FilesPanel', 'RuntimePanel', "panelType: 'browser'", 'value="import"', 'data-system="allow-origins"']) {
+for (const marker of ['FilesPanel', 'RuntimePanel', 'LandingPanel', 'DeckPanel', "component: 'deck'", 'value="import"', 'data-system="allow-origins"']) {
   if (!app.includes(marker) && !html.includes(marker)) throw new Error(`Missing expected feature marker: ${marker}`);
 }
 if (!html.match(/src="app\.js\?v=[\d.]+"/)) throw new Error('index.html must cache-bust app.js');

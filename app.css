@@ -17,6 +17,34 @@ wanix-bind { display: none; }
 wanix-term { flex: 1; min-width: 0; }
 
 .panel-content { height: 100%; min-height: 0; }
+.landing-panel { overflow: auto; background: #0d1117; color: #c9d1d9; }
+.landing-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 0.42fr); min-height: 100%; max-width: 1040px; margin: 0 auto; }
+.landing-intro { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 44px clamp(24px, 6vw, 76px); }
+.landing-logo { width: 72px; height: 72px; margin-bottom: 24px; object-fit: contain; }
+.landing-kicker { margin-bottom: 10px; color: #8b949e; font: 12px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: 0.12em; }
+.landing-intro h1 { max-width: 500px; margin: 0; color: #f0f6fc; font-size: clamp(30px, 5vw, 52px); font-weight: 600; letter-spacing: 0; line-height: 1.05; }
+.landing-lede { max-width: 540px; margin: 22px 0 0; color: #c9d1d9; font-size: 16px; line-height: 1.6; }
+.landing-tagline { margin: 7px 0 28px; color: #58a6ff; font-size: 16px; line-height: 1.5; }
+.landing-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 540px; }
+.landing-actions button { display: grid; grid-template-columns: 18px minmax(0, 1fr) 16px; align-items: center; gap: 8px; min-height: 42px; padding: 8px 10px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; cursor: pointer; font: 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; text-align: left; }
+.landing-actions button:hover { border-color: #58a6ff; background: #1c2128; }
+.landing-actions button svg:first-child { color: #8b949e; }
+.landing-actions button svg:last-child { color: #58a6ff; }
+.landing-actions button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.landing-capabilities { display: flex; flex-direction: column; justify-content: center; border-left: 1px solid #30363d; background: #161b22; }
+.landing-capability { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 24px; border-bottom: 1px solid #30363d; color: #c9d1d9; font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.landing-capability:first-child { border-top: 1px solid #30363d; }
+.landing-capability-index { color: #58a6ff; font-size: 11px; }
+@media (max-width: 620px) {
+  .landing-shell { grid-template-columns: 1fr; }
+  .landing-intro { justify-content: flex-start; padding: 32px 22px; }
+  .landing-logo { width: 58px; height: 58px; margin-bottom: 20px; }
+  .landing-actions { grid-template-columns: 1fr; }
+  .landing-capabilities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid #30363d; border-left: 0; }
+  .landing-capability { min-height: 48px; padding: 0 16px; border-top: 0; border-right: 1px solid #30363d; }
+  .landing-capability:first-child { border-top: 0; }
+  .landing-capability:last-child { grid-column: 1 / -1; }
+}
 .home-content { height: 100%; overflow: hidden; position: relative; }
 .dv-view.home-view { overflow: hidden !important; }
 .home-debug-panel { position: absolute; right: 8px; bottom: 8px; left: 8px; z-index: 30; max-height: 40%; }

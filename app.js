@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, LayoutDashboard, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -71,14 +71,14 @@ const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
 const WORKSPACE_PRESET_INDEX_KEY = 'gear-shell-workspace-preset-index';
 const WORKSPACE_PRESET_KEY_PREFIX = 'gear-shell-workspace-preset:';
-const WORKSPACE_SCHEMA_VERSION = 3;
+const WORKSPACE_SCHEMA_VERSION = 4;
 const WORKSPACE_CHANGED_EVENT = 'gear-shell-workspace-change';
 const WORKSPACE_TASK_STATUS_EVENT = 'gear-shell-task-status';
 const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
-const STARTUP_PANEL_TYPES = ['home', 'terminal', 'settings', 'files', 'runtime', 'group', 'browser', 'codigo', 'crush', 'rickroll'];
+const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'settings', 'files', 'runtime', 'group', 'browser', 'codigo', 'crush', 'rickroll'];
 
 const BUILTIN_TERMINAL_PROFILES = [
   { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
@@ -533,6 +533,16 @@ function migrateWorkspace(workspace) {
   if (workspace.version < 2) {
     migrated.binds = migrated.binds.filter((bind) => !isLegacySystemMirrorBind(bind));
   }
+  if (workspace.version < 4) {
+    if (migrated.shell.startupPanels.includes('home')) {
+      migrated.shell.startupPanels = migrated.shell.startupPanels.map((panel) => panel === 'home' ? 'deck' : panel);
+    }
+    if (Array.isArray(migrated.ui?.openPanels)) {
+      migrated.ui.openPanels = migrated.ui.openPanels.map((panel) =>
+        panel?.component === 'home' ? { ...panel, component: 'deck' } : panel
+      );
+    }
+  }
   return migrated;
 }
 
@@ -934,6 +944,7 @@ function resetConfig() {
 }
 
 const openPanelSnapshots = new Map();
+let dockviewApi = null;
 
 function persistOpenPanels() {
   const workspace = loadActiveWorkspace();
@@ -960,7 +971,7 @@ function getSavedOpenPanels() {
   if (!Array.isArray(panels)) return [];
   return panels.filter((panel) => panel && typeof panel === 'object' &&
     (STARTUP_PANEL_TYPES.includes(panel.component) || panel.component === 'fallback' || panel.component === 'task')
-  );
+  ).map((panel) => panel.component === 'home' ? { ...panel, component: 'deck' } : panel);
 }
 
 function getTerminalProfiles(config = loadConfig()) {
@@ -2558,7 +2569,7 @@ let runtimeIdCounter = 0;
 let workspaceTaskPanelCounter = 0;
 let fallbackIdCounter = 0;
 
-function addHomePanel(api, group) {
+function addLandingPanel(api, group) {
   const id = ++homeIdCounter;
   const panel = api.addPanel({
     id: `home-${id}`,
@@ -2568,6 +2579,20 @@ function addHomePanel(api, group) {
     ...(group && { position: { referenceGroup: group } }),
   });
   rememberOpenPanel(panel, { component: 'home' });
+  panel.api.setActive();
+  return panel;
+}
+
+function addDeckPanel(api, group) {
+  const id = ++homeIdCounter;
+  const panel = api.addPanel({
+    id: `deck-${id}`,
+    component: 'deck',
+    params: { deckId: id, panelType: 'deck' },
+    title: 'Deck',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  rememberOpenPanel(panel, { component: 'deck' });
   panel.api.setActive();
   return panel;
 }
@@ -2705,6 +2730,7 @@ const PANEL_CREATION_OPTIONS = [
   { component: 'terminal', label: 'Terminal', icon: Terminal },
   { component: 'fallback', label: 'Launcher', icon: Rocket },
   { component: 'home', label: 'Home', icon: House },
+  { component: 'deck', label: 'Deck', icon: LayoutDashboard },
   { component: 'settings', label: 'Settings', icon: Settings },
   { component: 'files', label: 'Files', icon: FolderOpen },
   { component: 'runtime', label: 'Runtime', icon: Activity },
@@ -2723,12 +2749,14 @@ PANEL_ICONS.task = Play;
 function addPanelByComponent(api, component, group) {
   if (component === 'terminal') return addTerminalPanel(api, group);
   if (component === 'fallback') return addFallbackPanel(api, group);
+  if (component === 'home') return addLandingPanel(api, group);
+  if (component === 'deck') return addDeckPanel(api, group);
   if (component === 'settings') return addSettingsPanel(api, group);
   if (component === 'files') return addFilesPanel(api, group);
   if (component === 'runtime') return addRuntimePanel(api, group);
   if (component === 'group') return addGroupPanel(api, group);
   if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
-  return addHomePanel(api, group);
+  return addLandingPanel(api, group);
 }
 
 function restoreSavedPanels(api) {
@@ -2762,13 +2790,12 @@ function whenWanixReady(callback) {
 
 // ========== Components ==========
 
-// Home panels each own a Reveal instance so they can be split and closed independently.
-function HomePanel({ api }) {
+function DeckPanel({ api }) {
   const wrapperRef = useRef(null);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    const template = document.getElementById('home-template');
+    const template = document.getElementById('deck-template');
     const homeContent = template?.content.firstElementChild?.cloneNode(true);
     if (!wrapper || !homeContent) return;
 
@@ -2802,6 +2829,41 @@ function HomePanel({ api }) {
   }, [api]);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+}
+
+function LandingPanel({ containerApi }) {
+  const openPanel = (component) => {
+    const api = containerApi || dockviewApi;
+    if (api) addPanelByComponent(api, component);
+  };
+  const actions = [
+    { component: 'terminal', label: 'Open Terminal', icon: Terminal },
+    { component: 'files', label: 'Browse Files', icon: FolderOpen },
+    { component: 'browser', label: 'Open Browser', icon: Globe2 },
+    { component: 'deck', label: 'Open Deck', icon: LayoutDashboard },
+    { component: 'settings', label: 'Open Settings', icon: Settings },
+  ];
+  return React.createElement('div', { className: 'landing-panel panel-content' },
+    React.createElement('div', { className: 'landing-shell' },
+      React.createElement('div', { className: 'landing-intro' },
+        React.createElement('img', { className: 'landing-logo', src: 'logo-banner-logo.png', alt: 'GearShell' }),
+        React.createElement('div', { className: 'landing-kicker' }, 'GEARSHELL'),
+        React.createElement('h1', null, 'A browser-native shell.'),
+        React.createElement('p', { className: 'landing-lede' }, 'A kernel. A shell. A terminal. A tiling window manager. A browser.'),
+        React.createElement('p', { className: 'landing-tagline' }, 'All running in the browser.'),
+        React.createElement('div', { className: 'landing-actions' }, actions.map(({ component, label, icon: Icon }) =>
+          React.createElement('button', { key: component, type: 'button', onClick: () => openPanel(component) },
+            React.createElement(Icon, { size: 16, 'aria-hidden': true }), React.createElement('span', null, label), React.createElement(ArrowRight, { size: 14, 'aria-hidden': true })
+          )
+        )),
+      ),
+      React.createElement('div', { className: 'landing-capabilities', 'aria-label': 'GearShell capabilities' },
+        ['Kernel', 'Shell', 'Terminal', 'Files', 'Browser'].map((name, index) => React.createElement('div', { className: 'landing-capability', key: name },
+          React.createElement('span', { className: 'landing-capability-index' }, `0${index + 1}`), React.createElement('span', null, name)
+        )),
+      ),
+    ),
+  );
 }
 
 function SettingsPanel({ containerApi }) {
@@ -3489,6 +3551,7 @@ function FallbackPanel({ containerApi }) {
 // Main application
 function App() {
   const onReady = useCallback((event) => {
+    dockviewApi = event.api;
     // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
@@ -3526,7 +3589,8 @@ function App() {
       className: 'dockview-theme-github-dark',
       onReady,
       components: {
-        home: HomePanel,
+        home: LandingPanel,
+        deck: DeckPanel,
         settings: SettingsPanel,
         files: FilesPanel,
         runtime: RuntimePanel,
