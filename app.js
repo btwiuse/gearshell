@@ -1093,8 +1093,39 @@ function filesystemPathParent(path) {
   return parts.join('/') || '.';
 }
 
+const FILE_PREVIEW_TYPES = {
+  image: {
+    avif: 'image/avif', bmp: 'image/bmp', gif: 'image/gif', ico: 'image/x-icon',
+    jpeg: 'image/jpeg', jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml',
+    webp: 'image/webp',
+  },
+  audio: {
+    aac: 'audio/aac', flac: 'audio/flac', m4a: 'audio/mp4', mp3: 'audio/mpeg',
+    oga: 'audio/ogg', ogg: 'audio/ogg', opus: 'audio/ogg', wav: 'audio/wav',
+  },
+  video: {
+    '3gp': 'video/3gpp', m4v: 'video/x-m4v', mov: 'video/quicktime', mp4: 'video/mp4',
+    ogv: 'video/ogg', webm: 'video/webm',
+  },
+};
+
+function getFilesystemPreviewType(path) {
+  const extension = String(path).split('.').pop()?.toLowerCase();
+  if (!extension) return null;
+  for (const [kind, types] of Object.entries(FILE_PREVIEW_TYPES)) {
+    if (types[extension]) return { kind, mime: types[extension] };
+  }
+  return null;
+}
+
+function toFilesystemBytes(contents) {
+  if (contents instanceof Uint8Array) return contents;
+  if (ArrayBuffer.isView(contents)) return new Uint8Array(contents.buffer, contents.byteOffset, contents.byteLength);
+  return new Uint8Array(contents);
+}
+
 function decodeFilesystemText(contents) {
-  const bytes = contents instanceof Uint8Array ? contents : new Uint8Array(contents);
+  const bytes = toFilesystemBytes(contents);
   if (bytes.byteLength > 1024 * 1024) throw new Error('Files larger than 1 MiB cannot be opened in this editor.');
   return new TextDecoder().decode(bytes);
 }
@@ -2863,6 +2894,7 @@ function FilesPanel() {
   const [selectedPath, setSelectedPath] = useState(null);
   const [contents, setContents] = useState('');
   const [savedContents, setSavedContents] = useState('');
+  const [preview, setPreview] = useState(null);
   const [creating, setCreating] = useState(null);
   const [entryName, setEntryName] = useState('');
   const [status, setStatus] = useState('');
@@ -2880,6 +2912,17 @@ function FilesPanel() {
   }, []);
 
   useEffect(() => () => document.body.classList.remove('files-resizing', 'files-resizing-row'), []);
+
+  useEffect(() => () => {
+    if (preview?.url) URL.revokeObjectURL(preview.url);
+  }, [preview?.url]);
+
+  const clearFileSelection = () => {
+    setSelectedPath(null);
+    setContents('');
+    setSavedContents('');
+    setPreview(null);
+  };
 
   const startSidebarResize = (event) => {
     if (event.button !== 0) return;
@@ -2952,25 +2995,31 @@ function FilesPanel() {
   const navigateToPath = () => {
     const nextPath = normalizeFilesystemPath(pathDraft);
     setPath(nextPath);
-    setSelectedPath(null);
-    setContents('');
-    setSavedContents('');
+    clearFileSelection();
   };
 
   const openEntry = async (entry) => {
     const nextPath = filesystemPathJoin(path, entry.name);
     if (entry.isDirectory) {
       setPath(nextPath);
-      setSelectedPath(null);
-      setContents('');
-      setSavedContents('');
+      clearFileSelection();
       return;
     }
     try {
-      const text = decodeFilesystemText(await getWanixRoot().readFile(nextPath));
+      const data = await getWanixRoot().readFile(nextPath);
+      const previewType = getFilesystemPreviewType(nextPath);
       setSelectedPath(nextPath);
-      setContents(text);
-      setSavedContents(text);
+      if (previewType) {
+        const blob = new Blob([toFilesystemBytes(data)], { type: previewType.mime });
+        setPreview({ ...previewType, blob, url: URL.createObjectURL(blob) });
+        setContents('');
+        setSavedContents('');
+      } else {
+        const text = decodeFilesystemText(data);
+        setPreview(null);
+        setContents(text);
+        setSavedContents(text);
+      }
       setStatus('');
     } catch (error) {
       setStatus(error.message || 'Unable to open this file.');
@@ -3023,9 +3072,7 @@ function FilesPanel() {
     if (!selectedPath || !window.confirm(`Delete ${selectedPath}?`)) return;
     try {
       await getWanixRoot().remove(selectedPath);
-      setSelectedPath(null);
-      setContents('');
-      setSavedContents('');
+      clearFileSelection();
       setStatus('Deleted.');
       await refresh();
     } catch (error) {
@@ -3039,9 +3086,7 @@ function FilesPanel() {
       const parent = filesystemPathParent(path);
       await getWanixRoot().remove(path);
       setPath(parent);
-      setSelectedPath(null);
-      setContents('');
-      setSavedContents('');
+      clearFileSelection();
       setStatus('Deleted empty folder.');
     } catch (error) {
       setStatus(error.message || 'Only empty folders can be deleted here.');
@@ -3068,13 +3113,14 @@ function FilesPanel() {
   const downloadFile = () => {
     if (!selectedPath) return;
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([contents], { type: 'application/octet-stream' }));
+    const blob = preview?.blob || new Blob([contents], { type: 'text/plain;charset=utf-8' });
+    link.href = URL.createObjectURL(blob);
     link.download = selectedPath.split('/').pop() || 'download';
     link.click();
-    URL.revokeObjectURL(link.href);
+    setTimeout(() => URL.revokeObjectURL(link.href), 0);
   };
 
-  const dirty = selectedPath && contents !== savedContents;
+  const dirty = selectedPath && !preview && contents !== savedContents;
   return React.createElement('div', {
     ref: filesPanelRef,
     className: 'files-panel panel-content',
@@ -3094,7 +3140,7 @@ function FilesPanel() {
         }),
         React.createElement('div', { className: 'files-toolbar-actions' },
           React.createElement('button', { type: 'button', title: 'Go to path', 'aria-label': 'Go to path', onClick: navigateToPath }, React.createElement(ArrowRight, { size: 15, 'aria-hidden': true })),
-          React.createElement('button', { type: 'button', title: 'Parent folder', 'aria-label': 'Parent folder', disabled: path === '.', onClick: () => setPath(filesystemPathParent(path)) }, React.createElement(ArrowUp, { size: 15, 'aria-hidden': true })),
+          React.createElement('button', { type: 'button', title: 'Parent folder', 'aria-label': 'Parent folder', disabled: path === '.', onClick: () => { setPath(filesystemPathParent(path)); clearFileSelection(); } }, React.createElement(ArrowUp, { size: 15, 'aria-hidden': true })),
           React.createElement('button', { type: 'button', title: 'Refresh files', 'aria-label': 'Refresh files', onClick: refresh }, React.createElement(RefreshCw, { className: loading ? 'files-spinning' : '', size: 15, 'aria-hidden': true })),
           React.createElement('button', { type: 'button', title: 'Upload files', 'aria-label': 'Upload files', onClick: () => fileInputRef.current?.click() }, React.createElement(Upload, { size: 15, 'aria-hidden': true })),
           React.createElement('button', { type: 'button', title: 'New file', 'aria-label': 'New file', onClick: () => { setCreating('file'); setEntryName(''); } }, React.createElement(FilePlus2, { size: 15, 'aria-hidden': true })),
@@ -3140,7 +3186,25 @@ function FilesPanel() {
     }),
     React.createElement('section', { className: 'files-editor' },
       selectedPath
-        ? React.createElement(React.Fragment, null,
+        ? preview
+          ? React.createElement(React.Fragment, null,
+            React.createElement('div', { className: 'files-editor-toolbar' },
+              React.createElement('code', { title: selectedPath }, `/${selectedPath}`),
+              React.createElement('div', { className: 'files-toolbar-actions' },
+                React.createElement('button', { type: 'button', title: 'Download file', 'aria-label': 'Download file', onClick: downloadFile }, React.createElement(Download, { size: 15, 'aria-hidden': true })),
+                React.createElement('button', { type: 'button', title: 'Rename file', 'aria-label': 'Rename file', onClick: () => { setCreating('rename-file'); setEntryName(selectedPath.split('/').pop() || ''); } }, React.createElement(Pencil, { size: 15, 'aria-hidden': true })),
+                React.createElement('button', { type: 'button', title: 'Delete file', 'aria-label': 'Delete file', onClick: removeFile }, React.createElement(Trash2, { size: 15, 'aria-hidden': true })),
+              ),
+            ),
+            React.createElement('div', { className: `files-media-preview ${preview.kind}` },
+              preview.kind === 'image'
+                ? React.createElement('img', { src: preview.url, alt: selectedPath.split('/').pop() || 'Image preview' })
+                : preview.kind === 'audio'
+                  ? React.createElement('audio', { src: preview.url, controls: true, preload: 'metadata' })
+                  : React.createElement('video', { src: preview.url, controls: true, preload: 'metadata' }),
+            ),
+          )
+          : React.createElement(React.Fragment, null,
           React.createElement('div', { className: 'files-editor-toolbar' },
             React.createElement('code', { title: selectedPath }, `/${selectedPath}`),
             React.createElement('div', { className: 'files-toolbar-actions' },
@@ -3151,7 +3215,7 @@ function FilesPanel() {
             ),
           ),
           React.createElement('textarea', { value: contents, spellCheck: false, 'aria-label': `Contents of ${selectedPath}`, onChange: (event) => setContents(event.target.value) }),
-        )
+          )
         : React.createElement('div', { className: 'files-editor-empty' }, React.createElement(FileCode2, { size: 28, 'aria-hidden': true })),
       status && React.createElement('div', { className: 'files-status', role: 'status' }, status),
     ),
