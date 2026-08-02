@@ -252,8 +252,10 @@ wanix-term { flex: 1; min-width: 0; }
 @media (max-width: 460px) { .task-fields { grid-template-columns: 1fr; } }
 .settings-panel .config-form { width: 100%; text-align: left; }
 .settings-panel .config-form input,
+.settings-panel .config-form select,
 .settings-panel .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; outline: none; }
 .settings-panel .config-form input:focus,
+.settings-panel .config-form select:focus,
 .settings-panel .config-form textarea:focus { border-color: #58a6ff; }
 .settings-panel .config-form textarea { height: 180px; line-height: 1.4; box-sizing: border-box; resize: vertical; }
 .settings-panel .config-form details { border: 1px solid #30363d; border-radius: 4px; margin-top: 8px; }
@@ -265,6 +267,8 @@ wanix-term { flex: 1; min-width: 0; }
 .settings-panel .config-form details summary span { color: #c9d1d9; font-size: 13px; }
 .settings-panel .config-form details .body { padding: 10px; text-align: left; }
 .settings-panel .config-form .hint { font-size: 12px; color: #8b949e; margin-top: 4px; }
+.settings-panel .config-form .cfg-network-field { margin-top: 10px; }
+.settings-panel .config-form .cfg-network-field.disabled { opacity: 0.55; }
 .files-panel { display: grid; grid-template-columns: minmax(190px, var(--files-sidebar-width, 280px)) 6px minmax(0, 1fr); min-height: 0; background: #0d1117; color: #c9d1d9; }
 .files-sidebar, .files-editor { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .files-sidebar { background: #161b22; }

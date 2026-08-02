@@ -66,7 +66,7 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="app.css?v=20260802.9" />
+    <link rel="stylesheet" href="app.css?v=20260802.10" />
   </head>
   <body>
     <template id="deck-template">
@@ -347,6 +347,17 @@
                 <input id="vm-backend-url" data-config-value="vmBackendUrl" type="url" spellcheck="false">
                 <label for="vm-memory">VM memory</label>
                 <input id="vm-memory" data-config-value="vmMemory" type="text" inputmode="text" spellcheck="false" placeholder="512M">
+                <label for="vm-network-mode">VM network</label>
+                <select id="vm-network-mode" data-config-value="vmNetworkMode">
+                  <option value="none">Disabled</option>
+                  <option value="fetch">Browser fetch</option>
+                  <option value="wisp">Wisp relay</option>
+                </select>
+                <div class="cfg-network-field">
+                  <label for="vm-wisp-url">Wisp server URL</label>
+                  <input id="vm-wisp-url" data-config-value="vmWispUrl" type="url" spellcheck="false" placeholder="wisps://relay.example.com">
+                  <p class="hint">Used only by Wisp relay. New VM panels use the saved setting; relay modes require a v86 backend archive built with Wanix Wisp support.</p>
+                </div>
               </div>
             </details>
 
@@ -362,6 +373,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260802.14"></script>
+    <script type="module" src="app.js?v=20260802.15"></script>
   </body>
 </html>

@@ -78,6 +78,8 @@ const DEFAULT_CONFIG = {
   vmBackendUrl: DEFAULT_VM_BACKEND_URL,
   vmLinuxUrl: DEFAULT_VM_LINUX_URL,
   vmMemory: '512M',
+  vmNetworkMode: 'none',
+  vmWispUrl: '',
 };
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
 const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
@@ -264,6 +266,8 @@ function normalizeShellConfig(config) {
     vmBackendUrl: normalizeIntegrationUrl(config?.vmBackendUrl, DEFAULT_VM_BACKEND_URL),
     vmLinuxUrl: normalizeIntegrationUrl(config?.vmLinuxUrl, DEFAULT_VM_LINUX_URL),
     vmMemory: normalizeVmMemory(config?.vmMemory),
+    vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
+    vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
     terminalProfiles: Array.isArray(config?.terminalProfiles)
       ? config.terminalProfiles
         .map(normalizeTerminalProfile)
@@ -295,6 +299,21 @@ function normalizeWorkbenchAssetsUrl(value) {
 function normalizeVmMemory(value) {
   const normalized = typeof value === 'string' ? value.trim() : '';
   return /^\d+(?:[KMG])?$/i.test(normalized) ? normalized.toUpperCase() : '512M';
+}
+
+function normalizeVmNetworkMode(value) {
+  return ['none', 'fetch', 'wisp'].includes(value) ? value : 'none';
+}
+
+function normalizeVmWispUrl(value) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!normalized) return '';
+  try {
+    const { protocol } = new URL(normalized);
+    return ['wisp:', 'wisps:', 'ws:', 'wss:'].includes(protocol) ? normalized : '';
+  } catch {
+    return '';
+  }
 }
 
 function normalizeTerminalProfile(profile = {}) {
@@ -1059,10 +1078,13 @@ function getWorkbenchPanelConfig(config = loadConfig()) {
 }
 
 function getVmPanelConfig(config = loadConfig()) {
+  const networkMode = normalizeVmNetworkMode(config.vmNetworkMode);
+  const wispUrl = normalizeVmWispUrl(config.vmWispUrl);
   return {
     backendUrl: config.vmBackendUrl || DEFAULT_VM_BACKEND_URL,
     linuxUrl: config.vmLinuxUrl || DEFAULT_VM_LINUX_URL,
     memory: config.vmMemory || '512M',
+    netdev: networkMode === 'fetch' ? 'fetch' : networkMode === 'wisp' && wispUrl ? `wisp,${wispUrl}` : '',
   };
 }
 
@@ -1826,6 +1848,7 @@ function startVmSession(session) {
     vm.setAttribute('id', vmId);
     vm.setAttribute('export', 'ttyS0');
     vm.setAttribute('mem', session.config.memory);
+    if (session.config.netdev) vm.setAttribute('netdev', session.config.netdev);
     vm.setAttribute('term', '');
     vm.setAttribute('start', '');
     vm.appendChild(createWanixBindElement({ type: 'archive', dst: '.', src: session.config.linuxUrl }));
@@ -1939,6 +1962,8 @@ function setupConfigForm(settingsContent) {
   const startupEls = [...settingsContent.querySelectorAll('[data-config-startup]')];
   const restoreTabsEl = settingsContent.querySelector('[data-config="restore-tabs"]');
   const integrationEls = [...settingsContent.querySelectorAll('[data-config-value]')];
+  const vmNetworkModeEl = settingsContent.querySelector('[data-config-value="vmNetworkMode"]');
+  const vmWispUrlEl = settingsContent.querySelector('[data-config-value="vmWispUrl"]');
   const saveButton = settingsContent.querySelector('[data-config-action="save"]');
   const resetButton = settingsContent.querySelector('[data-config-action="reset"]');
   if (!saveButton || !resetButton) return;
@@ -1948,10 +1973,25 @@ function setupConfigForm(settingsContent) {
     for (const input of startupEls) input.checked = cfg.startupPanels.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
     for (const input of integrationEls) input.value = cfg[input.dataset.configValue] || '';
+    syncVmNetworkFields();
+  };
+  const syncVmNetworkFields = () => {
+    if (!vmNetworkModeEl || !vmWispUrlEl) return;
+    const enabled = vmNetworkModeEl.value === 'wisp';
+    vmWispUrlEl.disabled = !enabled;
+    vmWispUrlEl.closest('.cfg-network-field')?.classList.toggle('disabled', !enabled);
   };
   populate();
 
+  vmNetworkModeEl?.addEventListener('change', syncVmNetworkFields);
+
   saveButton.addEventListener('click', () => {
+    if (vmNetworkModeEl?.value === 'wisp' && !normalizeVmWispUrl(vmWispUrlEl?.value)) {
+      const s = settingsContent.querySelector('[data-config="status"]');
+      s.textContent = 'Enter a valid Wisp server URL.';
+      s.style.color = '#f85149';
+      return;
+    }
     const config = loadConfig();
     saveConfig({
       ...config,
@@ -1970,6 +2010,7 @@ function setupConfigForm(settingsContent) {
     for (const input of startupEls) input.checked = c.startupPanels.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
     for (const input of integrationEls) input.value = c[input.dataset.configValue] || '';
+    syncVmNetworkFields();
     const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Reset to defaults.';
     s.style.color = '#8b949e';
