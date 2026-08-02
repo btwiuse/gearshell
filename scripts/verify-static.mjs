@@ -23,6 +23,8 @@ if (!app.includes("window.dispatchEvent(new Event('resize'))")) throw new Error(
 if (!app.includes("vm.setAttribute('netdev', session.config.netdev)")) throw new Error('VM panels must forward their saved network configuration.');
 if (!app.includes("wisp,${wispUrl}")) throw new Error('VM settings must derive a Wisp netdev argument.');
 if (!html.includes('data-config-value="vmWispUrl"')) throw new Error('Settings must expose the Wisp server URL.');
+if (!app.includes('btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz')) throw new Error('VMs must default to the Wisp-enabled static v86 archive.');
+if (!app.includes('LEGACY_DEFAULT_VM_BACKEND_URL')) throw new Error('Existing workspaces must migrate from the pre-Wisp v86 archive.');
 if (!html.includes('Workbench assets URL or path')) throw new Error('Workbench asset settings must accept local paths.');
 if (!html.match(/src="app\.js\?v=[\d.]+"/)) throw new Error('index.html must cache-bust app.js');
 if (!css.includes('.files-panel') || !css.includes('.runtime-panel')) throw new Error('Missing panel styles');

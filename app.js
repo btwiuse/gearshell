@@ -66,7 +66,8 @@ const LEGACY_DEFAULT_CMD = 'hush -rcfile /tmp/profile';
 const DEFAULT_CMD = 'hush -rcfile /profile';
 const DEFAULT_WORKBENCH_ASSETS_URL = '/wanix-workbench';
 const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL = 'https://wanix.dev/workbench';
-const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz';
+const LEGACY_DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz';
+const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz';
 const DEFAULT_VM_LINUX_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz';
 const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = {
@@ -263,7 +264,7 @@ function normalizeShellConfig(config) {
       : [],
     restoreTabs: config?.restoreTabs === true,
     workbenchAssetsUrl: normalizeWorkbenchAssetsUrl(config?.workbenchAssetsUrl),
-    vmBackendUrl: normalizeIntegrationUrl(config?.vmBackendUrl, DEFAULT_VM_BACKEND_URL),
+    vmBackendUrl: normalizeVmBackendUrl(config?.vmBackendUrl),
     vmLinuxUrl: normalizeIntegrationUrl(config?.vmLinuxUrl, DEFAULT_VM_LINUX_URL),
     vmMemory: normalizeVmMemory(config?.vmMemory),
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
@@ -294,6 +295,13 @@ function normalizeWorkbenchAssetsUrl(value) {
   return normalized === LEGACY_DEFAULT_WORKBENCH_ASSETS_URL
     ? DEFAULT_WORKBENCH_ASSETS_URL
     : normalized;
+}
+
+function normalizeVmBackendUrl(value) {
+  const normalized = normalizeIntegrationUrl(value, DEFAULT_VM_BACKEND_URL);
+  // Upgrade the previous public archive automatically: it predates relay
+  // networking and therefore cannot interpret the Wisp netdev setting.
+  return normalized === LEGACY_DEFAULT_VM_BACKEND_URL ? DEFAULT_VM_BACKEND_URL : normalized;
 }
 
 function normalizeVmMemory(value) {
