@@ -7,6 +7,3 @@
 [submodule "wanix-workbench"]
 	path = wanix-workbench
 	url = https://github.com/btwiuse/gear-wanix-workbench.git
-[submodule "wanix-extras"]
-	path = wanix-extras
-	url = https://github.com/btwiuse/wanix-extras.git

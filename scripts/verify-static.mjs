@@ -21,10 +21,11 @@ if (!app.includes('LEGACY_WANIX_RUNTIME_MODULE_URLS')) throw new Error('Existing
 if (!app.includes('71206477ae506f807b9893a8deca09749d212542')) throw new Error('The short-lived broken Workbench runtime must migrate automatically.');
 if (!app.includes("window.dispatchEvent(new Event('resize'))")) throw new Error('Workbench panels must forward Dockview resize events.');
 if (!app.includes("vm.setAttribute('netdev', session.config.netdev)")) throw new Error('VM panels must forward their saved network configuration.');
-if (!app.includes("wisp,${wispUrl}")) throw new Error('VM settings must derive a Wisp netdev argument.');
+if (!app.includes("user,type=virtio,relay_url=${wispUrl}")) throw new Error('VM settings must derive v86\'s native Wisp relay argument.');
+if (!app.includes("user,type=virtio,relay_url=fetch")) throw new Error('VM settings must derive v86\'s native fetch relay argument.');
 if (!html.includes('data-config-value="vmWispUrl"')) throw new Error('Settings must expose the Wisp server URL.');
-if (!app.includes('btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz')) throw new Error('VMs must default to the Wisp-enabled static v86 archive.');
-if (!app.includes('LEGACY_DEFAULT_VM_BACKEND_URL')) throw new Error('Existing workspaces must migrate from the pre-Wisp v86 archive.');
+if (!app.includes('wanix-extras@0.4.0-rc2/dist/v86.tgz')) throw new Error('VMs must default to the public v86 archive with built-in Wisp support.');
+if (!app.includes('REDUNDANT_WISP_VM_BACKEND_URL')) throw new Error('Existing workspaces must migrate away from the redundant custom v86 archive.');
 if (!html.includes('Workbench assets URL or path')) throw new Error('Workbench asset settings must accept local paths.');
 if (!html.match(/src="app\.js\?v=[\d.]+"/)) throw new Error('index.html must cache-bust app.js');
 if (!css.includes('.files-panel') || !css.includes('.runtime-panel')) throw new Error('Missing panel styles');

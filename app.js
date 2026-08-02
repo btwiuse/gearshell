@@ -66,8 +66,8 @@ const LEGACY_DEFAULT_CMD = 'hush -rcfile /tmp/profile';
 const DEFAULT_CMD = 'hush -rcfile /profile';
 const DEFAULT_WORKBENCH_ASSETS_URL = '/wanix-workbench';
 const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL = 'https://wanix.dev/workbench';
-const LEGACY_DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz';
-const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz';
+const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz';
+const REDUNDANT_WISP_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz';
 const DEFAULT_VM_LINUX_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz';
 const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = {
@@ -299,9 +299,9 @@ function normalizeWorkbenchAssetsUrl(value) {
 
 function normalizeVmBackendUrl(value) {
   const normalized = normalizeIntegrationUrl(value, DEFAULT_VM_BACKEND_URL);
-  // Upgrade the previous public archive automatically: it predates relay
-  // networking and therefore cannot interpret the Wisp netdev setting.
-  return normalized === LEGACY_DEFAULT_VM_BACKEND_URL ? DEFAULT_VM_BACKEND_URL : normalized;
+  // The temporary custom archive duplicated v86's existing Wisp support.
+  // Restore workspaces that inherited it to the maintained public archive.
+  return normalized === REDUNDANT_WISP_VM_BACKEND_URL ? DEFAULT_VM_BACKEND_URL : normalized;
 }
 
 function normalizeVmMemory(value) {
@@ -318,7 +318,7 @@ function normalizeVmWispUrl(value) {
   if (!normalized) return '';
   try {
     const { protocol } = new URL(normalized);
-    return ['wisp:', 'wisps:', 'ws:', 'wss:'].includes(protocol) ? normalized : '';
+    return ['wisp:', 'wisps:'].includes(protocol) ? normalized : '';
   } catch {
     return '';
   }
@@ -1092,7 +1092,11 @@ function getVmPanelConfig(config = loadConfig()) {
     backendUrl: config.vmBackendUrl || DEFAULT_VM_BACKEND_URL,
     linuxUrl: config.vmLinuxUrl || DEFAULT_VM_LINUX_URL,
     memory: config.vmMemory || '512M',
-    netdev: networkMode === 'fetch' ? 'fetch' : networkMode === 'wisp' && wispUrl ? `wisp,${wispUrl}` : '',
+    netdev: networkMode === 'fetch'
+      ? 'user,type=virtio,relay_url=fetch'
+      : networkMode === 'wisp' && wispUrl
+        ? `user,type=virtio,relay_url=${wispUrl}`
+        : '',
   };
 }
 
