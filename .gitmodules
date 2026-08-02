@@ -4,3 +4,6 @@
 [submodule "isolation"]
 	path = isolation
 	url = https://github.com/btwiuse/gear-isolation.git
+[submodule "wanix-workbench"]
+	path = wanix-workbench
+	url = https://github.com/btwiuse/gear-wanix-workbench.git

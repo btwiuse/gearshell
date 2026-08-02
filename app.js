@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, LayoutDashboard, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Cpu, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -64,8 +64,21 @@ const HUSH_ENV = {
 };
 const LEGACY_DEFAULT_CMD = 'hush -rcfile /tmp/profile';
 const DEFAULT_CMD = 'hush -rcfile /profile';
+const DEFAULT_WORKBENCH_ASSETS_URL = '/wanix-workbench';
+const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL = 'https://wanix.dev/workbench';
+const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz';
+const DEFAULT_VM_LINUX_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz';
 const CONFIG_KEY = 'gear-shell-config';
-const DEFAULT_CONFIG = { cmd: DEFAULT_CMD, env: '', startupPanels: [], restoreTabs: false };
+const DEFAULT_CONFIG = {
+  cmd: DEFAULT_CMD,
+  env: '',
+  startupPanels: [],
+  restoreTabs: false,
+  workbenchAssetsUrl: DEFAULT_WORKBENCH_ASSETS_URL,
+  vmBackendUrl: DEFAULT_VM_BACKEND_URL,
+  vmLinuxUrl: DEFAULT_VM_LINUX_URL,
+  vmMemory: '512M',
+};
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
 const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
 const WORKSPACE_KEY_PREFIX = 'gear-shell-workspace:';
@@ -78,7 +91,7 @@ const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
-const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'settings', 'files', 'runtime', 'group', 'browser', 'codigo', 'crush', 'rickroll'];
+const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'codigo', 'crush', 'rickroll'];
 
 const BUILTIN_TERMINAL_PROFILES = [
   { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
@@ -87,8 +100,18 @@ const BUILTIN_TERMINAL_PROFILES = [
 
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0',
-  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@9ceae50b35558ddf8e9f3862fa3c4aa9e8b4097d/dist/wanix.min.js',
+  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@72141cb09a97b9a6f61461e9587ed8879ab08af1/dist/wanix.min.js',
 };
+const LEGACY_WANIX_RUNTIME_MODULE_URLS = new Set([
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@9ceae50b35558ddf8e9f3862fa3c4aa9e8b4097d/dist/wanix.min.js',
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@9446c661d2d4bf66885e9f7082def770c314ecb1/dist/wanix.min.js',
+  // This short-lived build called a nonexistent Workbench layout API.
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@71206477ae506f807b9893a8deca09749d212542/dist/wanix.min.js',
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@72141cb09a97b9a6f61461e9587ed8879ab08af1/dist/wanix.min.js',
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@d433adbca2d80d93719be5e25f65be0ed8786556/dist/wanix.min.js',
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@4eead0d2b5461803f4dbe4022f98c0e5479d2a71/dist/wanix.min.js',
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@main/dist/wanix.min.js',
+]);
 
 const DEFAULT_SYSTEM_CONFIG = {
   binds: [
@@ -209,7 +232,7 @@ function normalizeCustomWorkspacePreset(preset = {}) {
     description: normalizePresetDescription(preset.description),
     createdAt: typeof preset.createdAt === 'string' ? preset.createdAt : new Date().toISOString(),
     updatedAt: typeof preset.updatedAt === 'string' ? preset.updatedAt : new Date().toISOString(),
-    runtime: { ...WANIX_RUNTIME, ...clone(template.runtime || {}) },
+    runtime: normalizeRuntimeConfig(template.runtime),
     system: normalizeSystemConfig(template.system),
     binds: Array.isArray(template.binds) ? template.binds.map(normalizeBind) : [],
     tasks: Array.isArray(template.tasks) ? template.tasks.map(normalizeTask) : [],
@@ -221,6 +244,14 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function normalizeRuntimeConfig(runtime = {}) {
+  const configured = runtime && typeof runtime === 'object' ? runtime : {};
+  const moduleUrl = LEGACY_WANIX_RUNTIME_MODULE_URLS.has(configured.moduleUrl)
+    ? WANIX_RUNTIME.moduleUrl
+    : configured.moduleUrl;
+  return { ...WANIX_RUNTIME, ...configured, ...(moduleUrl ? { moduleUrl } : {}) };
+}
+
 function normalizeShellConfig(config) {
   const normalized = {
     cmd: typeof config?.cmd === 'string' && config.cmd.trim() ? config.cmd.trim() : DEFAULT_CMD,
@@ -229,6 +260,10 @@ function normalizeShellConfig(config) {
       ? [...new Set(config.startupPanels.filter((panel) => STARTUP_PANEL_TYPES.includes(panel)))]
       : [],
     restoreTabs: config?.restoreTabs === true,
+    workbenchAssetsUrl: normalizeWorkbenchAssetsUrl(config?.workbenchAssetsUrl),
+    vmBackendUrl: normalizeIntegrationUrl(config?.vmBackendUrl, DEFAULT_VM_BACKEND_URL),
+    vmLinuxUrl: normalizeIntegrationUrl(config?.vmLinuxUrl, DEFAULT_VM_LINUX_URL),
+    vmMemory: normalizeVmMemory(config?.vmMemory),
     terminalProfiles: Array.isArray(config?.terminalProfiles)
       ? config.terminalProfiles
         .map(normalizeTerminalProfile)
@@ -241,6 +276,25 @@ function normalizeShellConfig(config) {
   };
   if (normalized.cmd === LEGACY_DEFAULT_CMD) normalized.cmd = DEFAULT_CMD;
   return normalized;
+}
+
+function normalizeIntegrationUrl(value, fallback) {
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  return value.trim().replace(/\/+$/, '');
+}
+
+function normalizeWorkbenchAssetsUrl(value) {
+  const normalized = normalizeIntegrationUrl(value, DEFAULT_WORKBENCH_ASSETS_URL);
+  // This was GearShell's former default. Migrate it to the bundled submodule;
+  // any other value remains an intentional workspace-local override.
+  return normalized === LEGACY_DEFAULT_WORKBENCH_ASSETS_URL
+    ? DEFAULT_WORKBENCH_ASSETS_URL
+    : normalized;
+}
+
+function normalizeVmMemory(value) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return /^\d+(?:[KMG])?$/i.test(normalized) ? normalized.toUpperCase() : '512M';
 }
 
 function normalizeTerminalProfile(profile = {}) {
@@ -512,7 +566,7 @@ function createWorkspace(presetId = 'hush-shell', overrides = {}) {
     presetId,
     createdAt: overrides.createdAt || now,
     updatedAt: now,
-    runtime: { ...clone(preset.runtime), ...overrides.runtime },
+    runtime: normalizeRuntimeConfig({ ...clone(preset.runtime), ...overrides.runtime }),
     system: normalizeSystemConfig(overrides.system || preset.system),
     binds: clone(overrides.binds || preset.binds).map(normalizeBind),
     tasks: clone(overrides.tasks || preset.tasks).map(normalizeTask),
@@ -1000,6 +1054,18 @@ function getDefaultTerminalProfile(config = loadConfig()) {
     || getTerminalProfiles(config)[0];
 }
 
+function getWorkbenchPanelConfig(config = loadConfig()) {
+  return { assetsUrl: config.workbenchAssetsUrl || DEFAULT_WORKBENCH_ASSETS_URL };
+}
+
+function getVmPanelConfig(config = loadConfig()) {
+  return {
+    backendUrl: config.vmBackendUrl || DEFAULT_VM_BACKEND_URL,
+    linuxUrl: config.vmLinuxUrl || DEFAULT_VM_LINUX_URL,
+    memory: config.vmMemory || '512M',
+  };
+}
+
 function terminalCommand(profile) {
   return profile.cmd || [profile.program, profile.args].filter(Boolean).join(' ');
 }
@@ -1072,6 +1138,9 @@ const terminalLayer = document.getElementById('terminal-layer');
 const terminalSessions = new Map();
 const workspaceTaskSessions = new Map();
 const iframeSessions = new Map();
+const vmSessions = new Map();
+const workbenchSessions = new Map();
+const vmDriverInstallations = new Map();
 wanixSystem?.addEventListener('ready', (event) => {
   if (event.target !== wanixSystem) return;
   systemReady = true;
@@ -1528,7 +1597,7 @@ function layoutIframeSession(session, anchor, isVisible) {
   if (!terminalLayer || !anchor || !isVisible) {
     session.wrapper.classList.remove('visible');
     session.layout = null;
-    return;
+    return false;
   }
 
   const bounds = anchor.getBoundingClientRect();
@@ -1536,7 +1605,7 @@ function layoutIframeSession(session, anchor, isVisible) {
   if (bounds.width === 0 || bounds.height === 0) {
     session.wrapper.classList.remove('visible');
     session.layout = null;
-    return;
+    return false;
   }
 
   const nextLayout = {
@@ -1550,6 +1619,7 @@ function layoutIframeSession(session, anchor, isVisible) {
     Math.abs(nextLayout[key] - previousLayout[key]) >= 0.5
   );
 
+  const wasVisible = session.wrapper.classList.contains('visible');
   if (layoutChanged) {
     session.wrapper.style.left = `${nextLayout.left}px`;
     session.wrapper.style.top = `${nextLayout.top}px`;
@@ -1558,6 +1628,7 @@ function layoutIframeSession(session, anchor, isVisible) {
     session.layout = nextLayout;
   }
   session.wrapper.classList.add('visible');
+  return layoutChanged || !wasVisible;
 }
 
 function attachIframeSession(id, params, anchor, api) {
@@ -1594,6 +1665,192 @@ function attachIframeSession(id, params, anchor, api) {
       layoutIframeSession(session, null, false);
     }
   };
+}
+
+function createOverlayAttachment(session, anchor, api) {
+  let updateFrame = 0;
+  const update = () => {
+    updateFrame = 0;
+    session.anchor = anchor;
+    const bounds = anchor.getBoundingClientRect();
+    const isVisible = anchor.isConnected && bounds.width > 0 && bounds.height > 0;
+    const layoutChanged = layoutIframeSession(session, anchor, isVisible);
+    // VS Code's embedded Workbench listens to the window resize event rather
+    // than exposing a public layout API. Forward Dockview's coalesced pane
+    // updates after the overlay has received its new dimensions.
+    if (layoutChanged && session.workbench) window.dispatchEvent(new Event('resize'));
+  };
+  const scheduleUpdate = () => {
+    if (!updateFrame) updateFrame = requestAnimationFrame(update);
+  };
+  const observer = new ResizeObserver(scheduleUpdate);
+  observer.observe(anchor);
+  const subscriptions = [
+    api.onDidDimensionsChange(scheduleUpdate),
+    api.onDidVisibilityChange(scheduleUpdate),
+    api.onDidLocationChange(scheduleUpdate),
+    api.onDidGroupChange(scheduleUpdate),
+  ];
+  scheduleUpdate();
+  return () => {
+    observer.disconnect();
+    if (updateFrame) cancelAnimationFrame(updateFrame);
+    for (const subscription of subscriptions) subscription.dispose();
+    if (session.anchor === anchor) {
+      session.anchor = null;
+      layoutIframeSession(session, null, false);
+    }
+  };
+}
+
+function createWorkbenchSession(id, config) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'workbench-session';
+
+  const workbench = document.createElement('wanix-workbench');
+  workbench.setAttribute('for', 'wanix-system');
+  workbench.setAttribute('assets', config.assetsUrl);
+  workbench.setAttribute('term', '');
+  // Hush consumes an interactive terminal stream, including control and
+  // escape sequences. Let xterm forward each key instead of line-buffering.
+  workbench.setAttribute('raw', '');
+  workbench.setAttribute('sidebar', 'always');
+  const profile = getDefaultTerminalProfile();
+  const shell = document.createElement('wanix-task');
+  shell.setAttribute('role', 'shell');
+  shell.setAttribute('cmd', terminalCommand(profile) || DEFAULT_CMD);
+  shell.setAttribute('type', profile.type || 'gojs');
+  shell.setAttribute('env', buildEnv(profile.env));
+  // Workbench creates the task through the task control filesystem instead
+  // of a wanix-task element. Its runtime requires a concrete directory, while
+  // a blank `dir` is interpreted as an invalid path.
+  shell.setAttribute('wd', profile.wd || HOME);
+  workbench.appendChild(shell);
+  wrapper.appendChild(workbench);
+  terminalLayer?.appendChild(wrapper);
+
+  const session = { id, wrapper, workbench, anchor: null, layout: null };
+  workbenchSessions.set(id, session);
+  return session;
+}
+
+function getWorkbenchSession(id, config) {
+  return workbenchSessions.get(id) || createWorkbenchSession(id, config);
+}
+
+function destroyWorkbenchSession(id) {
+  const session = workbenchSessions.get(id);
+  if (!session) return;
+  workbenchSessions.delete(id);
+  session.anchor = null;
+  session.wrapper.remove();
+}
+
+function attachWorkbenchSession(id, config, anchor, api) {
+  return createOverlayAttachment(getWorkbenchSession(id, config), anchor, api);
+}
+
+function waitForWanixSystem() {
+  if (systemReady && wanixSystem?._kernel) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const onReady = (event) => {
+      if (event.target !== wanixSystem) return;
+      wanixSystem.removeEventListener('ready', onReady);
+      wanixSystem.removeEventListener('error', onError);
+      resolve();
+    };
+    const onError = (event) => {
+      wanixSystem?.removeEventListener('error', onError);
+      reject(event.detail?.error || new Error('Wanix system failed to start.'));
+    };
+    wanixSystem?.addEventListener('ready', onReady);
+    wanixSystem?.addEventListener('error', onError, { once: true });
+  });
+}
+
+function ensureVmDriver(backendUrl) {
+  const existing = vmDriverInstallations.get(backendUrl);
+  if (existing) return existing;
+  const install = (async () => {
+    await waitForWanixSystem();
+    const bind = createWanixBindElement({ type: 'archive', dst: '#vm/v86', src: backendUrl });
+    const bindings = document.createElement('div');
+    bindings.appendChild(bind);
+    terminalLayer?.appendChild(bindings);
+    try {
+      await wanixSystem._kernel._setupNamespace('1', '', bindings.querySelectorAll(':scope > wanix-bind'));
+    } finally {
+      bindings.remove();
+    }
+  })();
+  vmDriverInstallations.set(backendUrl, install);
+  install.catch(() => vmDriverInstallations.delete(backendUrl));
+  return install;
+}
+
+function createVmSession(id, config) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'vm-session';
+  wrapper.textContent = 'Preparing VM…';
+  terminalLayer?.appendChild(wrapper);
+
+  const session = { id, wrapper, config, vm: null, term: null, anchor: null, layout: null, startPromise: null, destroyed: false };
+  vmSessions.set(id, session);
+  return session;
+}
+
+function getVmSession(id, config) {
+  return vmSessions.get(id) || createVmSession(id, config);
+}
+
+function destroyVmSession(id) {
+  const session = vmSessions.get(id);
+  if (!session) return;
+  vmSessions.delete(id);
+  session.destroyed = true;
+  session.anchor = null;
+  const taskPath = session.vm?.task?.rid ? session.vm.task.path : null;
+  if (taskPath && session.vm?._kernel) {
+    session.vm._kernel.root.writeFile(`${taskPath}/ctl`, 'terminate').catch(() => {});
+  }
+  session.wrapper.remove();
+}
+
+function startVmSession(session) {
+  if (session.startPromise) return session.startPromise;
+  session.startPromise = ensureVmDriver(session.config.backendUrl).then(() => {
+    if (session.destroyed) return;
+    const vmId = `vm-panel-${session.id}`;
+    const vm = document.createElement('wanix-vm');
+    vm.setAttribute('for', 'wanix-system');
+    vm.setAttribute('id', vmId);
+    vm.setAttribute('export', 'ttyS0');
+    vm.setAttribute('mem', session.config.memory);
+    vm.setAttribute('term', '');
+    vm.setAttribute('start', '');
+    vm.appendChild(createWanixBindElement({ type: 'archive', dst: '.', src: session.config.linuxUrl }));
+
+    const term = document.createElement('wanix-term');
+    term.setAttribute('for', 'wanix-system');
+    term.setAttribute('path', `#vm/${vmId}/term`);
+    term.setAttribute('raw', '');
+    term.setAttribute('no-scrollbar', '');
+    session.vm = vm;
+    session.term = term;
+    session.wrapper.replaceChildren(vm, term);
+  }).catch((error) => {
+    if (session.destroyed) return;
+    console.error('VM driver setup failed', error);
+    session.wrapper.textContent = `VM failed to start: ${error.message || error}`;
+    session.wrapper.classList.add('vm-session-error');
+  });
+  return session.startPromise;
+}
+
+function attachVmSession(id, config, anchor, api) {
+  const session = getVmSession(id, config);
+  startVmSession(session);
+  return createOverlayAttachment(session, anchor, api);
 }
 
 // --- Reveal.js ---
@@ -1681,6 +1938,7 @@ function destroyReveal(homeContent) {
 function setupConfigForm(settingsContent) {
   const startupEls = [...settingsContent.querySelectorAll('[data-config-startup]')];
   const restoreTabsEl = settingsContent.querySelector('[data-config="restore-tabs"]');
+  const integrationEls = [...settingsContent.querySelectorAll('[data-config-value]')];
   const saveButton = settingsContent.querySelector('[data-config-action="save"]');
   const resetButton = settingsContent.querySelector('[data-config-action="reset"]');
   if (!saveButton || !resetButton) return;
@@ -1689,6 +1947,7 @@ function setupConfigForm(settingsContent) {
     const cfg = loadConfig();
     for (const input of startupEls) input.checked = cfg.startupPanels.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
+    for (const input of integrationEls) input.value = cfg[input.dataset.configValue] || '';
   };
   populate();
 
@@ -1698,6 +1957,7 @@ function setupConfigForm(settingsContent) {
       ...config,
       startupPanels: startupEls.filter((input) => input.checked).map((input) => input.value),
       restoreTabs: restoreTabsEl?.checked === true,
+      ...Object.fromEntries(integrationEls.map((input) => [input.dataset.configValue, input.value])),
     });
     const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Saved!';
@@ -1709,6 +1969,7 @@ function setupConfigForm(settingsContent) {
     const c = resetConfig();
     for (const input of startupEls) input.checked = c.startupPanels.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
+    for (const input of integrationEls) input.value = c[input.dataset.configValue] || '';
     const s = settingsContent.querySelector('[data-config="status"]');
     s.textContent = 'Reset to defaults.';
     s.style.color = '#8b949e';
@@ -2566,6 +2827,8 @@ let iframeIdCounter = 0;
 let settingsIdCounter = 0;
 let filesIdCounter = 0;
 let runtimeIdCounter = 0;
+let workbenchIdCounter = 0;
+let vmIdCounter = 0;
 let workspaceTaskPanelCounter = 0;
 let fallbackIdCounter = 0;
 
@@ -2635,6 +2898,34 @@ function addRuntimePanel(api, group) {
     ...(group && { position: { referenceGroup: group } }),
   });
   rememberOpenPanel(panel, { component: 'runtime' });
+  panel.api.setActive();
+  return panel;
+}
+
+function addWorkbenchPanel(api, group, config = getWorkbenchPanelConfig()) {
+  const id = ++workbenchIdCounter;
+  const panel = api.addPanel({
+    id: `workbench-${id}`,
+    component: 'workbench',
+    params: { workbenchId: id, panelType: 'workbench', config: clone(config) },
+    title: 'Workbench',
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  rememberOpenPanel(panel, { component: 'workbench', config: clone(config) });
+  panel.api.setActive();
+  return panel;
+}
+
+function addVmPanel(api, group, config = getVmPanelConfig()) {
+  const id = ++vmIdCounter;
+  const panel = api.addPanel({
+    id: `vm-${id}`,
+    component: 'vm',
+    params: { vmId: id, panelType: 'vm', config: clone(config) },
+    title: `VM ${id}`,
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  rememberOpenPanel(panel, { component: 'vm', config: clone(config) });
   panel.api.setActive();
   return panel;
 }
@@ -2731,6 +3022,8 @@ const PANEL_CREATION_OPTIONS = [
   { component: 'fallback', label: 'Launcher', icon: Rocket },
   { component: 'home', label: 'Home', icon: House },
   { component: 'deck', label: 'Deck', icon: LayoutDashboard },
+  { component: 'workbench', label: 'Workbench', icon: Monitor },
+  { component: 'vm', label: 'VM', icon: Cpu },
   { component: 'settings', label: 'Settings', icon: Settings },
   { component: 'files', label: 'Files', icon: FolderOpen },
   { component: 'runtime', label: 'Runtime', icon: Activity },
@@ -2751,6 +3044,8 @@ function addPanelByComponent(api, component, group) {
   if (component === 'fallback') return addFallbackPanel(api, group);
   if (component === 'home') return addLandingPanel(api, group);
   if (component === 'deck') return addDeckPanel(api, group);
+  if (component === 'workbench') return addWorkbenchPanel(api, group);
+  if (component === 'vm') return addVmPanel(api, group);
   if (component === 'settings') return addSettingsPanel(api, group);
   if (component === 'files') return addFilesPanel(api, group);
   if (component === 'runtime') return addRuntimePanel(api, group);
@@ -2764,6 +3059,10 @@ function restoreSavedPanels(api) {
   for (const panel of panels) {
     if (panel.component === 'terminal') {
       addTerminalPanel(api, undefined, panel.profile || getDefaultTerminalProfile());
+    } else if (panel.component === 'workbench') {
+      addWorkbenchPanel(api, undefined, panel.config || getWorkbenchPanelConfig());
+    } else if (panel.component === 'vm') {
+      addVmPanel(api, undefined, panel.config || getVmPanelConfig());
     } else if (panel.component === 'task' && panel.task) {
       addWorkspaceTaskPanel(api, panel.task, loadWorkspace(panel.workspaceId) || loadActiveWorkspace());
     } else {
@@ -2839,6 +3138,8 @@ function LandingPanel({ containerApi }) {
   const actions = [
     { component: 'terminal', label: 'Open Terminal', icon: Terminal },
     { component: 'files', label: 'Browse Files', icon: FolderOpen },
+    { component: 'workbench', label: 'Open Workbench', icon: Monitor },
+    { component: 'vm', label: 'Boot VM', icon: Cpu },
     { component: 'browser', label: 'Open Browser', icon: Globe2 },
     { component: 'deck', label: 'Open Deck', icon: LayoutDashboard },
     { component: 'settings', label: 'Open Settings', icon: Settings },
@@ -3367,6 +3668,26 @@ function IframePanel({ api, params }) {
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
 
+function WorkbenchPanel({ api, params }) {
+  const wrapperRef = useRef(null);
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    return attachWorkbenchSession(params.workbenchId, params.config || getWorkbenchPanelConfig(), wrapper, api);
+  }, [api, params.workbenchId]);
+  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+}
+
+function VmPanel({ api, params }) {
+  const wrapperRef = useRef(null);
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    return attachVmSession(params.vmId, params.config || getVmPanelConfig(), wrapper, api);
+  }, [api, params.vmId]);
+  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+}
+
 function PanelTab(props) {
   const Icon = PANEL_ICONS[props.params.panelType] || Terminal;
   return React.createElement('div', { className: 'panel-tab' },
@@ -3561,6 +3882,10 @@ function App() {
       if (match) destroyTerminalSession(Number(match[1]));
       const iframeMatch = /^iframe-(\d+)$/.exec(panel.id);
       if (iframeMatch) destroyIframeSession(Number(iframeMatch[1]));
+      const workbenchMatch = /^workbench-(\d+)$/.exec(panel.id);
+      if (workbenchMatch) destroyWorkbenchSession(Number(workbenchMatch[1]));
+      const vmMatch = /^vm-(\d+)$/.exec(panel.id);
+      if (vmMatch) destroyVmSession(Number(vmMatch[1]));
       const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
       if (workspaceTaskMatch) destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
       forgetOpenPanel(panel.id);
@@ -3594,6 +3919,8 @@ function App() {
         settings: SettingsPanel,
         files: FilesPanel,
         runtime: RuntimePanel,
+        workbench: WorkbenchPanel,
+        vm: VmPanel,
         fallback: FallbackPanel,
         task: WorkspaceTaskPanel,
         terminal: TerminalPanel,

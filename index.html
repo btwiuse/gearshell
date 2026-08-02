@@ -66,7 +66,7 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="app.css?v=20260801.54" />
+    <link rel="stylesheet" href="app.css?v=20260802.9" />
   </head>
   <body>
     <template id="deck-template">
@@ -317,6 +317,8 @@
                   <label class="cfg-toggle"><input data-config-startup type="checkbox" value="home"><span>Home</span></label>
                   <label class="cfg-toggle"><input data-config-startup type="checkbox" value="deck"><span>Deck</span></label>
                   <label class="cfg-toggle"><input data-config-startup type="checkbox" value="terminal"><span>Terminal</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="workbench"><span>Workbench</span></label>
+                  <label class="cfg-toggle"><input data-config-startup type="checkbox" value="vm"><span>VM</span></label>
                   <label class="cfg-toggle"><input data-config-startup type="checkbox" value="settings"><span>Settings</span></label>
                   <label class="cfg-toggle"><input data-config-startup type="checkbox" value="files"><span>Files</span></label>
                   <label class="cfg-toggle"><input data-config-startup type="checkbox" value="runtime"><span>Runtime</span></label>
@@ -333,6 +335,21 @@
               </div>
             </details>
 
+            <details>
+              <summary><span>Wanix tools</span></summary>
+              <div class="body">
+                <p class="hint">New VM and Workbench panels use these workspace-local defaults. Existing panels keep their launch snapshot.</p>
+                <label for="workbench-assets-url">Workbench assets URL or path</label>
+                <input id="workbench-assets-url" data-config-value="workbenchAssetsUrl" type="text" spellcheck="false" placeholder="/wanix-workbench">
+                <label for="vm-linux-url">Linux archive URL</label>
+                <input id="vm-linux-url" data-config-value="vmLinuxUrl" type="url" spellcheck="false">
+                <label for="vm-backend-url">v86 backend archive URL</label>
+                <input id="vm-backend-url" data-config-value="vmBackendUrl" type="url" spellcheck="false">
+                <label for="vm-memory">VM memory</label>
+                <input id="vm-memory" data-config-value="vmMemory" type="text" inputmode="text" spellcheck="false" placeholder="512M">
+              </div>
+            </details>
+
             <div class="actions">
               <button class="primary" data-config-action="save">Save</button>
               <button data-config-action="reset">Reset</button>
@@ -345,6 +362,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260801.53"></script>
+    <script type="module" src="app.js?v=20260802.14"></script>
   </body>
 </html>

@@ -1,5 +1,8 @@
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; overflow: hidden; overscroll-behavior: none; }
+/* Code - OSS ships a global `body { height: 100% }` rule. Keep the host
+   layout independent from a Workbench panel loading its stylesheet. */
+html, body { height: 100dvh !important; }
+body { margin: 0; display: flex; flex-direction: column; background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px !important; user-select: auto !important; overflow: hidden; overscroll-behavior: none; }
 
 #wanix-host { flex: 1; display: flex; min-height: 0; }
 wanix-system { flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; }
@@ -9,12 +12,28 @@ wanix-bind { display: none; }
 
 #terminal-layer { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
 #terminal-layer.dragging .terminal-session,
-#terminal-layer.dragging .iframe-session { visibility: hidden; pointer-events: none; }
+#terminal-layer.dragging .iframe-session,
+#terminal-layer.dragging .vm-session,
+#terminal-layer.dragging .workbench-session { visibility: hidden; pointer-events: none; }
 .terminal-session { position: absolute; display: flex; overflow: hidden; visibility: hidden; pointer-events: none; }
 .terminal-session.visible { visibility: visible; pointer-events: auto; }
 .iframe-session { position: absolute; display: flex; overflow: hidden; visibility: hidden; pointer-events: none; }
 .iframe-session.visible { visibility: visible; pointer-events: auto; }
+.vm-session, .workbench-session { position: absolute; display: flex; overflow: hidden; visibility: hidden; pointer-events: none; background: #0d1117; }
+.vm-session.visible, .workbench-session.visible { visibility: visible; pointer-events: auto; }
+.vm-session wanix-term, .workbench-session wanix-workbench { flex: 1; min-width: 0; min-height: 0; }
 wanix-term { flex: 1; min-width: 0; }
+
+/* Preserve Workbench's native tree geometry and indentation guides. The
+   default VS Code theme intentionally leaves folders to their disclosure
+   arrow; only add breathing room around labels and file icons. Keep nested
+   controls clearly to the right of their parent guide, rather than directly
+   on its vertical axis. */
+.workbench-session .explorer-folders-view .monaco-tl-twistie + .monaco-tl-contents > .monaco-icon-label.folder-icon { margin-left: 6px; }
+.workbench-session .explorer-folders-view .monaco-icon-label::before { margin-right: 6px; }
+.workbench-session .explorer-folders-view .monaco-list-row[aria-level]:not([aria-level="1"]) .monaco-tl-twistie,
+.workbench-session .explorer-folders-view .monaco-list-row[aria-level]:not([aria-level="1"]) .monaco-tl-contents { transform: translateX(5px); }
+.workbench-session .explorer-folders-view .monaco-list-row[aria-level]:not([aria-level="1"]) .indent-guide { transform: translateX(-4px); }
 
 .panel-content { height: 100%; min-height: 0; }
 .landing-panel { overflow: auto; background: #0d1117; color: #c9d1d9; }
