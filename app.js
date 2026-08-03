@@ -98,10 +98,27 @@ const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
 const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'codigo', 'crush', 'rickroll'];
 const LAUNCHER_COLLAPSIBLE_PANEL_TYPES = STARTUP_PANEL_TYPES.filter((component) => component !== 'terminal');
+const TERMINAL_PRESET_ICON_OPTIONS = [
+  { id: 'terminal', label: 'Terminal', icon: Terminal },
+  { id: 'bot', label: 'Bot', icon: Bot },
+  { id: 'code', label: 'Code', icon: Code2 },
+  { id: 'play', label: 'Play', icon: Play },
+  { id: 'cpu', label: 'CPU', icon: Cpu },
+  { id: 'activity', label: 'Activity', icon: Activity },
+  { id: 'browser', label: 'Browser', icon: Globe2 },
+  { id: 'files', label: 'Files', icon: FolderOpen },
+  { id: 'home', label: 'Home', icon: House },
+  { id: 'layout', label: 'Layout', icon: LayoutDashboard },
+  { id: 'monitor', label: 'Monitor', icon: Monitor },
+  { id: 'rocket', label: 'Rocket', icon: Rocket },
+];
+const TERMINAL_PRESET_ICON_BY_ID = Object.fromEntries(
+  TERMINAL_PRESET_ICON_OPTIONS.map((option) => [option.id, option]),
+);
 
 const BUILTIN_TERMINAL_PROFILES = [
-  { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
-  { id: 'crush', name: 'Crush', program: 'crush', args: '', type: 'gojs', env: '', wd: '', builtin: true },
+  { id: 'hush', name: 'Hush', type: 'gojs', icon: 'terminal', builtin: true },
+  { id: 'crush', name: 'Crush', program: 'crush', args: '', type: 'gojs', env: '', wd: '', icon: 'bot', builtin: true },
 ];
 
 const WANIX_RUNTIME = {
@@ -342,6 +359,7 @@ function normalizeVmWispUrl(value) {
 }
 
 function normalizeTerminalProfile(profile = {}) {
+  const defaultIcon = profile.id === 'crush' ? 'bot' : 'terminal';
   return {
     id: typeof profile.id === 'string' && profile.id ? profile.id : createWorkspaceId(),
     name: typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : 'Terminal',
@@ -350,7 +368,12 @@ function normalizeTerminalProfile(profile = {}) {
     type: SUPPORTED_TASK_TYPES.includes(profile.type) ? profile.type : 'gojs',
     env: typeof profile.env === 'string' ? profile.env : '',
     wd: typeof profile.wd === 'string' ? profile.wd.trim() : '',
+    icon: TERMINAL_PRESET_ICON_BY_ID[profile.icon] ? profile.icon : defaultIcon,
   };
+}
+
+function getTerminalPresetIcon(profile) {
+  return TERMINAL_PRESET_ICON_BY_ID[profile?.icon]?.icon || Terminal;
 }
 
 function migrateLegacyHushTerminalProfile(profile) {
@@ -2057,6 +2080,7 @@ function setupConfigForm(settingsContent) {
 function setupTerminalProfileForm(settingsContent) {
   const list = settingsContent.querySelector('[data-terminal-profile-list]');
   const nameEl = settingsContent.querySelector('[data-terminal-profile="name"]');
+  const iconEl = settingsContent.querySelector('[data-terminal-profile="icon"]');
   const programEl = settingsContent.querySelector('[data-terminal-profile="program"]');
   const argsEl = settingsContent.querySelector('[data-terminal-profile="args"]');
   const typeEl = settingsContent.querySelector('[data-terminal-profile="type"]');
@@ -2065,7 +2089,7 @@ function setupTerminalProfileForm(settingsContent) {
   const status = settingsContent.querySelector('[data-terminal-profile="status"]');
   const addButton = settingsContent.querySelector('[data-terminal-profile-action="add"]');
   const cancelButton = settingsContent.querySelector('[data-terminal-profile-action="cancel"]');
-  if (!list || !nameEl || !programEl || !argsEl || !typeEl || !wdEl || !envEl || !status || !addButton || !cancelButton) return;
+  if (!list || !nameEl || !iconEl || !programEl || !argsEl || !typeEl || !wdEl || !envEl || !status || !addButton || !cancelButton) return;
 
   let editingProfileId = null;
 
@@ -2104,6 +2128,7 @@ function setupTerminalProfileForm(settingsContent) {
       edit.addEventListener('click', () => {
         editingProfileId = profile.id;
         nameEl.value = profile.name;
+        iconEl.value = profile.icon;
         programEl.value = profile.program;
         argsEl.value = profile.args;
         typeEl.value = profile.type;
@@ -2134,6 +2159,7 @@ function setupTerminalProfileForm(settingsContent) {
   const resetFields = () => {
     editingProfileId = null;
     nameEl.value = '';
+    iconEl.value = 'terminal';
     programEl.value = '';
     argsEl.value = '';
     typeEl.value = 'gojs';
@@ -2147,6 +2173,7 @@ function setupTerminalProfileForm(settingsContent) {
       const profile = normalizeTerminalProfile({
         id: editingProfileId || undefined,
         name: nameEl.value,
+        icon: iconEl.value,
         program: programEl.value,
         args: argsEl.value,
         type: typeEl.value,
@@ -3763,7 +3790,9 @@ function VmPanel({ api, params }) {
 }
 
 function PanelTab(props) {
-  const Icon = PANEL_ICONS[props.params.panelType] || Terminal;
+  const Icon = props.params.panelType === 'terminal'
+    ? getTerminalPresetIcon(props.params.profile)
+    : PANEL_ICONS[props.params.panelType] || Terminal;
   return React.createElement('div', { className: 'panel-tab' },
     React.createElement(Icon, { className: 'panel-tab-icon', size: 14, 'aria-hidden': true }),
     React.createElement(DockviewDefaultTab, props),
@@ -3773,6 +3802,7 @@ function PanelTab(props) {
 function TerminalLaunchPicker({ className, iconSize, inMenu = false, onLaunch }) {
   const [expanded, setExpanded] = useState(false);
   const defaultProfile = getDefaultTerminalProfile();
+  const DefaultIcon = getTerminalPresetIcon(defaultProfile);
   const menuRole = inMenu ? 'menuitem' : undefined;
 
   return React.createElement('div', { className: `terminal-launch-picker ${className}` },
@@ -3784,7 +3814,7 @@ function TerminalLaunchPicker({ className, iconSize, inMenu = false, onLaunch })
         title: terminalCommand(defaultProfile),
         onClick: () => onLaunch(defaultProfile),
       },
-      React.createElement(Terminal, { size: iconSize, 'aria-hidden': true }),
+      React.createElement(DefaultIcon, { size: iconSize, 'aria-hidden': true }),
       React.createElement('span', null, 'Terminal'),
       ),
       React.createElement('button', {
@@ -3800,18 +3830,19 @@ function TerminalLaunchPicker({ className, iconSize, inMenu = false, onLaunch })
       })),
     ),
     expanded && React.createElement('div', { className: 'terminal-launch-options', role: inMenu ? 'menu' : undefined },
-      getTerminalProfiles().map((profile) =>
-        React.createElement('button', {
+      getTerminalProfiles().map((profile) => {
+        const Icon = getTerminalPresetIcon(profile);
+        return React.createElement('button', {
           key: profile.id,
           type: 'button',
           role: menuRole,
           title: terminalCommand(profile),
           onClick: () => onLaunch(profile),
         },
-        React.createElement(Terminal, { size: iconSize, 'aria-hidden': true }),
+        React.createElement(Icon, { size: iconSize, 'aria-hidden': true }),
         React.createElement('span', null, profile.name),
-        )
-      ),
+        );
+      }),
     ),
   );
 }

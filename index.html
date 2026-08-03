@@ -213,6 +213,21 @@
               <div class="terminal-profile-fields">
                 <label for="terminal-profile-name">Name</label>
                 <input id="terminal-profile-name" data-terminal-profile="name" type="text" placeholder="My tool">
+                <label for="terminal-profile-icon">Icon</label>
+                <select id="terminal-profile-icon" data-terminal-profile="icon">
+                  <option value="terminal">Terminal</option>
+                  <option value="bot">Bot</option>
+                  <option value="code">Code</option>
+                  <option value="play">Play</option>
+                  <option value="cpu">CPU</option>
+                  <option value="activity">Activity</option>
+                  <option value="browser">Browser</option>
+                  <option value="files">Files</option>
+                  <option value="home">Home</option>
+                  <option value="layout">Layout</option>
+                  <option value="monitor">Monitor</option>
+                  <option value="rocket">Rocket</option>
+                </select>
                 <label for="terminal-profile-program">Program</label>
                 <input id="terminal-profile-program" data-terminal-profile="program" type="text" placeholder="crush" spellcheck="false">
                 <label for="terminal-profile-args">Startup arguments</label>
@@ -388,6 +403,6 @@
 
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260803.2"></script>
+    <script type="module" src="app.js?v=20260803.3"></script>
   </body>
 </html>
