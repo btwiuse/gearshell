@@ -18,6 +18,8 @@ if (!app.includes("DEFAULT_WORKBENCH_ASSETS_URL = '/wanix-workbench'")) throw ne
 if (!app.includes('LEGACY_DEFAULT_WORKBENCH_ASSETS_URL')) throw new Error('Legacy Workbench asset defaults must migrate to the bundled assets.');
 if (!app.includes('72141cb09a97b9a6f61461e9587ed8879ab08af1')) throw new Error('Workbench requires the runtime that synchronizes pane layout and terminal resize signals.');
 if (!app.includes('LEGACY_WANIX_RUNTIME_MODULE_URLS')) throw new Error('Existing workspaces must migrate to the Workbench terminal runtime.');
+if (!app.includes('LEGACY_WANIX_RUNTIME_WASM_URLS')) throw new Error('Existing workspaces must migrate to the multiline-argv kernel runtime.');
+if (!app.includes('7111a7b9fb6f192af61498844354d1c758376b2d')) throw new Error('Wanix runtime must preserve multiline task arguments.');
 if (!app.includes('71206477ae506f807b9893a8deca09749d212542')) throw new Error('The short-lived broken Workbench runtime must migrate automatically.');
 if (!app.includes("window.dispatchEvent(new Event('resize'))")) throw new Error('Workbench panels must forward Dockview resize events.');
 if (!app.includes("vm.setAttribute('netdev', session.config.netdev)")) throw new Error('VM panels must forward their saved network configuration.');

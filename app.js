@@ -102,9 +102,12 @@ const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 const WANIX_RUNTIME = {
-  wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0',
+  wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@7111a7b9fb6f192af61498844354d1c758376b2d',
   moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@72141cb09a97b9a6f61461e9587ed8879ab08af1/dist/wanix.min.js',
 };
+const LEGACY_WANIX_RUNTIME_WASM_URLS = new Set([
+  'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0',
+]);
 const LEGACY_WANIX_RUNTIME_MODULE_URLS = new Set([
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@9ceae50b35558ddf8e9f3862fa3c4aa9e8b4097d/dist/wanix.min.js',
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@9446c661d2d4bf66885e9f7082def770c314ecb1/dist/wanix.min.js',
@@ -249,10 +252,18 @@ function clone(value) {
 
 function normalizeRuntimeConfig(runtime = {}) {
   const configured = runtime && typeof runtime === 'object' ? runtime : {};
+  const wasmUrl = LEGACY_WANIX_RUNTIME_WASM_URLS.has(configured.wasmUrl)
+    ? WANIX_RUNTIME.wasmUrl
+    : configured.wasmUrl;
   const moduleUrl = LEGACY_WANIX_RUNTIME_MODULE_URLS.has(configured.moduleUrl)
     ? WANIX_RUNTIME.moduleUrl
     : configured.moduleUrl;
-  return { ...WANIX_RUNTIME, ...configured, ...(moduleUrl ? { moduleUrl } : {}) };
+  return {
+    ...WANIX_RUNTIME,
+    ...configured,
+    ...(wasmUrl ? { wasmUrl } : {}),
+    ...(moduleUrl ? { moduleUrl } : {}),
+  };
 }
 
 function normalizeShellConfig(config) {
