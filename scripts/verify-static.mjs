@@ -16,7 +16,8 @@ for (const marker of ['FilesPanel', 'RuntimePanel', 'LandingPanel', 'DeckPanel',
 if (!app.includes("workbench.setAttribute('raw', '')")) throw new Error('Workbench terminals must forward raw input.');
 if (!app.includes("DEFAULT_WORKBENCH_ASSETS_URL = '/wanix-workbench'")) throw new Error('Workbench must default to the bundled static assets.');
 if (!app.includes('LEGACY_DEFAULT_WORKBENCH_ASSETS_URL')) throw new Error('Legacy Workbench asset defaults must migrate to the bundled assets.');
-if (!app.includes('72141cb09a97b9a6f61461e9587ed8879ab08af1')) throw new Error('Workbench requires the runtime that synchronizes pane layout and terminal resize signals.');
+if (!app.includes('976020821b1a7a09a13c6e8034a41686a69c12df')) throw new Error('Workbench must share the VS Code AMD loader between panels.');
+if (!app.includes('72141cb09a97b9a6f61461e9587ed8879ab08af1')) throw new Error('Existing workspaces must migrate from the prior Workbench runtime.');
 if (!app.includes('LEGACY_WANIX_RUNTIME_MODULE_URLS')) throw new Error('Existing workspaces must migrate to the Workbench terminal runtime.');
 if (!app.includes('LEGACY_WANIX_RUNTIME_WASM_URLS')) throw new Error('Existing workspaces must migrate to the multiline-argv kernel runtime.');
 if (!app.includes('7111a7b9fb6f192af61498844354d1c758376b2d')) throw new Error('Wanix runtime must preserve multiline task arguments.');
