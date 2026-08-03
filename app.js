@@ -123,12 +123,13 @@ const BUILTIN_TERMINAL_PROFILES = [
 
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@7111a7b9fb6f192af61498844354d1c758376b2d',
-  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@976020821b1a7a09a13c6e8034a41686a69c12df/dist/wanix.min.js',
+  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@4541e4ca6d7a6c07dd2b0538cf27e1fe5335e1a4/dist/wanix.min.js',
 };
 const LEGACY_WANIX_RUNTIME_WASM_URLS = new Set([
   'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0',
 ]);
 const LEGACY_WANIX_RUNTIME_MODULE_URLS = new Set([
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@976020821b1a7a09a13c6e8034a41686a69c12df/dist/wanix.min.js',
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@9ceae50b35558ddf8e9f3862fa3c4aa9e8b4097d/dist/wanix.min.js',
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@9446c661d2d4bf66885e9f7082def770c314ecb1/dist/wanix.min.js',
   // This short-lived build called a nonexistent Workbench layout API.
@@ -3004,6 +3005,11 @@ function addRuntimePanel(api, group) {
 }
 
 function addWorkbenchPanel(api, group, config = getWorkbenchPanelConfig()) {
+  const existing = api.panels.find((panel) => panel.id.startsWith('workbench-'));
+  if (existing) {
+    existing.api.setActive();
+    return existing;
+  }
   const id = ++workbenchIdCounter;
   const panel = api.addPanel({
     id: `workbench-${id}`,
