@@ -29,6 +29,8 @@ if (!app.includes("vm.setAttribute('netdev', session.config.netdev)")) throw new
 if (!app.includes('DEFAULT_COLLAPSED_LAUNCHER_ITEMS')) throw new Error('Launcher needs configurable default collapsed items.');
 if (!app.includes('launcher-more-toggle')) throw new Error('Launcher needs a More control for collapsed items.');
 if (!html.includes('data-config-launcher-collapse')) throw new Error('Settings must expose Launcher item collapse controls.');
+if (!app.includes("src: '/bonsai/'") || !app.includes("label: 'Bonsai 27B'")) throw new Error('Launcher must offer Bonsai 27B from the bundled Bonsai app.');
+if (!html.includes('value="bonsai"')) throw new Error('Settings must expose Bonsai 27B startup and Launcher-collapse controls.');
 if (!app.includes('TERMINAL_PRESET_ICON_OPTIONS')) throw new Error('Terminal presets need configurable Lucide icons.');
 if (!html.includes('data-terminal-profile="icon"')) throw new Error('Settings must expose Terminal preset icon controls.');
 if (!app.includes("user,type=virtio,relay_url=${wispUrl}")) throw new Error('VM settings must derive v86\'s native Wisp relay argument.');
