@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Cpu, Download, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Cpu, Download, Ellipsis, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -69,6 +69,7 @@ const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL = 'https://wanix.dev/workbench';
 const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz';
 const REDUNDANT_WISP_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz';
 const DEFAULT_VM_LINUX_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz';
+const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = ['deck', 'codigo', 'crush', 'rickroll'];
 const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = {
   cmd: DEFAULT_CMD,
@@ -81,6 +82,7 @@ const DEFAULT_CONFIG = {
   vmMemory: '512M',
   vmNetworkMode: 'none',
   vmWispUrl: '',
+  collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
 };
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
 const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
@@ -95,6 +97,7 @@ const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import']
 const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
 const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'codigo', 'crush', 'rickroll'];
+const LAUNCHER_COLLAPSIBLE_PANEL_TYPES = STARTUP_PANEL_TYPES.filter((component) => component !== 'terminal');
 
 const BUILTIN_TERMINAL_PROFILES = [
   { id: 'hush', name: 'Hush', type: 'gojs', builtin: true },
@@ -280,6 +283,9 @@ function normalizeShellConfig(config) {
     vmMemory: normalizeVmMemory(config?.vmMemory),
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
+    collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)
+      ? [...new Set(config.collapsedLauncherItems.filter((component) => LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)))]
+      : [...DEFAULT_COLLAPSED_LAUNCHER_ITEMS],
     terminalProfiles: Array.isArray(config?.terminalProfiles)
       ? config.terminalProfiles
         .map(normalizeTerminalProfile)
@@ -1983,6 +1989,7 @@ function destroyReveal(homeContent) {
 // --- Settings forms ---
 function setupConfigForm(settingsContent) {
   const startupEls = [...settingsContent.querySelectorAll('[data-config-startup]')];
+  const launcherCollapseEls = [...settingsContent.querySelectorAll('[data-config-launcher-collapse]')];
   const restoreTabsEl = settingsContent.querySelector('[data-config="restore-tabs"]');
   const integrationEls = [...settingsContent.querySelectorAll('[data-config-value]')];
   const vmNetworkModeEl = settingsContent.querySelector('[data-config-value="vmNetworkMode"]');
@@ -1994,6 +2001,7 @@ function setupConfigForm(settingsContent) {
   const populate = () => {
     const cfg = loadConfig();
     for (const input of startupEls) input.checked = cfg.startupPanels.includes(input.value);
+    for (const input of launcherCollapseEls) input.checked = cfg.collapsedLauncherItems.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
     for (const input of integrationEls) input.value = cfg[input.dataset.configValue] || '';
     syncVmNetworkFields();
@@ -2019,6 +2027,7 @@ function setupConfigForm(settingsContent) {
     saveConfig({
       ...config,
       startupPanels: startupEls.filter((input) => input.checked).map((input) => input.value),
+      collapsedLauncherItems: launcherCollapseEls.filter((input) => input.checked).map((input) => input.value),
       restoreTabs: restoreTabsEl?.checked === true,
       ...Object.fromEntries(integrationEls.map((input) => [input.dataset.configValue, input.value])),
     });
@@ -2031,6 +2040,7 @@ function setupConfigForm(settingsContent) {
   resetButton.addEventListener('click', () => {
     const c = resetConfig();
     for (const input of startupEls) input.checked = c.startupPanels.includes(input.value);
+    for (const input of launcherCollapseEls) input.checked = c.collapsedLauncherItems.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
     for (const input of integrationEls) input.value = c[input.dataset.configValue] || '';
     syncVmNetworkFields();
@@ -3900,10 +3910,34 @@ function AddTerminalButton({ containerApi, group }) {
 }
 
 function FallbackPage({ containerApi, className }) {
+  const [showMore, setShowMore] = useState(false);
+  const [collapsedItems, setCollapsedItems] = useState(() => loadConfig().collapsedLauncherItems);
+
+  useEffect(() => {
+    const updateCollapsedItems = () => {
+      setCollapsedItems(loadConfig().collapsedLauncherItems);
+      setShowMore(false);
+    };
+    window.addEventListener(WORKSPACE_CHANGED_EVENT, updateCollapsedItems);
+    return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, updateCollapsedItems);
+  }, []);
+
   const addPanel = (component) => {
     if (!containerApi) return;
     addPanelByComponent(containerApi, component);
   };
+  const collapsed = new Set(collapsedItems);
+  const options = PANEL_CREATION_OPTIONS.filter((option) => !['terminal', 'fallback'].includes(option.component));
+  const primaryOptions = options.filter((option) => !collapsed.has(option.component));
+  const moreOptions = options.filter((option) => collapsed.has(option.component));
+  const renderOption = (option) => React.createElement('button', {
+    key: option.component,
+    type: 'button',
+    onClick: () => addPanel(option.component),
+  },
+  React.createElement(option.icon, { size: 18, 'aria-hidden': true }),
+  React.createElement('span', null, option.label),
+  );
 
   return React.createElement('div', { className },
     React.createElement('div', { className: 'empty-workspace-card' },
@@ -3914,16 +3948,17 @@ function FallbackPage({ containerApi, className }) {
           iconSize: 18,
           onLaunch: (profile) => containerApi && addTerminalPanel(containerApi, undefined, profile),
         }),
-        PANEL_CREATION_OPTIONS.filter((option) => !['terminal', 'fallback'].includes(option.component)).map((option) =>
-          React.createElement('button', {
-            key: option.component,
-            type: 'button',
-            onClick: () => addPanel(option.component),
-          },
-          React.createElement(option.icon, { size: 18, 'aria-hidden': true }),
-          React.createElement('span', null, option.label),
-          )
+        primaryOptions.map(renderOption),
+        moreOptions.length > 0 && React.createElement('button', {
+          type: 'button',
+          className: 'launcher-more-toggle',
+          'aria-expanded': showMore,
+          onClick: () => setShowMore((expanded) => !expanded),
+        },
+        React.createElement(Ellipsis, { size: 18, 'aria-hidden': true }),
+        React.createElement('span', null, showMore ? 'Less' : 'More'),
         ),
+        showMore && React.createElement('div', { className: 'launcher-more-options' }, moreOptions.map(renderOption)),
       ),
     ),
   );

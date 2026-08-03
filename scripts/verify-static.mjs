@@ -23,6 +23,9 @@ if (!app.includes('7111a7b9fb6f192af61498844354d1c758376b2d')) throw new Error('
 if (!app.includes('71206477ae506f807b9893a8deca09749d212542')) throw new Error('The short-lived broken Workbench runtime must migrate automatically.');
 if (!app.includes("window.dispatchEvent(new Event('resize'))")) throw new Error('Workbench panels must forward Dockview resize events.');
 if (!app.includes("vm.setAttribute('netdev', session.config.netdev)")) throw new Error('VM panels must forward their saved network configuration.');
+if (!app.includes('DEFAULT_COLLAPSED_LAUNCHER_ITEMS')) throw new Error('Launcher needs configurable default collapsed items.');
+if (!app.includes('launcher-more-toggle')) throw new Error('Launcher needs a More control for collapsed items.');
+if (!html.includes('data-config-launcher-collapse')) throw new Error('Settings must expose Launcher item collapse controls.');
 if (!app.includes("user,type=virtio,relay_url=${wispUrl}")) throw new Error('VM settings must derive v86\'s native Wisp relay argument.');
 if (!app.includes("user,type=virtio,relay_url=fetch")) throw new Error('VM settings must derive v86\'s native fetch relay argument.');
 if (!html.includes('data-config-value="vmWispUrl"')) throw new Error('Settings must expose the Wisp server URL.');

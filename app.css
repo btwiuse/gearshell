@@ -92,6 +92,9 @@ wanix-term { flex: 1; min-width: 0; }
 .empty-workspace-card { width: min(280px, calc(100% - 32px)); padding: 20px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; text-align: center; }
 .empty-workspace-card p { margin: 0 0 16px; color: #8b949e; }
 .empty-workspace-actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.launcher-more-options { display: flex; flex-direction: column; gap: 8px; }
+.empty-workspace-actions .launcher-more-toggle { border-style: dashed; color: #8b949e; }
+.empty-workspace-actions .launcher-more-toggle:hover { color: #c9d1d9; }
 .empty-workspace-actions button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
 .empty-workspace-actions button:hover { background: #30363d; }
 .empty-workspace-actions button svg { flex: 0 0 auto; color: #8b949e; }
@@ -328,7 +331,8 @@ wanix-term { flex: 1; min-width: 0; }
 .cfg-toggle { display: block; font-size: 13px; color: #c9d1d9; cursor: pointer; }
 .cfg-toggle input[type="checkbox"] { width: auto !important; height: auto !important; accent-color: #58a6ff; cursor: pointer; vertical-align: middle; margin-right: 6px; }
 .cfg-startup-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0 14px; }
-@media (max-width: 460px) { .cfg-startup-panels { grid-template-columns: 1fr; } }
+.cfg-launcher-collapse { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0 14px; }
+@media (max-width: 460px) { .cfg-startup-panels, .cfg-launcher-collapse { grid-template-columns: 1fr; } }
 
 /* Fix dockview theme for gap between tab bar and content */
 .dockview-theme-github-dark .dv-groupview {
