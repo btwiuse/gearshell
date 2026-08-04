@@ -28,12 +28,12 @@ if (!app.includes("window.dispatchEvent(new Event('resize'))")) throw new Error(
 if (!app.includes("vm.setAttribute('netdev', session.config.netdev)")) throw new Error('VM panels must forward their saved network configuration.');
 if (!app.includes('DEFAULT_COLLAPSED_LAUNCHER_ITEMS')) throw new Error('Launcher needs configurable default collapsed items.');
 if (!app.includes('launcher-more-toggle')) throw new Error('Launcher needs a More control for collapsed items.');
-if (!html.includes('data-config-launcher-collapse')) throw new Error('Settings must expose Launcher item collapse controls.');
 if (!app.includes('DEFAULT_LAUNCHER_ITEM_ORDER') || !app.includes('normalizeLauncherOrder')) throw new Error('Launcher must persist a complete item order.');
 if (!html.includes('data-config-launcher-order')) throw new Error('Settings must expose Launcher item ordering.');
-if (!app.includes("item.addEventListener('dragstart'")) throw new Error('Launcher item ordering must support drag and drop.');
+if (!app.includes('function LauncherOrderEditor') || !app.includes('setCollapsed')) throw new Error('Launcher layout must combine ordering and visibility controls.');
+if (!app.includes('onDragStart:') || !app.includes('EyeOff') || !app.includes('Open by default')) throw new Error('Launcher layout must support drag, visibility icons, and default startup.');
 if (!app.includes("src: '/bonsai/'") || !app.includes("label: 'Bonsai 27B'")) throw new Error('Launcher must offer Bonsai 27B from the bundled Bonsai app.');
-if (!html.includes('value="bonsai"')) throw new Error('Settings must expose Bonsai 27B startup and Launcher-collapse controls.');
+if (!app.includes('DEFAULT_LAUNCHER_ITEM_ORDER') || !app.includes("'bonsai'")) throw new Error('Launcher layout must include Bonsai 27B.');
 if (!app.includes("import WebPet from './web-pet/index.js'")) throw new Error('Wagi Dog must use the bundled web-pet runtime.');
 if (!app.includes('new WebPet()')) throw new Error('GearShell must start the Wagi Dog web pet when enabled.');
 if (!html.includes('href="web-pet/web-pet.css"')) throw new Error('GearShell must load the web-pet stylesheet.');

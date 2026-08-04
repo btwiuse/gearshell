@@ -332,19 +332,26 @@ wanix-term { flex: 1; min-width: 0; }
 
 .cfg-toggle { display: block; font-size: 13px; color: #c9d1d9; cursor: pointer; }
 .cfg-toggle input[type="checkbox"] { width: auto !important; height: auto !important; accent-color: #58a6ff; cursor: pointer; vertical-align: middle; margin-right: 6px; }
-.cfg-startup-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0 14px; }
-.cfg-launcher-collapse { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0 14px; }
-.launcher-order-list { display: grid; gap: 4px; margin: 10px 0 14px; }
-.launcher-order-item { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 34px; padding: 4px 6px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; cursor: grab; }
+.launcher-order-list { display: grid; gap: 14px; margin: 2px 0 14px; }
+.launcher-order-hint { margin: 0; }
+.launcher-order-section { min-width: 0; }
+.launcher-order-section.collapsed { padding-top: 14px; border-top: 1px solid #30363d; }
+.launcher-order-section-heading { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: #8b949e; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.launcher-order-section-heading svg { color: #8b949e; }
+.launcher-order-section-items { display: grid; gap: 4px; min-height: 40px; }
+.launcher-order-empty { display: grid; min-height: 40px; place-items: center; border: 1px dashed #30363d; color: #8b949e; font-size: 12px; }
+.launcher-order-item { display: grid; grid-template-columns: 16px 16px minmax(0, 1fr) minmax(124px, auto) auto; align-items: center; gap: 8px; min-height: 38px; padding: 4px 6px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; cursor: grab; }
 .launcher-order-item.dragging { opacity: 0.45; }
 .launcher-order-item.drop-before { box-shadow: 0 -2px 0 #58a6ff; }
 .launcher-order-item.drop-after { box-shadow: 0 2px 0 #58a6ff; }
-.launcher-order-handle { color: #8b949e; font: 14px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: 1px; transform: rotate(90deg); }
+.launcher-order-handle, .launcher-order-icon { color: #8b949e; }
 .launcher-order-label { overflow: hidden; color: #c9d1d9; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.launcher-order-startup { display: flex; align-items: center; gap: 6px; color: #8b949e; cursor: pointer; font-size: 11px; white-space: nowrap; }
+.launcher-order-startup input { width: auto !important; height: auto !important; margin: 0; accent-color: #58a6ff; }
 .launcher-order-actions { display: flex; gap: 4px; }
-.settings-panel .config-form .launcher-order-actions button { min-height: 24px; padding: 3px 7px; font-size: 11px; }
+.settings-panel .config-form .launcher-order-actions button { display: grid; width: 28px; min-height: 28px; padding: 0; place-items: center; }
 .settings-panel .config-form .launcher-order-actions button:disabled { cursor: default; opacity: 0.4; }
-@media (max-width: 460px) { .cfg-startup-panels, .cfg-launcher-collapse { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .launcher-order-item { grid-template-columns: 16px 16px minmax(0, 1fr) auto; } .launcher-order-startup { grid-column: 3 / -1; grid-row: 2; } }
 
 /* Fix dockview theme for gap between tab bar and content */
 .dockview-theme-github-dark .dv-groupview {
