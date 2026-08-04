@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Cpu, Download, Ellipsis, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, House, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X } from 'lucide-react';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -82,6 +82,7 @@ const DEFAULT_CONFIG = {
   vmMemory: '512M',
   vmNetworkMode: 'none',
   vmWispUrl: '',
+  wagiDogEnabled: true,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
 };
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
@@ -301,6 +302,7 @@ function normalizeShellConfig(config) {
     vmMemory: normalizeVmMemory(config?.vmMemory),
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
+    wagiDogEnabled: config?.wagiDogEnabled !== false,
     collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)
       ? [...new Set(config.collapsedLauncherItems.filter((component) => LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)))]
       : [...DEFAULT_COLLAPSED_LAUNCHER_ITEMS],
@@ -1063,6 +1065,10 @@ function resetConfig() {
   try { localStorage.removeItem(CONFIG_KEY); } catch { /* no storage */ }
   notifyWorkspaceChange();
   return workspace.shell;
+}
+
+function setWagiDogEnabled(enabled) {
+  saveConfig({ ...loadConfig(), wagiDogEnabled: enabled });
 }
 
 const openPanelSnapshots = new Map();
@@ -2015,6 +2021,7 @@ function setupConfigForm(settingsContent) {
   const startupEls = [...settingsContent.querySelectorAll('[data-config-startup]')];
   const launcherCollapseEls = [...settingsContent.querySelectorAll('[data-config-launcher-collapse]')];
   const restoreTabsEl = settingsContent.querySelector('[data-config="restore-tabs"]');
+  const wagiDogEnabledEl = settingsContent.querySelector('[data-config="wagi-dog-enabled"]');
   const integrationEls = [...settingsContent.querySelectorAll('[data-config-value]')];
   const vmNetworkModeEl = settingsContent.querySelector('[data-config-value="vmNetworkMode"]');
   const vmWispUrlEl = settingsContent.querySelector('[data-config-value="vmWispUrl"]');
@@ -2027,6 +2034,7 @@ function setupConfigForm(settingsContent) {
     for (const input of startupEls) input.checked = cfg.startupPanels.includes(input.value);
     for (const input of launcherCollapseEls) input.checked = cfg.collapsedLauncherItems.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
+    if (wagiDogEnabledEl) wagiDogEnabledEl.checked = cfg.wagiDogEnabled;
     for (const input of integrationEls) input.value = cfg[input.dataset.configValue] || '';
     syncVmNetworkFields();
   };
@@ -2053,6 +2061,7 @@ function setupConfigForm(settingsContent) {
       startupPanels: startupEls.filter((input) => input.checked).map((input) => input.value),
       collapsedLauncherItems: launcherCollapseEls.filter((input) => input.checked).map((input) => input.value),
       restoreTabs: restoreTabsEl?.checked === true,
+      wagiDogEnabled: wagiDogEnabledEl?.checked !== false,
       ...Object.fromEntries(integrationEls.map((input) => [input.dataset.configValue, input.value])),
     });
     const s = settingsContent.querySelector('[data-config="status"]');
@@ -2066,6 +2075,7 @@ function setupConfigForm(settingsContent) {
     for (const input of startupEls) input.checked = c.startupPanels.includes(input.value);
     for (const input of launcherCollapseEls) input.checked = c.collapsedLauncherItems.includes(input.value);
     if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
+    if (wagiDogEnabledEl) wagiDogEnabledEl.checked = c.wagiDogEnabled;
     for (const input of integrationEls) input.value = c[input.dataset.configValue] || '';
     syncVmNetworkFields();
     const s = settingsContent.querySelector('[data-config="status"]');
@@ -3864,6 +3874,7 @@ function TerminalLaunchPicker({ className, iconSize, inMenu = false, onLaunch })
 // Compact header action: tap creates a terminal, long-press opens extensions.
 function AddTerminalButton({ containerApi, group }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [wagiDogEnabled, setWagiDogEnabledState] = useState(() => loadConfig().wagiDogEnabled);
   const controlRef = useRef(null);
   const pressTimer = useRef(null);
   const longPress = useRef(false);
@@ -3902,6 +3913,12 @@ function AddTerminalButton({ containerApi, group }) {
     return () => document.removeEventListener('pointerdown', closeMenu, true);
   }, [menuOpen]);
 
+  useEffect(() => {
+    const syncWagiDog = () => setWagiDogEnabledState(loadConfig().wagiDogEnabled);
+    window.addEventListener(WORKSPACE_CHANGED_EVENT, syncWagiDog);
+    return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, syncWagiDog);
+  }, []);
+
   const createTerminal = (event) => {
     if (longPress.current) {
       event.preventDefault();
@@ -3936,6 +3953,17 @@ function AddTerminalButton({ containerApi, group }) {
           addTerminalPanel(containerApi, group, profile);
         },
       }),
+      React.createElement('div', { className: 'panel-action-menu-divider', role: 'separator' }),
+      React.createElement('button', {
+        type: 'button',
+        role: 'menuitemcheckbox',
+        'aria-checked': wagiDogEnabled,
+        onClick: () => setWagiDogEnabled(!wagiDogEnabled),
+      },
+      React.createElement(Dog, { size: 16, 'aria-hidden': true }),
+      React.createElement('span', null, 'Wagi Dog'),
+      wagiDogEnabled && React.createElement(Check, { className: 'panel-action-menu-check', size: 15, 'aria-label': 'Enabled' }),
+      ),
       PANEL_CREATION_OPTIONS.filter((option) => option.component !== 'terminal').map((option) =>
         React.createElement('button', {
           key: option.component,
@@ -3952,6 +3980,36 @@ function AddTerminalButton({ containerApi, group }) {
       ),
     ),
   );
+}
+
+const WAGI_DOG_FRAME_WIDTH = 96;
+const WAGI_DOG_FRAME_DURATION = 180;
+
+function WagiDogPet() {
+  const [enabled, setEnabled] = useState(() => loadConfig().wagiDogEnabled);
+  const [frame, setFrame] = useState(0);
+
+  useEffect(() => {
+    const syncEnabled = () => setEnabled(loadConfig().wagiDogEnabled);
+    window.addEventListener(WORKSPACE_CHANGED_EVENT, syncEnabled);
+    return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, syncEnabled);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const timer = window.setInterval(() => setFrame((current) => (current + 1) % 8), WAGI_DOG_FRAME_DURATION);
+    return () => window.clearInterval(timer);
+  }, [enabled]);
+
+  if (!enabled) return null;
+  return React.createElement('div', {
+    className: 'wagi-dog',
+    role: 'img',
+    'aria-label': 'Wagi Dog, your animated shell companion',
+    style: {
+      backgroundPosition: `-${frame * WAGI_DOG_FRAME_WIDTH}px 0px`,
+    },
+  });
 }
 
 function FallbackPage({ containerApi, className }) {
@@ -4074,6 +4132,7 @@ function App() {
       defaultTabComponent: PanelTab,
       rightHeaderActionsComponent: AddTerminalButton,
     }),
+    React.createElement(WagiDogPet),
   );
 }
 

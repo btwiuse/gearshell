@@ -10,3 +10,6 @@
 [submodule "bonsai"]
 	path = bonsai
 	url = https://github.com/btwiuse/bonsai-webgpu-kernels.git
+[submodule "wagi-dog"]
+	path = wagi-dog
+	url = https://github.com/btwiuse/wagi-dog.git

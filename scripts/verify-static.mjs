@@ -31,6 +31,10 @@ if (!app.includes('launcher-more-toggle')) throw new Error('Launcher needs a Mor
 if (!html.includes('data-config-launcher-collapse')) throw new Error('Settings must expose Launcher item collapse controls.');
 if (!app.includes("src: '/bonsai/'") || !app.includes("label: 'Bonsai 27B'")) throw new Error('Launcher must offer Bonsai 27B from the bundled Bonsai app.');
 if (!html.includes('value="bonsai"')) throw new Error('Settings must expose Bonsai 27B startup and Launcher-collapse controls.');
+if (!app.includes('function WagiDogPet') || !css.includes("url('/wagi-dog/spritesheet.webp')")) throw new Error('GearShell must render the bundled Wagi Dog pet.');
+if (!app.includes('wagiDogEnabled: config?.wagiDogEnabled !== false')) throw new Error('Wagi Dog must default to enabled for existing workspaces.');
+if (!html.includes('data-config="wagi-dog-enabled"')) throw new Error('Settings must expose the Wagi Dog toggle.');
+if (!app.includes("'aria-checked': wagiDogEnabled")) throw new Error('The panel menu must expose the Wagi Dog toggle.');
 if (!app.includes('TERMINAL_PRESET_ICON_OPTIONS')) throw new Error('Terminal presets need configurable Lucide icons.');
 if (!html.includes('data-terminal-profile="icon"')) throw new Error('Settings must expose Terminal preset icon controls.');
 if (!app.includes("user,type=virtio,relay_url=${wispUrl}")) throw new Error('VM settings must derive v86\'s native Wisp relay argument.');
