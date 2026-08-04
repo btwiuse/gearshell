@@ -2308,7 +2308,9 @@ function TerminalPresetIconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
-  const pageSize = 12;
+  const [catalogColumns, setCatalogColumns] = useState(1);
+  const catalogRef = useRef(null);
+  const pageSize = Math.max(1, catalogColumns * 3);
   const selected = TERMINAL_PRESET_ICON_BY_ID[value] || TERMINAL_PRESET_ICON_BY_ID.terminal;
   const SelectedIcon = selected.icon;
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -2320,6 +2322,21 @@ function TerminalPresetIconPicker({ value, onChange }) {
   const currentOptions = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   useEffect(() => setPage(0), [query]);
+  useEffect(() => {
+    if (!open || !catalogRef.current) return undefined;
+    const catalog = catalogRef.current;
+    const updateColumns = () => {
+      // Tiles are at least 78px wide with 6px gutters; the catalog padding
+      // accounts for the small deduction before calculating a complete row.
+      const available = Math.max(1, catalog.clientWidth - 16);
+      setCatalogColumns(Math.max(1, Math.floor((available + 6) / 84)));
+    };
+    updateColumns();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(catalog);
+    return () => observer.disconnect();
+  }, [open]);
 
   return React.createElement('div', { className: 'terminal-profile-icon-picker' },
     React.createElement('button', {
@@ -2334,7 +2351,7 @@ function TerminalPresetIconPicker({ value, onChange }) {
     React.createElement('span', { className: 'terminal-profile-icon-trigger-meta' }, 'Choose icon'),
     React.createElement(ChevronDown, { size: 16, 'aria-hidden': true }),
     ),
-    open && React.createElement('div', { id: 'terminal-preset-icon-catalog', className: 'terminal-profile-icon-catalog' },
+    open && React.createElement('div', { ref: catalogRef, id: 'terminal-preset-icon-catalog', className: 'terminal-profile-icon-catalog' },
       React.createElement('div', { className: 'terminal-profile-icon-catalog-toolbar' },
         React.createElement('input', {
           type: 'search', value: query, placeholder: `Search ${TERMINAL_PRESET_ICON_OPTIONS.length} Lucide icons…`,
