@@ -3983,10 +3983,7 @@ function AddTerminalButton({ containerApi, group }) {
 }
 
 const WAGI_DOG_FRAME_WIDTH = 96;
-// The supplied Codex pet preview uses six idle frames. The remaining two
-// cells in the 8-column row are transparent, so looping all eight flashes
-// the companion out of view.
-const WAGI_DOG_IDLE_FRAME_DURATIONS = [280, 110, 110, 140, 140, 320];
+const WAGI_DOG_FRAME_DURATION = 180;
 
 function WagiDogPet() {
   const [enabled, setEnabled] = useState(() => loadConfig().wagiDogEnabled);
@@ -4000,12 +3997,9 @@ function WagiDogPet() {
 
   useEffect(() => {
     if (!enabled) return undefined;
-    const timer = window.setTimeout(
-      () => setFrame((current) => (current + 1) % WAGI_DOG_IDLE_FRAME_DURATIONS.length),
-      WAGI_DOG_IDLE_FRAME_DURATIONS[frame],
-    );
-    return () => window.clearTimeout(timer);
-  }, [enabled, frame]);
+    const timer = window.setInterval(() => setFrame((current) => (current + 1) % 8), WAGI_DOG_FRAME_DURATION);
+    return () => window.clearInterval(timer);
+  }, [enabled]);
 
   if (!enabled) return null;
   return React.createElement('div', {
