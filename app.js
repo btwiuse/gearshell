@@ -71,6 +71,7 @@ const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-
 const REDUNDANT_WISP_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz';
 const DEFAULT_VM_LINUX_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz';
 const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = ['deck', 'codigo', 'crush', 'rickroll'];
+const DEFAULT_LAUNCHER_ITEM_ORDER = ['terminal', 'home', 'deck', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'bonsai', 'codigo', 'crush', 'rickroll'];
 const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = {
   cmd: DEFAULT_CMD,
@@ -85,6 +86,7 @@ const DEFAULT_CONFIG = {
   vmWispUrl: '',
   wagiDogEnabled: true,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
+  launcherOrder: DEFAULT_LAUNCHER_ITEM_ORDER,
 };
 const WORKSPACE_INDEX_KEY = 'gear-shell-workspace-index';
 const WORKSPACE_ACTIVE_KEY = 'gear-shell-active-workspace';
@@ -307,6 +309,7 @@ function normalizeShellConfig(config) {
     collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)
       ? [...new Set(config.collapsedLauncherItems.filter((component) => LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)))]
       : [...DEFAULT_COLLAPSED_LAUNCHER_ITEMS],
+    launcherOrder: normalizeLauncherOrder(config?.launcherOrder),
     terminalProfiles: Array.isArray(config?.terminalProfiles)
       ? config.terminalProfiles
         .map(normalizeTerminalProfile)
@@ -319,6 +322,13 @@ function normalizeShellConfig(config) {
   };
   if (normalized.cmd === LEGACY_DEFAULT_CMD) normalized.cmd = DEFAULT_CMD;
   return normalized;
+}
+
+function normalizeLauncherOrder(order) {
+  const requested = Array.isArray(order) ? order : [];
+  const known = new Set(DEFAULT_LAUNCHER_ITEM_ORDER);
+  const unique = [...new Set(requested.filter((component) => known.has(component)))];
+  return [...unique, ...DEFAULT_LAUNCHER_ITEM_ORDER.filter((component) => !unique.includes(component))];
 }
 
 function normalizeIntegrationUrl(value, fallback) {
@@ -2021,6 +2031,7 @@ function destroyReveal(homeContent) {
 function setupConfigForm(settingsContent) {
   const startupEls = [...settingsContent.querySelectorAll('[data-config-startup]')];
   const launcherCollapseEls = [...settingsContent.querySelectorAll('[data-config-launcher-collapse]')];
+  const launcherOrderList = settingsContent.querySelector('[data-config-launcher-order]');
   const restoreTabsEl = settingsContent.querySelector('[data-config="restore-tabs"]');
   const wagiDogEnabledEl = settingsContent.querySelector('[data-config="wagi-dog-enabled"]');
   const integrationEls = [...settingsContent.querySelectorAll('[data-config-value]')];
@@ -2029,11 +2040,89 @@ function setupConfigForm(settingsContent) {
   const saveButton = settingsContent.querySelector('[data-config-action="save"]');
   const resetButton = settingsContent.querySelector('[data-config-action="reset"]');
   if (!saveButton || !resetButton) return;
+  let launcherOrder = normalizeLauncherOrder();
+  let draggedLauncherComponent = null;
+
+  const renderLauncherOrder = (order) => {
+    launcherOrder = normalizeLauncherOrder(order);
+    if (!launcherOrderList) return;
+    launcherOrderList.replaceChildren();
+    for (const [index, component] of launcherOrder.entries()) {
+      const option = PANEL_CREATION_OPTIONS.find((candidate) => candidate.component === component);
+      if (!option) continue;
+      const item = document.createElement('div');
+      item.className = 'launcher-order-item';
+      item.draggable = true;
+      item.title = 'Drag to reorder';
+      item.setAttribute('aria-label', `${option.label}, draggable`);
+      const handle = document.createElement('span');
+      handle.className = 'launcher-order-handle';
+      handle.setAttribute('aria-hidden', 'true');
+      handle.textContent = '::';
+      const label = document.createElement('span');
+      label.className = 'launcher-order-label';
+      label.textContent = option.label;
+      const actions = document.createElement('div');
+      actions.className = 'launcher-order-actions';
+      const move = (direction) => {
+        const target = index + direction;
+        if (target < 0 || target >= launcherOrder.length) return;
+        const next = [...launcherOrder];
+        [next[index], next[target]] = [next[target], next[index]];
+        renderLauncherOrder(next);
+      };
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.textContent = 'Up';
+      up.title = `Move ${option.label} up`;
+      up.disabled = index === 0;
+      up.addEventListener('click', () => move(-1));
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.textContent = 'Down';
+      down.title = `Move ${option.label} down`;
+      down.disabled = index === launcherOrder.length - 1;
+      down.addEventListener('click', () => move(1));
+      actions.append(up, down);
+      item.append(handle, label, actions);
+      item.addEventListener('dragstart', (event) => {
+        draggedLauncherComponent = component;
+        item.classList.add('dragging');
+        event.dataTransfer?.setData('text/plain', component);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragend', () => {
+        draggedLauncherComponent = null;
+        for (const candidate of launcherOrderList.querySelectorAll('.launcher-order-item')) candidate.classList.remove('dragging', 'drop-before', 'drop-after');
+      });
+      item.addEventListener('dragover', (event) => {
+        if (!draggedLauncherComponent || draggedLauncherComponent === component) return;
+        event.preventDefault();
+        const placeAfter = event.clientY > item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2;
+        item.classList.toggle('drop-before', !placeAfter);
+        item.classList.toggle('drop-after', placeAfter);
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      });
+      item.addEventListener('dragleave', () => item.classList.remove('drop-before', 'drop-after'));
+      item.addEventListener('drop', (event) => {
+        event.preventDefault();
+        const source = draggedLauncherComponent || event.dataTransfer?.getData('text/plain');
+        if (!source || source === component) return;
+        const next = launcherOrder.filter((candidate) => candidate !== source);
+        let target = next.indexOf(component);
+        if (event.clientY > item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2) target += 1;
+        next.splice(target, 0, source);
+        renderLauncherOrder(next);
+      });
+      launcherOrderList.append(item);
+    }
+  };
 
   const populate = () => {
     const cfg = loadConfig();
     for (const input of startupEls) input.checked = cfg.startupPanels.includes(input.value);
     for (const input of launcherCollapseEls) input.checked = cfg.collapsedLauncherItems.includes(input.value);
+    renderLauncherOrder(cfg.launcherOrder);
     if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
     if (wagiDogEnabledEl) wagiDogEnabledEl.checked = cfg.wagiDogEnabled;
     for (const input of integrationEls) input.value = cfg[input.dataset.configValue] || '';
@@ -2061,6 +2150,7 @@ function setupConfigForm(settingsContent) {
       ...config,
       startupPanels: startupEls.filter((input) => input.checked).map((input) => input.value),
       collapsedLauncherItems: launcherCollapseEls.filter((input) => input.checked).map((input) => input.value),
+      launcherOrder,
       restoreTabs: restoreTabsEl?.checked === true,
       wagiDogEnabled: wagiDogEnabledEl?.checked !== false,
       ...Object.fromEntries(integrationEls.map((input) => [input.dataset.configValue, input.value])),
@@ -2075,6 +2165,7 @@ function setupConfigForm(settingsContent) {
     const c = resetConfig();
     for (const input of startupEls) input.checked = c.startupPanels.includes(input.value);
     for (const input of launcherCollapseEls) input.checked = c.collapsedLauncherItems.includes(input.value);
+    renderLauncherOrder(c.launcherOrder);
     if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
     if (wagiDogEnabledEl) wagiDogEnabledEl.checked = c.wagiDogEnabled;
     for (const input of integrationEls) input.value = c[input.dataset.configValue] || '';
@@ -4025,9 +4116,11 @@ function FallbackPage({ containerApi, className }) {
     addPanelByComponent(containerApi, component);
   };
   const collapsed = new Set(collapsedItems);
-  const options = PANEL_CREATION_OPTIONS.filter((option) => !['terminal', 'fallback'].includes(option.component));
-  const primaryOptions = options.filter((option) => !collapsed.has(option.component));
-  const moreOptions = options.filter((option) => collapsed.has(option.component));
+  const options = normalizeLauncherOrder(loadConfig().launcherOrder)
+    .map((component) => PANEL_CREATION_OPTIONS.find((option) => option.component === component))
+    .filter(Boolean);
+  const primaryOptions = options.filter((option) => option.component === 'terminal' || !collapsed.has(option.component));
+  const moreOptions = options.filter((option) => option.component !== 'terminal' && collapsed.has(option.component));
   const renderOption = (option) => React.createElement('button', {
     key: option.component,
     type: 'button',
@@ -4041,12 +4134,14 @@ function FallbackPage({ containerApi, className }) {
     React.createElement('div', { className: 'empty-workspace-card' },
       React.createElement('p', null, 'Task Launcher'),
       React.createElement('div', { className: 'empty-workspace-actions' },
-        React.createElement(TerminalLaunchPicker, {
-          className: 'empty-terminal-launch',
-          iconSize: 18,
-          onLaunch: (profile) => containerApi && addTerminalPanel(containerApi, undefined, profile),
-        }),
-        primaryOptions.map(renderOption),
+        primaryOptions.map((option) => option.component === 'terminal'
+          ? React.createElement(TerminalLaunchPicker, {
+            key: option.component,
+            className: 'empty-terminal-launch',
+            iconSize: 18,
+            onLaunch: (profile) => containerApi && addTerminalPanel(containerApi, undefined, profile),
+          })
+          : renderOption(option)),
         moreOptions.length > 0 && React.createElement('button', {
           type: 'button',
           className: 'launcher-more-toggle',
