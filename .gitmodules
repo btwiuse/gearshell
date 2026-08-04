@@ -10,3 +10,6 @@
 [submodule "bonsai"]
 	path = bonsai
 	url = https://github.com/btwiuse/bonsai-webgpu-kernels.git
+[submodule "web-pet"]
+	path = web-pet
+	url = https://github.com/justwasm/wagi-web-pet.git
