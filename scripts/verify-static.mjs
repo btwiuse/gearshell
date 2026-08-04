@@ -41,7 +41,11 @@ if (!app.includes('wagiDogEnabled: config?.wagiDogEnabled !== false')) throw new
 if (!html.includes('data-config="wagi-dog-enabled"')) throw new Error('Settings must expose the Wagi Dog toggle.');
 if (!app.includes("'aria-checked': wagiDogEnabled")) throw new Error('The panel menu must expose the Wagi Dog toggle.');
 if (!app.includes('TERMINAL_PRESET_ICON_OPTIONS')) throw new Error('Terminal presets need configurable Lucide icons.');
-if (!html.includes('data-terminal-profile="icon"')) throw new Error('Settings must expose Terminal preset icon controls.');
+if (!html.includes('data-terminal-profile-editor')) throw new Error('Settings must expose the Terminal preset editor.');
+if (!app.includes('icons as LucideIcons') || !app.includes('Object.entries(LucideIcons)')) throw new Error('Terminal preset icons must cover the complete Lucide catalog.');
+if (!app.includes('TerminalPresetIconPicker') || !app.includes('terminal-profile-icon-catalog') || !app.includes('terminal-profile-icon-pagination')) throw new Error('Terminal preset icons need a searchable, paginated picker.');
+if (!app.includes('terminalProfileOrder') || !app.includes('function normalizeTerminalProfileOrder')) throw new Error('Terminal presets need persisted ordering.');
+if (!app.includes('terminal-profile-handle') || !app.includes('onDragStart:')) throw new Error('Terminal presets need drag reorder controls.');
 if (!app.includes("user,type=virtio,relay_url=${wispUrl}")) throw new Error('VM settings must derive v86\'s native Wisp relay argument.');
 if (!app.includes("user,type=virtio,relay_url=fetch")) throw new Error('VM settings must derive v86\'s native fetch relay argument.');
 if (!html.includes('data-config-value="vmWispUrl"')) throw new Error('Settings must expose the Wisp server URL.');

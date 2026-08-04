@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, ArrowDown, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, GripVertical, House, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X } from 'lucide-react';
+import { Activity, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Globe2, GripVertical, House, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X, icons as LucideIcons } from 'lucide-react';
 import WebPet from './web-pet/index.js';
 
 const debugMode = window.location.search.includes('debug');
@@ -102,20 +102,31 @@ const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
 const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'bonsai', 'codigo', 'crush', 'rickroll'];
 const LAUNCHER_COLLAPSIBLE_PANEL_TYPES = STARTUP_PANEL_TYPES;
+function lucideIconId(name) {
+  return name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/([A-Z])([A-Z][a-z])/g, '$1-$2').replace(/([a-zA-Z])(\d+)/g, '$1-$2').toLowerCase();
+}
+
+function lucideIconLabel(name) {
+  return lucideIconId(name).replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+// Persist canonical Lucide ids rather than a hand-maintained shortlist. The
+// legacy aliases keep existing workspace configurations working unchanged.
+const LEGACY_TERMINAL_PRESET_ICON_NAMES = {
+  terminal: 'Terminal', bot: 'Bot', code: 'Code2', play: 'Play', cpu: 'Cpu', activity: 'Activity',
+  browser: 'Globe2', files: 'FolderOpen', home: 'House', layout: 'LayoutDashboard', monitor: 'Monitor',
+  rocket: 'Rocket', 'file-code': 'FileCode2', 'file-plus': 'FilePlus2', 'folder-plus': 'FolderPlus',
+  grip: 'GripVertical', music: 'Music2', pencil: 'Pencil', refresh: 'RefreshCw', save: 'Save',
+  settings: 'Settings', trash: 'Trash2', tree: 'TreePine', upload: 'Upload', users: 'UsersRound', close: 'X',
+};
+const CANONICAL_LUCIDE_ICON_IDS = new Set(Object.keys(LucideIcons).map(lucideIconId));
 const TERMINAL_PRESET_ICON_OPTIONS = [
-  { id: 'terminal', label: 'Terminal', icon: Terminal },
-  { id: 'bot', label: 'Bot', icon: Bot },
-  { id: 'code', label: 'Code', icon: Code2 },
-  { id: 'play', label: 'Play', icon: Play },
-  { id: 'cpu', label: 'CPU', icon: Cpu },
-  { id: 'activity', label: 'Activity', icon: Activity },
-  { id: 'browser', label: 'Browser', icon: Globe2 },
-  { id: 'files', label: 'Files', icon: FolderOpen },
-  { id: 'home', label: 'Home', icon: House },
-  { id: 'layout', label: 'Layout', icon: LayoutDashboard },
-  { id: 'monitor', label: 'Monitor', icon: Monitor },
-  { id: 'rocket', label: 'Rocket', icon: Rocket },
-];
+  ...Object.entries(LucideIcons).map(([name, icon]) => ({ id: lucideIconId(name), label: lucideIconLabel(name), icon })),
+  ...Object.entries(LEGACY_TERMINAL_PRESET_ICON_NAMES)
+    .filter(([id]) => !CANONICAL_LUCIDE_ICON_IDS.has(id))
+    .map(([id, name]) => ({ id, label: lucideIconLabel(name), icon: LucideIcons[name] })),
+].filter((option, index, options) => option.icon && options.findIndex((candidate) => candidate.id === option.id) === index)
+  .sort((left, right) => left.label.localeCompare(right.label));
 const TERMINAL_PRESET_ICON_BY_ID = Object.fromEntries(
   TERMINAL_PRESET_ICON_OPTIONS.map((option) => [option.id, option]),
 );
@@ -292,6 +303,12 @@ function normalizeRuntimeConfig(runtime = {}) {
 }
 
 function normalizeShellConfig(config) {
+  const terminalProfiles = Array.isArray(config?.terminalProfiles)
+    ? config.terminalProfiles
+      .map(normalizeTerminalProfile)
+      .map(migrateLegacyHushTerminalProfile)
+      .filter((profile) => profile.program)
+    : [];
   const normalized = {
     cmd: typeof config?.cmd === 'string' && config.cmd.trim() ? config.cmd.trim() : DEFAULT_CMD,
     env: typeof config?.env === 'string' ? config.env : '',
@@ -310,18 +327,25 @@ function normalizeShellConfig(config) {
       ? [...new Set(config.collapsedLauncherItems.filter((component) => LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)))]
       : [...DEFAULT_COLLAPSED_LAUNCHER_ITEMS],
     launcherOrder: normalizeLauncherOrder(config?.launcherOrder),
-    terminalProfiles: Array.isArray(config?.terminalProfiles)
-      ? config.terminalProfiles
-        .map(normalizeTerminalProfile)
-        .map(migrateLegacyHushTerminalProfile)
-        .filter((profile) => profile.program)
-      : [],
+    terminalProfiles,
+    terminalProfileOrder: normalizeTerminalProfileOrder(config?.terminalProfileOrder, terminalProfiles),
     defaultTerminalProfileId: typeof config?.defaultTerminalProfileId === 'string'
       ? config.defaultTerminalProfileId
       : 'hush',
   };
   if (normalized.cmd === LEGACY_DEFAULT_CMD) normalized.cmd = DEFAULT_CMD;
   return normalized;
+}
+
+function normalizeTerminalProfileOrder(order, profiles = []) {
+  const knownIds = [
+    ...BUILTIN_TERMINAL_PROFILES.map((profile) => profile.id),
+    ...profiles.map((profile) => profile.id),
+  ];
+  const known = new Set(knownIds);
+  const requested = Array.isArray(order) ? order : [];
+  const unique = [...new Set(requested.filter((id) => known.has(id)))];
+  return [...unique, ...knownIds.filter((id) => !unique.includes(id))];
 }
 
 function normalizeLauncherOrder(order) {
@@ -1128,10 +1152,13 @@ function getTerminalProfiles(config = loadConfig()) {
     ...configuredProfiles.get(profile.id),
     builtin: true,
   }));
-  return [
+  const profiles = [
     ...builtins,
     ...config.terminalProfiles.filter((profile) => !builtinIds.has(profile.id)),
   ];
+  const order = normalizeTerminalProfileOrder(config.terminalProfileOrder, profiles);
+  const positions = new Map(order.map((id, index) => [id, index]));
+  return [...profiles].sort((left, right) => positions.get(left.id) - positions.get(right.id));
 }
 
 function getDefaultTerminalProfile(config = loadConfig()) {
@@ -1162,13 +1189,17 @@ function terminalCommand(profile) {
   return profile.cmd || [profile.program, profile.args].filter(Boolean).join(' ');
 }
 
-function saveTerminalProfiles(profiles, defaultProfileId) {
+function saveTerminalProfiles(profiles, defaultProfileId, profileOrder) {
   const config = loadConfig();
   const normalizedProfiles = profiles.map(normalizeTerminalProfile);
   const hush = normalizedProfiles.find((profile) => profile.id === 'hush');
   saveConfig({
     ...config,
     terminalProfiles: normalizedProfiles,
+    terminalProfileOrder: normalizeTerminalProfileOrder(
+      profileOrder === undefined ? config.terminalProfileOrder : profileOrder,
+      normalizedProfiles,
+    ),
     defaultTerminalProfileId: defaultProfileId,
     ...(hush ? { cmd: terminalCommand(hush) || DEFAULT_CMD, env: hush.env } : {}),
   });
@@ -2262,136 +2293,280 @@ function LauncherOrderEditor() {
 }
 
 function setupTerminalProfileForm(settingsContent) {
-  const list = settingsContent.querySelector('[data-terminal-profile-list]');
-  const nameEl = settingsContent.querySelector('[data-terminal-profile="name"]');
-  const iconEl = settingsContent.querySelector('[data-terminal-profile="icon"]');
-  const programEl = settingsContent.querySelector('[data-terminal-profile="program"]');
-  const argsEl = settingsContent.querySelector('[data-terminal-profile="args"]');
-  const typeEl = settingsContent.querySelector('[data-terminal-profile="type"]');
-  const wdEl = settingsContent.querySelector('[data-terminal-profile="wd"]');
-  const envEl = settingsContent.querySelector('[data-terminal-profile="env"]');
-  const status = settingsContent.querySelector('[data-terminal-profile="status"]');
-  const addButton = settingsContent.querySelector('[data-terminal-profile-action="add"]');
-  const cancelButton = settingsContent.querySelector('[data-terminal-profile-action="cancel"]');
-  if (!list || !nameEl || !iconEl || !programEl || !argsEl || !typeEl || !wdEl || !envEl || !status || !addButton || !cancelButton) return;
+  const editor = settingsContent.querySelector('[data-terminal-profile-editor]');
+  if (!editor) return undefined;
+  const root = createRoot(editor);
+  root.render(React.createElement(TerminalPresetEditor));
+  return () => root.unmount();
+}
 
-  let editingProfileId = null;
+function blankTerminalPresetDraft() {
+  return { name: '', icon: 'terminal', program: '', args: '', type: 'gojs', wd: '', env: '' };
+}
 
-  const setStatus = (message, isError = false) => {
-    status.textContent = message;
-    status.style.color = isError ? '#f85149' : '#8b949e';
+function TerminalPresetIconPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const pageSize = 12;
+  const selected = TERMINAL_PRESET_ICON_BY_ID[value] || TERMINAL_PRESET_ICON_BY_ID.terminal;
+  const SelectedIcon = selected.icon;
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filtered = normalizedQuery
+    ? TERMINAL_PRESET_ICON_OPTIONS.filter((option) => `${option.label} ${option.id}`.toLocaleLowerCase().includes(normalizedQuery))
+    : TERMINAL_PRESET_ICON_OPTIONS;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const currentOptions = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+  useEffect(() => setPage(0), [query]);
+
+  return React.createElement('div', { className: 'terminal-profile-icon-picker' },
+    React.createElement('button', {
+      type: 'button',
+      className: 'terminal-profile-icon-trigger',
+      'aria-expanded': open,
+      'aria-controls': 'terminal-preset-icon-catalog',
+      onClick: () => setOpen((visible) => !visible),
+    },
+    React.createElement(SelectedIcon, { size: 18, 'aria-hidden': true }),
+    React.createElement('span', null, selected.label),
+    React.createElement('span', { className: 'terminal-profile-icon-trigger-meta' }, 'Choose icon'),
+    React.createElement(ChevronDown, { size: 16, 'aria-hidden': true }),
+    ),
+    open && React.createElement('div', { id: 'terminal-preset-icon-catalog', className: 'terminal-profile-icon-catalog' },
+      React.createElement('div', { className: 'terminal-profile-icon-catalog-toolbar' },
+        React.createElement('input', {
+          type: 'search', value: query, placeholder: `Search ${TERMINAL_PRESET_ICON_OPTIONS.length} Lucide icons…`,
+          'aria-label': 'Search Lucide icons', autoComplete: 'off',
+          onChange: (event) => setQuery(event.target.value),
+        }),
+        React.createElement('span', { className: 'terminal-profile-icon-result-count' }, `${filtered.length} icons`),
+      ),
+      currentOptions.length > 0
+        ? React.createElement('div', { className: 'terminal-profile-icon-grid', role: 'group', 'aria-label': 'Lucide icon results' }, currentOptions.map((option) => {
+          const Icon = option.icon;
+          const isSelected = value === option.id;
+          return React.createElement('button', {
+            key: option.id,
+            type: 'button',
+            className: `terminal-profile-icon-option${isSelected ? ' selected' : ''}`,
+            title: option.label,
+            'aria-label': option.label,
+            'aria-pressed': isSelected,
+            onClick: () => { onChange(option.id); setOpen(false); },
+          },
+          React.createElement(Icon, { size: 28, 'aria-hidden': true }),
+          React.createElement('span', null, option.label),
+          );
+        }))
+        : React.createElement('p', { className: 'terminal-profile-icon-empty' }, 'No Lucide icons match this search.'),
+      React.createElement('div', { className: 'terminal-profile-icon-pagination' },
+        React.createElement('button', {
+          type: 'button', disabled: currentPage === 0,
+          'aria-label': 'Previous icon page', onClick: () => setPage((current) => Math.max(0, current - 1)),
+        }, React.createElement(ArrowLeft, { size: 16, 'aria-hidden': true })),
+        React.createElement('label', null,
+          React.createElement('span', null, 'Page'),
+          React.createElement('input', {
+            type: 'number', min: 1, max: pageCount, value: currentPage + 1, 'aria-label': 'Icon page number',
+            onChange: (event) => {
+              const requested = Number(event.target.value);
+              if (Number.isFinite(requested)) setPage(Math.min(pageCount - 1, Math.max(0, Math.floor(requested) - 1)));
+            },
+          }),
+          React.createElement('span', null, `of ${pageCount}`),
+        ),
+        React.createElement('button', {
+          type: 'button', disabled: currentPage === pageCount - 1,
+          'aria-label': 'Next icon page', onClick: () => setPage((current) => Math.min(pageCount - 1, current + 1)),
+        }, React.createElement(ArrowRight, { size: 16, 'aria-hidden': true })),
+      ),
+    ),
+  );
+}
+
+function TerminalPresetEditor() {
+  const [config, setConfig] = useState(() => loadConfig());
+  const [editingProfileId, setEditingProfileId] = useState(null);
+  const [draft, setDraft] = useState(blankTerminalPresetDraft);
+  const [status, setStatus] = useState({ message: '', isError: false });
+  const [draggedId, setDraggedId] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null);
+
+  useEffect(() => {
+    const syncConfig = () => setConfig(loadConfig());
+    window.addEventListener(WORKSPACE_CHANGED_EVENT, syncConfig);
+    return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, syncConfig);
+  }, []);
+
+  const profiles = getTerminalProfiles(config);
+  const updateDraft = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
+  const resetDraft = () => {
+    setEditingProfileId(null);
+    setDraft(blankTerminalPresetDraft());
   };
-  const render = () => {
-    list.replaceChildren();
-    const config = loadConfig();
-    for (const profile of getTerminalProfiles(config)) {
-      const item = document.createElement('div');
-      item.className = 'terminal-profile-item';
-      const details = document.createElement('div');
-      const name = document.createElement('span');
-      name.className = 'terminal-profile-name';
-      name.textContent = profile.name;
-      const meta = document.createElement('span');
-      meta.className = 'terminal-profile-meta';
-      meta.textContent = `${terminalCommand(profile)} · ${profile.type}${profile.id === 'hush' ? ' · shell defaults' : ''}`;
-      details.append(name, meta);
-      const actions = document.createElement('div');
-      actions.className = 'terminal-profile-actions';
-      const useDefault = document.createElement('button');
-      useDefault.type = 'button';
-      useDefault.textContent = config.defaultTerminalProfileId === profile.id ? 'Default' : 'Set default';
-      useDefault.disabled = config.defaultTerminalProfileId === profile.id;
-      useDefault.addEventListener('click', () => {
-        saveTerminalProfiles(config.terminalProfiles, profile.id);
-        setStatus(`${profile.name} is now the default terminal.`);
-      });
-      actions.appendChild(useDefault);
-      const edit = document.createElement('button');
-      edit.type = 'button';
-      edit.textContent = 'Edit';
-      edit.addEventListener('click', () => {
-        editingProfileId = profile.id;
-        nameEl.value = profile.name;
-        iconEl.value = profile.icon;
-        programEl.value = profile.program;
-        argsEl.value = profile.args;
-        typeEl.value = profile.type;
-        wdEl.value = profile.wd;
-        envEl.value = profile.env;
-        addButton.textContent = 'Save terminal preset';
-        cancelButton.hidden = false;
-        setStatus(`Editing ${profile.name}.`);
-        nameEl.focus();
-      });
-      actions.appendChild(edit);
-      if (!profile.builtin) {
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.textContent = 'Remove';
-        remove.addEventListener('click', () => {
-          if (editingProfileId === profile.id) resetFields();
-          const profiles = config.terminalProfiles.filter((item) => item.id !== profile.id);
-          saveTerminalProfiles(profiles, config.defaultTerminalProfileId === profile.id ? 'hush' : config.defaultTerminalProfileId);
-          setStatus(`Removed ${profile.name}.`);
-        });
-        actions.appendChild(remove);
-      }
-      item.append(details, actions);
-      list.appendChild(item);
-    }
+  const editProfile = (profile) => {
+    setEditingProfileId(profile.id);
+    setDraft({
+      name: profile.name,
+      icon: profile.icon,
+      program: profile.program,
+      args: profile.args,
+      type: profile.type,
+      wd: profile.wd,
+      env: profile.env,
+    });
+    setStatus({ message: `Editing ${profile.name}.`, isError: false });
   };
-  const resetFields = () => {
-    editingProfileId = null;
-    nameEl.value = '';
-    iconEl.value = 'terminal';
-    programEl.value = '';
-    argsEl.value = '';
-    typeEl.value = 'gojs';
-    wdEl.value = '';
-    envEl.value = '';
-    addButton.textContent = 'Add terminal preset';
-    cancelButton.hidden = true;
+  const saveOrder = (nextOrder) => {
+    saveTerminalProfiles(config.terminalProfiles, config.defaultTerminalProfileId, nextOrder);
   };
-  addButton.addEventListener('click', () => {
+  const move = (profileId, direction) => {
+    const nextOrder = profiles.map((profile) => profile.id);
+    const index = nextOrder.indexOf(profileId);
+    const target = index + direction;
+    if (target < 0 || target >= nextOrder.length) return;
+    [nextOrder[index], nextOrder[target]] = [nextOrder[target], nextOrder[index]];
+    saveOrder(nextOrder);
+  };
+  const drop = (targetId, placeAfter) => {
+    if (!draggedId || draggedId === targetId) return;
+    const nextOrder = profiles.map((profile) => profile.id).filter((id) => id !== draggedId);
+    const targetIndex = nextOrder.indexOf(targetId);
+    nextOrder.splice(targetIndex + (placeAfter ? 1 : 0), 0, draggedId);
+    saveOrder(nextOrder);
+    setDraggedId(null);
+    setDropTarget(null);
+  };
+  const saveDraft = () => {
     try {
-      const profile = normalizeTerminalProfile({
-        id: editingProfileId || undefined,
-        name: nameEl.value,
-        icon: iconEl.value,
-        program: programEl.value,
-        args: argsEl.value,
-        type: typeEl.value,
-        wd: wdEl.value,
-        env: envEl.value,
-      });
+      const profile = normalizeTerminalProfile({ ...draft, id: editingProfileId || undefined });
       if (!profile.program) throw new Error('A program is required.');
-      const config = loadConfig();
-      if (getTerminalProfiles(config).some((item) =>
-        item.id !== editingProfileId && item.name.toLocaleLowerCase() === profile.name.toLocaleLowerCase()
-      )) {
+      if (profiles.some((item) => item.id !== editingProfileId && item.name.toLocaleLowerCase() === profile.name.toLocaleLowerCase())) {
         throw new Error('A terminal preset with this name already exists.');
       }
-      const hasExistingProfile = config.terminalProfiles.some((item) => item.id === editingProfileId);
-      const profiles = editingProfileId
-        ? hasExistingProfile
-          ? config.terminalProfiles.map((item) => item.id === editingProfileId ? profile : item)
-          : [...config.terminalProfiles, profile]
+      const existing = config.terminalProfiles.some((item) => item.id === editingProfileId);
+      const nextProfiles = editingProfileId && existing
+        ? config.terminalProfiles.map((item) => item.id === editingProfileId ? profile : item)
         : [...config.terminalProfiles, profile];
-      const action = editingProfileId ? 'Updated' : 'Added';
-      saveTerminalProfiles(profiles, config.defaultTerminalProfileId);
-      setStatus(`${action} ${profile.name}.`);
-      resetFields();
+      const nextOrder = normalizeTerminalProfileOrder(config.terminalProfileOrder, nextProfiles);
+      saveTerminalProfiles(nextProfiles, config.defaultTerminalProfileId, nextOrder);
+      setStatus({ message: `${editingProfileId ? 'Updated' : 'Added'} ${profile.name}.`, isError: false });
+      resetDraft();
     } catch (error) {
-      setStatus(error.message || 'Unable to add terminal preset.', true);
+      setStatus({ message: error.message || 'Unable to save the terminal preset.', isError: true });
     }
-  });
-  cancelButton.addEventListener('click', () => {
-    resetFields();
-    setStatus('Edit cancelled.');
-  });
-  window.addEventListener(WORKSPACE_CHANGED_EVENT, render);
-  render();
-  return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, render);
+  };
+  const removeProfile = (profile) => {
+    const nextProfiles = config.terminalProfiles.filter((item) => item.id !== profile.id);
+    const nextOrder = config.terminalProfileOrder.filter((id) => id !== profile.id);
+    saveTerminalProfiles(nextProfiles, config.defaultTerminalProfileId === profile.id ? 'hush' : config.defaultTerminalProfileId, nextOrder);
+    if (editingProfileId === profile.id) resetDraft();
+    setStatus({ message: `Removed ${profile.name}.`, isError: false });
+  };
+
+  const renderProfile = (profile, index) => {
+    const Icon = getTerminalPresetIcon(profile);
+    const isDefault = config.defaultTerminalProfileId === profile.id;
+    const isDropTarget = dropTarget?.id === profile.id;
+    return React.createElement('div', {
+      key: profile.id,
+      className: [
+        'terminal-profile-item',
+        draggedId === profile.id && 'dragging',
+        isDropTarget && (dropTarget.after ? 'drop-after' : 'drop-before'),
+      ].filter(Boolean).join(' '),
+      draggable: true,
+      onDragStart: (event) => {
+        setDraggedId(profile.id);
+        event.dataTransfer?.setData('text/plain', profile.id);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+      },
+      onDragEnd: () => {
+        setDraggedId(null);
+        setDropTarget(null);
+      },
+      onDragOver: (event) => {
+        if (!draggedId || draggedId === profile.id) return;
+        event.preventDefault();
+        const bounds = event.currentTarget.getBoundingClientRect();
+        setDropTarget({ id: profile.id, after: event.clientY > bounds.top + bounds.height / 2 });
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      },
+      onDrop: (event) => {
+        event.preventDefault();
+        const bounds = event.currentTarget.getBoundingClientRect();
+        drop(profile.id, event.clientY > bounds.top + bounds.height / 2);
+      },
+    },
+    React.createElement(GripVertical, { className: 'terminal-profile-handle', size: 16, 'aria-hidden': true }),
+    React.createElement(Icon, { className: 'terminal-profile-icon', size: 17, 'aria-hidden': true }),
+    React.createElement('div', { className: 'terminal-profile-details' },
+      React.createElement('span', { className: 'terminal-profile-name' }, profile.name),
+      React.createElement('span', { className: 'terminal-profile-meta' }, `${terminalCommand(profile)} · ${profile.type}${profile.id === 'hush' ? ' · shell defaults' : ''}`),
+    ),
+    React.createElement('div', { className: 'terminal-profile-actions' },
+      React.createElement('button', {
+        type: 'button',
+        className: isDefault ? 'is-default' : '',
+        title: isDefault ? `${profile.name} is the default` : `Make ${profile.name} the default`,
+        'aria-label': isDefault ? `${profile.name} is the default` : `Make ${profile.name} the default`,
+        disabled: isDefault,
+        onClick: () => {
+          saveTerminalProfiles(config.terminalProfiles, profile.id, config.terminalProfileOrder);
+          setStatus({ message: `${profile.name} is now the default terminal.`, isError: false });
+        },
+      }, React.createElement(Check, { size: 15, 'aria-hidden': true })),
+      React.createElement('button', {
+        type: 'button', title: `Edit ${profile.name}`, 'aria-label': `Edit ${profile.name}`,
+        onClick: () => editProfile(profile),
+      }, React.createElement(Pencil, { size: 15, 'aria-hidden': true })),
+      React.createElement('button', {
+        type: 'button', title: `Move ${profile.name} up`, 'aria-label': `Move ${profile.name} up`,
+        disabled: index === 0, onClick: () => move(profile.id, -1),
+      }, React.createElement(ArrowUp, { size: 15, 'aria-hidden': true })),
+      React.createElement('button', {
+        type: 'button', title: `Move ${profile.name} down`, 'aria-label': `Move ${profile.name} down`,
+        disabled: index === profiles.length - 1, onClick: () => move(profile.id, 1),
+      }, React.createElement(ArrowDown, { size: 15, 'aria-hidden': true })),
+      !profile.builtin && React.createElement('button', {
+        type: 'button', title: `Remove ${profile.name}`, 'aria-label': `Remove ${profile.name}`,
+        onClick: () => removeProfile(profile),
+      }, React.createElement(Trash2, { size: 15, 'aria-hidden': true })),
+    ));
+  };
+
+  return React.createElement(React.Fragment, null,
+    React.createElement('p', { className: 'hint' }, 'Drag presets to reorder Terminal menus. Choose an icon from the GearShell Lucide set, then add a command with its startup arguments.'),
+    React.createElement('div', { className: 'terminal-profile-list', 'aria-label': 'Terminal preset order' }, profiles.map(renderProfile)),
+    React.createElement('div', { className: 'terminal-profile-fields' },
+      React.createElement('label', { htmlFor: 'terminal-profile-name' }, 'Name'),
+      React.createElement('input', { id: 'terminal-profile-name', value: draft.name, placeholder: 'My tool', onChange: (event) => updateDraft('name', event.target.value) }),
+      React.createElement('div', { className: 'terminal-profile-icon-label' }, 'Icon'),
+      React.createElement(TerminalPresetIconPicker, { value: draft.icon, onChange: (icon) => updateDraft('icon', icon) }),
+      React.createElement('label', { htmlFor: 'terminal-profile-program' }, 'Program'),
+      React.createElement('input', { id: 'terminal-profile-program', value: draft.program, placeholder: 'crush', spellCheck: false, onChange: (event) => updateDraft('program', event.target.value) }),
+      React.createElement('label', { htmlFor: 'terminal-profile-args' }, 'Startup arguments'),
+      React.createElement('input', { id: 'terminal-profile-args', value: draft.args, placeholder: '--help', spellCheck: false, onChange: (event) => updateDraft('args', event.target.value) }),
+      React.createElement('label', { htmlFor: 'terminal-profile-type' }, 'Runtime'),
+      React.createElement('select', { id: 'terminal-profile-type', value: draft.type, onChange: (event) => updateDraft('type', event.target.value) },
+        React.createElement('option', { value: 'gojs' }, 'Go + JavaScript'),
+        React.createElement('option', { value: 'wasi' }, 'WASI'),
+        React.createElement('option', { value: 'js' }, 'JavaScript'),
+        React.createElement('option', { value: 'auto' }, 'Auto'),
+      ),
+      React.createElement('label', { htmlFor: 'terminal-profile-wd' }, 'Working directory'),
+      React.createElement('input', { id: 'terminal-profile-wd', value: draft.wd, placeholder: '.', onChange: (event) => updateDraft('wd', event.target.value) }),
+      React.createElement('label', { htmlFor: 'terminal-profile-env' }, 'Environment variables'),
+      React.createElement('textarea', { id: 'terminal-profile-env', value: draft.env, placeholder: 'KEY=value', spellCheck: false, onChange: (event) => updateDraft('env', event.target.value) }),
+    ),
+    React.createElement('div', { className: 'workspace-actions' },
+      React.createElement('button', { type: 'button', onClick: saveDraft }, editingProfileId ? 'Save terminal preset' : 'Add terminal preset'),
+      editingProfileId && React.createElement('button', { type: 'button', onClick: () => { resetDraft(); setStatus({ message: 'Edit cancelled.', isError: false }); } }, 'Cancel edit'),
+    ),
+    React.createElement('div', { className: 'hint terminal-profile-status', role: 'status', 'aria-live': 'polite', 'data-error': status.isError || undefined }, status.message),
+  );
 }
 
 function setupPresetLibrary(settingsContent) {
