@@ -76,7 +76,7 @@ const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = {
   cmd: DEFAULT_CMD,
   env: '',
-  startupPanels: [],
+  startupPanels: ['home'],
   restoreTabs: false,
   workbenchAssetsUrl: DEFAULT_WORKBENCH_ASSETS_URL,
   vmBackendUrl: DEFAULT_VM_BACKEND_URL,
