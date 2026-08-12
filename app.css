@@ -101,10 +101,6 @@ wanix-term { flex: 1; min-width: 0; }
 .home-content .reveal ul li::before { content: "\2192 "; color: #58a6ff; }
 .home-content .reveal .controls { color: #8b949e; }
 .home-content .reveal .progress { color: #58a6ff; height: 3px; }
-.settings-panel { overflow: auto; padding: 24px; background: #0d1117; }
-.settings-content { width: min(680px, 100%); margin: 0 auto; }
-.settings-content h1 { margin: 0 0 18px; color: #c9d1d9; font-size: 20px; font-weight: 600; }
-.settings-lede { margin: -8px 0 18px; color: #8b949e; font-size: 13px; }
 .workspace-form { margin: 0 0 14px; border: 1px solid #30363d; border-radius: 4px; }
 .workspace-form summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; color: #c9d1d9; font-size: 13px; user-select: none; list-style: none; }
 .workspace-form summary::-webkit-details-marker { display: none; }

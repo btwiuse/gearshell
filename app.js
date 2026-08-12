@@ -5,6 +5,7 @@ import { Activity, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookOpen,
 import WebPet from './web-pet/index.js';
 import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner } from './crush-runner.js?v=20260812.18';
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
+import { addSettingsPanel, SettingsPanel, initSettings } from './settings.js?v=20260812.22';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -3366,20 +3367,6 @@ function addDeckPanel(api, group) {
   return panel;
 }
 
-function addSettingsPanel(api, group) {
-  const id = ++settingsIdCounter;
-  const panel = api.addPanel({
-    id: `settings-${id}`,
-    component: 'settings',
-    params: { settingsId: id, panelType: 'settings' },
-    title: 'Settings',
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'settings' });
-  panel.api.setActive();
-  return panel;
-}
-
 function addFilesPanel(api, group) {
   const id = ++filesIdCounter;
   const panel = api.addPanel({
@@ -3657,38 +3644,6 @@ function DeckPanel({ api }) {
       homeContent.remove();
     };
   }, [api]);
-
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
-function SettingsPanel({ containerApi }) {
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    const template = document.getElementById('settings-template');
-    const settingsContent = template?.content.firstElementChild?.cloneNode(true);
-    if (!wrapper || !settingsContent) return;
-
-    wrapper.appendChild(settingsContent);
-    const disposeConfigForm = setupConfigForm(settingsContent);
-    const disposeTerminalProfileForm = setupTerminalProfileForm(settingsContent);
-    const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
-    const disposePresetLibrary = setupPresetLibrary(settingsContent);
-    const disposeSystemForm = setupSystemForm(settingsContent);
-    const disposeBindForm = setupBindForm(settingsContent);
-    const disposeTaskForm = setupTaskForm(settingsContent, containerApi);
-    return () => {
-      disposeConfigForm?.();
-      disposeTerminalProfileForm?.();
-      disposeWorkspaceForm?.();
-      disposePresetLibrary?.();
-      disposeSystemForm?.();
-      disposeBindForm?.();
-      disposeTaskForm?.();
-      settingsContent.remove();
-    };
-  }, []);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
 }
@@ -4524,6 +4479,22 @@ if (rootEl) {
   const root = createRoot(rootEl);
   root.render(React.createElement(App));
 }
+
+// Initialise the Settings submodule with the helpers it needs at
+// runtime. Done at the bottom of the module so every helper defined
+// above is available as a dependency. The shell calls the setup*Form
+// helpers that wire each <details> section; those helpers migrate into
+// settings.js in follow-up commits and stop being passed as deps.
+initSettings({
+  rememberOpenPanel,
+  setupConfigForm,
+  setupTerminalProfileForm,
+  setupWorkspaceForm,
+  setupPresetLibrary,
+  setupSystemForm,
+  setupBindForm,
+  setupTaskForm,
+});
 
 // Initialise the Home submodule with the helpers it needs at runtime.
 // Done at the bottom of the module so every helper defined above is

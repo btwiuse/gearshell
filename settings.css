@@ -1,0 +1,15 @@
+/* === Settings (workspace configuration page) ===
+ *
+ * Shell styles for the `settings` dockview panel. The actual form
+ * rules for each `<details>` section (workspace form, preset library,
+ * runtime / system / bind / task forms, terminal preset editor, etc.)
+ * are split alongside their respective setup*Form helpers in
+ * follow-up commits.
+ *
+ * Split out of app.css so this feature can ship its own stylesheet
+ * alongside settings.js without bloating the main bundle.
+ */
+.settings-panel { overflow: auto; padding: 24px; background: #0d1117; }
+.settings-content { width: min(680px, 100%); margin: 0 auto; }
+.settings-content h1 { margin: 0 0 18px; color: #c9d1d9; font-size: 20px; font-weight: 600; }
+.settings-lede { margin: -8px 0 18px; color: #8b949e; font-size: 13px; }
