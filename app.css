@@ -162,6 +162,8 @@ wanix-term { flex: 1; min-width: 0; }
 .mkt-foot-links { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin-top: 36px; font-size: 14px; color: #8b949e; }
 .mkt-foot-links a { color: #8b949e; }
 .mkt-foot-links a:hover { color: #58a6ff; text-decoration: none; }
+
+
 @media (max-width: 720px) {
   .mkt-nav-links { display: none; }
   .mkt-features { grid-template-columns: 1fr; }

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
 import { Activity, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookOpen, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Github, Globe2, GripVertical, House, Layers, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X, Zap, icons as LucideIcons } from 'lucide-react';
 import WebPet from './web-pet/index.js';
+import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner } from './crush-runner.js?v=20260812.18';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -71,7 +72,7 @@ const DEFAULT_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-
 const REDUNDANT_WISP_VM_BACKEND_URL = 'https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz';
 const DEFAULT_VM_LINUX_URL = 'https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz';
 const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = ['deck', 'codigo', 'crush', 'rickroll'];
-const DEFAULT_LAUNCHER_ITEM_ORDER = ['terminal', 'home', 'deck', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'bonsai', 'codigo', 'crush', 'rickroll'];
+const DEFAULT_LAUNCHER_ITEM_ORDER = ['terminal', 'home', 'deck', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'bonsai', 'codigo', 'crush', 'crush-runner', 'rickroll'];
 const CONFIG_KEY = 'gear-shell-config';
 const DEFAULT_CONFIG = {
   cmd: DEFAULT_CMD,
@@ -100,7 +101,7 @@ const SUPPORTED_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_SYSTEM_BIND_TYPES = ['ns', 'file', 'fetch', 'archive', 'import'];
 const SUPPORTED_UNION_MODES = ['after', 'before'];
 const SUPPORTED_TASK_TYPES = ['auto', 'gojs', 'wasi', 'js'];
-const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'bonsai', 'codigo', 'crush', 'rickroll'];
+const STARTUP_PANEL_TYPES = ['home', 'deck', 'terminal', 'workbench', 'vm', 'settings', 'files', 'runtime', 'group', 'browser', 'bonsai', 'codigo', 'crush', 'crush-runner', 'rickroll'];
 const LAUNCHER_COLLAPSIBLE_PANEL_TYPES = STARTUP_PANEL_TYPES;
 function lucideIconId(name) {
   return name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/([A-Z])([A-Z][a-z])/g, '$1-$2').replace(/([a-zA-Z])(\d+)/g, '$1-$2').toLowerCase();
@@ -1521,6 +1522,30 @@ function attachOverlayTerminalSession(session, anchor, api) {
   };
   const observer = new ResizeObserver(scheduleUpdate);
   observer.observe(anchor);
+  // The overlay wrapper is positioned inside the shared terminal-layer using
+  // the anchor's viewport coordinates. Anything that scrolls between the
+  // anchor and the layer shifts the anchor without firing ResizeObserver,
+  // so without these listeners the overlay detaches whenever a panel
+  // scrolls. Walk up the tree and subscribe to every scrollable ancestor
+  // plus the window so both panel-internal and page-level scrolling are
+  // covered.
+  const scrollListeners = [];
+  const trackScrollParent = (parent) => {
+    if (!parent || parent === session.wrapper) return;
+    const style = getComputedStyle(parent);
+    const overflows = [style.overflow, style.overflowX, style.overflowY];
+    if (overflows.some((value) => value === 'auto' || value === 'scroll' || value === 'overlay')) {
+      parent.addEventListener('scroll', scheduleUpdate, { passive: true });
+      scrollListeners.push(parent);
+    }
+  };
+  let scrollParent = anchor.parentElement;
+  while (scrollParent) {
+    trackScrollParent(scrollParent);
+    scrollParent = scrollParent.parentElement;
+  }
+  window.addEventListener('scroll', scheduleUpdate, { passive: true });
+  scrollListeners.push(window);
   const focusFromTerminalInteraction = () => {
     if (!api.isActive) {
       api.setActive();
@@ -1554,6 +1579,9 @@ function attachOverlayTerminalSession(session, anchor, api) {
     session.wrapper.removeEventListener('pointerdown', focusFromTerminalInteraction);
     session.wrapper.removeEventListener('touchstart', focusFromTerminalInteraction);
     for (const subscription of subscriptions) subscription.dispose();
+    for (const target of scrollListeners) {
+      target.removeEventListener('scroll', scheduleUpdate);
+    }
     if (session.anchor === anchor) {
       session.anchor = null;
       layoutTerminalSession(session, null, false);
@@ -1783,6 +1811,9 @@ function attachIframeSession(id, params, anchor, api) {
     observer.disconnect();
     if (updateFrame) cancelAnimationFrame(updateFrame);
     for (const subscription of subscriptions) subscription.dispose();
+    for (const target of scrollListeners) {
+      target.removeEventListener('scroll', scheduleUpdate);
+    }
     if (session.anchor === anchor) {
       session.anchor = null;
       layoutIframeSession(session, null, false);
@@ -1819,6 +1850,9 @@ function createOverlayAttachment(session, anchor, api) {
     observer.disconnect();
     if (updateFrame) cancelAnimationFrame(updateFrame);
     for (const subscription of subscriptions) subscription.dispose();
+    for (const target of scrollListeners) {
+      target.removeEventListener('scroll', scheduleUpdate);
+    }
     if (session.anchor === anchor) {
       session.anchor = null;
       layoutIframeSession(session, null, false);
@@ -1983,7 +2017,7 @@ let slidesMarkdownPromise = null;
 
 function loadSlidesMarkdown() {
   if (!slidesMarkdownPromise) {
-    slidesMarkdownPromise = fetch('slides.md').then(async (response) => {
+    slidesMarkdownPromise = fetch('slides.md?v=20260725.1').then(async (response) => {
       if (!response.ok) throw new Error(`Unable to load slides.md (${response.status})`);
       return response.text();
     });
@@ -3521,6 +3555,7 @@ const PANEL_CREATION_OPTIONS = [
   { component: 'bonsai', label: 'Bonsai 27B', icon: TreePine },
   { component: 'codigo', label: 'Codigo', icon: Code2 },
   { component: 'crush', label: 'Crush', icon: Bot },
+  { component: 'crush-runner', label: 'Crush Runner', icon: Rocket },
   { component: 'rickroll', label: 'Rick Roll', icon: Music2 },
 ];
 
@@ -3540,6 +3575,7 @@ function addPanelByComponent(api, component, group) {
   if (component === 'files') return addFilesPanel(api, group);
   if (component === 'runtime') return addRuntimePanel(api, group);
   if (component === 'group') return addGroupPanel(api, group);
+  if (component === 'crush-runner') return addCrushRunnerPanel(api, group);  // imported from ./crush-runner.js
   if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
   return addLandingPanel(api, group);
 }
@@ -4771,6 +4807,7 @@ function App() {
         terminal: TerminalPanel,
         group: GroupPanel,
         iframe: IframePanel,
+        'crush-runner': CrushRunnerPanel,  // from ./crush-runner.js
       },
       defaultTabComponent: PanelTab,
       rightHeaderActionsComponent: AddTerminalButton,
@@ -4785,3 +4822,26 @@ if (rootEl) {
   const root = createRoot(rootEl);
   root.render(React.createElement(App));
 }
+
+// Initialise the CrushRunner submodule with the helpers it needs at
+// runtime. Done at the bottom of the module so every helper defined
+// above is available as a dependency.
+initCrushRunner({
+  HOME,
+  WANIX,
+  createTerminalSession,
+  attachOverlayTerminalSession,
+  destroyTerminalSession,
+  addTerminalPanel,
+  waitForWanixSystem,
+  getWanixRoot,
+  buildEnv,
+  getTerminalProfiles,
+  loadConfig,
+  saveTerminalProfiles,
+  normalizeTerminalProfile,
+  normalizeTerminalProfileOrder,
+  TerminalPresetIconPicker,
+  WORKSPACE_CHANGED_EVENT,
+  rememberOpenPanel,
+});
