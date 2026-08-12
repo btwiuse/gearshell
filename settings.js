@@ -302,9 +302,9 @@ function SettingsPanel({ containerApi }) {
 
     const disposeConfigForm = setupConfigForm(settingsContent);
     const disposeTerminalProfileForm = settingsDep('setupTerminalProfileForm')(settingsContent);
-    const disposeWorkspaceForm = settingsDep('setupWorkspaceForm')(settingsContent);
-    const disposePresetLibrary = settingsDep('setupPresetLibrary')(settingsContent);
-    const disposeSystemForm = settingsDep('setupSystemForm')(settingsContent);
+    const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
+    const disposePresetLibrary = setupPresetLibrary(settingsContent);
+    const disposeSystemForm = setupSystemForm(settingsContent);
     const disposeBindForm = settingsDep('setupBindForm')(settingsContent);
     const disposeTaskForm = settingsDep('setupTaskForm')(settingsContent, containerApi);
     return () => {
@@ -565,6 +565,457 @@ function LauncherOrderEditor() {
     renderSection('Visible', visible, false),
     renderSection('Collapsed', collapsed, true),
   );
+}
+
+
+// === Workspace / Preset / System forms ===
+// `setupPresetLibrary`, `setupWorkspaceForm`, and `setupSystemForm`
+// wire the Workspace / Preset library / Runtime & system <details>
+// blocks. All app.js globals they touch (the workspace store + system
+// bind helpers, the workspace-changed event name, the Wanix runtime
+// constant) are passed via the dep shim so these helpers stay loosely
+// coupled to the rest of the shell.
+
+function setupPresetLibrary(settingsContent) {
+  const list = settingsContent.querySelector('[data-preset-library-list]');
+  const nameEl = settingsContent.querySelector('[data-preset-library="name"]');
+  const descriptionEl = settingsContent.querySelector('[data-preset-library="description"]');
+  const status = settingsContent.querySelector('[data-preset-library="status"]');
+  const saveButton = settingsContent.querySelector('[data-preset-library-action="save"]');
+  const updateButton = settingsContent.querySelector('[data-preset-library-action="update"]');
+  const cancelButton = settingsContent.querySelector('[data-preset-library-action="cancel"]');
+  if (!list || !nameEl || !descriptionEl || !status || !saveButton || !updateButton || !cancelButton) return;
+
+  let editingPresetId = null;
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const resetFields = () => {
+    editingPresetId = null;
+    const workspace = settingsDep("loadActiveWorkspace")();
+    nameEl.value = settingsDep("uniqueWorkspacePresetName")(`${workspace.name} preset`);
+    descriptionEl.value = workspace.description || '';
+    saveButton.textContent = 'Save current workspace as preset';
+    updateButton.hidden = true;
+    cancelButton.hidden = true;
+  };
+  const startEditing = (preset) => {
+    editingPresetId = preset.id;
+    nameEl.value = preset.name;
+    descriptionEl.value = preset.description;
+    saveButton.textContent = 'Save preset details';
+    updateButton.hidden = false;
+    cancelButton.hidden = false;
+    setStatus(`Editing ${preset.name}.`);
+    nameEl.focus();
+  };
+  const render = () => {
+    list.replaceChildren();
+    const presets = settingsDep("listWorkspacePresets")().filter((preset) => !preset.builtin);
+    if (presets.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'hint';
+      empty.textContent = 'No custom presets yet.';
+      list.appendChild(empty);
+      return;
+    }
+    for (const preset of presets) {
+      const item = document.createElement('div');
+      item.className = 'preset-library-item';
+      const details = document.createElement('div');
+      const name = document.createElement('span');
+      name.className = 'preset-library-name';
+      name.textContent = preset.name;
+      const meta = document.createElement('span');
+      meta.className = 'preset-library-meta';
+      meta.textContent = preset.description || 'Reusable workspace snapshot';
+      details.append(name, meta);
+      const actions = document.createElement('div');
+      actions.className = 'preset-library-actions';
+      const create = document.createElement('button');
+      create.type = 'button';
+      create.textContent = 'Create';
+      create.addEventListener('click', () => {
+        const workspace = settingsDep("createWorkspaceFromPreset")(preset.id);
+        if (workspace) setStatus(`Created ${workspace.name} from ${preset.name}.`);
+        else setStatus('Unable to create a workspace from this preset.', true);
+      });
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', () => {
+        const current = settingsDep("loadCustomWorkspacePreset")(preset.id);
+        if (current) startEditing(current);
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => {
+        if (!window.confirm(`Remove preset ${preset.name}? Existing workspaces will not be affected.`)) return;
+        if (editingPresetId === preset.id) resetFields();
+        if (settingsDep("removeCustomWorkspacePreset")(preset.id)) setStatus(`Removed ${preset.name}.`);
+        else setStatus('Unable to remove the preset.', true);
+      });
+      actions.append(create, edit, remove);
+      item.append(details, actions);
+      list.appendChild(item);
+    }
+  };
+
+  saveButton.addEventListener('click', () => {
+    try {
+      const preset = settingsDep("saveCustomWorkspacePreset")(editingPresetId, {
+        name: nameEl.value,
+        description: descriptionEl.value,
+        workspace: editingPresetId ? undefined : settingsDep("loadActiveWorkspace")(),
+      });
+      const message = editingPresetId ? `Saved details for ${preset.name}.` : `Saved ${preset.name}.`;
+      resetFields();
+      setStatus(message);
+    } catch (error) {
+      setStatus(error.message || 'Unable to save the preset.', true);
+    }
+  });
+  updateButton.addEventListener('click', () => {
+    try {
+      const preset = settingsDep("saveCustomWorkspacePreset")(editingPresetId, {
+        name: nameEl.value,
+        description: descriptionEl.value,
+        workspace: settingsDep("loadActiveWorkspace")(),
+      });
+      setStatus(`Updated ${preset.name} from the current workspace.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to update the preset.', true);
+    }
+  });
+  cancelButton.addEventListener('click', () => {
+    resetFields();
+    setStatus('Edit cancelled.');
+  });
+
+  window.addEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
+  resetFields();
+  render();
+  return () => window.removeEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
+}
+
+function setupWorkspaceForm(settingsContent) {
+  const activeSelect = settingsContent.querySelector('[data-workspace="active"]');
+  const nameInput = settingsContent.querySelector('[data-workspace="name"]');
+  const presetSelect = settingsContent.querySelector('[data-workspace="preset"]');
+  const status = settingsContent.querySelector('[data-workspace="status"]');
+  const jsonEl = settingsContent.querySelector('[data-workspace="json"]');
+  const jsonStatus = settingsContent.querySelector('[data-workspace="json-status"]');
+  const jsonFileInput = settingsContent.querySelector('[data-workspace="json-file"]');
+  const deleteButton = settingsContent.querySelector('[data-workspace-action="delete"]');
+  if (!activeSelect || !nameInput || !presetSelect || !status || !jsonEl || !jsonStatus || !jsonFileInput) return;
+
+  let jsonDirty = false;
+  let jsonWorkspaceId = null;
+
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const setJsonStatus = (message, isError = false) => {
+    jsonStatus.textContent = message;
+    jsonStatus.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const validateJson = () => {
+    try {
+      const workspace = settingsDep("parseWorkspaceJson")(jsonEl.value);
+      setJsonStatus(`${workspace.name} · v${workspace.version} · ${workspace.system.binds.length} system mounts · ${workspace.binds.length} mounts · ${workspace.tasks.length} tasks`);
+      return workspace;
+    } catch (error) {
+      setJsonStatus(error.message || 'Workspace JSON is invalid.', true);
+      return null;
+    }
+  };
+  const loadCurrentJson = () => {
+    const workspace = settingsDep("loadActiveWorkspace")();
+    jsonEl.value = JSON.stringify(workspace, null, 2);
+    jsonWorkspaceId = workspace.id;
+    jsonDirty = false;
+    validateJson();
+  };
+  const addOption = (select, value, label, selected) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.selected = selected;
+    select.appendChild(option);
+  };
+  const render = () => {
+    const activeId = settingsDep("getActiveWorkspaceId")();
+    activeSelect.replaceChildren();
+    for (const workspace of settingsDep("ensureWorkspaceStore")()) {
+      addOption(activeSelect, workspace.id, workspace.name, workspace.id === activeId);
+    }
+    const workspace = settingsDep("loadActiveWorkspace")();
+    nameInput.value = workspace.name;
+    if (!jsonDirty || jsonWorkspaceId !== workspace.id) loadCurrentJson();
+    presetSelect.replaceChildren();
+    for (const preset of settingsDep("listWorkspacePresets")()) {
+      addOption(presetSelect, preset.id, preset.name, preset.id === 'hush-shell');
+    }
+    if (deleteButton) {
+      deleteButton.disabled = activeId === 'hush-shell' || activeSelect.options.length <= 1;
+    }
+  };
+
+  activeSelect.addEventListener('change', () => {
+    if (settingsDep("setActiveWorkspaceId")(activeSelect.value)) setStatus('Workspace selected.');
+    else setStatus('Unable to select this workspace.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="rename"]').addEventListener('click', () => {
+    try {
+      const workspace = settingsDep("renameWorkspace")(settingsDep("getActiveWorkspaceId")(), nameInput.value);
+      setStatus(`Renamed workspace to ${workspace.name}.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to rename workspace.', true);
+    }
+  });
+  settingsContent.querySelector('[data-workspace-action="create"]').addEventListener('click', () => {
+    const workspace = settingsDep("createWorkspaceFromPreset")(presetSelect.value);
+    if (workspace) setStatus(`Created ${workspace.name}.`);
+    else setStatus('Unable to create workspace.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="duplicate"]').addEventListener('click', () => {
+    const workspace = settingsDep("duplicateWorkspace")(settingsDep("getActiveWorkspaceId")());
+    if (workspace) setStatus(`Created ${workspace.name}.`);
+    else setStatus('Unable to duplicate workspace.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="delete"]').addEventListener('click', () => {
+    const workspace = settingsDep("loadActiveWorkspace")();
+    if (!window.confirm(`Delete ${workspace.name}?`)) return;
+    if (settingsDep("deleteWorkspace")(workspace.id)) setStatus(`Deleted ${workspace.name}.`);
+    else setStatus('The default workspace cannot be deleted.', true);
+  });
+  settingsContent.querySelector('[data-workspace-action="json-reset"]').addEventListener('click', () => {
+    loadCurrentJson();
+    setStatus('Loaded the saved workspace JSON.');
+  });
+  settingsContent.querySelector('[data-workspace-action="json-copy"]').addEventListener('click', async () => {
+    if (!validateJson()) return;
+    try {
+      await navigator.clipboard.writeText(jsonEl.value);
+      setStatus('Workspace JSON copied.');
+    } catch {
+      setStatus('Unable to copy. Select the JSON and copy it manually.', true);
+      jsonEl.focus();
+      jsonEl.select();
+    }
+  });
+  settingsContent.querySelector('[data-workspace-action="json-download"]').addEventListener('click', () => {
+    const workspace = validateJson();
+    if (!workspace) return;
+    const blob = new Blob([jsonEl.value], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const download = document.createElement('a');
+    download.href = url;
+    download.download = `${workspace.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'workspace'}.json`;
+    download.click();
+    URL.revokeObjectURL(url);
+    setStatus('Workspace JSON downloaded.');
+  });
+  jsonEl.addEventListener('input', () => {
+    jsonDirty = true;
+    validateJson();
+  });
+  jsonFileInput.addEventListener('change', async () => {
+    const [file] = jsonFileInput.files || [];
+    if (!file) return;
+    try {
+      jsonEl.value = await file.text();
+      jsonDirty = true;
+      const workspace = validateJson();
+      if (workspace) setStatus(`Loaded ${workspace.name}. Review it, then choose how to apply it.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to read workspace JSON.', true);
+    } finally {
+      jsonFileInput.value = '';
+    }
+  });
+  settingsContent.querySelector('[data-workspace-action="json-create"]').addEventListener('click', () => {
+    try {
+      const workspace = settingsDep("importWorkspace")(jsonEl.value);
+      jsonDirty = false;
+      setStatus(`Created ${workspace.name} from JSON.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to create workspace.', true);
+    }
+  });
+  settingsContent.querySelector('[data-workspace-action="json-replace"]').addEventListener('click', () => {
+    const current = settingsDep("loadActiveWorkspace")();
+    if (!window.confirm(`Replace ${current.name} with the JSON in this editor?`)) return;
+    try {
+      const workspace = settingsDep("replaceActiveWorkspace")(jsonEl.value);
+      jsonDirty = false;
+      setStatus(`Replaced the current workspace with ${workspace.name}.`);
+    } catch (error) {
+      setStatus(error.message || 'Unable to replace workspace.', true);
+    }
+  });
+
+  window.addEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
+  render();
+  return () => window.removeEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
+}
+
+function setupSystemForm(settingsContent) {
+  const moduleEl = settingsContent.querySelector('[data-system="module"]');
+  const wasmEl = settingsContent.querySelector('[data-system="wasm"]');
+  const allowOriginsEl = settingsContent.querySelector('[data-system="allow-origins"]');
+  const shareUrlEl = settingsContent.querySelector('[data-system="share-url"]');
+  const list = settingsContent.querySelector('[data-system-bind-list]');
+  const typeEl = settingsContent.querySelector('[data-system-bind="type"]');
+  const dstEl = settingsContent.querySelector('[data-system-bind="dst"]');
+  const srcEl = settingsContent.querySelector('[data-system-bind="src"]');
+  const contentEl = settingsContent.querySelector('[data-system-bind="content"]');
+  const modeEl = settingsContent.querySelector('[data-system-bind="mode"]');
+  const unionEl = settingsContent.querySelector('[data-system-bind="union"]');
+  const status = settingsContent.querySelector('[data-system="status"]');
+  const saveButton = settingsContent.querySelector('[data-system-action="save"]');
+  const restartButton = settingsContent.querySelector('[data-system-action="restart"]');
+  const copyShareButton = settingsContent.querySelector('[data-system-action="copy-share"]');
+  const addButton = settingsContent.querySelector('[data-system-bind-action="add"]');
+  const cancelButton = settingsContent.querySelector('[data-system-bind-action="cancel"]');
+  if (!moduleEl || !wasmEl || !allowOriginsEl || !shareUrlEl || !list || !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !unionEl || !status || !saveButton || !restartButton || !copyShareButton || !addButton || !cancelButton) return;
+
+  let editingBindId = null;
+  let draggedBindId = null;
+
+  const setStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.style.color = isError ? '#f85149' : '#8b949e';
+  };
+  const resetBindFields = () => {
+    editingBindId = null;
+    typeEl.value = 'ns';
+    dstEl.value = '';
+    srcEl.value = '';
+    contentEl.value = '';
+    modeEl.value = '';
+    unionEl.value = 'after';
+    addButton.textContent = 'Add system mount';
+    cancelButton.hidden = true;
+  };
+  const render = () => {
+    const workspace = settingsDep("loadActiveWorkspace")();
+    moduleEl.value = workspace.runtime.moduleUrl || settingsDep("WANIX_RUNTIME").moduleUrl;
+    wasmEl.value = workspace.runtime.wasmUrl || settingsDep("WANIX_RUNTIME").wasmUrl;
+    allowOriginsEl.value = workspace.system.allowOrigins || '';
+    const shareUrl = new URL(window.location.href);
+    shareUrl.hash = 'wanix-system';
+    shareUrlEl.value = shareUrl.href;
+    list.replaceChildren();
+    for (const bind of workspace.system.binds) {
+      const item = document.createElement('div');
+      item.className = 'bind-item';
+      settingsDep("makeBindItemDraggable")(item, bind, {
+        list,
+        getDraggedId: () => draggedBindId,
+        setDraggedId: (id) => { draggedBindId = id; },
+        reorder: settingsDep("reorderWorkspaceSystemBinds"),
+        onReordered: () => setStatus('System mount order saved. Restart to apply changes.'),
+      });
+      const details = document.createElement('div');
+      const path = document.createElement('span');
+      path.className = 'bind-item-path';
+      path.textContent = `${bind.dst} ← ${bind.src || 'inline content'}`;
+      path.title = path.textContent;
+      const meta = document.createElement('span');
+      meta.className = 'bind-item-meta';
+      meta.textContent = `${bind.type}${bind.mode ? ` · ${bind.mode}` : ''} · ${bind.union}`;
+      details.append(path, meta);
+      const actions = document.createElement('div');
+      actions.className = 'bind-item-actions';
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click', () => {
+        editingBindId = bind.id;
+        typeEl.value = bind.type;
+        dstEl.value = bind.dst;
+        srcEl.value = bind.src;
+        contentEl.value = bind.content;
+        modeEl.value = bind.mode;
+        unionEl.value = bind.union;
+        addButton.textContent = 'Save system mount';
+        cancelButton.hidden = false;
+        setStatus(`Editing ${bind.dst}. Save and restart to apply changes.`);
+        dstEl.focus();
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => {
+        if (editingBindId === bind.id) resetBindFields();
+        settingsDep("removeWorkspaceSystemBind")(bind.id);
+        setStatus(`Removed ${bind.dst}. Restart to apply changes.`);
+      });
+      actions.append(edit, remove);
+      item.append(details, actions);
+      list.appendChild(item);
+    }
+  };
+  const saveSettings = () => {
+    settingsDep("saveWorkspaceSystemSettings")({ moduleUrl: moduleEl.value, wasmUrl: wasmEl.value, allowOrigins: allowOriginsEl.value });
+    setStatus('System settings saved. Restart the playground to apply changes.');
+  };
+
+  saveButton.addEventListener('click', () => {
+    try {
+      saveSettings();
+    } catch (error) {
+      setStatus(error.message || 'Unable to save system settings.', true);
+    }
+  });
+  restartButton.addEventListener('click', () => {
+    try {
+      saveSettings();
+      window.location.reload();
+    } catch (error) {
+      setStatus(error.message || 'Unable to save system settings.', true);
+    }
+  });
+  copyShareButton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrlEl.value);
+      setStatus('Namespace share URL copied.');
+    } catch {
+      shareUrlEl.focus();
+      shareUrlEl.select();
+      setStatus('Select the share URL and copy it manually.', true);
+    }
+  });
+  addButton.addEventListener('click', () => {
+    try {
+      const bind = {
+        type: typeEl.value,
+        dst: dstEl.value,
+        src: srcEl.value,
+        content: contentEl.value,
+        mode: modeEl.value,
+        union: unionEl.value,
+      };
+      if (editingBindId) settingsDep("updateWorkspaceSystemBind")(editingBindId, bind);
+      else settingsDep("addWorkspaceSystemBind")(bind);
+      setStatus(`${editingBindId ? 'Updated' : 'Added'} ${dstEl.value.trim()}. Restart to apply changes.`);
+      resetBindFields();
+    } catch (error) {
+      setStatus(error.message || 'Unable to save the system mount.', true);
+    }
+  });
+  cancelButton.addEventListener('click', () => {
+    resetBindFields();
+    setStatus('Edit cancelled.');
+  });
+
+  window.addEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
+  render();
+  return () => window.removeEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
 }
 
 // Counter for unique Settings panel ids. The counter is module-scoped
