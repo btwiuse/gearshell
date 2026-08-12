@@ -13,3 +13,60 @@
 .settings-content { width: min(680px, 100%); margin: 0 auto; }
 .settings-content h1 { margin: 0 0 18px; color: #c9d1d9; font-size: 20px; font-weight: 600; }
 .settings-lede { margin: -8px 0 18px; color: #8b949e; font-size: 13px; }
+
+/* === Settings: config form ===
+ *
+ * Styles for the "Behavior" / "Wanix tools" <details> blocks and the
+ * launcher-order drag-and-drop editor. Live inside settings.css since
+ * they belong to the setupConfigForm helper which migrated here in
+ * step 2 of the settings extraction.
+ */
+.settings-panel .config-form { width: 100%; text-align: left; }
+.settings-panel .config-form input,
+.settings-panel .config-form select,
+.settings-panel .config-form textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #c9d1d9; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; outline: none; }
+.settings-panel .config-form input:focus,
+.settings-panel .config-form select:focus,
+.settings-panel .config-form textarea:focus { border-color: #58a6ff; }
+.settings-panel .config-form textarea { height: 180px; line-height: 1.4; box-sizing: border-box; resize: vertical; }
+.settings-panel .config-form details { border: 1px solid #30363d; border-radius: 4px; margin-top: 8px; }
+.settings-panel .config-form details:first-child { margin-top: 0; }
+.settings-panel .config-form details summary { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; background: #161b22; border-radius: 4px; user-select: none; list-style: none; }
+.settings-panel .config-form details summary::-webkit-details-marker { display: none; }
+.settings-panel .config-form details summary::after { content: "\25B8"; color: #8b949e; margin-left: auto; transition: transform 0.15s; }
+.settings-panel .config-form details[open] summary::after { transform: rotate(90deg); }
+.settings-panel .config-form details summary span { color: #c9d1d9; font-size: 13px; }
+.settings-panel .config-form details .body { padding: 10px; text-align: left; }
+.settings-panel .config-form .hint { font-size: 12px; color: #8b949e; margin-top: 4px; }
+.settings-panel .config-form .cfg-network-field { margin-top: 10px; }
+.settings-panel .config-form .cfg-network-field.disabled { opacity: 0.55; }
+
+.settings-panel .config-form .actions { margin-top: 12px; display: flex; gap: 8px; }
+.settings-panel .config-form button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 7px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.settings-panel .config-form button:hover { background: #30363d; }
+.settings-panel .config-form button.primary { background: #238636; border-color: #2ea043; color: #fff; }
+.settings-panel .config-form button.primary:hover { background: #2ea043; }
+
+.launcher-order-list { display: grid; gap: 14px; margin: 2px 0 14px; }
+.launcher-order-hint { margin: 0; }
+.launcher-order-section { min-width: 0; }
+.launcher-order-section.collapsed { padding-top: 14px; border-top: 1px solid #30363d; }
+.launcher-order-section-heading { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: #8b949e; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.launcher-order-section-heading svg { color: #8b949e; }
+.launcher-order-section-items { display: grid; gap: 4px; min-height: 40px; }
+.launcher-order-empty { display: grid; min-height: 40px; place-items: center; border: 1px dashed #30363d; color: #8b949e; font-size: 12px; }
+.launcher-order-item { display: grid; grid-template-columns: 16px 16px minmax(0, 1fr) minmax(124px, auto) auto; align-items: center; gap: 8px; min-height: 38px; padding: 4px 6px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; cursor: grab; }
+.launcher-order-item.dragging { opacity: 0.45; }
+.launcher-order-item.drop-before { box-shadow: 0 -2px 0 #58a6ff; }
+.launcher-order-item.drop-after { box-shadow: 0 2px 0 #58a6ff; }
+.launcher-order-handle, .launcher-order-icon { color: #8b949e; }
+.launcher-order-label { overflow: hidden; color: #c9d1d9; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.launcher-order-startup { display: flex; align-items: center; gap: 6px; color: #8b949e; cursor: pointer; font-size: 11px; white-space: nowrap; }
+.launcher-order-startup input { width: auto !important; height: auto !important; margin: 0; accent-color: #58a6ff; }
+.launcher-order-actions { display: flex; gap: 4px; }
+.settings-panel .config-form .launcher-order-actions button { display: grid; width: 28px; min-height: 28px; padding: 0; place-items: center; }
+.settings-panel .config-form .launcher-order-actions button:disabled { cursor: default; opacity: 0.4; }
+@media (max-width: 560px) {
+  .launcher-order-item { grid-template-columns: 16px 16px minmax(0, 1fr) auto; }
+  .launcher-order-startup { grid-column: 3 / -1; grid-row: 2; }
+}
