@@ -106,14 +106,3 @@ wanix-term { flex: 1; min-width: 0; }
 
 @keyframes files-spin { to { transform: rotate(360deg); } }
 
-.runtime-panel { overflow: auto; padding: 22px; background: #0d1117; color: #c9d1d9; }
-.runtime-header { display: flex; align-items: center; gap: 8px; max-width: 680px; margin: 0 auto 18px; }
-.runtime-header h2 { margin: 0; font-size: 17px; }
-.runtime-header svg { color: #8b949e; }
-.runtime-header button { display: inline-flex; margin-left: auto; padding: 5px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; }
-.runtime-grid { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(0, 2fr); max-width: 680px; margin: 0 auto; border: 1px solid #30363d; border-radius: 4px; overflow: hidden; }
-.runtime-grid dt, .runtime-grid dd { margin: 0; padding: 9px 10px; border-bottom: 1px solid #30363d; font-size: 13px; }
-.runtime-grid dt { background: #161b22; color: #8b949e; }.runtime-grid dd { color: #c9d1d9; }.runtime-grid dd.ready { color: #3fb950; }.runtime-grid dt:nth-last-of-type(1), .runtime-grid dd:last-child { border-bottom: 0; }
-.runtime-source { display: grid; gap: 5px; max-width: 680px; margin: 16px auto 0; color: #8b949e; font-size: 12px; }
-.runtime-source code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-rder: none;

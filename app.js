@@ -7,6 +7,7 @@ import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner } from './crush-
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
 import { addSettingsPanel, SettingsPanel, initSettings } from './settings.js?v=20260812.25';
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
+import { addRuntimePanel, RuntimePanel, initRuntime } from './runtime.js?v=20260812.28';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -2190,20 +2191,6 @@ function addDeckPanel(api, group) {
   return panel;
 }
 
-function addRuntimePanel(api, group) {
-  const id = ++runtimeIdCounter;
-  const panel = api.addPanel({
-    id: `runtime-${id}`,
-    component: 'runtime',
-    params: { runtimeId: id, panelType: 'runtime' },
-    title: 'Runtime',
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'runtime' });
-  panel.api.setActive();
-  return panel;
-}
-
 function addWorkbenchPanel(api, group, config = getWorkbenchPanelConfig()) {
   const existing = api.panels.find((panel) => panel.id.startsWith('workbench-'));
   if (existing) {
@@ -2503,71 +2490,6 @@ function TerminalPanel({ api, params }) {
   }, [id, params.profile]);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
-function RuntimePanel() {
-  const [snapshot, setSnapshot] = useState(null);
-  const refresh = useCallback(async () => {
-    const workspace = loadActiveWorkspace();
-    const taskSessions = [...workspaceTaskSessions.values()];
-    let kernelTaskEntries = 'Unavailable';
-    try {
-      const entries = await getWanixRoot().readDir('task');
-      kernelTaskEntries = String((Array.isArray(entries) ? entries : []).filter((entry) => entry !== 'new' && entry !== 'self').length);
-    } catch { /* The system may still be starting or the task namespace may be unavailable. */ }
-    const activeWorkspaceTasks = taskSessions.filter((session) => session.status === 'running' || session.status === 'starting').length;
-    setSnapshot({
-      ready: systemReady,
-      moduleUrl: workspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl,
-      wasmUrl: workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl,
-      allowedOrigins: workspace.system.allowOrigins || 'None',
-      systemMounts: workspace.system.binds.length,
-      taskMounts: workspace.binds.length,
-      configuredTasks: workspace.tasks.length,
-      terminals: terminalSessions.size,
-      activeTasks: terminalSessions.size + activeWorkspaceTasks,
-      failedTasks: taskSessions.filter((session) => session.status === 'failed').length,
-      kernelTaskEntries,
-    });
-  }, []);
-  useEffect(() => {
-    refresh();
-    const timer = setInterval(refresh, 1000);
-    window.addEventListener(WORKSPACE_CHANGED_EVENT, refresh);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener(WORKSPACE_CHANGED_EVENT, refresh);
-    };
-  }, [refresh]);
-  if (!snapshot) return null;
-  const items = [
-    ['System', snapshot.ready ? 'Ready' : 'Starting'],
-    ['System mounts', String(snapshot.systemMounts)],
-    ['Task mounts', String(snapshot.taskMounts)],
-    ['Configured task definitions', String(snapshot.configuredTasks)],
-    ['Active Wanix tasks', String(snapshot.activeTasks)],
-    ['Kernel task entries', snapshot.kernelTaskEntries],
-    ['Failed tasks', String(snapshot.failedTasks)],
-    ['Terminal sessions', String(snapshot.terminals)],
-    ['Allowed origins', snapshot.allowedOrigins],
-  ];
-  return React.createElement('div', { className: 'runtime-panel panel-content' },
-    React.createElement('div', { className: 'runtime-header' },
-      React.createElement(Activity, { size: 20, 'aria-hidden': true }),
-      React.createElement('h2', null, 'Runtime diagnostics'),
-      React.createElement('button', { type: 'button', title: 'Refresh diagnostics', 'aria-label': 'Refresh diagnostics', onClick: refresh }, React.createElement(RefreshCw, { size: 15, 'aria-hidden': true })),
-    ),
-    React.createElement('dl', { className: 'runtime-grid' }, items.flatMap(([label, value]) => [
-      React.createElement('dt', { key: `${label}-label` }, label),
-      React.createElement('dd', { key: `${label}-value`, className: label === 'System' && snapshot.ready ? 'ready' : '' }, value),
-    ])),
-    React.createElement('section', { className: 'runtime-source' },
-      React.createElement('span', null, 'Runtime module'),
-      React.createElement('code', { title: snapshot.moduleUrl }, snapshot.moduleUrl),
-      React.createElement('span', null, 'Wasm module'),
-      React.createElement('code', { title: snapshot.wasmUrl }, snapshot.wasmUrl),
-    ),
-  );
 }
 
 function GroupPanel() {
@@ -2950,6 +2872,21 @@ if (rootEl) {
   const root = createRoot(rootEl);
   root.render(React.createElement(App));
 }
+
+// Initialise the Runtime submodule with the helpers it needs at
+// runtime. The panel reads wanix state (systemReady / getWanixRoot)
+// plus the live terminal + task session Maps (kept in app.js since
+// the TerminalPanel / WorkspaceTaskPanel also write to them).
+initRuntime({
+  WANIX_RUNTIME,
+  WORKSPACE_CHANGED_EVENT,
+  getWanixRoot,
+  loadActiveWorkspace,
+  systemReady,
+  terminalSessions,
+  workspaceTaskSessions,
+  rememberOpenPanel,
+});
 
 // Initialise the Files submodule with the helpers it needs at
 // runtime. The panel only reads the wanix filesystem root and
