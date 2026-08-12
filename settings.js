@@ -17,7 +17,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowDown, ArrowUp, Check, Eye, EyeOff, GripVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, Eye, EyeOff, GripVertical, Pencil, Trash2 } from "lucide-react";
 
 let __settingsDeps = null;
 export function initSettings(dependencies) {
@@ -1482,6 +1482,113 @@ function setupTerminalProfileForm(settingsContent) {
   return () => root.unmount();
 }
 
+// === Terminal preset icon picker ===
+// `TerminalPresetIconPicker` is a 300+-icon Lucide catalog browser
+// used by the terminal preset editor's icon field. It uses the
+// shared TERMINAL_PRESET_ICON_BY_ID / TERMINAL_PRESET_ICON_OPTIONS
+// tables (passed through the dep shim so settings.js doesn't reach
+// into the global app state directly) and renders a paginated grid
+// of icon buttons + a search box.
+
+function TerminalPresetIconPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [catalogColumns, setCatalogColumns] = useState(1);
+  const catalogRef = useRef(null);
+  const pageSize = Math.max(1, catalogColumns * 3);
+  const selected = settingsDep("TERMINAL_PRESET_ICON_BY_ID")[value] || settingsDep("TERMINAL_PRESET_ICON_BY_ID").terminal;
+  const SelectedIcon = selected.icon;
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filtered = normalizedQuery
+    ? settingsDep("TERMINAL_PRESET_ICON_OPTIONS").filter((option) => `${option.label} ${option.id}`.toLocaleLowerCase().includes(normalizedQuery))
+    : settingsDep("TERMINAL_PRESET_ICON_OPTIONS");
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const currentOptions = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+  useEffect(() => setPage(0), [query]);
+  useEffect(() => {
+    if (!open || !catalogRef.current) return undefined;
+    const catalog = catalogRef.current;
+    const updateColumns = () => {
+      // Tiles are at least 78px wide with 6px gutters; the catalog padding
+      // accounts for the small deduction before calculating a complete row.
+      const available = Math.max(1, catalog.clientWidth - 16);
+      setCatalogColumns(Math.max(1, Math.floor((available + 6) / 84)));
+    };
+    updateColumns();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(catalog);
+    return () => observer.disconnect();
+  }, [open]);
+
+  return React.createElement('div', { className: 'terminal-profile-icon-picker' },
+    React.createElement('button', {
+      type: 'button',
+      className: 'terminal-profile-icon-trigger',
+      'aria-expanded': open,
+      'aria-controls': 'terminal-preset-icon-catalog',
+      onClick: () => setOpen((visible) => !visible),
+    },
+    React.createElement(SelectedIcon, { size: 18, 'aria-hidden': true }),
+    React.createElement('span', null, selected.label),
+    React.createElement('span', { className: 'terminal-profile-icon-trigger-meta' }, 'Choose icon'),
+    React.createElement(ChevronDown, { size: 16, 'aria-hidden': true }),
+    ),
+    open && React.createElement('div', { ref: catalogRef, id: 'terminal-preset-icon-catalog', className: 'terminal-profile-icon-catalog' },
+      React.createElement('div', { className: 'terminal-profile-icon-catalog-toolbar' },
+        React.createElement('input', {
+          type: 'search', value: query, placeholder: `Search ${settingsDep("TERMINAL_PRESET_ICON_OPTIONS").length} Lucide icons…`,
+          'aria-label': 'Search Lucide icons', autoComplete: 'off',
+          onChange: (event) => setQuery(event.target.value),
+        }),
+        React.createElement('span', { className: 'terminal-profile-icon-result-count' }, `${filtered.length} icons`),
+      ),
+      currentOptions.length > 0
+        ? React.createElement('div', { className: 'terminal-profile-icon-grid', role: 'group', 'aria-label': 'Lucide icon results' }, currentOptions.map((option) => {
+          const Icon = option.icon;
+          const isSelected = value === option.id;
+          return React.createElement('button', {
+            key: option.id,
+            type: 'button',
+            className: `terminal-profile-icon-option${isSelected ? ' selected' : ''}`,
+            title: option.label,
+            'aria-label': option.label,
+            'aria-pressed': isSelected,
+            onClick: () => { onChange(option.id); setOpen(false); },
+          },
+          React.createElement(Icon, { size: 28, 'aria-hidden': true }),
+          React.createElement('span', null, option.label),
+          );
+        }))
+        : React.createElement('p', { className: 'terminal-profile-icon-empty' }, 'No Lucide icons match this search.'),
+      React.createElement('div', { className: 'terminal-profile-icon-pagination' },
+        React.createElement('button', {
+          type: 'button', disabled: currentPage === 0,
+          'aria-label': 'Previous icon page', onClick: () => setPage((current) => Math.max(0, current - 1)),
+        }, React.createElement(ArrowLeft, { size: 16, 'aria-hidden': true })),
+        React.createElement('label', null,
+          React.createElement('span', null, 'Page'),
+          React.createElement('input', {
+            type: 'number', min: 1, max: pageCount, value: currentPage + 1, 'aria-label': 'Icon page number',
+            onChange: (event) => {
+              const requested = Number(event.target.value);
+              if (Number.isFinite(requested)) setPage(Math.min(pageCount - 1, Math.max(0, Math.floor(requested) - 1)));
+            },
+          }),
+          React.createElement('span', null, `of ${pageCount}`),
+        ),
+        React.createElement('button', {
+          type: 'button', disabled: currentPage === pageCount - 1,
+          'aria-label': 'Next icon page', onClick: () => setPage((current) => Math.min(pageCount - 1, current + 1)),
+        }, React.createElement(ArrowRight, { size: 16, 'aria-hidden': true })),
+      ),
+    ),
+  );
+}
+
 // Counter for unique Settings panel ids. The counter is module-scoped
 // so it survives React re-renders but resets on page reload.
 let settingsIdCounter = 0;
@@ -1504,4 +1611,4 @@ export function addSettingsPanel(api, group) {
   return panel;
 }
 
-export { SettingsPanel };
+export { SettingsPanel, TerminalPresetIconPicker };
