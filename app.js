@@ -704,6 +704,9 @@ function migrateWorkspace(workspace) {
       );
     }
   }
+  if (!('activeOpenPanelIndex' in (migrated.ui || {}))) {
+    migrated.ui = { ...(migrated.ui || {}), activeOpenPanelIndex: null };
+  }
   return migrated;
 }
 
@@ -3587,6 +3590,16 @@ function restoreSavedPanels(api) {
       addPanelByComponent(api, panel.component);
     }
   }
+  // Each add* helper above calls setActive() on the newly added panel, so the
+  // last-added panel ends up active. When we remembered which panel was active
+  // before refresh, reactivate that one here so the user lands back where they
+  // were rather than on the rightmost tab.
+  const savedActiveIndex = loadActiveWorkspace().ui?.activeOpenPanelIndex;
+  if (typeof savedActiveIndex === 'number'
+      && savedActiveIndex >= 0
+      && savedActiveIndex < api.panels.length) {
+    api.panels[savedActiveIndex]?.api.setActive();
+  }
   return panels.length > 0;
 }
 
@@ -4456,6 +4469,20 @@ function App() {
       for (const component of cfg.startupPanels) addPanelByComponent(event.api, component);
     }
     if (event.api.panels.length === 0) addFallbackPanel(event.api);
+
+    // Remember which panel is active so a future reload with Restore tabs can
+    // reactivate the same tab instead of always landing on the last-added one.
+    const dockviewRoot = event.api;
+    event.api.onDidActivePanelChange((activeEvent) => {
+      if (!activeEvent.panel) return;
+      const idx = dockviewRoot.panels.findIndex((p) => p.id === activeEvent.panel.id);
+      if (idx < 0) return;
+      const workspace = loadActiveWorkspace();
+      if (workspace.ui?.activeOpenPanelIndex === idx) return;
+      workspace.ui = { ...workspace.ui, activeOpenPanelIndex: idx };
+      saveWorkspace(workspace);
+      updateWorkspaceIndex(workspace);
+    });
 
     // Start configured processes only after Wanix is ready so they follow the
     // same allocation path as tasks opened from Settings. Restored task tabs
