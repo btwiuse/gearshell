@@ -1,0 +1,30 @@
+/* === Launcher panel ===
+ * Styles for the `fallback` dockview panel: the empty-
+ * workspace Task Launcher card plus the terminal-preset
+ * picker that lets the user pick a profile before launching
+ * a terminal. Split out of app.css so this feature can ship
+ * its own stylesheet alongside launcher.js without bloating
+ * the main bundle.
+ */
+.terminal-launch-row { display: flex; align-items: stretch; }
+.terminal-launch-primary { flex: 1; min-width: 0; }
+.terminal-launch-toggle { flex: 0 0 32px; justify-content: center; }
+.terminal-launch-chevron { transition: transform 0.15s ease; }
+.terminal-launch-chevron.open { transform: rotate(180deg); }
+.empty-workspace, .fallback-panel { display: grid; place-items: center; background: #0d1117; }
+.empty-workspace { position: absolute; inset: 0; z-index: 2; }
+.fallback-panel { height: 100%; min-height: 0; }
+.empty-workspace-card { width: min(280px, calc(100% - 32px)); padding: 20px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; text-align: center; }
+.empty-workspace-card p { margin: 0 0 16px; color: #8b949e; }
+.empty-workspace-actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.launcher-more-options { display: flex; flex-direction: column; gap: 8px; }
+.empty-workspace-actions .launcher-more-toggle { border-style: dashed; color: #8b949e; }
+.empty-workspace-actions .launcher-more-toggle:hover { color: #c9d1d9; }
+.empty-workspace-actions button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
+.empty-workspace-actions button:hover { background: #30363d; }
+.empty-workspace-actions button svg { flex: 0 0 auto; color: #8b949e; }
+.empty-terminal-launch { overflow: hidden; border: 1px solid #30363d; border-radius: 4px; background: #161b22; }
+.empty-terminal-launch .terminal-launch-toggle { border: 0; border-radius: 0; background: transparent; }
+.empty-terminal-launch .terminal-launch-primary { width: auto; border-right: 1px solid #30363d; }
+.empty-terminal-launch .terminal-launch-toggle { width: 36px; padding: 7px; }
+.empty-terminal-launch .terminal-launch-options { display: flex; flex-direction: column; gap: 6px; padding: 7px; border-top: 1px solid #30363d; }

@@ -9,6 +9,7 @@ import { addSettingsPanel, SettingsPanel, initSettings } from './settings.js?v=2
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
 import { addRuntimePanel, RuntimePanel, initRuntime } from './runtime.js?v=20260812.28';
 import { addDeckPanel, DeckPanel, initDeck } from './deck.js?v=20260812.29';
+import { addFallbackPanel, FallbackPanel, initLauncher } from './launcher.js?v=20260812.30';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -2146,20 +2147,6 @@ function addVmPanel(api, group, config = getVmPanelConfig()) {
   return panel;
 }
 
-function addFallbackPanel(api, group) {
-  const id = ++fallbackIdCounter;
-  const panel = api.addPanel({
-    id: `fallback-${id}`,
-    component: 'fallback',
-    params: { fallbackId: id, panelType: 'fallback' },
-    title: 'Launcher',
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'fallback' });
-  panel.api.setActive();
-  return panel;
-}
-
 function addWorkspaceTaskPanel(api, task, workspace = loadActiveWorkspace(), group) {
   const sessionId = ++workspaceTaskPanelCounter;
   const panel = api.addPanel({
@@ -2421,54 +2408,6 @@ function PanelTab(props) {
   );
 }
 
-function TerminalLaunchPicker({ className, iconSize, inMenu = false, onLaunch }) {
-  const [expanded, setExpanded] = useState(false);
-  const defaultProfile = getDefaultTerminalProfile();
-  const DefaultIcon = getTerminalPresetIcon(defaultProfile);
-  const menuRole = inMenu ? 'menuitem' : undefined;
-
-  return React.createElement('div', { className: `terminal-launch-picker ${className}` },
-    React.createElement('div', { className: 'terminal-launch-row' },
-      React.createElement('button', {
-        className: 'terminal-launch-primary',
-        type: 'button',
-        role: menuRole,
-        title: terminalCommand(defaultProfile),
-        onClick: () => onLaunch(defaultProfile),
-      },
-      React.createElement(DefaultIcon, { size: iconSize, 'aria-hidden': true }),
-      React.createElement('span', null, 'Terminal'),
-      ),
-      React.createElement('button', {
-        className: 'terminal-launch-toggle',
-        type: 'button',
-        'aria-label': expanded ? 'Hide terminal presets' : 'Show terminal presets',
-        'aria-expanded': expanded,
-        onClick: () => setExpanded((open) => !open),
-      }, React.createElement(ChevronDown, {
-        className: expanded ? 'terminal-launch-chevron open' : 'terminal-launch-chevron',
-        size: 14,
-        'aria-hidden': true,
-      })),
-    ),
-    expanded && React.createElement('div', { className: 'terminal-launch-options', role: inMenu ? 'menu' : undefined },
-      getTerminalProfiles().map((profile) => {
-        const Icon = getTerminalPresetIcon(profile);
-        return React.createElement('button', {
-          key: profile.id,
-          type: 'button',
-          role: menuRole,
-          title: terminalCommand(profile),
-          onClick: () => onLaunch(profile),
-        },
-        React.createElement(Icon, { size: iconSize, 'aria-hidden': true }),
-        React.createElement('span', null, profile.name),
-        );
-      }),
-    ),
-  );
-}
-
 // Compact header action: tap creates a terminal, long-press opens extensions.
 function AddTerminalButton({ containerApi, group }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -2604,69 +2543,6 @@ function WagiDogPet() {
   return null;
 }
 
-function FallbackPage({ containerApi, className }) {
-  const [showMore, setShowMore] = useState(false);
-  const [collapsedItems, setCollapsedItems] = useState(() => loadConfig().collapsedLauncherItems);
-
-  useEffect(() => {
-    const updateCollapsedItems = () => {
-      setCollapsedItems(loadConfig().collapsedLauncherItems);
-      setShowMore(false);
-    };
-    window.addEventListener(WORKSPACE_CHANGED_EVENT, updateCollapsedItems);
-    return () => window.removeEventListener(WORKSPACE_CHANGED_EVENT, updateCollapsedItems);
-  }, []);
-
-  const addPanel = (component) => {
-    if (!containerApi) return;
-    addPanelByComponent(containerApi, component);
-  };
-  const collapsed = new Set(collapsedItems);
-  const options = normalizeLauncherOrder(loadConfig().launcherOrder)
-    .map((component) => PANEL_CREATION_OPTIONS.find((option) => option.component === component))
-    .filter(Boolean);
-  const primaryOptions = options.filter((option) => !collapsed.has(option.component));
-  const moreOptions = options.filter((option) => collapsed.has(option.component));
-  const renderOption = (option) => option.component === 'terminal'
-    ? React.createElement(TerminalLaunchPicker, {
-      key: option.component,
-      className: 'empty-terminal-launch',
-      iconSize: 18,
-      onLaunch: (profile) => containerApi && addTerminalPanel(containerApi, undefined, profile),
-    })
-    : React.createElement('button', {
-    key: option.component,
-    type: 'button',
-    onClick: () => addPanel(option.component),
-  },
-  React.createElement(option.icon, { size: 18, 'aria-hidden': true }),
-  React.createElement('span', null, option.label),
-  );
-
-  return React.createElement('div', { className },
-    React.createElement('div', { className: 'empty-workspace-card' },
-      React.createElement('p', null, 'Task Launcher'),
-      React.createElement('div', { className: 'empty-workspace-actions' },
-        primaryOptions.map(renderOption),
-        moreOptions.length > 0 && React.createElement('button', {
-          type: 'button',
-          className: 'launcher-more-toggle',
-          'aria-expanded': showMore,
-          onClick: () => setShowMore((expanded) => !expanded),
-        },
-        React.createElement(Ellipsis, { size: 18, 'aria-hidden': true }),
-        React.createElement('span', null, showMore ? 'Less' : 'More'),
-        ),
-        showMore && React.createElement('div', { className: 'launcher-more-options' }, moreOptions.map(renderOption)),
-      ),
-    ),
-  );
-}
-
-function FallbackPanel({ containerApi }) {
-  return React.createElement(FallbackPage, { containerApi, className: 'fallback-panel panel-content' });
-}
-
 // Main application
 function App() {
   const onReady = useCallback((event) => {
@@ -2753,6 +2629,30 @@ if (rootEl) {
   const root = createRoot(rootEl);
   root.render(React.createElement(App));
 }
+
+// Initialise the Launcher submodule with the helpers it needs at
+// runtime. The launcher panel reads the workspace config (so it can
+// know which items are collapsed in the More menu), the
+// panel-creation catalog (so it can render the right icon / label
+// for each launcher button), the terminal profile catalog + helpers
+// (so the Terminal launch picker can show the available profiles),
+// and the dockview dispatch (so the launcher buttons can add new
+// panels into the same group as the launcher).
+initLauncher({
+  WORKSPACE_CHANGED_EVENT,
+  loadConfig,
+  normalizeLauncherOrder,
+  addPanelByComponent,
+  addTerminalPanel,
+  getTerminalProfiles,
+  getTerminalPresetIcon,
+  terminalCommand,
+  PANEL_CREATION_OPTIONS,
+  getDefaultTerminalProfile,
+  saveConfig,
+  resetConfig,
+  rememberOpenPanel,
+});
 
 // Initialise the Deck submodule with the helpers it needs at
 // runtime. The deck panel only needs the debug-overlay helpers and
