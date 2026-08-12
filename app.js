@@ -6,6 +6,7 @@ import WebPet from './web-pet/index.js';
 import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner } from './crush-runner.js?v=20260812.18';
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
 import { addSettingsPanel, SettingsPanel, initSettings } from './settings.js?v=20260812.25';
+import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -1287,62 +1288,7 @@ function getWanixRoot() {
   return wanixSystem.root;
 }
 
-function normalizeFilesystemPath(path = '.') {
-  const parts = [];
-  for (const part of String(path).split('/')) {
-    if (!part || part === '.') continue;
-    if (part === '..') parts.pop();
-    else parts.push(part);
-  }
-  return parts.join('/') || '.';
-}
-
-function filesystemPathJoin(base, name) {
-  return normalizeFilesystemPath(base === '.' ? name : `${base}/${name}`);
-}
-
-function filesystemPathParent(path) {
-  const parts = normalizeFilesystemPath(path).split('/').filter((part) => part && part !== '.');
-  parts.pop();
-  return parts.join('/') || '.';
-}
-
-const FILE_PREVIEW_TYPES = {
-  image: {
-    avif: 'image/avif', bmp: 'image/bmp', gif: 'image/gif', ico: 'image/x-icon',
-    jpeg: 'image/jpeg', jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml',
-    webp: 'image/webp',
-  },
-  audio: {
-    aac: 'audio/aac', flac: 'audio/flac', m4a: 'audio/mp4', mp3: 'audio/mpeg',
-    oga: 'audio/ogg', ogg: 'audio/ogg', opus: 'audio/ogg', wav: 'audio/wav',
-  },
-  video: {
-    '3gp': 'video/3gpp', m4v: 'video/x-m4v', mov: 'video/quicktime', mp4: 'video/mp4',
-    ogv: 'video/ogg', webm: 'video/webm',
-  },
-};
-
-function getFilesystemPreviewType(path) {
-  const extension = String(path).split('.').pop()?.toLowerCase();
-  if (!extension) return null;
-  for (const [kind, types] of Object.entries(FILE_PREVIEW_TYPES)) {
-    if (types[extension]) return { kind, mime: types[extension] };
-  }
-  return null;
-}
-
-function toFilesystemBytes(contents) {
-  if (contents instanceof Uint8Array) return contents;
-  if (ArrayBuffer.isView(contents)) return new Uint8Array(contents.buffer, contents.byteOffset, contents.byteLength);
-  return new Uint8Array(contents);
-}
-
-function decodeFilesystemText(contents) {
-  const bytes = toFilesystemBytes(contents);
-  if (bytes.byteLength > 1024 * 1024) throw new Error('Files larger than 1 MiB cannot be opened in this editor.');
-  return new TextDecoder().decode(bytes);
-}
+;
 
 function hideTerminalLayer() {
   terminalLayer?.classList.add('dragging');
@@ -2244,20 +2190,6 @@ function addDeckPanel(api, group) {
   return panel;
 }
 
-function addFilesPanel(api, group) {
-  const id = ++filesIdCounter;
-  const panel = api.addPanel({
-    id: `files-${id}`,
-    component: 'files',
-    params: { filesId: id, panelType: 'files' },
-    title: 'Files',
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'files' });
-  panel.api.setActive();
-  return panel;
-}
-
 function addRuntimePanel(api, group) {
   const id = ++runtimeIdCounter;
   const panel = api.addPanel({
@@ -2571,344 +2503,6 @@ function TerminalPanel({ api, params }) {
   }, [id, params.profile]);
 
   return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
-function FilesPanel() {
-  const fileInputRef = useRef(null);
-  const filesPanelRef = useRef(null);
-  const sidebarResizeRef = useRef(null);
-  const [path, setPath] = useState('.');
-  const [pathDraft, setPathDraft] = useState('/');
-  const [entries, setEntries] = useState([]);
-  const [selectedPath, setSelectedPath] = useState(null);
-  const [contents, setContents] = useState('');
-  const [savedContents, setSavedContents] = useState('');
-  const [preview, setPreview] = useState(null);
-  const [creating, setCreating] = useState(null);
-  const [entryName, setEntryName] = useState('');
-  const [status, setStatus] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(280);
-  const [sidebarHeight, setSidebarHeight] = useState(220);
-  const [stackedLayout, setStackedLayout] = useState(() => window.matchMedia('(max-width: 560px)').matches);
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 560px)');
-    const updateLayout = () => setStackedLayout(media.matches);
-    updateLayout();
-    media.addEventListener('change', updateLayout);
-    return () => media.removeEventListener('change', updateLayout);
-  }, []);
-
-  useEffect(() => () => document.body.classList.remove('files-resizing', 'files-resizing-row'), []);
-
-  useEffect(() => () => {
-    if (preview?.url) URL.revokeObjectURL(preview.url);
-  }, [preview?.url]);
-
-  const clearFileSelection = () => {
-    setSelectedPath(null);
-    setContents('');
-    setSavedContents('');
-    setPreview(null);
-  };
-
-  const startSidebarResize = (event) => {
-    if (event.button !== 0) return;
-    const panelBounds = filesPanelRef.current?.getBoundingClientRect();
-    if (!panelBounds) return;
-    event.preventDefault();
-    sidebarResizeRef.current = {
-      pointerId: event.pointerId,
-      stacked: stackedLayout,
-      panelLeft: panelBounds.left,
-      panelTop: panelBounds.top,
-      maxSize: stackedLayout
-        ? Math.max(130, panelBounds.height - 180)
-        : Math.max(190, panelBounds.width - 240),
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    document.body.classList.add(stackedLayout ? 'files-resizing-row' : 'files-resizing');
-  };
-
-  const resizeSidebar = (event) => {
-    const resize = sidebarResizeRef.current;
-    if (!resize || resize.pointerId !== event.pointerId) return;
-    const nextSize = resize.stacked
-      ? event.clientY - resize.panelTop
-      : event.clientX - resize.panelLeft;
-    if (resize.stacked) {
-      setSidebarHeight(Math.max(130, Math.min(resize.maxSize, nextSize)));
-    } else {
-      setSidebarWidth(Math.max(190, Math.min(resize.maxSize, nextSize)));
-    }
-  };
-
-  const stopSidebarResize = (event) => {
-    const resize = sidebarResizeRef.current;
-    if (!resize || resize.pointerId !== event.pointerId) return;
-    sidebarResizeRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    document.body.classList.remove('files-resizing', 'files-resizing-row');
-  };
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const names = await getWanixRoot().readDir(path);
-      const next = (Array.isArray(names) ? names : []).map((entry) => {
-        const isDirectory = entry.endsWith('/');
-        return { name: entry.replace(/\/$/, ''), isDirectory };
-      }).sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name));
-      setEntries(next);
-      setStatus('');
-    } catch (error) {
-      setEntries([]);
-      setStatus(error.message || 'Unable to read this directory.');
-    } finally {
-      setLoading(false);
-    }
-  }, [path]);
-
-  useEffect(() => {
-    refresh();
-    const retry = () => refresh();
-    wanixSystem?.addEventListener('ready', retry);
-    return () => wanixSystem?.removeEventListener('ready', retry);
-  }, [refresh]);
-
-  useEffect(() => {
-    setPathDraft(path === '.' ? '/' : `/${path}`);
-  }, [path]);
-
-  const navigateToPath = () => {
-    const nextPath = normalizeFilesystemPath(pathDraft);
-    setPath(nextPath);
-    clearFileSelection();
-  };
-
-  const openEntry = async (entry) => {
-    const nextPath = filesystemPathJoin(path, entry.name);
-    if (entry.isDirectory) {
-      setPath(nextPath);
-      clearFileSelection();
-      return;
-    }
-    try {
-      const data = await getWanixRoot().readFile(nextPath);
-      const previewType = getFilesystemPreviewType(nextPath);
-      setSelectedPath(nextPath);
-      if (previewType) {
-        const blob = new Blob([toFilesystemBytes(data)], { type: previewType.mime });
-        setPreview({ ...previewType, blob, url: URL.createObjectURL(blob) });
-        setContents('');
-        setSavedContents('');
-      } else {
-        const text = decodeFilesystemText(data);
-        setPreview(null);
-        setContents(text);
-        setSavedContents(text);
-      }
-      setStatus('');
-    } catch (error) {
-      setStatus(error.message || 'Unable to open this file.');
-    }
-  };
-
-  const createEntry = async () => {
-    const name = entryName.trim();
-    if (!name || name.includes('/') || name === '.' || name === '..') {
-      setStatus('Enter a name without a path separator.');
-      return;
-    }
-    try {
-      const entryPath = filesystemPathJoin(path, name);
-      const root = getWanixRoot();
-      if (creating === 'rename-file' && selectedPath) {
-        await root.rename(selectedPath, filesystemPathJoin(filesystemPathParent(selectedPath), name));
-        setSelectedPath(filesystemPathJoin(filesystemPathParent(selectedPath), name));
-      } else if (creating === 'rename-folder') {
-        const nextPath = filesystemPathJoin(filesystemPathParent(path), name);
-        await root.rename(path, nextPath);
-        setPath(nextPath);
-      } else if (creating === 'folder') {
-        await root.makeDir(entryPath);
-      } else {
-        await root.writeFile(entryPath, '');
-      }
-      setCreating(null);
-      setEntryName('');
-      await refresh();
-      if (creating === 'file') await openEntry({ name, isDirectory: false });
-    } catch (error) {
-      setStatus(error.message || 'Unable to create this entry.');
-    }
-  };
-
-  const saveFile = async () => {
-    if (!selectedPath) return;
-    try {
-      await getWanixRoot().writeFile(selectedPath, contents);
-      setSavedContents(contents);
-      await refresh();
-      setStatus('Saved.');
-    } catch (error) {
-      setStatus(error.message || 'Unable to save this file.');
-    }
-  };
-
-  const removeFile = async () => {
-    if (!selectedPath || !window.confirm(`Delete ${selectedPath}?`)) return;
-    try {
-      await getWanixRoot().remove(selectedPath);
-      clearFileSelection();
-      setStatus('Deleted.');
-      await refresh();
-    } catch (error) {
-      setStatus(error.message || 'Unable to delete this file.');
-    }
-  };
-
-  const removeDirectory = async () => {
-    if (path === '.' || !window.confirm(`Delete the empty folder /${path}?`)) return;
-    try {
-      const parent = filesystemPathParent(path);
-      await getWanixRoot().remove(path);
-      setPath(parent);
-      clearFileSelection();
-      setStatus('Deleted empty folder.');
-    } catch (error) {
-      setStatus(error.message || 'Only empty folders can be deleted here.');
-    }
-  };
-
-  const uploadFiles = async (event) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-    try {
-      const root = getWanixRoot();
-      for (const file of files) {
-        await root.writeFile(filesystemPathJoin(path, file.name), new Uint8Array(await file.arrayBuffer()));
-      }
-      await refresh();
-      setStatus(`Uploaded ${files.length} file${files.length === 1 ? '' : 's'}.`);
-    } catch (error) {
-      setStatus(error.message || 'Unable to upload these files.');
-    } finally {
-      event.target.value = '';
-    }
-  };
-
-  const downloadFile = () => {
-    if (!selectedPath) return;
-    const link = document.createElement('a');
-    const blob = preview?.blob || new Blob([contents], { type: 'text/plain;charset=utf-8' });
-    link.href = URL.createObjectURL(blob);
-    link.download = selectedPath.split('/').pop() || 'download';
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 0);
-  };
-
-  const dirty = selectedPath && !preview && contents !== savedContents;
-  return React.createElement('div', {
-    ref: filesPanelRef,
-    className: 'files-panel panel-content',
-    style: {
-      '--files-sidebar-width': `${sidebarWidth}px`,
-      '--files-sidebar-height': `${sidebarHeight}px`,
-    },
-  },
-    React.createElement('section', { className: 'files-sidebar' },
-      React.createElement('div', { className: 'files-toolbar' },
-        React.createElement('input', {
-          value: pathDraft,
-          'aria-label': 'Filesystem path',
-          spellCheck: false,
-          onChange: (event) => setPathDraft(event.target.value),
-          onKeyDown: (event) => { if (event.key === 'Enter') navigateToPath(); },
-        }),
-        React.createElement('div', { className: 'files-toolbar-actions' },
-          React.createElement('button', { type: 'button', title: 'Go to path', 'aria-label': 'Go to path', onClick: navigateToPath }, React.createElement(ArrowRight, { size: 15, 'aria-hidden': true })),
-          React.createElement('button', { type: 'button', title: 'Parent folder', 'aria-label': 'Parent folder', disabled: path === '.', onClick: () => { setPath(filesystemPathParent(path)); clearFileSelection(); } }, React.createElement(ArrowUp, { size: 15, 'aria-hidden': true })),
-          React.createElement('button', { type: 'button', title: 'Refresh files', 'aria-label': 'Refresh files', onClick: refresh }, React.createElement(RefreshCw, { className: loading ? 'files-spinning' : '', size: 15, 'aria-hidden': true })),
-          React.createElement('button', { type: 'button', title: 'Upload files', 'aria-label': 'Upload files', onClick: () => fileInputRef.current?.click() }, React.createElement(Upload, { size: 15, 'aria-hidden': true })),
-          React.createElement('button', { type: 'button', title: 'New file', 'aria-label': 'New file', onClick: () => { setCreating('file'); setEntryName(''); } }, React.createElement(FilePlus2, { size: 15, 'aria-hidden': true })),
-          React.createElement('button', { type: 'button', title: 'New folder', 'aria-label': 'New folder', onClick: () => { setCreating('folder'); setEntryName(''); } }, React.createElement(FolderPlus, { size: 15, 'aria-hidden': true })),
-          path !== '.' && React.createElement(React.Fragment, null,
-            React.createElement('button', { type: 'button', title: 'Rename folder', 'aria-label': 'Rename folder', onClick: () => { setCreating('rename-folder'); setEntryName(path.split('/').pop() || ''); } }, React.createElement(Pencil, { size: 15, 'aria-hidden': true })),
-            React.createElement('button', { type: 'button', title: 'Delete empty folder', 'aria-label': 'Delete empty folder', onClick: removeDirectory }, React.createElement(Trash2, { size: 15, 'aria-hidden': true })),
-          ),
-        ),
-      ),
-      React.createElement('input', { ref: fileInputRef, className: 'files-upload-input', type: 'file', multiple: true, onChange: uploadFiles }),
-      creating && React.createElement('div', { className: 'files-create' },
-        React.createElement('input', { autoFocus: true, value: entryName, placeholder: creating.includes('folder') ? 'folder name' : 'file name', onChange: (event) => setEntryName(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter') createEntry(); if (event.key === 'Escape') setCreating(null); } }),
-        React.createElement('button', { type: 'button', title: `Create ${creating}`, 'aria-label': `Create ${creating}`, onClick: createEntry }, React.createElement(Check, { size: 15, 'aria-hidden': true })),
-        React.createElement('button', { type: 'button', title: 'Cancel', 'aria-label': 'Cancel', onClick: () => setCreating(null) }, React.createElement(X, { size: 15, 'aria-hidden': true })),
-      ),
-      React.createElement('div', { className: 'files-list', role: 'list' },
-        entries.map((entry) => React.createElement('button', {
-          key: `${entry.isDirectory ? 'd' : 'f'}:${entry.name}`,
-          type: 'button',
-          role: 'listitem',
-          className: selectedPath === filesystemPathJoin(path, entry.name) ? 'selected' : '',
-          title: entry.name,
-          onClick: () => openEntry(entry),
-        },
-        React.createElement(entry.isDirectory ? FolderOpen : FileCode2, { size: 15, 'aria-hidden': true }),
-        React.createElement('span', null, entry.name),
-        )),
-        !loading && entries.length === 0 && !status && React.createElement('p', { className: 'files-empty' }, 'Folder is empty.'),
-      ),
-    ),
-    React.createElement('div', {
-      className: 'files-resizer',
-      role: 'separator',
-      'aria-label': stackedLayout ? 'Resize file browser file list height' : 'Resize file browser sidebar',
-      'aria-orientation': stackedLayout ? 'horizontal' : 'vertical',
-      'aria-valuemin': stackedLayout ? 130 : 190,
-      'aria-valuenow': Math.round(stackedLayout ? sidebarHeight : sidebarWidth),
-      onPointerDown: startSidebarResize,
-      onPointerMove: resizeSidebar,
-      onPointerUp: stopSidebarResize,
-      onPointerCancel: stopSidebarResize,
-    }),
-    React.createElement('section', { className: 'files-editor' },
-      selectedPath
-        ? preview
-          ? React.createElement(React.Fragment, null,
-            React.createElement('div', { className: 'files-editor-toolbar' },
-              React.createElement('code', { title: selectedPath }, `/${selectedPath}`),
-              React.createElement('div', { className: 'files-toolbar-actions' },
-                React.createElement('button', { type: 'button', title: 'Download file', 'aria-label': 'Download file', onClick: downloadFile }, React.createElement(Download, { size: 15, 'aria-hidden': true })),
-                React.createElement('button', { type: 'button', title: 'Rename file', 'aria-label': 'Rename file', onClick: () => { setCreating('rename-file'); setEntryName(selectedPath.split('/').pop() || ''); } }, React.createElement(Pencil, { size: 15, 'aria-hidden': true })),
-                React.createElement('button', { type: 'button', title: 'Delete file', 'aria-label': 'Delete file', onClick: removeFile }, React.createElement(Trash2, { size: 15, 'aria-hidden': true })),
-              ),
-            ),
-            React.createElement('div', { className: `files-media-preview ${preview.kind}` },
-              preview.kind === 'image'
-                ? React.createElement('img', { src: preview.url, alt: selectedPath.split('/').pop() || 'Image preview' })
-                : preview.kind === 'audio'
-                  ? React.createElement('audio', { src: preview.url, controls: true, preload: 'metadata' })
-                  : React.createElement('video', { src: preview.url, controls: true, preload: 'metadata' }),
-            ),
-          )
-          : React.createElement(React.Fragment, null,
-          React.createElement('div', { className: 'files-editor-toolbar' },
-            React.createElement('code', { title: selectedPath }, `/${selectedPath}`),
-            React.createElement('div', { className: 'files-toolbar-actions' },
-              React.createElement('button', { type: 'button', title: 'Save file', 'aria-label': 'Save file', disabled: !dirty, onClick: saveFile }, React.createElement(Save, { size: 15, 'aria-hidden': true })),
-              React.createElement('button', { type: 'button', title: 'Download file', 'aria-label': 'Download file', onClick: downloadFile }, React.createElement(Download, { size: 15, 'aria-hidden': true })),
-              React.createElement('button', { type: 'button', title: 'Rename file', 'aria-label': 'Rename file', onClick: () => { setCreating('rename-file'); setEntryName(selectedPath.split('/').pop() || ''); } }, React.createElement(Pencil, { size: 15, 'aria-hidden': true })),
-              React.createElement('button', { type: 'button', title: 'Delete file', 'aria-label': 'Delete file', onClick: removeFile }, React.createElement(Trash2, { size: 15, 'aria-hidden': true })),
-            ),
-          ),
-          React.createElement('textarea', { value: contents, spellCheck: false, 'aria-label': `Contents of ${selectedPath}`, onChange: (event) => setContents(event.target.value) }),
-          )
-        : React.createElement('div', { className: 'files-editor-empty' }, React.createElement(FileCode2, { size: 28, 'aria-hidden': true })),
-      status && React.createElement('div', { className: 'files-status', role: 'status' }, status),
-    ),
-  );
 }
 
 function RuntimePanel() {
@@ -3356,6 +2950,16 @@ if (rootEl) {
   const root = createRoot(rootEl);
   root.render(React.createElement(App));
 }
+
+// Initialise the Files submodule with the helpers it needs at
+// runtime. The panel only reads the wanix filesystem root and
+// subscribes to the wanix-system ready event; everything else is
+// self-contained inside files.js.
+initFiles({
+  wanixSystem,
+  getWanixRoot,
+  rememberOpenPanel,
+});
 
 // Initialise the Settings submodule with the helpers it needs at
 // runtime. Done at the bottom of the module so every helper defined

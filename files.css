@@ -1,0 +1,42 @@
+/* === Files panel ===
+ * Styles for the `files` dockview panel: tree-view file browser
+ * over the Wanix filesystem, with a text/image/audio/PDF editor.
+ * Split out of app.css so this feature can ship its own stylesheet
+ * alongside files.js without bloating the main bundle.
+ */
+.files-panel { display: grid; grid-template-columns: minmax(190px, var(--files-sidebar-width, 280px)) 6px minmax(0, 1fr); min-height: 0; background: #0d1117; color: #c9d1d9; }
+.files-sidebar, .files-editor { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.files-sidebar { background: #161b22; }
+.files-resizer { position: relative; z-index: 1; cursor: col-resize; touch-action: none; }
+.files-resizer::before { position: absolute; top: 0; bottom: 0; left: 2px; width: 1px; background: #30363d; content: ''; }
+.files-resizer:hover::before, .files-resizing .files-resizer::before { width: 2px; left: 2px; background: #58a6ff; }
+.files-resizing { cursor: col-resize; user-select: none; }
+.files-resizing-row { cursor: row-resize; user-select: none; }
+.files-toolbar, .files-editor-toolbar { min-height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border-bottom: 1px solid #30363d; }
+.files-toolbar code, .files-editor-toolbar code { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-toolbar input { min-width: 0; flex: 1; height: 26px; padding: 3px 5px; border: 1px solid transparent; border-radius: 3px; outline: 0; background: transparent; color: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-toolbar input:hover, .files-toolbar input:focus { border-color: #30363d; background: #0d1117; color: #c9d1d9; }
+.files-toolbar-actions { display: flex; align-items: center; gap: 3px; }
+.files-toolbar-actions button, .files-create button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
+.files-toolbar-actions button:hover:not(:disabled), .files-create button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
+.files-toolbar-actions button:disabled { opacity: 0.45; cursor: default; }
+.files-upload-input { display: none; }
+.files-create { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid #30363d; }
+.files-create input { min-width: 0; flex: 1; height: 28px; padding: 4px 7px; border: 1px solid #30363d; border-radius: 4px; background: #0d1117; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-list { min-height: 0; overflow: auto; padding: 4px; }
+.files-list button { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 30px; padding: 5px 7px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #c9d1d9; cursor: pointer; text-align: left; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-list button:hover, .files-list button.selected { border-color: #30363d; background: #21262d; }
+.files-list button svg { flex: 0 0 auto; color: #8b949e; }
+.files-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-empty { margin: 10px; color: #8b949e; font-size: 12px; }
+.files-editor textarea { box-sizing: border-box; width: 100%; min-height: 0; flex: 1; resize: none; padding: 12px; border: 0; outline: 0; background: #0d1117; color: #c9d1d9; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; tab-size: 2; }
+.files-editor-empty { display: grid; min-height: 0; flex: 1; place-items: center; color: #484f58; }
+.files-media-preview { display: grid; min-height: 0; flex: 1; place-items: center; overflow: auto; padding: 14px; background: #0d1117; }
+.files-media-preview img, .files-media-preview video { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.files-media-preview.audio audio { width: min(480px, 100%); }
+.files-status { min-height: 28px; padding: 6px 10px; border-top: 1px solid #30363d; color: #8b949e; font-size: 12px; }
+.files-spinning { animation: files-spin 0.8s linear infinite; }
+  .files-sidebar { border-bottom: 0; }
+  .files-resizer { cursor: row-resize; }
+  .files-resizer::before { top: 2px; right: 0; bottom: auto; left: 0; width: auto; height: 1px; }
+  .files-resizer:hover::before, .files-resizing-row .files-resizer::before { top: 2px; right: 0; left: 0; width: auto; height: 2px; background: #58a6ff; }
