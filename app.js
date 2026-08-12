@@ -9,7 +9,22 @@ import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
 import { addRuntimePanel, RuntimePanel, initRuntime } from './runtime.js?v=20260812.28';
 import { addDeckPanel, DeckPanel, initDeck } from './deck.js?v=20260812.29';
-import { addFallbackPanel, FallbackPanel, initLauncher, AddTerminalButton } from './launcher.js?v=20260812.31';
+import { addFallbackPanel, FallbackPanel, initLauncher, AddTerminalButton } from './launcher.js?v=20260812.32';
+import {
+  addTerminalPanel as addTerminalPanelFromPanels, addWorkbenchPanel as addWorkbenchPanelFromPanels,
+  addVmPanel as addVmPanelFromPanels, addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
+  addGroupPanel as addGroupPanelFromPanels, addIframePanel as addIframePanelFromPanels,
+  addPanelByComponent as addPanelByComponentFromPanels,
+  TerminalPanel as TerminalPanelFromPanels,
+  GroupPanel as GroupPanelFromPanels,
+  IframePanel as IframePanelFromPanels,
+  WorkbenchPanel as WorkbenchPanelFromPanels,
+  VmPanel as VmPanelFromPanels,
+  WorkspaceTaskPanel as WorkspaceTaskPanelFromPanels,
+  PanelTab,
+  WagiDogPet as WagiDogPetFromPanels,
+  initPanels, PANEL_ICONS,
+} from './panels.js?v=20260812.32';
 
 const debugMode = window.location.search.includes('debug');
 let debugErrorsDismissed = false;
@@ -1991,19 +2006,6 @@ function blankTerminalPresetDraft() {
   return { name: '', icon: 'terminal', program: '', args: '', type: 'gojs', wd: '', env: '' };
 }
 
-function addTerminalPanel(api, group, profile = getDefaultTerminalProfile()) {
-  const id = ++terminalIdCounter;
-  const panel = api.addPanel({
-    id: `terminal-${id}`,
-    component: 'terminal',
-    params: { terminalId: id, panelType: 'terminal', profile: clone(profile) },
-    title: `${profile.name || 'Terminal'} ${id}`,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'terminal', profile: clone(profile) });
-  panel.api.setActive();
-}
-
 let homeIdCounter = 0;
 let groupIdCounter = 0;
 let iframeIdCounter = 0;
@@ -2015,91 +2017,11 @@ let vmIdCounter = 0;
 let workspaceTaskPanelCounter = 0;
 let fallbackIdCounter = 0;
 
-function addWorkbenchPanel(api, group, config = getWorkbenchPanelConfig()) {
-  const existing = api.panels.find((panel) => panel.id.startsWith('workbench-'));
-  if (existing) {
-    existing.api.setActive();
-    return existing;
-  }
-  const id = ++workbenchIdCounter;
-  const panel = api.addPanel({
-    id: `workbench-${id}`,
-    component: 'workbench',
-    params: { workbenchId: id, panelType: 'workbench', config: clone(config) },
-    title: 'Workbench',
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'workbench', config: clone(config) });
-  panel.api.setActive();
-  return panel;
-}
-
-function addVmPanel(api, group, config = getVmPanelConfig()) {
-  const id = ++vmIdCounter;
-  const panel = api.addPanel({
-    id: `vm-${id}`,
-    component: 'vm',
-    params: { vmId: id, panelType: 'vm', config: clone(config) },
-    title: `VM ${id}`,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'vm', config: clone(config) });
-  panel.api.setActive();
-  return panel;
-}
-
-function addWorkspaceTaskPanel(api, task, workspace = loadActiveWorkspace(), group) {
-  const sessionId = ++workspaceTaskPanelCounter;
-  const panel = api.addPanel({
-    id: `workspace-task-${sessionId}`,
-    component: 'task',
-    params: {
-      sessionId,
-      task: clone(task),
-      workspaceId: workspace.id,
-      panelType: 'task',
-    },
-    title: task.name || task.cmd,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'task', task: clone(task), workspaceId: workspace.id });
-  panel.api.setActive();
-  return panel;
-}
-
 function autoStartWorkspaceTasks(api) {
   const workspace = loadActiveWorkspace();
   for (const task of workspace.tasks) {
-    if (task.autoStart) addWorkspaceTaskPanel(api, task, workspace);
+    if (task.autoStart) addWorkspaceTaskPanelFromPanels(api, task, workspace);
   }
-}
-
-function addGroupPanel(api, group) {
-  const id = ++groupIdCounter;
-  const panel = api.addPanel({
-    id: `group-${id}`,
-    component: 'group',
-    params: { groupId: id, panelType: 'group' },
-    title: 'Group',
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: 'group' });
-  panel.api.setActive();
-  return panel;
-}
-
-function addIframePanel(api, config, group) {
-  const id = ++iframeIdCounter;
-  const panel = api.addPanel({
-    id: `iframe-${id}`,
-    component: 'iframe',
-    params: { iframeId: id, panelType: config.panelType, ...config },
-    title: config.title,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  rememberOpenPanel(panel, { component: config.panelType });
-  panel.api.setActive();
-  return panel;
 }
 
 const IFRAME_PANEL_OPTIONS = {
@@ -2147,40 +2069,19 @@ const PANEL_CREATION_OPTIONS = [
   { component: 'rickroll', label: 'Rick Roll', icon: Music2 },
 ];
 
-const PANEL_ICONS = Object.fromEntries(
-  PANEL_CREATION_OPTIONS.map(({ component, icon }) => [component, icon]),
-);
-PANEL_ICONS.task = Play;
-
-function addPanelByComponent(api, component, group) {
-  if (component === 'terminal') return addTerminalPanel(api, group);
-  if (component === 'fallback') return addFallbackPanel(api, group);
-  if (component === 'home') return addLandingPanel(api, group);
-  if (component === 'deck') return addDeckPanel(api, group);
-  if (component === 'workbench') return addWorkbenchPanel(api, group);
-  if (component === 'vm') return addVmPanel(api, group);
-  if (component === 'settings') return addSettingsPanel(api, group);
-  if (component === 'files') return addFilesPanel(api, group);
-  if (component === 'runtime') return addRuntimePanel(api, group);
-  if (component === 'group') return addGroupPanel(api, group);
-  if (component === 'crush-runner') return addCrushRunnerPanel(api, group);  // imported from ./crush-runner.js
-  if (IFRAME_PANEL_OPTIONS[component]) return addIframePanel(api, IFRAME_PANEL_OPTIONS[component], group);
-  return addLandingPanel(api, group);
-}
-
 function restoreSavedPanels(api) {
   const panels = getSavedOpenPanels();
   for (const panel of panels) {
     if (panel.component === 'terminal') {
-      addTerminalPanel(api, undefined, panel.profile || getDefaultTerminalProfile());
+      addTerminalPanelFromPanels(api, undefined, panel.profile || getDefaultTerminalProfile());
     } else if (panel.component === 'workbench') {
-      addWorkbenchPanel(api, undefined, panel.config || getWorkbenchPanelConfig());
+      addWorkbenchPanelFromPanels(api, undefined, panel.config || getWorkbenchPanelConfig());
     } else if (panel.component === 'vm') {
-      addVmPanel(api, undefined, panel.config || getVmPanelConfig());
+      addVmPanelFromPanels(api, undefined, panel.config || getVmPanelConfig());
     } else if (panel.component === 'task' && panel.task) {
-      addWorkspaceTaskPanel(api, panel.task, loadWorkspace(panel.workspaceId) || loadActiveWorkspace());
+      addWorkspaceTaskPanelFromPanels(api, panel.task, loadWorkspace(panel.workspaceId) || loadActiveWorkspace());
     } else {
-      addPanelByComponent(api, panel.component);
+      addPanelByComponentFromPanels(api, panel.component);
     }
   }
   // Each add* helper above calls setActive() on the newly added panel, so the
@@ -2213,127 +2114,8 @@ function whenWanixReady(callback) {
 
 // ========== Components ==========
 
-function WorkspaceTaskPanel({ api, params }) {
-  const wrapperRef = useRef(null);
-  const hasTerminal = params.task.term;
-  const [taskStatus, setTaskStatus] = useState({ status: 'created', error: null });
-
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    const workspace = loadWorkspace(params.workspaceId) || loadActiveWorkspace();
-    const session = getWorkspaceTaskSession(params.sessionId, params.task, workspace);
-    const updateStatus = (event) => setTaskStatus(event.detail);
-    session.task.addEventListener(WORKSPACE_TASK_STATUS_EVENT, updateStatus);
-    setTaskStatus({ status: session.status || 'created', error: session.error || null });
-    const detach = attachWorkspaceTaskSession(params.sessionId, params.task, workspace, wrapper, api);
-    return () => {
-      session.task.removeEventListener(WORKSPACE_TASK_STATUS_EVENT, updateStatus);
-      detach?.();
-    };
-  }, [api, params.sessionId]);
-
-  if (!hasTerminal) {
-    return React.createElement('div', { ref: wrapperRef, className: 'task-headless panel-content' },
-      React.createElement('h2', null, params.task.name),
-      React.createElement('p', null, taskStatus.status === 'failed'
-        ? taskStatus.error?.message || 'Task failed to start.'
-        : taskStatus.status === 'starting'
-          ? 'Starting task…'
-          : 'Task started without a terminal. Its output is available in the browser console.'),
-      React.createElement('span', { className: `task-headless-status ${taskStatus.status}` }, taskStatus.status),
-    );
-  }
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
 // Terminal panel: creates wanix-task + wanix-term
-function TerminalPanel({ api, params }) {
-  const id = params.terminalId;
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    return attachTerminalSession(id, params.profile, wrapper, api);
-  }, [id, params.profile]);
-
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
-function GroupPanel() {
-  return React.createElement('div', { className: 'group-panel panel-content' },
-    React.createElement('img', { src: 'group.png', alt: 'Gear Shell group' }),
-  );
-}
-
-function IframePanel({ api, params }) {
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    return attachIframeSession(params.iframeId, params, wrapper, api);
-  }, [api, params.iframeId]);
-
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
-function WorkbenchPanel({ api, params }) {
-  const wrapperRef = useRef(null);
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    return attachWorkbenchSession(params.workbenchId, params.config || getWorkbenchPanelConfig(), wrapper, api);
-  }, [api, params.workbenchId]);
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
-function VmPanel({ api, params }) {
-  const wrapperRef = useRef(null);
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    return attachVmSession(params.vmId, params.config || getVmPanelConfig(), wrapper, api);
-  }, [api, params.vmId]);
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
-}
-
-function PanelTab(props) {
-  const Icon = props.params.panelType === 'terminal'
-    ? getTerminalPresetIcon(props.params.profile)
-    : PANEL_ICONS[props.params.panelType] || Terminal;
-  return React.createElement('div', { className: 'panel-tab' },
-    React.createElement(Icon, { className: 'panel-tab-icon', size: 14, 'aria-hidden': true }),
-    React.createElement(DockviewDefaultTab, props),
-  );
-}
-
 // Compact header action: tap creates a terminal, long-press opens extensions.
-function WagiDogPet() {
-  const petRef = useRef(null);
-
-  useEffect(() => {
-    const syncWagiDog = () => {
-      if (loadConfig().wagiDogEnabled) {
-        if (!petRef.current) petRef.current = new WebPet();
-      } else {
-        petRef.current?.destroy();
-        petRef.current = null;
-      }
-    };
-    syncWagiDog();
-    window.addEventListener(WORKSPACE_CHANGED_EVENT, syncWagiDog);
-    return () => {
-      window.removeEventListener(WORKSPACE_CHANGED_EVENT, syncWagiDog);
-      petRef.current?.destroy();
-      petRef.current = null;
-    };
-  }, []);
-
-  return null;
-}
-
 // Main application
 function App() {
   const onReady = useCallback((event) => {
@@ -2362,7 +2144,7 @@ function App() {
     const cfg = loadConfig();
     const restored = cfg.restoreTabs && restoreSavedPanels(event.api);
     if (!restored) {
-      for (const component of cfg.startupPanels) addPanelByComponent(event.api, component);
+      for (const component of cfg.startupPanels) addPanelByComponentFromPanels(event.api, component);
     }
     if (event.api.panels.length === 0) addFallbackPanel(event.api);
 
@@ -2398,19 +2180,19 @@ function App() {
         settings: SettingsPanel,
         files: FilesPanel,
         runtime: RuntimePanel,
-        workbench: WorkbenchPanel,
-        vm: VmPanel,
+        workbench: WorkbenchPanelFromPanels,
+        vm: VmPanelFromPanels,
         fallback: FallbackPanel,
-        task: WorkspaceTaskPanel,
-        terminal: TerminalPanel,
-        group: GroupPanel,
-        iframe: IframePanel,
+        task: WorkspaceTaskPanelFromPanels,
+        terminal: TerminalPanelFromPanels,
+        group: GroupPanelFromPanels,
+        iframe: IframePanelFromPanels,
         'crush-runner': CrushRunnerPanel,  // from ./crush-runner.js
       },
       defaultTabComponent: PanelTab,
       rightHeaderActionsComponent: AddTerminalButton,
     }),
-    React.createElement(WagiDogPet),
+    React.createElement(WagiDogPetFromPanels),
   );
 }
 
@@ -2433,8 +2215,8 @@ initLauncher({
   WORKSPACE_CHANGED_EVENT,
   loadConfig,
   normalizeLauncherOrder,
-  addPanelByComponent,
-  addTerminalPanel,
+  addPanelByComponent: addPanelByComponentFromPanels,
+  addTerminalPanel: addTerminalPanelFromPanels,
   getTerminalProfiles,
   getTerminalPresetIcon,
   terminalCommand,
@@ -2444,6 +2226,29 @@ initLauncher({
   resetConfig,
   setWagiDogEnabled,
   rememberOpenPanel,
+});
+
+// Initialise the Panels submodule with the deps its 15 atomic
+// panels + 7 add*Panel dispatchers need. The dep list is the longest
+// of any module because each panel type reads a different slice of
+// app.js (overlay session attachers, the panel-creation catalog,
+// the IFRAME panel options table, the WORKSPACE_*_EVENT constants,
+// the per-type id counters, plus the workspace + config helpers).
+initPanels({
+  attachTerminalSession, attachWorkbenchSession, attachVmSession,
+  attachWorkspaceTaskSession, attachIframeSession,
+  loadActiveWorkspace, loadWorkspace, loadConfig, saveConfig, resetConfig,
+  rememberOpenPanel, clone,
+  IFRAME_PANEL_OPTIONS, PANEL_CREATION_OPTIONS,
+  WORKSPACE_CHANGED_EVENT, WORKSPACE_TASK_STATUS_EVENT,
+  getWorkspaceTaskSession, getTerminalPresetIcon,
+  getVmPanelConfig, getWorkbenchPanelConfig,
+  getDefaultTerminalProfile,
+  // Cross-module add*Panel dispatchers so panels.js can route every
+  // component name (home / deck / settings / files / runtime /
+  // fallback / crush-runner) through a single PANEL_ADDERS table.
+  addLandingPanel, addDeckPanel, addSettingsPanel, addFilesPanel,
+  addRuntimePanel, addFallbackPanel, addCrushRunnerPanel,
 });
 
 // Initialise the Deck submodule with the helpers it needs at
@@ -2527,7 +2332,7 @@ initSettings({
   // Task + bind helpers (used by setupTaskForm and setupBindForm)
   addWorkspaceBind,
   addWorkspaceTask,
-  addWorkspaceTaskPanel,
+  addWorkspaceTaskPanel: addWorkspaceTaskPanelFromPanels,
   removeWorkspaceBind,
   removeWorkspaceTask,
   reorderWorkspaceBinds,
@@ -2552,7 +2357,7 @@ initSettings({
 // a live view of the dockview root to fall back to when the panel is
 // not given an explicit containerApi.
 initHome({
-  addPanelByComponent,
+  addPanelByComponent: addPanelByComponentFromPanels,
   getDockviewApi,
   rememberOpenPanel,
 });
@@ -2566,7 +2371,7 @@ initCrushRunner({
   createTerminalSession,
   attachOverlayTerminalSession,
   destroyTerminalSession,
-  addTerminalPanel,
+  addTerminalPanel: addTerminalPanelFromPanels,
   waitForWanixSystem,
   getWanixRoot,
   buildEnv,
