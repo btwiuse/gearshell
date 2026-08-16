@@ -9,7 +9,7 @@ import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
 import { addRuntimePanel, RuntimePanel, initRuntime } from './runtime.js?v=20260812.28';
 import { addDeckPanel, DeckPanel, initDeck } from './deck.js?v=20260812.29';
-import { addFallbackPanel, FallbackPanel, initLauncher, AddTerminalButton } from './launcher.js?v=20260812.32';
+import { addFallbackPanel, FallbackPanel, initLauncher, AddTerminalButton } from './launcher.js?v=20260812.33';
 import {
   addTerminalPanel as addTerminalPanelFromPanels, addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addVmPanel as addVmPanelFromPanels, addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,

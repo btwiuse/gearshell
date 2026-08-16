@@ -266,7 +266,7 @@ function AddTerminalButton({ containerApi, group }) {
       React.createElement('span', null, 'Wagi Dog'),
       wagiDogEnabled && React.createElement(Check, { className: 'panel-action-menu-check', size: 15, 'aria-label': 'Enabled' }),
       ),
-      PANEL_CREATION_OPTIONS.filter((option) => option.component !== 'terminal').map((option) =>
+      launcherDep("PANEL_CREATION_OPTIONS").filter((option) => option.component !== 'terminal').map((option) =>
         React.createElement('button', {
           key: option.component,
           type: 'button',
