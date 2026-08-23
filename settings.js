@@ -17,7 +17,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, Eye, EyeOff, GripVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronDown, Eye, EyeOff, GripVertical, Pencil, Trash2 } from "lucide-react";
 
 let __settingsDeps = null;
 export function initSettings(dependencies) {
@@ -1150,7 +1150,10 @@ function TerminalPresetEditor() {
     React.createElement(GripVertical, { className: 'terminal-profile-handle', size: 16, 'aria-hidden': true }),
     React.createElement(Icon, { className: 'terminal-profile-icon', size: 17, 'aria-hidden': true }),
     React.createElement('div', { className: 'terminal-profile-details' },
-      React.createElement('span', { className: 'terminal-profile-name' }, profile.name),
+      React.createElement('span', { className: 'terminal-profile-name' },
+        profile.name,
+        profile.builtin && React.createElement('span', { className: 'terminal-profile-builtin-tag', title: 'Built-in preset' }, 'built-in'),
+      ),
       React.createElement('span', { className: 'terminal-profile-meta' }, `${settingsDep("terminalCommand")(profile)} · ${profile.type}${profile.id === 'hush' ? ' · shell defaults' : ''}`),
     ),
     React.createElement('div', { className: 'terminal-profile-actions' },
@@ -1493,38 +1496,96 @@ function setupTerminalProfileForm(settingsContent) {
 function TerminalPresetIconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [page, setPage] = useState(0);
-  const [catalogColumns, setCatalogColumns] = useState(1);
+  const [category, setCategory] = useState('all');
   const catalogRef = useRef(null);
-  const pageSize = Math.max(1, catalogColumns * 3);
-  const selected = settingsDep("TERMINAL_PRESET_ICON_BY_ID")[value] || settingsDep("TERMINAL_PRESET_ICON_BY_ID").terminal;
+  const gridRef = useRef(null);
+  const RECENT_KEY = 'crush-runner-recent-icons';
+  const RECENT_LIMIT = 8;
+  const ALL_OPTIONS = settingsDep("TERMINAL_PRESET_ICON_OPTIONS");
+  const ICON_BY_ID = settingsDep("TERMINAL_PRESET_ICON_BY_ID");
+  const CATEGORIES = [
+    { id: 'all', label: 'All', match: () => true },
+    { id: 'agents', label: 'Agents', match: (id) => /^(bot|sparkles|message-circle|message-square|wand|wand-sparkles|atom|mic|lightbulb|workflow|zap)/i.test(id) },
+    { id: 'terminal', label: 'Terminal', match: (id) => /^(terminal|square-terminal|code|code-2|braces|brackets|command|hash|chevron-right)/i.test(id) },
+    { id: 'tools', label: 'Tools', match: (id) => /^(wrench|screwdriver|hammer|settings|gear|tool|pencil|pen|brush|scissors|package|box|boxes|cog)/i.test(id) },
+    { id: 'media', label: 'Media', match: (id) => /^(image|music|video|film|camera|microphone|headphones|volume|play|pause|fast-forward|rewind)/i.test(id) },
+    { id: 'shapes', label: 'Shapes', match: (id) => /^(circle|square|triangle|hexagon|octagon|star|heart|diamond|polygon)/i.test(id) },
+  ];
+  const [recents, setRecents] = useState(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((id) => ICON_BY_ID[id]).slice(0, RECENT_LIMIT) : [];
+    } catch { return []; }
+  });
+  const selected = ICON_BY_ID[value] || ICON_BY_ID.terminal;
   const SelectedIcon = selected.icon;
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const filtered = normalizedQuery
-    ? settingsDep("TERMINAL_PRESET_ICON_OPTIONS").filter((option) => `${option.label} ${option.id}`.toLocaleLowerCase().includes(normalizedQuery))
-    : settingsDep("TERMINAL_PRESET_ICON_OPTIONS");
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, pageCount - 1);
-  const currentOptions = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const matchesQuery = (option) => {
+    if (!normalizedQuery) return true;
+    const haystack = `${option.label} ${option.id}`.toLocaleLowerCase();
+    if (haystack.includes(normalizedQuery)) return true;
+    // Loose token match: every char of the query appears in order somewhere
+    // in the haystack. Lets "bt" find "bot" without exact substring luck.
+    let cursor = 0;
+    for (const char of normalizedQuery) {
+      const next = haystack.indexOf(char, cursor);
+      if (next === -1) return false;
+      cursor = next + 1;
+    }
+    return true;
+  };
+  const cat = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
+  const filtered = ALL_OPTIONS.filter((option) => matchesQuery(option) && cat.match(option.id));
+  const recentOptions = recents.map((id) => ICON_BY_ID[id]).filter(Boolean);
 
-  useEffect(() => setPage(0), [query]);
+  // Scroll the currently selected tile into view whenever the catalog opens
+  // or the search query changes; without this the user opens the picker and
+  // stares at a grid that does not show what they already have.
   useEffect(() => {
-    if (!open || !catalogRef.current) return undefined;
-    const catalog = catalogRef.current;
-    const updateColumns = () => {
-      // Tiles are at least 78px wide with 6px gutters; the catalog padding
-      // accounts for the small deduction before calculating a complete row.
-      const available = Math.max(1, catalog.clientWidth - 16);
-      setCatalogColumns(Math.max(1, Math.floor((available + 6) / 84)));
-    };
-    updateColumns();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(updateColumns);
-    observer.observe(catalog);
-    return () => observer.disconnect();
-  }, [open]);
+    if (!open || !gridRef.current) return;
+    const tile = gridRef.current.querySelector('[data-selected="true"]');
+    if (tile && typeof tile.scrollIntoView === 'function') {
+      tile.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [open, normalizedQuery, category]);
 
-  return React.createElement('div', { className: 'terminal-profile-icon-picker' },
+  const choose = (optionId) => {
+    onChange(optionId);
+    setRecents((current) => {
+      const next = [optionId, ...current.filter((id) => id !== optionId)].slice(0, RECENT_LIMIT);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* private mode */ }
+      return next;
+    });
+    setOpen(false);
+  };
+
+  const onKeyDown = (event) => {
+    if (!open) return;
+    if (event.key === 'Escape') { event.preventDefault(); setOpen(false); return; }
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    const tiles = gridRef.current ? Array.from(gridRef.current.querySelectorAll('.terminal-profile-icon-option')) : [];
+    if (tiles.length === 0) return;
+    const currentIndex = tiles.findIndex((tile) => tile.dataset.selected === 'true');
+    let target = currentIndex;
+    if (event.key === 'Enter' || event.key === ' ') {
+      const id = tiles[currentIndex >= 0 ? currentIndex : 0]?.dataset.iconId;
+      if (id) choose(id);
+      return;
+    }
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') target = currentIndex + 1;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') target = currentIndex - 1;
+    if (target < 0) target = tiles.length - 1;
+    if (target >= tiles.length) target = 0;
+    const nextId = tiles[target]?.dataset.iconId;
+    if (nextId) onChange(nextId);
+  };
+
+  return React.createElement('div', {
+    className: 'terminal-profile-icon-picker',
+    onKeyDown,
+  },
     React.createElement('button', {
       type: 'button',
       className: 'terminal-profile-icon-trigger',
@@ -1533,57 +1594,83 @@ function TerminalPresetIconPicker({ value, onChange }) {
       onClick: () => setOpen((visible) => !visible),
     },
     React.createElement(SelectedIcon, { size: 18, 'aria-hidden': true }),
-    React.createElement('span', null, selected.label),
-    React.createElement('span', { className: 'terminal-profile-icon-trigger-meta' }, 'Choose icon'),
-    React.createElement(ChevronDown, { size: 16, 'aria-hidden': true }),
+    React.createElement('span', { className: 'terminal-profile-icon-trigger-label' }, selected.label),
+    open
+      ? React.createElement(ChevronDown, { size: 16, 'aria-hidden': true, style: { transform: 'rotate(180deg)' } })
+      : React.createElement(ChevronDown, { size: 16, 'aria-hidden': true }),
     ),
-    open && React.createElement('div', { ref: catalogRef, id: 'terminal-preset-icon-catalog', className: 'terminal-profile-icon-catalog' },
+    open && React.createElement('div', {
+      ref: catalogRef,
+      id: 'terminal-preset-icon-catalog',
+      className: 'terminal-profile-icon-catalog',
+    },
       React.createElement('div', { className: 'terminal-profile-icon-catalog-toolbar' },
         React.createElement('input', {
-          type: 'search', value: query, placeholder: `Search ${settingsDep("TERMINAL_PRESET_ICON_OPTIONS").length} Lucide icons…`,
-          'aria-label': 'Search Lucide icons', autoComplete: 'off',
+          type: 'search', value: query, placeholder: `Search ${ALL_OPTIONS.length} icons…`,
+          'aria-label': 'Search icons', autoComplete: 'off', autoFocus: true,
           onChange: (event) => setQuery(event.target.value),
         }),
-        React.createElement('span', { className: 'terminal-profile-icon-result-count' }, `${filtered.length} icons`),
-      ),
-      currentOptions.length > 0
-        ? React.createElement('div', { className: 'terminal-profile-icon-grid', role: 'group', 'aria-label': 'Lucide icon results' }, currentOptions.map((option) => {
-          const Icon = option.icon;
-          const isSelected = value === option.id;
-          return React.createElement('button', {
-            key: option.id,
-            type: 'button',
-            className: `terminal-profile-icon-option${isSelected ? ' selected' : ''}`,
-            title: option.label,
-            'aria-label': option.label,
-            'aria-pressed': isSelected,
-            onClick: () => { onChange(option.id); setOpen(false); },
-          },
-          React.createElement(Icon, { size: 28, 'aria-hidden': true }),
-          React.createElement('span', null, option.label),
-          );
-        }))
-        : React.createElement('p', { className: 'terminal-profile-icon-empty' }, 'No Lucide icons match this search.'),
-      React.createElement('div', { className: 'terminal-profile-icon-pagination' },
-        React.createElement('button', {
-          type: 'button', disabled: currentPage === 0,
-          'aria-label': 'Previous icon page', onClick: () => setPage((current) => Math.max(0, current - 1)),
-        }, React.createElement(ArrowLeft, { size: 16, 'aria-hidden': true })),
-        React.createElement('label', null,
-          React.createElement('span', null, 'Page'),
-          React.createElement('input', {
-            type: 'number', min: 1, max: pageCount, value: currentPage + 1, 'aria-label': 'Icon page number',
-            onChange: (event) => {
-              const requested = Number(event.target.value);
-              if (Number.isFinite(requested)) setPage(Math.min(pageCount - 1, Math.max(0, Math.floor(requested) - 1)));
-            },
-          }),
-          React.createElement('span', null, `of ${pageCount}`),
+        React.createElement('span', { className: 'terminal-profile-icon-result-count' },
+          `${filtered.length}${filtered.length === 1 ? ' icon' : ' icons'}`,
         ),
-        React.createElement('button', {
-          type: 'button', disabled: currentPage === pageCount - 1,
-          'aria-label': 'Next icon page', onClick: () => setPage((current) => Math.min(pageCount - 1, current + 1)),
-        }, React.createElement(ArrowRight, { size: 16, 'aria-hidden': true })),
+      ),
+      React.createElement('div', { className: 'terminal-profile-icon-categories', role: 'tablist' },
+        CATEGORIES.map((c) => React.createElement('button', {
+          key: c.id,
+          type: 'button',
+          role: 'tab',
+          'aria-selected': category === c.id,
+          className: `terminal-profile-icon-category${category === c.id ? ' selected' : ''}`,
+          onClick: () => setCategory(c.id),
+        }, c.label)),
+      ),
+      recentOptions.length > 0 && React.createElement('div', { className: 'terminal-profile-icon-recent' },
+        React.createElement('span', { className: 'terminal-profile-icon-section-label' }, 'Recent'),
+        React.createElement('div', { className: 'terminal-profile-icon-recent-grid' },
+          recentOptions.map((option) => {
+            const Icon = option.icon;
+            const isSelected = value === option.id;
+            return React.createElement('button', {
+              key: option.id,
+              type: 'button',
+              className: `terminal-profile-icon-option${isSelected ? ' selected' : ''}`,
+              'data-icon-id': option.id,
+              'data-selected': isSelected,
+              title: option.label,
+              'aria-label': option.label,
+              'aria-pressed': isSelected,
+              onClick: () => choose(option.id),
+            }, React.createElement(Icon, { size: 22, 'aria-hidden': true }));
+          }),
+        ),
+      ),
+      filtered.length > 0
+        ? React.createElement('div', {
+            ref: gridRef,
+            className: 'terminal-profile-icon-grid',
+            role: 'group',
+            'aria-label': 'Icon results',
+          }, filtered.map((option) => {
+            const Icon = option.icon;
+            const isSelected = value === option.id;
+            return React.createElement('button', {
+              key: option.id,
+              type: 'button',
+              className: `terminal-profile-icon-option${isSelected ? ' selected' : ''}`,
+              'data-icon-id': option.id,
+              'data-selected': isSelected,
+              title: option.label,
+              'aria-label': option.label,
+              'aria-pressed': isSelected,
+              onClick: () => choose(option.id),
+            },
+            React.createElement(Icon, { size: 26, 'aria-hidden': true }),
+            React.createElement('span', null, option.label),
+            );
+          }))
+        : React.createElement('p', { className: 'terminal-profile-icon-empty' }, 'No icons match. Try fewer letters or a different category.'),
+      React.createElement('div', { className: 'terminal-profile-icon-footer' },
+        React.createElement('span', null, '↑↓←→ to browse · Enter to apply · Esc to close'),
       ),
     ),
   );

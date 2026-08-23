@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
 import { Activity, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookOpen, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Github, Globe2, GripVertical, House, Layers, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X, Zap, icons as LucideIcons } from 'lucide-react';
 import WebPet from './web-pet/index.js';
-import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner } from './crush-runner.js?v=20260812.18';
+import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner } from './crush-runner.js?v=20260812.20';
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
 import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker } from './settings.js?v=20260812.31';
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
@@ -331,6 +331,11 @@ function normalizeShellConfig(config) {
       .map(migrateLegacyHushTerminalProfile)
       .filter((profile) => profile.program)
     : [];
+  const crushRunnerPresets = Array.isArray(config?.crushRunnerPresets)
+    ? config.crushRunnerPresets
+      .map(normalizeCrushRunnerPreset)
+      .filter((preset) => preset.program)
+    : [];
   const normalized = {
     cmd: typeof config?.cmd === 'string' && config.cmd.trim() ? config.cmd.trim() : DEFAULT_CMD,
     env: typeof config?.env === 'string' ? config.env : '',
@@ -354,9 +359,74 @@ function normalizeShellConfig(config) {
     defaultTerminalProfileId: typeof config?.defaultTerminalProfileId === 'string'
       ? config.defaultTerminalProfileId
       : 'hush',
+    crushRunnerPresets,
+    crushRunnerPresetOrder: normalizeTerminalProfileOrder(config?.crushRunnerPresetOrder, crushRunnerPresets),
+    crushRunnerActiveId: typeof config?.crushRunnerActiveId === 'string'
+      ? config.crushRunnerActiveId
+      : 'crush',
   };
   if (normalized.cmd === LEGACY_DEFAULT_CMD) normalized.cmd = DEFAULT_CMD;
   return normalized;
+}
+
+const BUILTIN_CRUSH_RUNNER_PRESET = {
+  id: 'crush',
+  name: 'Crush',
+  icon: 'bot',
+  program: 'crush',
+  args: '',
+  type: 'gojs',
+  env: '',
+  wd: '',
+  builtin: true,
+};
+
+function normalizeCrushRunnerPreset(preset = {}) {
+  const base = normalizeTerminalProfile(preset);
+  return {
+    ...base,
+    crushrc: typeof preset.crushrc === 'string' ? preset.crushrc : '',
+    builtin: preset.builtin === true,
+  };
+}
+
+function getCrushRunnerPresets(config = loadConfig()) {
+  const builtin = { ...BUILTIN_CRUSH_RUNNER_PRESET };
+  const configured = new Map((config.crushRunnerPresets || []).map((preset) => [preset.id, preset]));
+  const builtins = [builtin].map((preset) => ({
+    ...preset,
+    ...configured.get(preset.id),
+    builtin: true,
+    id: 'crush',
+  }));
+  const customs = (config.crushRunnerPresets || []).filter((preset) => preset.id !== 'crush');
+  // User-built "save updates to the built-in" overrides live inside
+  // crushRunnerPresets too (id === 'crush'); we merge them into the
+  // built-in slot above via `configured.get('crush')` and drop them from
+  // the customs list so we don't render the same preset twice.
+  const all = [...builtins, ...customs];
+  const order = normalizeTerminalProfileOrder(config.crushRunnerPresetOrder, all);
+  const positions = new Map(order.map((id, index) => [id, index]));
+  return [...all].sort((left, right) => (positions.get(left.id) ?? 0) - (positions.get(right.id) ?? 0));
+}
+
+function getActiveCrushRunnerPreset(config = loadConfig()) {
+  return getCrushRunnerPresets(config).find((preset) => preset.id === (config.crushRunnerActiveId || 'crush'))
+    || getCrushRunnerPresets(config)[0];
+}
+
+function saveCrushRunnerPresets(presets, activeId, order) {
+  const config = loadConfig();
+  saveConfig({
+    ...config,
+    crushRunnerPresets: presets.map((preset) => ({ ...preset, builtin: false })),
+    crushRunnerPresetOrder: normalizeTerminalProfileOrder(order, presets),
+    crushRunnerActiveId: typeof activeId === 'string' && activeId ? activeId : 'crush',
+  });
+}
+
+function blankCrushRunnerPresetDraft() {
+  return { name: '', icon: 'bot', program: 'crush', args: '', type: 'gojs', wd: '', env: '', crushrc: '' };
 }
 
 function normalizeTerminalProfileOrder(order, profiles = []) {
@@ -2347,6 +2417,7 @@ initSettings({
   blankTerminalPresetDraft,
   getTerminalPresetIcon,
   terminalCommand,
+  TerminalPresetIconPicker,
   TERMINAL_PRESET_ICON_BY_ID,
   TERMINAL_PRESET_ICON_OPTIONS,
 });
@@ -2381,6 +2452,13 @@ initCrushRunner({
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   TerminalPresetIconPicker,
+  getCrushRunnerPresets,
+  getActiveCrushRunnerPreset,
+  saveCrushRunnerPresets,
+  normalizeCrushRunnerPreset,
+  blankCrushRunnerPresetDraft,
+  getTerminalPresetIcon,
+  TERMINAL_PRESET_ICON_BY_ID,
   WORKSPACE_CHANGED_EVENT,
   rememberOpenPanel,
 });
