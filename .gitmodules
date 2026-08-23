@@ -13,3 +13,7 @@
 [submodule "web-pet"]
 	path = web-pet
 	url = https://github.com/justwasm/wagi-web-pet.git
+[submodule "memory"]
+	path = memory
+	url = https://github.com/btwiuse/gearshell.wiki.git
+	branch = master
