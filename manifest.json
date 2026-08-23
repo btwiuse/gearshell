@@ -1,6 +1,6 @@
 {
-  "name": "Gear Shell",
-  "short_name": "Gear Shell",
+  "name": "GearShell",
+  "short_name": "GearShell",
   "description": "Web Native Agent Sandbox",
   "start_url": ".",
   "display": "standalone",
