@@ -884,7 +884,15 @@ function CrushRunnerPanel({ api, params, containerApi }) {
     });
   };
   const resetCrushrcField = () => {
-    setCrushrcContent(DEFAULT_CRUSHRC);
+    // Built-in presets reset to their own bundled crushrc template so
+    // each provider-specific slot (Ox, MiniMax, DeepSeek, StepFun, All)
+    // round-trips back to its shipped config. User presets also reset
+    // to their own saved crushrc; the shared DEFAULT_CRUSHRC only
+    // serves as the ultimate fallback when no preset is active.
+    const fallback = activePreset && activePreset.crushrc
+      ? activePreset.crushrc
+      : DEFAULT_CRUSHRC;
+    setCrushrcContent(fallback);
     setStatus({
       message: "Reset crushrc to the built-in template.",
       isError: false,

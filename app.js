@@ -366,23 +366,185 @@ function normalizeShellConfig(config) {
     crushRunnerPresetOrder: normalizeTerminalProfileOrder(config?.crushRunnerPresetOrder, crushRunnerPresets),
     crushRunnerActiveId: typeof config?.crushRunnerActiveId === 'string'
       ? config.crushRunnerActiveId
-      : 'crush',
+      : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   };
   if (normalized.cmd === LEGACY_DEFAULT_CMD) normalized.cmd = DEFAULT_CMD;
   return normalized;
 }
 
-const BUILTIN_CRUSH_RUNNER_PRESET = {
-  id: 'crush',
-  name: 'Crush',
-  icon: 'bot',
-  program: 'crush',
-  args: '',
-  type: 'gojs',
-  env: 'USER=me',
-  wd: '/opfs/home',
-  builtin: true,
-};
+// Built-in Crush Runner presets. These ship with the app and are always
+// available alongside the user's saved customs; the order below is also
+// the fallback render order when a workspace has no saved
+// crushRunnerPresetOrder yet. The first entry (`crush`) keeps the
+// legacy default id so existing workspaces that pinned
+// crushRunnerActiveId === 'crush' keep resolving.
+const BUILTIN_CRUSH_RUNNER_PRESETS = [
+  {
+    id: 'crush',
+    name: 'Crush',
+    icon: 'bot',
+    program: 'crush',
+    args: '',
+    type: 'gojs',
+    env: 'USER=me',
+    wd: '/opfs/home',
+    builtin: true,
+  },
+  {
+    id: 'ox',
+    name: 'Ox',
+    icon: 'ghost',
+    program: '/opfs/wanix/crush',
+    args: '',
+    type: 'gojs',
+    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
+    wd: '/opfs/home',
+    builtin: true,
+    crushrc: String.raw`AGW=https://agw.up.railway.app
+
+provider add OpenRouter \
+     --type openai-compat \
+     --base-url "${AGW}/api/v1" \
+     --api-key "-" \
+     --extra-header "Model" "stealth/ox-alpha"
+
+model add OpenRouter/stealth/ox-alpha \
+     --name "Stealth Ox Alpha" \
+     --context-window 1000000 \
+     --default-max-tokens 163840 \
+     --can-reason true \
+     --supports-images false
+
+model large OpenRouter/stealth/ox-alpha --think
+model small OpenRouter/stealth/ox-alpha --think
+
+option ui transparent false`,
+  },
+  {
+    id: 'minimax',
+    name: 'MiniMax',
+    icon: 'bot',
+    program: '/opfs/wanix/crush',
+    args: '',
+    type: 'gojs',
+    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
+    wd: '/opfs/home',
+    builtin: true,
+    crushrc: String.raw`AGW=https://agw.up.railway.app
+
+provider add minimax-china \
+  --type anthropic \
+  --base-url "${AGW}/anthropic" \
+  --api-key "-"
+
+model small minimax-china/MiniMax-M3
+model large minimax-china/MiniMax-M3
+
+option ui transparent false
+`,
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    icon: 'fish',
+    program: '/opfs/wanix/crush',
+    args: '',
+    type: 'gojs',
+    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
+    wd: '/opfs/home',
+    builtin: true,
+    crushrc: String.raw`AGW=https://agw.up.railway.app
+
+provider add deepseek \
+  --type openai-compat \
+  --base-url "${AGW}/v1" \
+  --api-key "-"
+
+model small deepseek/deepseek-v4-flash
+model large deepseek/deepseek-v4-flash
+
+option ui transparent false
+`,
+  },
+  {
+    id: 'stepfun',
+    name: 'StepFun',
+    icon: 'footprints',
+    program: '/opfs/wanix/crush',
+    args: '',
+    type: 'gojs',
+    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
+    wd: '/opfs/home',
+    builtin: true,
+    crushrc: String.raw`AGW=https://agw.up.railway.app
+
+provider add stepfun \
+  --type openai-compat \
+  --base-url "${AGW}/v1" \
+  --api-key "-"
+
+model small stepfun/step-3.7-flash
+model large stepfun/step-3.7-flash
+
+option ui transparent false
+`,
+  },
+  {
+    id: 'all',
+    name: 'All',
+    icon: 'bot',
+    program: '/opfs/wanix/crush',
+    args: '',
+    type: 'gojs',
+    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
+    wd: '/opfs/home',
+    builtin: true,
+    crushrc: String.raw`AGW=https://agw.up.railway.app
+
+provider add deepseek \
+  --type openai-compat \
+  --base-url "${AGW}/v1" \
+  --api-key "-"
+
+provider add stepfun \
+  --type openai-compat \
+  --base-url "${AGW}/v1" \
+  --api-key "-"
+
+provider add minimax-china \
+  --type anthropic \
+  --base-url "${AGW}/anthropic" \
+  --api-key "-"
+
+provider add OpenRouter \
+     --type openai-compat \
+     --base-url "${AGW}/api/v1" \
+     --api-key "-" \
+     --extra-header "Model" "stealth/ox-alpha"
+
+model add OpenRouter/stealth/ox-alpha \
+     --name "Stealth Ox Alpha" \
+     --context-window 1000000 \
+     --default-max-tokens 163840 \
+     --can-reason true \
+     --supports-images false
+
+model large OpenRouter/stealth/ox-alpha --think
+model small OpenRouter/stealth/ox-alpha --think
+model small deepseek/deepseek-v4-flash
+model large deepseek/deepseek-v4-flash
+model small stepfun/step-3.7-flash
+model large stepfun/step-3.7-flash
+model small minimax-china/MiniMax-M3
+model large minimax-china/MiniMax-M3
+
+option ui transparent false
+`,
+  },
+];
+
+const BUILTIN_CRUSH_RUNNER_PRESET_IDS = BUILTIN_CRUSH_RUNNER_PRESETS.map((preset) => preset.id);
+const DEFAULT_CRUSH_RUNNER_ACTIVE_ID = BUILTIN_CRUSH_RUNNER_PRESET_IDS[0];
 
 function normalizeCrushRunnerPreset(preset = {}) {
   const base = normalizeTerminalProfile(preset);
@@ -394,37 +556,42 @@ function normalizeCrushRunnerPreset(preset = {}) {
 }
 
 function getCrushRunnerPresets(config = loadConfig()) {
-  const builtin = { ...BUILTIN_CRUSH_RUNNER_PRESET };
-  const configured = (config.crushRunnerPresets || []).find((preset) => preset.id === 'crush');
-  // Merge the user's saved "default Crush Runner preset" override on top
-  // of the built-in defaults, but only with fields that carry an explicit
-  // non-empty value. Empty strings are treated as "user did not set this"
-  // so newly introduced defaults (e.g. env=USER=me) reach existing
-  // workspaces whose old override still stores '' from before the field
-  // existed.
-  if (configured) {
-    for (const [key, value] of Object.entries(configured)) {
-      if (value === '' || value == null) continue;
-      if (!(key in builtin)) continue;
-      builtin[key] = value;
+  // Build the live list of built-ins, then layer any user-saved
+  // override with the matching id on top of each one. Empty-string
+  // fields are treated as "user did not set this" so newly introduced
+  // defaults (e.g. a new env= line on a builtin) reach existing
+  // workspaces whose override still stores '' from before the field
+  // existed. The legacy `crush` slot keeps merging into the first
+  // builtin by id, so workspaces pinned to that id keep working.
+  const builtins = BUILTIN_CRUSH_RUNNER_PRESETS.map((template) => {
+    const merged = { ...template };
+    const configured = (config.crushRunnerPresets || []).find((preset) => preset.id === template.id);
+    if (configured) {
+      for (const [key, value] of Object.entries(configured)) {
+        if (value === '' || value == null) continue;
+        if (!(key in merged)) continue;
+        merged[key] = value;
+      }
     }
-  }
-  builtin.builtin = true;
-  builtin.id = 'crush';
-  const customs = (config.crushRunnerPresets || []).filter((preset) => preset.id !== 'crush');
-  // User-built "save updates to the built-in" overrides live inside
-  // crushRunnerPresets too (id === 'crush'); we merged them into the
-  // built-in slot above and drop them from the customs list so we don't
-  // render the same preset twice.
-  const all = [builtin, ...customs];
+    merged.builtin = true;
+    merged.id = template.id;
+    return merged;
+  });
+  // Drop the user-saved entries that we just merged into the builtin
+  // slots so we don't render the same preset twice.
+  const customs = (config.crushRunnerPresets || []).filter(
+    (preset) => !BUILTIN_CRUSH_RUNNER_PRESET_IDS.includes(preset.id),
+  );
+  const all = [...builtins, ...customs];
   const order = normalizeTerminalProfileOrder(config.crushRunnerPresetOrder, all);
   const positions = new Map(order.map((id, index) => [id, index]));
   return [...all].sort((left, right) => (positions.get(left.id) ?? 0) - (positions.get(right.id) ?? 0));
 }
 
 function getActiveCrushRunnerPreset(config = loadConfig()) {
-  return getCrushRunnerPresets(config).find((preset) => preset.id === (config.crushRunnerActiveId || 'crush'))
-    || getCrushRunnerPresets(config)[0];
+  const presets = getCrushRunnerPresets(config);
+  return presets.find((preset) => preset.id === (config.crushRunnerActiveId || DEFAULT_CRUSH_RUNNER_ACTIVE_ID))
+    || presets[0];
 }
 
 function saveCrushRunnerPresets(presets, activeId, order) {
@@ -433,7 +600,7 @@ function saveCrushRunnerPresets(presets, activeId, order) {
     ...config,
     crushRunnerPresets: presets.map((preset) => ({ ...preset, builtin: false })),
     crushRunnerPresetOrder: normalizeTerminalProfileOrder(order, presets),
-    crushRunnerActiveId: typeof activeId === 'string' && activeId ? activeId : 'crush',
+    crushRunnerActiveId: typeof activeId === 'string' && activeId ? activeId : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   });
 }
 
@@ -444,6 +611,7 @@ function blankCrushRunnerPresetDraft() {
 function normalizeTerminalProfileOrder(order, profiles = []) {
   const knownIds = [
     ...BUILTIN_TERMINAL_PROFILES.map((profile) => profile.id),
+    ...BUILTIN_CRUSH_RUNNER_PRESET_IDS,
     ...profiles.map((profile) => profile.id),
   ];
   const known = new Set(knownIds);
