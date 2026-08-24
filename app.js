@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
 import { Activity, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookOpen, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Github, Globe2, GripVertical, House, Layers, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X, Zap, icons as LucideIcons } from 'lucide-react';
-import WebPet from './web-pet/index.js';
+
 import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner, reserveCrushRunnerIds } from './crush-runner.js?v=20260812.20';
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
 import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker } from './settings.js?v=20260812.31';

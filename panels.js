@@ -18,8 +18,26 @@ import { Play, Terminal } from "lucide-react";
 import { DockviewDefaultTab } from "dockview-react";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
-// bundle.
-import WebPet from './web-pet/index.js';
+// bundle. We load it lazily via a dynamic import so that production
+// builds where the web-pet submodule failed to materialise (404s on
+// /web-pet/index.js) don't crash the whole shell — the desktop pet
+// just stays disabled, the rest of the app keeps working.
+let webPetModulePromise = null;
+function loadWebPetModule() {
+  if (webPetModulePromise) return webPetModulePromise;
+  webPetModulePromise = import('./web-pet/index.js')
+    .then((mod) => mod.default || mod.WebPet)
+    .catch((error) => {
+      // Reset so a later retry (e.g. after a config toggle) can try
+      // again; surface the failure once via the dev-error overlay so
+      // it's diagnosable but don't throw — the shell has to keep
+      // running without the desktop pet.
+      webPetModulePromise = null;
+      if (typeof console !== 'undefined') console.warn('web-pet unavailable:', error);
+      return null;
+    });
+  return webPetModulePromise;
+}
 
 let __panelsDeps = null;
 export function initPanels(dependencies) {
@@ -179,19 +197,27 @@ function WorkspaceTaskPanel({ api, params }) {
 // === WagiDogPet ===
 function WagiDogPet() {
   const petRef = useRef(null);
+  const WebPetRef = useRef(null);
 
   useEffect(() => {
-    const syncWagiDog = () => {
+    let cancelled = false;
+    loadWebPetModule().then((WebPetClass) => {
+      if (cancelled) return;
+      WebPetRef.current = WebPetClass;
+      if (WebPetClass) syncWagiDog();
+    });
+    function syncWagiDog() {
       if (panelsDep("loadConfig")().wagiDogEnabled) {
-        if (!petRef.current) petRef.current = new WebPet();
+        if (WebPetRef.current && !petRef.current) petRef.current = new WebPetRef.current();
       } else {
         petRef.current?.destroy();
         petRef.current = null;
       }
-    };
+    }
     syncWagiDog();
     window.addEventListener(panelsDep("WORKSPACE_CHANGED_EVENT"), syncWagiDog);
     return () => {
+      cancelled = true;
       window.removeEventListener(panelsDep("WORKSPACE_CHANGED_EVENT"), syncWagiDog);
       petRef.current?.destroy();
       petRef.current = null;
