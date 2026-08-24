@@ -68,12 +68,14 @@ if (debugMode) {
 // --- Constants ---
 const WANIX = '/opfs/wanix';
 const HOME = '/opfs/home';
+const USER = 'me';
 const HUSH_ENV = {
   TERM: 'xterm-256color',
   COLORTERM: 'truecolor',
   CLICOLOR_FORCE: '1',
   WANIX,
   HOME,
+  USER,
   PATH: `${HOME}/go/bin:${WANIX}`,
   GOPROXY: 'https://goproxy.up.railway.app',
   GONOSUMDB: '*',
