@@ -2080,23 +2080,6 @@ function attachVmSession(id, config, anchor, api) {
   return createOverlayAttachment(session, anchor, api);
 }
 
-// --- Reveal.js ---
-const revealStates = new WeakMap();
-let slidesMarkdownPromise = null;
-
-async function prepareRevealSlides(homeContent) {
-  const placeholder = homeContent.querySelector('[data-home-slides-markdown]');
-  if (!placeholder) return;
-
-  const stack = document.createElement('section');
-  for (const source of (await loadSlidesMarkdown()).split(/^\s*--\s*$/m)) {
-    const slide = document.createElement('section');
-    slide.innerHTML = marked.parse(source);
-    stack.appendChild(slide);
-  }
-  placeholder.replaceWith(stack);
-}
-
 function blankTerminalPresetDraft() {
   return { name: '', icon: 'terminal', program: '', args: '', type: 'gojs', wd: '', env: '' };
 }
