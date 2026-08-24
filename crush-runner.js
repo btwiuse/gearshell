@@ -34,6 +34,18 @@ let __crushRunnerDeps = null;
 export function initCrushRunner(dependencies) {
   __crushRunnerDeps = dependencies;
 }
+
+// Push the module-level counter past `maxId` so subsequent
+// addCrushRunnerPanel calls mint fresh ids above any previously
+// allocated ones. Used by restoreSavedPanels so newly opened panels
+// after a reload never collide with restored ids, even when the saved
+// snapshot predates the panelId field (legacy snapshots stored no
+// panel id at all and would otherwise leave the counter at 0).
+export function reserveCrushRunnerIds(maxId) {
+  if (Number.isFinite(Number(maxId)) && Number(maxId) > crushRunnerIdCounter) {
+    crushRunnerIdCounter = Number(maxId);
+  }
+}
 function crushRunnerDep(name) {
   if (__crushRunnerDeps == null) {
     throw new Error(
@@ -57,8 +69,15 @@ const CRUSH_RUNNER_DEFAULT_PROFILE = {
   program: "crush",
   args: "",
   type: "gojs",
-  env: "",
-  wd: "",
+  env: "USER=me",
+  // Default working directory. The HOME bind (`/opfs/home`) is injected via
+  // initCrushRunner, so resolve it lazily: spreading the profile at module
+  // load would throw because deps are wired later. getCrushRunnerDefaults
+  // snapshots the current HOME into a concrete string whenever the form or
+  // a preset switch needs a starting point.
+  get wd() {
+    return crushRunnerDep("HOME");
+  },
   icon: "bot",
 };
 // Default Crush config written to `${CRUSH_GLOBAL_CONFIG}/crushrc` on
@@ -117,9 +136,15 @@ function getCrushRunnerCrushrcFor(preset = null) {
 // runnerId the panel was registered with, which is stable across renders
 // within the same panel.
 function crushConfigDirFor(runnerId) {
-  const safeId = Number.isFinite(Number(runnerId))
-    ? String(runnerId)
-    : "shared";
+  // Accept any non-empty string/number id. Dash-separated ids like
+  // "2-3" (panel #2, launch #3) used to fall through to the "shared"
+  // bucket because Number("2-3") is NaN; that defeated the per-launch
+  // isolation guarantee, so we now stringify whatever the caller hands
+  // us. Empty/missing falls back to "shared" for sanity.
+  if (runnerId === null || runnerId === undefined || runnerId === "") {
+    return "/tmp/crush-runner-shared";
+  }
+  const safeId = String(runnerId).replace(/[^A-Za-z0-9._-]/g, "_");
   return `/tmp/crush-runner-${safeId}`;
 }
 // Build the profile that the Crush process should be launched with for
@@ -617,13 +642,26 @@ function CrushRunnerPanel({ api, params, containerApi }) {
   // restart when the user edits the form afterwards.
   const openCrushInNewPanel = async ({ source } = {}) => {
     if (!dockApi) return;
+    // Mint a fresh launch id so each Crush process owns its own
+    // /tmp/crush-runner-<launchId>/crushrc directory. Reusing the panel's
+    // runnerId would mean a second Launch overwrites the first Crush
+    // instance's crushrc while it is still running. The launch id keeps
+    // a strong relationship with the panel id by mixing it into the
+    // counter seed, so CrushRunner panel #2's launches land in
+    // /tmp/crush-runner-2-1, 2-2, 2-3, etc., which makes it obvious
+    // which panel spawned each running Crush instance.
+    const panelId = Number(params?.runnerId);
+    const baseId = Number.isFinite(panelId) && panelId > 0 ? panelId : 1;
+    const nextIndex = (perPanelLaunchCount[baseId] || 0) + 1;
+    perPanelLaunchCount[baseId] = nextIndex;
+    const launchId = `${baseId}-${nextIndex}`;
     setStatus({
-      message: `Writing ${crushConfigDirFor(params?.runnerId)}/crushrc…`,
+      message: `Writing ${crushConfigDirFor(launchId)}/crushrc…`,
       isError: false,
     });
     try {
       const { configDir, profile } = await prepareCrushLaunch(
-        params?.runnerId,
+        launchId,
         draft,
         crushrcContent,
       );
@@ -809,7 +847,13 @@ function CrushRunnerPanel({ api, params, containerApi }) {
   // owns so a reset never reaches across the tab boundary. The button
   // is disabled when the corresponding tab is already clean.
   const resetProfileFields = () => {
-    const base = activePreset || CRUSH_RUNNER_DEFAULT_PROFILE;
+    // Built-in presets reset to the code-side CRUSH_RUNNER_DEFAULT_PROFILE so
+    // localStorage overrides from older sessions can't leak into the form.
+    // User presets still reset to their own saved values, since the user
+    // explicitly authored those.
+    const base = activePreset && activePreset.builtin === false
+      ? activePreset
+      : CRUSH_RUNNER_DEFAULT_PROFILE;
     const pick = (field) =>
       base[field] == null ? CRUSH_RUNNER_DEFAULT_PROFILE[field] : base[field];
     setDraft((current) => ({
@@ -828,7 +872,9 @@ function CrushRunnerPanel({ api, params, containerApi }) {
     });
   };
   const resetEnvField = () => {
-    const base = activePreset || CRUSH_RUNNER_DEFAULT_PROFILE;
+    const base = activePreset && activePreset.builtin === false
+      ? activePreset
+      : CRUSH_RUNNER_DEFAULT_PROFILE;
     const fallback = CRUSH_RUNNER_DEFAULT_PROFILE.env || "";
     const next = base.env == null ? fallback : (base.env || "");
     updateField("env", next);
@@ -983,7 +1029,7 @@ function CrushRunnerPanel({ api, params, containerApi }) {
       React.createElement(
         "header",
         { className: "crush-runner-hero" },
-        React.createElement("h1", null, "Run Crush your way."),
+        React.createElement("h1", null, "Crush, in your browser."),
         React.createElement(
           "p",
           { className: "crush-runner-lede" },
@@ -1004,7 +1050,7 @@ function CrushRunnerPanel({ api, params, containerApi }) {
                 ? "installed"
                 : "missing",
             },
-            crushInstalled === true && !installing &&
+            !installing &&
               React.createElement(
                 "button",
                 {
@@ -1771,8 +1817,16 @@ function CrushRunnerPanel({ api, params, containerApi }) {
 }
 
 // Counter for unique CrushRunner panel ids. The counter is module-scoped
-// so it survives React re-renders but resets on page reload.
+// so it survives React re-renders but resets on page reload. The saved
+// snapshot path can hand us back an original id via addCrushRunnerPanel
+// options; we then bump the counter past it so freshly added panels
+// never collide with restored ids.
 let crushRunnerIdCounter = 0;
+// Per-panel launch counter so each panel's launches index sequentially
+// off the panel id (panel #2 produces 2-1, 2-2, ...). Keeping the
+// association explicit makes the running Crush instance's config dir
+// visually traceable to the panel that spawned it.
+const perPanelLaunchCount = Object.create(null);
 
 // Register a new CrushRunner panel with dockview. Called from app.js's
 // `addPanelByComponent` when the user picks Crush Runner from the panel
@@ -1781,8 +1835,21 @@ let crushRunnerIdCounter = 0;
 // Register a new CrushRunner panel with dockview. Called from app.js's
 // `addPanelByComponent` when the user picks Crush Runner from the panel
 // menu, and from the restore-saved-panels path on boot.
-export function addCrushRunnerPanel(api, group) {
-  const id = ++crushRunnerIdCounter;
+export function addCrushRunnerPanel(api, group, options = {}) {
+  // The restore-saved-panels path can hand us back the original panel id
+  // so reloads keep the same numeric label on the Crush Runner tab;
+  // otherwise we mint a fresh one from the module-level counter. When
+  // restoring we also lift the counter past the restored id so a later
+  // "new panel" action does not collide with it.
+  const restoredId = Number(options.id);
+  const id = Number.isFinite(restoredId) && restoredId > 0
+    ? restoredId
+    : ++crushRunnerIdCounter;
+  if (Number.isFinite(restoredId) && restoredId > 0) {
+    crushRunnerIdCounter = Math.max(crushRunnerIdCounter, restoredId);
+  } else {
+    crushRunnerIdCounter = Math.max(crushRunnerIdCounter, id);
+  }
   const panel = api.addPanel({
     id: `crush-runner-${id}`,
     component: "crush-runner",
@@ -1791,7 +1858,7 @@ export function addCrushRunnerPanel(api, group) {
     ...(group && { position: { referenceGroup: group } }),
   });
   const rememberOpenPanel = crushRunnerDep("rememberOpenPanel");
-  rememberOpenPanel(panel, { component: "crush-runner" });
+  rememberOpenPanel(panel, { component: "crush-runner", panelId: panel.id });
   panel.api.setActive();
   return panel;
 }

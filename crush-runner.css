@@ -285,11 +285,14 @@
 
 /* Install banner doubles as the install-state diagnostic. The re-check
    button anchors to the banner's top-right corner so it stays visible
-   without pushing the body content down on every state. */
+   without pushing the body content down on every state. Grid-column is
+   pinned to the body track so the absolute-positioned buttons do not
+   claim the icon's 36px cell when they are rendered (the JS only emits
+   them while !installing). */
 .crush-runner-install {
   position: relative;
 }
-.crush-runner-install[data-state="installed"] .crush-runner-install-recheck {
+.crush-runner-install-recheck {
   position: absolute;
   top: 10px;
   right: 44px;
@@ -306,9 +309,23 @@
   cursor: pointer;
   font: 11px system-ui, sans-serif;
 }
-.crush-runner-install[data-state="installed"] .crush-runner-install-recheck:hover {
+.crush-runner-install[data-state="checking"] .crush-runner-install-recheck {
+  border-color: rgba(88, 166, 255, 0.4);
+  color: #58a6ff;
+}
+.crush-runner-install[data-state="missing"] .crush-runner-install-recheck {
+  border-color: rgba(240, 136, 62, 0.4);
+  color: #f0883e;
+}
+.crush-runner-install-recheck:hover {
   background: rgba(63, 185, 80, 0.12);
   color: #f0f6fc;
+}
+.crush-runner-install[data-state="checking"] .crush-runner-install-recheck:hover {
+  background: rgba(88, 166, 255, 0.12);
+}
+.crush-runner-install[data-state="missing"] .crush-runner-install-recheck:hover {
+  background: rgba(240, 136, 62, 0.12);
 }
 /* Dismiss glyph: pinned to the banner's top-right corner next to the
    re-check button. Hides the entire install banner for the current
@@ -622,8 +639,12 @@
    bar's chips overflow horizontally. Adjust the column to a single
    track and let the actions stack so the user can still tap them. */
 @media (max-width: 540px) {
+  /* Keep the two-column layout on narrow screens so the icon and
+     body sit on the same row as on desktop; only shrink the icon
+     and tighten padding. The actions row still stacks so the
+     primary button has room above the cmd chip. */
   .crush-runner-install {
-    grid-template-columns: 1fr;
+    grid-template-columns: 32px minmax(0, 1fr);
     gap: 10px;
     padding: 12px 14px;
   }
@@ -640,7 +661,12 @@
     text-align: center;
     word-break: break-all;
   }
-  .crush-runner-install[data-state="installed"] .crush-runner-install-recheck {
+  /* Keep the corner buttons absolutely positioned on narrow screens so
+     they do not eat their own row above the body. The single-column
+     grid already pushed the icon and body onto separate rows, so we
+     just nudge the absolute offsets inward to clear the smaller
+     padding without changing the visual hierarchy. */
+  .crush-runner-install-recheck {
     top: 8px;
     right: 40px;
   }

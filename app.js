@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
 import { Activity, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookOpen, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Github, Globe2, GripVertical, House, Layers, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X, Zap, icons as LucideIcons } from 'lucide-react';
 import WebPet from './web-pet/index.js';
-import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner } from './crush-runner.js?v=20260812.20';
+import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner, reserveCrushRunnerIds } from './crush-runner.js?v=20260812.20';
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
 import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker } from './settings.js?v=20260812.31';
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
@@ -160,7 +160,7 @@ const BUILTIN_TERMINAL_PROFILES = [
 
 const WANIX_RUNTIME = {
   wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@7111a7b9fb6f192af61498844354d1c758376b2d',
-  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@4541e4ca6d7a6c07dd2b0538cf27e1fe5335e1a4/dist/wanix.min.js',
+  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@74b9b3ea72ef67816e938aefe530c0a79942cdd5/dist/wanix.min.js',
 };
 const LEGACY_WANIX_RUNTIME_WASM_URLS = new Set([
   'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0',
@@ -174,6 +174,7 @@ const LEGACY_WANIX_RUNTIME_MODULE_URLS = new Set([
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@72141cb09a97b9a6f61461e9587ed8879ab08af1/dist/wanix.min.js',
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@d433adbca2d80d93719be5e25f65be0ed8786556/dist/wanix.min.js',
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@4eead0d2b5461803f4dbe4022f98c0e5479d2a71/dist/wanix.min.js',
+  'https://cdn.jsdelivr.net/gh/justwasm/wanix@4541e4ca6d7a6c07dd2b0538cf27e1fe5335e1a4/dist/wanix.min.js',
   'https://cdn.jsdelivr.net/gh/justwasm/wanix@main/dist/wanix.min.js',
 ]);
 
@@ -376,8 +377,8 @@ const BUILTIN_CRUSH_RUNNER_PRESET = {
   program: 'crush',
   args: '',
   type: 'gojs',
-  env: '',
-  wd: '',
+  env: 'USER=me',
+  wd: '/opfs/home',
   builtin: true,
 };
 
@@ -392,19 +393,28 @@ function normalizeCrushRunnerPreset(preset = {}) {
 
 function getCrushRunnerPresets(config = loadConfig()) {
   const builtin = { ...BUILTIN_CRUSH_RUNNER_PRESET };
-  const configured = new Map((config.crushRunnerPresets || []).map((preset) => [preset.id, preset]));
-  const builtins = [builtin].map((preset) => ({
-    ...preset,
-    ...configured.get(preset.id),
-    builtin: true,
-    id: 'crush',
-  }));
+  const configured = (config.crushRunnerPresets || []).find((preset) => preset.id === 'crush');
+  // Merge the user's saved "default Crush Runner preset" override on top
+  // of the built-in defaults, but only with fields that carry an explicit
+  // non-empty value. Empty strings are treated as "user did not set this"
+  // so newly introduced defaults (e.g. env=USER=me) reach existing
+  // workspaces whose old override still stores '' from before the field
+  // existed.
+  if (configured) {
+    for (const [key, value] of Object.entries(configured)) {
+      if (value === '' || value == null) continue;
+      if (!(key in builtin)) continue;
+      builtin[key] = value;
+    }
+  }
+  builtin.builtin = true;
+  builtin.id = 'crush';
   const customs = (config.crushRunnerPresets || []).filter((preset) => preset.id !== 'crush');
   // User-built "save updates to the built-in" overrides live inside
-  // crushRunnerPresets too (id === 'crush'); we merge them into the
-  // built-in slot above via `configured.get('crush')` and drop them from
-  // the customs list so we don't render the same preset twice.
-  const all = [...builtins, ...customs];
+  // crushRunnerPresets too (id === 'crush'); we merged them into the
+  // built-in slot above and drop them from the customs list so we don't
+  // render the same preset twice.
+  const all = [builtin, ...customs];
   const order = normalizeTerminalProfileOrder(config.crushRunnerPresetOrder, all);
   const positions = new Map(order.map((id, index) => [id, index]));
   return [...all].sort((left, right) => (positions.get(left.id) ?? 0) - (positions.get(right.id) ?? 0));
@@ -1235,6 +1245,19 @@ function getSavedOpenPanels() {
   return panels.filter((panel) => panel && typeof panel === 'object' &&
     (STARTUP_PANEL_TYPES.includes(panel.component) || panel.component === 'fallback' || panel.component === 'task')
   );
+}
+
+// Extract the numeric suffix from a CrushRunner panel id ("crush-runner-3"
+// → 3). Used by restoreSavedPanels to feed the original id back into
+// addCrushRunnerPanel so reloads keep the same numeric label on the
+// Crush Runner tab. Returns undefined for legacy snapshots that did
+// not record the panel id.
+function parseCrushRunnerPanelId(panelId) {
+  if (typeof panelId !== "string") return undefined;
+  const match = /^crush-runner-(\d+)$/.exec(panelId);
+  if (!match) return undefined;
+  const n = Number(match[1]);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 function getTerminalProfiles(config = loadConfig()) {
@@ -2141,6 +2164,20 @@ const PANEL_CREATION_OPTIONS = [
 
 function restoreSavedPanels(api) {
   const panels = getSavedOpenPanels();
+  // Make sure the Crush Runner id counter never collides with a
+  // restored panel id. Legacy snapshots did not record panelId, so
+  // lifting the counter past the largest id we can derive from any
+  // stored panel id still protects against collisions when the user
+  // opens a fresh Crush Runner panel after a reload.
+  let maxCrushRunnerId = 0;
+  for (const panel of panels) {
+    if (panel.component !== "crush-runner") continue;
+    const parsed = parseCrushRunnerPanelId(panel.panelId);
+    if (Number.isFinite(parsed) && parsed > maxCrushRunnerId) {
+      maxCrushRunnerId = parsed;
+    }
+  }
+  reserveCrushRunnerIds(maxCrushRunnerId);
   for (const panel of panels) {
     if (panel.component === 'terminal') {
       addTerminalPanelFromPanels(api, undefined, panel.profile || getDefaultTerminalProfile());
@@ -2150,6 +2187,14 @@ function restoreSavedPanels(api) {
       addVmPanelFromPanels(api, undefined, panel.config || getVmPanelConfig());
     } else if (panel.component === 'task' && panel.task) {
       addWorkspaceTaskPanelFromPanels(api, panel.task, loadWorkspace(panel.workspaceId) || loadActiveWorkspace());
+    } else if (panel.component === 'crush-runner') {
+      // Restore the original Crush Runner panel id so the tab title
+      // ("Crush Runner N") and the linked terminal launch ids stay
+      // stable across reloads; otherwise the module-level counter in
+      // crush-runner.js would mint fresh numbers and the previous
+      // session's panels would silently disappear or collide.
+      const restoredId = parseCrushRunnerPanelId(panel.panelId);
+      addPanelByComponentFromPanels(api, panel.component, { id: restoredId });
     } else {
       addPanelByComponentFromPanels(api, panel.component);
     }
