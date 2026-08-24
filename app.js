@@ -404,7 +404,7 @@ const BUILTIN_CRUSH_RUNNER_PRESETS = [
 
 provider add OpenRouter \
      --type openai-compat \
-     --base-url "${AGW}/api/v1" \
+     --base-url "\${AGW}/api/v1" \
      --api-key "-" \
      --extra-header "Model" "stealth/ox-alpha"
 
@@ -434,7 +434,7 @@ option ui transparent false`,
 
 provider add minimax-china \
   --type anthropic \
-  --base-url "${AGW}/anthropic" \
+  --base-url "\${AGW}/anthropic" \
   --api-key "-"
 
 model small minimax-china/MiniMax-M3
@@ -457,7 +457,7 @@ option ui transparent false
 
 provider add deepseek \
   --type openai-compat \
-  --base-url "${AGW}/v1" \
+  --base-url "\${AGW}/v1" \
   --api-key "-"
 
 model small deepseek/deepseek-v4-flash
@@ -480,7 +480,7 @@ option ui transparent false
 
 provider add stepfun \
   --type openai-compat \
-  --base-url "${AGW}/v1" \
+  --base-url "\${AGW}/v1" \
   --api-key "-"
 
 model small stepfun/step-3.7-flash
@@ -503,22 +503,22 @@ option ui transparent false
 
 provider add deepseek \
   --type openai-compat \
-  --base-url "${AGW}/v1" \
+  --base-url "\${AGW}/v1" \
   --api-key "-"
 
 provider add stepfun \
   --type openai-compat \
-  --base-url "${AGW}/v1" \
+  --base-url "\${AGW}/v1" \
   --api-key "-"
 
 provider add minimax-china \
   --type anthropic \
-  --base-url "${AGW}/anthropic" \
+  --base-url "\${AGW}/anthropic" \
   --api-key "-"
 
 provider add OpenRouter \
      --type openai-compat \
-     --base-url "${AGW}/api/v1" \
+     --base-url "\${AGW}/api/v1" \
      --api-key "-" \
      --extra-header "Model" "stealth/ox-alpha"
 
