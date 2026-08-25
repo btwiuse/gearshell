@@ -17,11 +17,8 @@ import {
   LAUNCHER_COLLAPSIBLE_PANEL_TYPES,
   LEGACY_DEFAULT_CMD,
   LEGACY_DEFAULT_WORKBENCH_ASSETS_URL,
-  LEGACY_WANIX_RUNTIME_MODULE_URLS,
-  LEGACY_WANIX_RUNTIME_WASM_URLS,
   lucideIconId,
   lucideIconLabel,
-  REDUNDANT_WISP_VM_BACKEND_URL,
   STARTUP_PANEL_TYPES,
   SUPPORTED_BIND_TYPES,
   SUPPORTED_SYSTEM_BIND_TYPES,
@@ -80,12 +77,31 @@ export function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+// Only v<semver> tags are supported for the Wanix runtime. Workspaces
+// that still pin the module to a commit hash or @main, or the wasm to
+// v0.4.0 (which predates the multiline-argv kernel), are migrated to
+// the current default; any other semver-pinned URL is an intentional
+// override and stays as-is.
+const WANIX_RUNTIME_SEMVER = /^v\d+\.\d+\.\d+/;
+const LEGACY_WANIX_KERNEL_WASM = "v0.4.0";
+
+export function isLegacyWanixRuntimeUrl(url, kind) {
+  if (typeof url !== "string" || !url.includes("justwasm/wanix")) {
+    return false;
+  }
+  const ref = url.slice(url.lastIndexOf("@") + 1);
+  if (WANIX_RUNTIME_SEMVER.test(ref)) {
+    return kind === "wasm" && ref === LEGACY_WANIX_KERNEL_WASM;
+  }
+  return true; // commit hashes, @main, or any other floating ref
+}
+
 export function normalizeRuntimeConfig(runtime = {}) {
   const configured = runtime && typeof runtime === "object" ? runtime : {};
-  const wasmUrl = LEGACY_WANIX_RUNTIME_WASM_URLS.has(configured.wasmUrl)
+  const wasmUrl = isLegacyWanixRuntimeUrl(configured.wasmUrl, "wasm")
     ? WANIX_RUNTIME.wasmUrl
     : configured.wasmUrl;
-  const moduleUrl = LEGACY_WANIX_RUNTIME_MODULE_URLS.has(configured.moduleUrl)
+  const moduleUrl = isLegacyWanixRuntimeUrl(configured.moduleUrl, "module")
     ? WANIX_RUNTIME.moduleUrl
     : configured.moduleUrl;
   return {
@@ -251,11 +267,18 @@ export function normalizeWorkbenchAssetsUrl(value) {
 
 export function normalizeVmBackendUrl(value) {
   const normalized = normalizeIntegrationUrl(value, DEFAULT_VM_BACKEND_URL);
-  // The temporary custom archive duplicated v86's existing Wisp support.
-  // Restore workspaces that inherited it to the maintained public archive.
-  return normalized === REDUNDANT_WISP_VM_BACKEND_URL
+  // The temporary custom archive was pinned to a wanix-extras commit
+  // hash; only the semver-pinned public archive is supported going
+  // forward, so restore workspaces that inherited the commit-pinned one.
+  return isLegacyVmBackendUrl(normalized)
     ? DEFAULT_VM_BACKEND_URL
     : normalized;
+}
+
+function isLegacyVmBackendUrl(url) {
+  return typeof url === "string" &&
+    url.includes("wanix-extras@") &&
+    /@[0-9a-f]{7,}\/v86\.tgz$/.test(url);
 }
 
 export function normalizeVmMemory(value) {

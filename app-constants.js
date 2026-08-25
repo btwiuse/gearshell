@@ -83,8 +83,6 @@ export const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL =
   "https://wanix.dev/workbench";
 export const DEFAULT_VM_BACKEND_URL =
   "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz";
-export const REDUNDANT_WISP_VM_BACKEND_URL =
-  "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@85be99779bb8026bf3be64579b096c60b2c77c64/v86.tgz";
 export const DEFAULT_VM_LINUX_URL =
   "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
 export const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = [
@@ -258,21 +256,6 @@ export const WANIX_RUNTIME = {
   moduleUrl:
     "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.7/dist/wanix.min.js",
 };
-export const LEGACY_WANIX_RUNTIME_WASM_URLS = new Set([
-  "https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0",
-]);
-export const LEGACY_WANIX_RUNTIME_MODULE_URLS = new Set([
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@976020821b1a7a09a13c6e8034a41686a69c12df/dist/wanix.min.js",
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@9ceae50b35558ddf8e9f3862fa3c4aa9e8b4097d/dist/wanix.min.js",
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@9446c661d2d4bf66885e9f7082def770c314ecb1/dist/wanix.min.js",
-  // This short-lived build called a nonexistent Workbench layout API.
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@71206477ae506f807b9893a8deca09749d212542/dist/wanix.min.js",
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@72141cb09a97b9a6f61461e9587ed8879ab08af1/dist/wanix.min.js",
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@d433adbca2d80d93719be5e25f65be0ed8786556/dist/wanix.min.js",
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@4eead0d2b5461803f4dbe4022f98c0e5479d2a71/dist/wanix.min.js",
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@4541e4ca6d7a6c07dd2b0538cf27e1fe5335e1a4/dist/wanix.min.js",
-  "https://cdn.jsdelivr.net/gh/justwasm/wanix@main/dist/wanix.min.js",
-]);
 
 export const DEFAULT_SYSTEM_CONFIG = {
   binds: [
