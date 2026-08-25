@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260825.1";
+import { crushRunnerDep } from "./crush-deps.js?v=20260826.1";
 
 const SUPPORTED_TASK_TYPES = ["auto", "gojs", "wasi", "js"];
 
@@ -121,5 +121,11 @@ export function useCrushJsonEdit({
     });
   };
 
-  return { jsonDraft, setJsonDraft, jsonDraftDirty, applyJsonEdit, resetJsonDraft };
+  return {
+    jsonDraft,
+    setJsonDraft,
+    jsonDraftDirty,
+    applyJsonEdit,
+    resetJsonDraft,
+  };
 }

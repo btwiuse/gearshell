@@ -3,7 +3,7 @@
 // the Wanix kernel, and the headless-task command helpers the detect and
 // install flows share.
 
-import { crushRunnerDep, __getWanixSystem } from "./crush-deps.js?v=20260825.1";
+import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260826.1";
 
 // Pick a per-panel config directory under /tmp. Each CrushRunner instance
 // owns its own directory so concurrent Crush launches don't fight over a
@@ -39,9 +39,10 @@ export function crushRunDirFor(runnerId) {
 // env var keeps pointing at a directory, matching crush's own path
 // lookup).
 export function resolveConfigDir(runnerId, rcfilePathState) {
-  const override = (typeof rcfilePathState === "string" && rcfilePathState.trim())
-    ? rcfilePathState.trim().replace(/\/+$/, "")
-    : "";
+  const override =
+    (typeof rcfilePathState === "string" && rcfilePathState.trim())
+      ? rcfilePathState.trim().replace(/\/+$/, "")
+      : "";
   if (override) {
     return override.endsWith("rc")
       ? override.slice(0, override.lastIndexOf("/"))
@@ -69,9 +70,10 @@ export async function prepareCrushLaunch(runnerId, draft, crushrcContent) {
     !/^CRUSH_GLOBAL_CONFIG\s*=/.test(line)
   );
   const configDir = crushRunDirFor(runnerId);
-  const mergedEnv = [...withoutConfig, `CRUSH_GLOBAL_CONFIG=/${configDir}`].join(
-    "\n",
-  );
+  const mergedEnv = [...withoutConfig, `CRUSH_GLOBAL_CONFIG=/${configDir}`]
+    .join(
+      "\n",
+    );
   return {
     configPath: configDir,
     profile: {

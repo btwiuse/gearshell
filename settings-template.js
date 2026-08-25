@@ -1,7 +1,8 @@
 // Inlined HTML for the Settings panel, moved here verbatim so the
 // template string keeps living next to the modules that query it.
 
-export const SETTINGS_TEMPLATE_HTML = `      <div class="settings-panel panel-content">
+export const SETTINGS_TEMPLATE_HTML =
+  `      <div class="settings-panel panel-content">
         <div class="settings-content">
           <h1>Settings</h1>
           <p class="settings-lede">Manage the current workspace and its shell defaults.</p>
@@ -250,4 +251,3 @@ export const SETTINGS_TEMPLATE_HTML = `      <div class="settings-panel panel-co
         </div>
       </div>
 `;
-

@@ -1,6 +1,9 @@
 // localStorage helpers + storage key derivations (500-line rule split).
 
-import { WORKSPACE_KEY_PREFIX, WORKSPACE_PRESET_KEY_PREFIX } from "./app-constants.js?v=20260825.2";
+import {
+  WORKSPACE_KEY_PREFIX,
+  WORKSPACE_PRESET_KEY_PREFIX,
+} from "./app-constants.js?v=20260826.1";
 
 export function readStoredJson(key, fallback) {
   try {
@@ -33,4 +36,3 @@ export function createWorkspaceId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `workspace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
-

@@ -3,15 +3,15 @@
 // addSettingsPanel).
 
 import React, { useEffect, useRef } from "react";
-import { settingsDep } from "./settings-deps.js?v=20260825.1";
-import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260825.1";
-import { setupConfigForm } from "./settings-config.js?v=20260825.1";
-import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260825.1";
-import { setupWorkspaceForm } from "./settings-workspace.js?v=20260825.1";
-import { setupPresetLibrary } from "./settings-preset-library.js?v=20260825.1";
-import { setupSystemForm } from "./settings-system.js?v=20260825.1";
-import { setupBindForm } from "./settings-binds.js?v=20260825.1";
-import { setupTaskForm } from "./settings-task.js?v=20260825.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.1";
+import { setupConfigForm } from "./settings-config.js?v=20260826.1";
+import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.1";
+import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.1";
+import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.1";
+import { setupSystemForm } from "./settings-system.js?v=20260826.1";
+import { setupBindForm } from "./settings-binds.js?v=20260826.1";
+import { setupTaskForm } from "./settings-task.js?v=20260826.1";
 export function SettingsPanel({ containerApi }) {
   const wrapperRef = useRef(null);
 
@@ -23,7 +23,9 @@ export function SettingsPanel({ containerApi }) {
     if (!settingsContent) return;
 
     const disposeConfigForm = setupConfigForm(settingsContent);
-    const disposeTerminalProfileForm = setupTerminalProfileForm(settingsContent);
+    const disposeTerminalProfileForm = setupTerminalProfileForm(
+      settingsContent,
+    );
     const disposeWorkspaceForm = setupWorkspaceForm(settingsContent);
     const disposePresetLibrary = setupPresetLibrary(settingsContent);
     const disposeSystemForm = setupSystemForm(settingsContent);
@@ -37,11 +39,14 @@ export function SettingsPanel({ containerApi }) {
       disposeSystemForm?.();
       disposeBindForm?.();
       disposeTaskForm?.();
-      if (wrapper.firstElementChild) wrapper.innerHTML = '';
+      if (wrapper.firstElementChild) wrapper.innerHTML = "";
     };
   }, [containerApi]);
 
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+  return React.createElement("div", {
+    ref: wrapperRef,
+    className: "panel-content",
+  });
 }
 
 // so it survives React re-renders but resets on page reload.
@@ -54,13 +59,13 @@ export function addSettingsPanel(api, group) {
   const id = ++settingsIdCounter;
   const panel = api.addPanel({
     id: `settings-${id}`,
-    component: 'settings',
-    params: { settingsId: id, panelType: 'settings' },
-    title: 'Settings',
+    component: "settings",
+    params: { settingsId: id, panelType: "settings" },
+    title: "Settings",
     ...(group && { position: { referenceGroup: group } }),
   });
-  const rememberOpenPanel = settingsDep('rememberOpenPanel');
-  rememberOpenPanel(panel, { component: 'settings' });
+  const rememberOpenPanel = settingsDep("rememberOpenPanel");
+  rememberOpenPanel(panel, { component: "settings" });
   panel.api.setActive();
   return panel;
 }

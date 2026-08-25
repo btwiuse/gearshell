@@ -17,13 +17,13 @@ import {
 } from "lucide-react";
 
 import {
+  adoptCrushRunnerId,
   crushRunnerDep,
   nextCrushRunnerId,
-  adoptCrushRunnerId,
-} from "./crush-deps.js?v=20260825.1";
-import { detectCrushInstallation } from "./crush-install.js?v=20260825.1";
-import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260825.1";
-import { CrushConfigSection } from "./crush-panel-config.js?v=20260825.1";
+} from "./crush-deps.js?v=20260826.1";
+import { detectCrushInstallation } from "./crush-install.js?v=20260826.1";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260826.1";
+import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.1";
 
 export function CrushRunnerPanel({ api, params, containerApi }) {
   const ctl = useCrushRunnerPanelController({ api, params, containerApi });

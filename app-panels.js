@@ -1,15 +1,55 @@
 // Panel creation catalog + saved-panel restore (500-line rule split).
 
-import { systemReady, wanixSystem } from "./app-state.js?v=20260825.2";
-import { loadActiveWorkspace, loadWorkspace } from "./app-workspace.js?v=20260825.2";
-import { getDefaultTerminalProfile, getWorkbenchPanelConfig, getVmPanelConfig } from "./app-terminal-profiles.js?v=20260825.2";
-import { getSavedOpenPanels, parseCrushRunnerPanelId } from "./app-panels-store.js?v=20260825.2";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260825.1";
-import { addTerminalPanel as addTerminalPanelFromPanels, addWorkbenchPanel as addWorkbenchPanelFromPanels, addVmPanel as addVmPanelFromPanels, addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels, addPanelByComponent as addPanelByComponentFromPanels } from "./panels.js?v=20260812.32";
-import { Terminal, Rocket, House, LayoutDashboard, Monitor, Cpu, Settings, FolderOpen, Activity, UsersRound, Globe2, TreePine, Code2, Bot, Music2 } from "lucide-react";
+import { systemReady, wanixSystem } from "./app-state.js?v=20260826.1";
+import {
+  loadActiveWorkspace,
+  loadWorkspace,
+} from "./app-workspace.js?v=20260826.1";
+import {
+  getDefaultTerminalProfile,
+  getVmPanelConfig,
+  getWorkbenchPanelConfig,
+} from "./app-terminal-profiles.js?v=20260826.1";
+import {
+  getSavedOpenPanels,
+  parseCrushRunnerPanelId,
+} from "./app-panels-store.js?v=20260826.1";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.1";
+import {
+  addPanelByComponent as addPanelByComponentFromPanels,
+  addTerminalPanel as addTerminalPanelFromPanels,
+  addVmPanel as addVmPanelFromPanels,
+  addWorkbenchPanel as addWorkbenchPanelFromPanels,
+  addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
+} from "./panels.js?v=20260812.32";
+import {
+  Activity,
+  Bot,
+  Code2,
+  Cpu,
+  FolderOpen,
+  Globe2,
+  House,
+  LayoutDashboard,
+  Monitor,
+  Music2,
+  Rocket,
+  Settings,
+  Terminal,
+  TreePine,
+  UsersRound,
+} from "lucide-react";
 
 export function blankTerminalPresetDraft() {
-  return { name: '', icon: 'terminal', program: '', args: '', type: 'gojs', wd: '', env: '' };
+  return {
+    name: "",
+    icon: "terminal",
+    program: "",
+    args: "",
+    type: "gojs",
+    wd: "",
+    env: "",
+  };
 }
 
 export let homeIdCounter = 0;
@@ -32,47 +72,52 @@ export function autoStartWorkspaceTasks(api) {
 
 export const IFRAME_PANEL_OPTIONS = {
   browser: {
-    title: 'Browser',
-    src: '/browser/',
-    panelType: 'browser',
-    allow: 'clipboard-read; clipboard-write; fullscreen',
+    title: "Browser",
+    src: "/browser/",
+    panelType: "browser",
+    allow: "clipboard-read; clipboard-write; fullscreen",
     allowFullscreen: true,
   },
   bonsai: {
-    title: 'Bonsai 27B',
-    src: '/bonsai/',
-    panelType: 'bonsai',
-    allow: 'clipboard-read; clipboard-write; fullscreen',
+    title: "Bonsai 27B",
+    src: "/bonsai/",
+    panelType: "bonsai",
+    allow: "clipboard-read; clipboard-write; fullscreen",
     allowFullscreen: true,
   },
-  codigo: { title: 'Codigo', src: 'https://codigo.dev', panelType: 'codigo' },
-  crush: { title: 'Crush', src: 'https://justwasm.github.io/crush/', panelType: 'crush' },
+  codigo: { title: "Codigo", src: "https://codigo.dev", panelType: "codigo" },
+  crush: {
+    title: "Crush",
+    src: "https://justwasm.github.io/crush/",
+    panelType: "crush",
+  },
   rickroll: {
-    title: 'Rick Roll',
-    src: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    panelType: 'rickroll',
-    allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+    title: "Rick Roll",
+    src: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    panelType: "rickroll",
+    allow:
+      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
     allowFullscreen: true,
   },
 };
 
 export const PANEL_CREATION_OPTIONS = [
-  { component: 'terminal', label: 'Terminal', icon: Terminal },
-  { component: 'fallback', label: 'Launcher', icon: Rocket },
-  { component: 'home', label: 'Home', icon: House },
-  { component: 'deck', label: 'Deck', icon: LayoutDashboard },
-  { component: 'workbench', label: 'Workbench', icon: Monitor },
-  { component: 'vm', label: 'VM', icon: Cpu },
-  { component: 'settings', label: 'Settings', icon: Settings },
-  { component: 'files', label: 'Files', icon: FolderOpen },
-  { component: 'runtime', label: 'Runtime', icon: Activity },
-  { component: 'group', label: 'Group', icon: UsersRound },
-  { component: 'browser', label: 'Browser', icon: Globe2 },
-  { component: 'bonsai', label: 'Bonsai 27B', icon: TreePine },
-  { component: 'codigo', label: 'Codigo', icon: Code2 },
-  { component: 'crush', label: 'Crush', icon: Bot },
-  { component: 'crush-runner', label: 'Crush Runner', icon: Rocket },
-  { component: 'rickroll', label: 'Rick Roll', icon: Music2 },
+  { component: "terminal", label: "Terminal", icon: Terminal },
+  { component: "fallback", label: "Launcher", icon: Rocket },
+  { component: "home", label: "Home", icon: House },
+  { component: "deck", label: "Deck", icon: LayoutDashboard },
+  { component: "workbench", label: "Workbench", icon: Monitor },
+  { component: "vm", label: "VM", icon: Cpu },
+  { component: "settings", label: "Settings", icon: Settings },
+  { component: "files", label: "Files", icon: FolderOpen },
+  { component: "runtime", label: "Runtime", icon: Activity },
+  { component: "group", label: "Group", icon: UsersRound },
+  { component: "browser", label: "Browser", icon: Globe2 },
+  { component: "bonsai", label: "Bonsai 27B", icon: TreePine },
+  { component: "codigo", label: "Codigo", icon: Code2 },
+  { component: "crush", label: "Crush", icon: Bot },
+  { component: "crush-runner", label: "Crush Runner", icon: Rocket },
+  { component: "rickroll", label: "Rick Roll", icon: Music2 },
 ];
 
 export function restoreSavedPanels(api) {
@@ -92,22 +137,36 @@ export function restoreSavedPanels(api) {
   }
   reserveCrushRunnerIds(maxCrushRunnerId);
   for (const panel of panels) {
-    if (panel.component === 'terminal') {
-      addTerminalPanelFromPanels(api, undefined, panel.profile || getDefaultTerminalProfile());
-    } else if (panel.component === 'workbench') {
-      addWorkbenchPanelFromPanels(api, undefined, panel.config || getWorkbenchPanelConfig());
-    } else if (panel.component === 'vm') {
+    if (panel.component === "terminal") {
+      addTerminalPanelFromPanels(
+        api,
+        undefined,
+        panel.profile || getDefaultTerminalProfile(),
+      );
+    } else if (panel.component === "workbench") {
+      addWorkbenchPanelFromPanels(
+        api,
+        undefined,
+        panel.config || getWorkbenchPanelConfig(),
+      );
+    } else if (panel.component === "vm") {
       addVmPanelFromPanels(api, undefined, panel.config || getVmPanelConfig());
-    } else if (panel.component === 'task' && panel.task) {
-      addWorkspaceTaskPanelFromPanels(api, panel.task, loadWorkspace(panel.workspaceId) || loadActiveWorkspace());
-    } else if (panel.component === 'crush-runner') {
+    } else if (panel.component === "task" && panel.task) {
+      addWorkspaceTaskPanelFromPanels(
+        api,
+        panel.task,
+        loadWorkspace(panel.workspaceId) || loadActiveWorkspace(),
+      );
+    } else if (panel.component === "crush-runner") {
       // Restore the original Crush Runner panel id so the tab title
       // ("Crush Runner N") and the linked terminal launch ids stay
       // stable across reloads; otherwise the module-level counter in
       // crush-runner.js would mint fresh numbers and the previous
       // session's panels would silently disappear or collide.
       const restoredId = parseCrushRunnerPanelId(panel.panelId);
-      addPanelByComponentFromPanels(api, panel.component, undefined, { id: restoredId });
+      addPanelByComponentFromPanels(api, panel.component, undefined, {
+        id: restoredId,
+      });
     } else {
       addPanelByComponentFromPanels(api, panel.component);
     }
@@ -117,9 +176,11 @@ export function restoreSavedPanels(api) {
   // before refresh, reactivate that one here so the user lands back where they
   // were rather than on the rightmost tab.
   const savedActiveIndex = loadActiveWorkspace().ui?.activeOpenPanelIndex;
-  if (typeof savedActiveIndex === 'number'
-      && savedActiveIndex >= 0
-      && savedActiveIndex < api.panels.length) {
+  if (
+    typeof savedActiveIndex === "number" &&
+    savedActiveIndex >= 0 &&
+    savedActiveIndex < api.panels.length
+  ) {
     api.panels[savedActiveIndex]?.api.setActive();
   }
   return panels.length > 0;
@@ -134,10 +195,10 @@ export function whenWanixReady(callback) {
 
   const onReady = (event) => {
     if (event.target !== wanixSystem) return;
-    wanixSystem.removeEventListener('ready', onReady);
+    wanixSystem.removeEventListener("ready", onReady);
     run();
   };
-  wanixSystem?.addEventListener('ready', onReady);
+  wanixSystem?.addEventListener("ready", onReady);
 }
 
 // ========== Components ==========

@@ -8,11 +8,13 @@ export function initSettings(dependencies) {
 }
 export function settingsDep(name) {
   if (__settingsDeps == null) {
-    throw new Error('settings: initSettings() has not been called; ensure app.js wires it in.');
+    throw new Error(
+      "settings: initSettings() has not been called; ensure app.js wires it in.",
+    );
   }
   const value = __settingsDeps[name];
   if (value === undefined) {
-    throw new Error('settings: missing dependency ' + name);
+    throw new Error("settings: missing dependency " + name);
   }
   return value;
 }

@@ -2,36 +2,76 @@
 // tasks (500-line rule split). Pure functions.
 
 import {
-  SUPPORTED_BIND_TYPES, SUPPORTED_SYSTEM_BIND_TYPES, SUPPORTED_UNION_MODES,
-  SUPPORTED_TASK_TYPES, CANONICAL_LUCIDE_ICON_IDS, TERMINAL_PRESET_ICON_BY_ID,
-  TERMINAL_PRESET_ICON_OPTIONS, BUILTIN_TERMINAL_PROFILES, WANIX_RUNTIME,
-  LEGACY_WANIX_RUNTIME_WASM_URLS, LEGACY_WANIX_RUNTIME_MODULE_URLS,
-  DEFAULT_CONFIG, DEFAULT_CMD, LEGACY_DEFAULT_CMD, DEFAULT_WORKBENCH_ASSETS_URL,
-  LEGACY_DEFAULT_WORKBENCH_ASSETS_URL, DEFAULT_VM_BACKEND_URL,
-  REDUNDANT_WISP_VM_BACKEND_URL, DEFAULT_VM_LINUX_URL, WORKSPACE_SCHEMA_VERSION,
-  STARTUP_PANEL_TYPES, WORKSPACE_CHANGED_EVENT, WORKSPACE_TASK_STATUS_EVENT,
-  CONFIG_KEY, WANIX, HOME, DEFAULT_LAUNCHER_ITEM_ORDER, DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
-  DEFAULT_SYSTEM_CONFIG, LAUNCHER_COLLAPSIBLE_PANEL_TYPES, lucideIconId, lucideIconLabel,
-} from "./app-constants.js?v=20260825.2";
-import { BUILTIN_CRUSH_RUNNER_PRESET_IDS, DEFAULT_CRUSH_RUNNER_ACTIVE_ID } from "./crush-runner.js?v=20260825.1";
-import { getCrushRunnerPresets, normalizeCrushRunnerPreset } from "./app-workspace.js?v=20260825.2";
+  BUILTIN_TERMINAL_PROFILES,
+  CANONICAL_LUCIDE_ICON_IDS,
+  CONFIG_KEY,
+  DEFAULT_CMD,
+  DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
+  DEFAULT_CONFIG,
+  DEFAULT_LAUNCHER_ITEM_ORDER,
+  DEFAULT_SYSTEM_CONFIG,
+  DEFAULT_VM_BACKEND_URL,
+  DEFAULT_VM_LINUX_URL,
+  DEFAULT_WORKBENCH_ASSETS_URL,
+  HOME,
+  LAUNCHER_COLLAPSIBLE_PANEL_TYPES,
+  LEGACY_DEFAULT_CMD,
+  LEGACY_DEFAULT_WORKBENCH_ASSETS_URL,
+  LEGACY_WANIX_RUNTIME_MODULE_URLS,
+  LEGACY_WANIX_RUNTIME_WASM_URLS,
+  lucideIconId,
+  lucideIconLabel,
+  REDUNDANT_WISP_VM_BACKEND_URL,
+  STARTUP_PANEL_TYPES,
+  SUPPORTED_BIND_TYPES,
+  SUPPORTED_SYSTEM_BIND_TYPES,
+  SUPPORTED_TASK_TYPES,
+  SUPPORTED_UNION_MODES,
+  TERMINAL_PRESET_ICON_BY_ID,
+  TERMINAL_PRESET_ICON_OPTIONS,
+  WANIX,
+  WANIX_RUNTIME,
+  WORKSPACE_CHANGED_EVENT,
+  WORKSPACE_SCHEMA_VERSION,
+  WORKSPACE_TASK_STATUS_EVENT,
+} from "./app-constants.js?v=20260826.1";
+import {
+  BUILTIN_CRUSH_RUNNER_PRESET_IDS,
+  DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
+} from "./crush-runner.js?v=20260826.1";
+import {
+  getCrushRunnerPresets,
+  normalizeCrushRunnerPreset,
+} from "./app-workspace.js?v=20260826.1";
 
 export function normalizePresetDescription(description) {
-  return typeof description === 'string' ? description.trim() : '';
+  return typeof description === "string" ? description.trim() : "";
 }
 
 export function normalizeCustomWorkspacePreset(preset = {}) {
-  const template = preset.template && typeof preset.template === 'object' ? preset.template : preset;
+  const template = preset.template && typeof preset.template === "object"
+    ? preset.template
+    : preset;
   return {
-    id: typeof preset.id === 'string' && preset.id ? preset.id : `custom-${createWorkspaceId()}`,
-    name: normalizeWorkspaceName(preset.name) || 'Untitled preset',
+    id: typeof preset.id === "string" && preset.id
+      ? preset.id
+      : `custom-${createWorkspaceId()}`,
+    name: normalizeWorkspaceName(preset.name) || "Untitled preset",
     description: normalizePresetDescription(preset.description),
-    createdAt: typeof preset.createdAt === 'string' ? preset.createdAt : new Date().toISOString(),
-    updatedAt: typeof preset.updatedAt === 'string' ? preset.updatedAt : new Date().toISOString(),
+    createdAt: typeof preset.createdAt === "string"
+      ? preset.createdAt
+      : new Date().toISOString(),
+    updatedAt: typeof preset.updatedAt === "string"
+      ? preset.updatedAt
+      : new Date().toISOString(),
     runtime: normalizeRuntimeConfig(template.runtime),
     system: normalizeSystemConfig(template.system),
-    binds: Array.isArray(template.binds) ? template.binds.map(normalizeBind) : [],
-    tasks: Array.isArray(template.tasks) ? template.tasks.map(normalizeTask) : [],
+    binds: Array.isArray(template.binds)
+      ? template.binds.map(normalizeBind)
+      : [],
+    tasks: Array.isArray(template.tasks)
+      ? template.tasks.map(normalizeTask)
+      : [],
     shell: normalizeShellConfig(template.shell),
   };
 }
@@ -41,7 +81,7 @@ export function clone(value) {
 }
 
 export function normalizeRuntimeConfig(runtime = {}) {
-  const configured = runtime && typeof runtime === 'object' ? runtime : {};
+  const configured = runtime && typeof runtime === "object" ? runtime : {};
   const wasmUrl = LEGACY_WANIX_RUNTIME_WASM_URLS.has(configured.wasmUrl)
     ? WANIX_RUNTIME.wasmUrl
     : configured.wasmUrl;
@@ -69,31 +109,51 @@ export function normalizeShellConfig(config) {
       .filter((preset) => preset.program)
     : [];
   const normalized = {
-    cmd: typeof config?.cmd === 'string' && config.cmd.trim() ? config.cmd.trim() : DEFAULT_CMD,
-    env: typeof config?.env === 'string' ? config.env : '',
+    cmd: typeof config?.cmd === "string" && config.cmd.trim()
+      ? config.cmd.trim()
+      : DEFAULT_CMD,
+    env: typeof config?.env === "string" ? config.env : "",
     startupPanels: Array.isArray(config?.startupPanels)
-      ? [...new Set(config.startupPanels.filter((panel) => STARTUP_PANEL_TYPES.includes(panel)))]
+      ? [
+        ...new Set(config.startupPanels.filter((panel) =>
+          STARTUP_PANEL_TYPES.includes(panel)
+        )),
+      ]
       : [],
     restoreTabs: config?.restoreTabs === true,
     workbenchAssetsUrl: normalizeWorkbenchAssetsUrl(config?.workbenchAssetsUrl),
     vmBackendUrl: normalizeVmBackendUrl(config?.vmBackendUrl),
-    vmLinuxUrl: normalizeIntegrationUrl(config?.vmLinuxUrl, DEFAULT_VM_LINUX_URL),
+    vmLinuxUrl: normalizeIntegrationUrl(
+      config?.vmLinuxUrl,
+      DEFAULT_VM_LINUX_URL,
+    ),
     vmMemory: normalizeVmMemory(config?.vmMemory),
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
     wagiDogEnabled: config?.wagiDogEnabled !== false,
     collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)
-      ? [...new Set(config.collapsedLauncherItems.filter((component) => LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)))]
+      ? [
+        ...new Set(config.collapsedLauncherItems.filter((component) =>
+          LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)
+        )),
+      ]
       : [...DEFAULT_COLLAPSED_LAUNCHER_ITEMS],
     launcherOrder: normalizeLauncherOrder(config?.launcherOrder),
     terminalProfiles,
-    terminalProfileOrder: normalizeTerminalProfileOrder(config?.terminalProfileOrder, terminalProfiles),
-    defaultTerminalProfileId: typeof config?.defaultTerminalProfileId === 'string'
-      ? config.defaultTerminalProfileId
-      : 'hush',
+    terminalProfileOrder: normalizeTerminalProfileOrder(
+      config?.terminalProfileOrder,
+      terminalProfiles,
+    ),
+    defaultTerminalProfileId:
+      typeof config?.defaultTerminalProfileId === "string"
+        ? config.defaultTerminalProfileId
+        : "hush",
     crushRunnerPresets,
-    crushRunnerPresetOrder: normalizeTerminalProfileOrder(config?.crushRunnerPresetOrder, crushRunnerPresets),
-    crushRunnerActiveId: typeof config?.crushRunnerActiveId === 'string'
+    crushRunnerPresetOrder: normalizeTerminalProfileOrder(
+      config?.crushRunnerPresetOrder,
+      crushRunnerPresets,
+    ),
+    crushRunnerActiveId: typeof config?.crushRunnerActiveId === "string"
       ? config.crushRunnerActiveId
       : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   };
@@ -105,24 +165,39 @@ export function normalizeShellConfig(config) {
 
 export function getActiveCrushRunnerPreset(config = loadConfig()) {
   const presets = getCrushRunnerPresets(config);
-  return presets.find((preset) => preset.id === (config.crushRunnerActiveId || DEFAULT_CRUSH_RUNNER_ACTIVE_ID))
-    || presets[0];
+  return presets.find((preset) =>
+    preset.id === (config.crushRunnerActiveId || DEFAULT_CRUSH_RUNNER_ACTIVE_ID)
+  ) ||
+    presets[0];
 }
 
 export function saveCrushRunnerPresets(presets, activeId, order) {
   const config = loadConfig();
   saveConfig({
     ...config,
-    crushRunnerPresets: presets.map((preset) => ({ ...preset, builtin: false })),
+    crushRunnerPresets: presets.map((preset) => ({
+      ...preset,
+      builtin: false,
+    })),
     crushRunnerPresetOrder: normalizeTerminalProfileOrder(order, presets),
-    crushRunnerActiveId: typeof activeId === 'string' && activeId ? activeId : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
+    crushRunnerActiveId: typeof activeId === "string" && activeId
+      ? activeId
+      : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   });
 }
 
 export function blankCrushRunnerPresetDraft() {
-  return { name: '', icon: 'bot', program: 'crush', args: '', type: 'gojs', wd: '', env: '', crushrc: '' };
+  return {
+    name: "",
+    icon: "bot",
+    program: "crush",
+    args: "",
+    type: "gojs",
+    wd: "",
+    env: "",
+    crushrc: "",
+  };
 }
-
 
 export function normalizeTerminalProfileOrder(order, profiles = []) {
   const knownIds = [
@@ -136,22 +211,30 @@ export function normalizeTerminalProfileOrder(order, profiles = []) {
   return [...unique, ...knownIds.filter((id) => !unique.includes(id))];
 }
 
-
 export function normalizeLauncherOrder(order) {
   const requested = Array.isArray(order) ? order : [];
   const known = new Set(DEFAULT_LAUNCHER_ITEM_ORDER);
-  const unique = [...new Set(requested.filter((component) => known.has(component)))];
-  return [...unique, ...DEFAULT_LAUNCHER_ITEM_ORDER.filter((component) => !unique.includes(component))];
+  const unique = [
+    ...new Set(requested.filter((component) => known.has(component))),
+  ];
+  return [
+    ...unique,
+    ...DEFAULT_LAUNCHER_ITEM_ORDER.filter((component) =>
+      !unique.includes(component)
+    ),
+  ];
 }
 
-
 export function normalizeIntegrationUrl(value, fallback) {
-  if (typeof value !== 'string' || !value.trim()) return fallback;
-  return value.trim().replace(/\/+$/, '');
+  if (typeof value !== "string" || !value.trim()) return fallback;
+  return value.trim().replace(/\/+$/, "");
 }
 
 export function normalizeWorkbenchAssetsUrl(value) {
-  const normalized = normalizeIntegrationUrl(value, DEFAULT_WORKBENCH_ASSETS_URL);
+  const normalized = normalizeIntegrationUrl(
+    value,
+    DEFAULT_WORKBENCH_ASSETS_URL,
+  );
   // This was GearShell's former default. Migrate it to the bundled submodule;
   // any other value remains an intentional workspace-local override.
   return normalized === LEGACY_DEFAULT_WORKBENCH_ASSETS_URL
@@ -163,39 +246,47 @@ export function normalizeVmBackendUrl(value) {
   const normalized = normalizeIntegrationUrl(value, DEFAULT_VM_BACKEND_URL);
   // The temporary custom archive duplicated v86's existing Wisp support.
   // Restore workspaces that inherited it to the maintained public archive.
-  return normalized === REDUNDANT_WISP_VM_BACKEND_URL ? DEFAULT_VM_BACKEND_URL : normalized;
+  return normalized === REDUNDANT_WISP_VM_BACKEND_URL
+    ? DEFAULT_VM_BACKEND_URL
+    : normalized;
 }
 
 export function normalizeVmMemory(value) {
-  const normalized = typeof value === 'string' ? value.trim() : '';
-  return /^\d+(?:[KMG])?$/i.test(normalized) ? normalized.toUpperCase() : '512M';
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return /^\d+(?:[KMG])?$/i.test(normalized)
+    ? normalized.toUpperCase()
+    : "512M";
 }
 
 export function normalizeVmNetworkMode(value) {
-  return ['none', 'fetch', 'wisp'].includes(value) ? value : 'none';
+  return ["none", "fetch", "wisp"].includes(value) ? value : "none";
 }
 
 export function normalizeVmWispUrl(value) {
-  const normalized = typeof value === 'string' ? value.trim() : '';
-  if (!normalized) return '';
+  const normalized = typeof value === "string" ? value.trim() : "";
+  if (!normalized) return "";
   try {
     const { protocol } = new URL(normalized);
-    return ['wisp:', 'wisps:'].includes(protocol) ? normalized : '';
+    return ["wisp:", "wisps:"].includes(protocol) ? normalized : "";
   } catch {
-    return '';
+    return "";
   }
 }
 
 export function normalizeTerminalProfile(profile = {}) {
-  const defaultIcon = profile.id === 'crush' ? 'bot' : 'terminal';
+  const defaultIcon = profile.id === "crush" ? "bot" : "terminal";
   return {
-    id: typeof profile.id === 'string' && profile.id ? profile.id : createWorkspaceId(),
-    name: typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : 'Terminal',
-    program: typeof profile.program === 'string' ? profile.program.trim() : '',
-    args: typeof profile.args === 'string' ? profile.args.trim() : '',
-    type: SUPPORTED_TASK_TYPES.includes(profile.type) ? profile.type : 'gojs',
-    env: typeof profile.env === 'string' ? profile.env : '',
-    wd: typeof profile.wd === 'string' ? profile.wd.trim() : '',
+    id: typeof profile.id === "string" && profile.id
+      ? profile.id
+      : createWorkspaceId(),
+    name: typeof profile.name === "string" && profile.name.trim()
+      ? profile.name.trim()
+      : "Terminal",
+    program: typeof profile.program === "string" ? profile.program.trim() : "",
+    args: typeof profile.args === "string" ? profile.args.trim() : "",
+    type: SUPPORTED_TASK_TYPES.includes(profile.type) ? profile.type : "gojs",
+    env: typeof profile.env === "string" ? profile.env : "",
+    wd: typeof profile.wd === "string" ? profile.wd.trim() : "",
     icon: TERMINAL_PRESET_ICON_BY_ID[profile.icon] ? profile.icon : defaultIcon,
   };
 }
@@ -205,50 +296,54 @@ export function getTerminalPresetIcon(profile) {
 }
 
 export function migrateLegacyHushTerminalProfile(profile) {
-  if (profile.id !== 'hush' || profile.program !== 'hush' || profile.args !== '-rcfile /tmp/profile') {
+  if (
+    profile.id !== "hush" || profile.program !== "hush" ||
+    profile.args !== "-rcfile /tmp/profile"
+  ) {
     return profile;
   }
-  return { ...profile, args: '-rcfile /profile' };
+  return { ...profile, args: "-rcfile /profile" };
 }
 
 export function normalizeBind(bind = {}) {
   return {
-    id: typeof bind.id === 'string' && bind.id ? bind.id : createWorkspaceId(),
-    type: SUPPORTED_BIND_TYPES.includes(bind.type) ? bind.type : 'file',
-    dst: typeof bind.dst === 'string' ? bind.dst.trim() : '',
-    src: typeof bind.src === 'string' ? bind.src.trim() : '',
-    content: typeof bind.content === 'string' ? bind.content : '',
-    perm: typeof bind.perm === 'string' && bind.perm ? bind.perm : '0644',
-    union: SUPPORTED_UNION_MODES.includes(bind.union) ? bind.union : 'after',
+    id: typeof bind.id === "string" && bind.id ? bind.id : createWorkspaceId(),
+    type: SUPPORTED_BIND_TYPES.includes(bind.type) ? bind.type : "file",
+    dst: typeof bind.dst === "string" ? bind.dst.trim() : "",
+    src: typeof bind.src === "string" ? bind.src.trim() : "",
+    content: typeof bind.content === "string" ? bind.content : "",
+    perm: typeof bind.perm === "string" && bind.perm ? bind.perm : "0644",
+    union: SUPPORTED_UNION_MODES.includes(bind.union) ? bind.union : "after",
   };
 }
 
 export const LEGACY_SYSTEM_MIRROR_BINDS = new Map([
-  ['task', { dst: 'task', src: '#task' }],
-  ['term', { dst: 'term', src: '#term' }],
-  ['web', { dst: 'web', src: '#web' }],
-  ['js', { dst: 'js', src: '#js' }],
-  ['opfs', { dst: 'opfs', src: '#web/opfs' }],
-  ['tmp', { dst: 'tmp', src: '#ramfs' }],
-  ['root', { dst: '.', src: '#ramfs' }],
+  ["task", { dst: "task", src: "#task" }],
+  ["term", { dst: "term", src: "#term" }],
+  ["web", { dst: "web", src: "#web" }],
+  ["js", { dst: "js", src: "#js" }],
+  ["opfs", { dst: "opfs", src: "#web/opfs" }],
+  ["tmp", { dst: "tmp", src: "#ramfs" }],
+  ["root", { dst: ".", src: "#ramfs" }],
 ]);
 
-export const LEGACY_RAMFS_MOUNT_IDS = new Set(['root', 'tmp']);
+export const LEGACY_RAMFS_MOUNT_IDS = new Set(["root", "tmp"]);
 
 export function isLegacySystemMirrorBind(bind) {
   const expected = LEGACY_SYSTEM_MIRROR_BINDS.get(bind.id);
-  return bind.type === 'ns' && expected?.dst === bind.dst && expected.src === bind.src;
+  return bind.type === "ns" && expected?.dst === bind.dst &&
+    expected.src === bind.src;
 }
 
 export function normalizeSystemBind(bind = {}) {
   return {
-    id: typeof bind.id === 'string' && bind.id ? bind.id : createWorkspaceId(),
-    type: SUPPORTED_SYSTEM_BIND_TYPES.includes(bind.type) ? bind.type : 'file',
-    dst: typeof bind.dst === 'string' ? bind.dst.trim() : '',
-    src: typeof bind.src === 'string' ? bind.src.trim() : '',
-    content: typeof bind.content === 'string' ? bind.content : '',
-    mode: typeof bind.mode === 'string' ? bind.mode : '',
-    union: SUPPORTED_UNION_MODES.includes(bind.union) ? bind.union : 'after',
+    id: typeof bind.id === "string" && bind.id ? bind.id : createWorkspaceId(),
+    type: SUPPORTED_SYSTEM_BIND_TYPES.includes(bind.type) ? bind.type : "file",
+    dst: typeof bind.dst === "string" ? bind.dst.trim() : "",
+    src: typeof bind.src === "string" ? bind.src.trim() : "",
+    content: typeof bind.content === "string" ? bind.content : "",
+    mode: typeof bind.mode === "string" ? bind.mode : "",
+    union: SUPPORTED_UNION_MODES.includes(bind.union) ? bind.union : "after",
   };
 }
 
@@ -258,56 +353,92 @@ export function normalizeSystemConfig(system) {
     ? system.binds.map(normalizeSystemBind)
     : defaults.binds.map(normalizeSystemBind);
   const legacyProfile = system?.profile;
-  if (legacyProfile && !binds.some((bind) => bind.id === 'boot-profile' || bind.dst === 'tmp/profile')) {
-    binds.push(normalizeSystemBind({ ...legacyProfile, id: 'boot-profile', type: 'file' }));
+  if (
+    legacyProfile &&
+    !binds.some((bind) =>
+      bind.id === "boot-profile" || bind.dst === "tmp/profile"
+    )
+  ) {
+    binds.push(
+      normalizeSystemBind({
+        ...legacyProfile,
+        id: "boot-profile",
+        type: "file",
+      }),
+    );
   }
   for (const bind of binds) {
-    if (bind.id === 'boot-profile' && bind.type === 'file' && bind.dst === 'tmp/profile') {
-      bind.dst = 'profile';
+    if (
+      bind.id === "boot-profile" && bind.type === "file" &&
+      bind.dst === "tmp/profile"
+    ) {
+      bind.dst = "profile";
     }
-    if (bind.type === 'ns' && LEGACY_RAMFS_MOUNT_IDS.has(bind.id) && bind.src === '#ramfs') {
-      bind.src = '#ramfs/new';
+    if (
+      bind.type === "ns" && LEGACY_RAMFS_MOUNT_IDS.has(bind.id) &&
+      bind.src === "#ramfs"
+    ) {
+      bind.src = "#ramfs/new";
     }
   }
   return {
     binds,
-    allowOrigins: typeof system?.allowOrigins === 'string' ? system.allowOrigins.trim().replace(/[\s,]+/g, ' ') : '',
+    allowOrigins: typeof system?.allowOrigins === "string"
+      ? system.allowOrigins.trim().replace(/[\s,]+/g, " ")
+      : "",
   };
 }
 
 export function validateBind(bind) {
-  if (!SUPPORTED_BIND_TYPES.includes(bind.type)) return 'Unsupported mount type.';
-  if (!bind.dst) return 'A destination path is required.';
-  if (bind.dst.startsWith('/')) return 'Destination paths must not start with a slash.';
-  if (bind.type === 'ns' && !bind.src.startsWith('#')) return 'Namespace mounts must use a # system path.';
-  if (bind.type === 'file' && !bind.src && !bind.content) {
-    return 'Provide a URL or inline file content.';
+  if (!SUPPORTED_BIND_TYPES.includes(bind.type)) {
+    return "Unsupported mount type.";
   }
-  if ((bind.type === 'fetch' || bind.type === 'archive' || bind.type === 'import') && !bind.src) {
+  if (!bind.dst) return "A destination path is required.";
+  if (bind.dst.startsWith("/")) {
+    return "Destination paths must not start with a slash.";
+  }
+  if (bind.type === "ns" && !bind.src.startsWith("#")) {
+    return "Namespace mounts must use a # system path.";
+  }
+  if (bind.type === "file" && !bind.src && !bind.content) {
+    return "Provide a URL or inline file content.";
+  }
+  if (
+    (bind.type === "fetch" || bind.type === "archive" ||
+      bind.type === "import") && !bind.src
+  ) {
     return `${bind.type} mounts require a source URL.`;
   }
-  if (!SUPPORTED_UNION_MODES.includes(bind.union)) return 'Union position must be before or after.';
-  if (!/^[0-7]{3,4}$/.test(bind.perm)) return 'Permissions must be an octal mode such as 0644.';
+  if (!SUPPORTED_UNION_MODES.includes(bind.union)) {
+    return "Union position must be before or after.";
+  }
+  if (!/^[0-7]{3,4}$/.test(bind.perm)) {
+    return "Permissions must be an octal mode such as 0644.";
+  }
   return null;
 }
 
 export function normalizeTask(task = {}) {
   return {
-    id: typeof task.id === 'string' && task.id ? task.id : createWorkspaceId(),
-    name: typeof task.name === 'string' && task.name ? task.name : 'Task',
-    cmd: typeof task.cmd === 'string' ? task.cmd.trim() : '',
-    type: SUPPORTED_TASK_TYPES.includes(task.type) ? task.type : 'auto',
-    env: typeof task.env === 'string' ? task.env : '',
-    wd: typeof task.wd === 'string' ? task.wd.trim() : '',
-    fsys: typeof task.fsys === 'string' ? task.fsys.trim() : '',
+    id: typeof task.id === "string" && task.id ? task.id : createWorkspaceId(),
+    name: typeof task.name === "string" && task.name ? task.name : "Task",
+    cmd: typeof task.cmd === "string" ? task.cmd.trim() : "",
+    type: SUPPORTED_TASK_TYPES.includes(task.type) ? task.type : "auto",
+    env: typeof task.env === "string" ? task.env : "",
+    wd: typeof task.wd === "string" ? task.wd.trim() : "",
+    fsys: typeof task.fsys === "string" ? task.fsys.trim() : "",
     term: task.term !== false,
     autoStart: task.autoStart === true,
   };
 }
 
 export function validateTask(task) {
-  if (!task.cmd) return 'A command is required.';
-  if (!SUPPORTED_TASK_TYPES.includes(task.type)) return 'Unsupported task type.';
-  if (task.wd.startsWith('/')) return 'Working directories must not start with a slash.';
+  if (!task.cmd) return "A command is required.";
+  if (!SUPPORTED_TASK_TYPES.includes(task.type)) {
+    return "Unsupported task type.";
+  }
+  if (task.wd.startsWith("/")) {
+    return "Working directories must not start with a slash.";
+  }
   return null;
 }

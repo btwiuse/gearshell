@@ -3,8 +3,11 @@
 // filesystem side effects (a marker file / marker directory) rather than
 // task events, because short-lived shell tasks emit no completion signal.
 
-import { crushRunnerDep, __getWanixSystem } from "./crush-deps.js?v=20260825.1";
-import { spawnWanixCommand, readWanixText } from "./crush-config.js?v=20260825.1";
+import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260826.1";
+import {
+  readWanixText,
+  spawnWanixCommand,
+} from "./crush-config.js?v=20260826.1";
 
 // `which crush` probe driven by a small hush script so the lookup behaves
 // the same way it would in a real terminal: a function we call, output

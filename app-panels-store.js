@@ -1,9 +1,13 @@
 // Dockview panel snapshot store: which panels are open, which is active,
 // and the active dockview api (500-line rule split).
 
-import { loadActiveWorkspace, saveWorkspace, updateWorkspaceIndex } from "./app-workspace.js?v=20260825.2";
-import { clone } from "./app-normalize.js?v=20260825.2";
-import { STARTUP_PANEL_TYPES } from "./app-constants.js?v=20260825.2";
+import {
+  loadActiveWorkspace,
+  saveWorkspace,
+  updateWorkspaceIndex,
+} from "./app-workspace.js?v=20260826.1";
+import { clone } from "./app-normalize.js?v=20260826.1";
+import { STARTUP_PANEL_TYPES } from "./app-constants.js?v=20260826.1";
 
 export const openPanelSnapshots = new Map();
 export let dockviewApi = null;
@@ -36,8 +40,10 @@ export function forgetOpenPanel(panelId) {
 export function getSavedOpenPanels() {
   const panels = loadActiveWorkspace().ui?.openPanels;
   if (!Array.isArray(panels)) return [];
-  return panels.filter((panel) => panel && typeof panel === 'object' &&
-    (STARTUP_PANEL_TYPES.includes(panel.component) || panel.component === 'fallback' || panel.component === 'task')
+  return panels.filter((panel) =>
+    panel && typeof panel === "object" &&
+    (STARTUP_PANEL_TYPES.includes(panel.component) ||
+      panel.component === "fallback" || panel.component === "task")
   );
 }
 

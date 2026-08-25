@@ -13,8 +13,8 @@ import {
   User,
 } from "lucide-react";
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260825.1";
-import { crushRunDirFor } from "./crush-config.js?v=20260825.1";
+import { crushRunnerDep } from "./crush-deps.js?v=20260826.1";
+import { crushRunDirFor } from "./crush-config.js?v=20260826.1";
 
 export function CrushConfigSection({ ctl }) {
   const {
@@ -55,8 +55,7 @@ export function CrushConfigSection({ ctl }) {
         React.createElement(
           "div",
           {
-            className:
-              "crush-runner-section-body crush-runner-tab-panel",
+            className: "crush-runner-section-body crush-runner-tab-panel",
             "data-dirty": profileDirty || undefined,
           },
           React.createElement(
@@ -87,8 +86,7 @@ export function CrushConfigSection({ ctl }) {
               value: draft.name,
               spellCheck: false,
               placeholder: "Crush",
-              onChange: (event) =>
-                updateField("name", event.target.value),
+              onChange: (event) => updateField("name", event.target.value),
             }),
             React.createElement("label", {
               htmlFor: "crush-runner-program",
@@ -115,8 +113,7 @@ export function CrushConfigSection({ ctl }) {
               value: draft.args,
               spellCheck: false,
               placeholder: "--help",
-              onChange: (event) =>
-                updateField("args", event.target.value),
+              onChange: (event) => updateField("args", event.target.value),
             }),
             React.createElement("label", {
               htmlFor: "crush-runner-type",
@@ -126,8 +123,7 @@ export function CrushConfigSection({ ctl }) {
               {
                 id: "crush-runner-type",
                 value: draft.type,
-                onChange: (event) =>
-                  updateField("type", event.target.value),
+                onChange: (event) => updateField("type", event.target.value),
               },
               React.createElement(
                 "option",
@@ -161,8 +157,7 @@ export function CrushConfigSection({ ctl }) {
               value: draft.wd,
               spellCheck: false,
               placeholder: ".",
-              onChange: (event) =>
-                updateField("wd", event.target.value),
+              onChange: (event) => updateField("wd", event.target.value),
             }),
           ),
           React.createElement(
@@ -195,8 +190,7 @@ export function CrushConfigSection({ ctl }) {
         React.createElement(
           "div",
           {
-            className:
-              "crush-runner-section-body crush-runner-tab-panel",
+            className: "crush-runner-section-body crush-runner-tab-panel",
             "data-dirty": configDirty || undefined,
           },
           React.createElement(
@@ -219,8 +213,7 @@ export function CrushConfigSection({ ctl }) {
             spellCheck: false,
             "aria-label": "crushrc contents",
             placeholder: "AGW=...",
-            onChange: (event) =>
-              setCrushrcContent(event.target.value),
+            onChange: (event) => setCrushrcContent(event.target.value),
           }),
           React.createElement(
             "div",
@@ -252,8 +245,7 @@ export function CrushConfigSection({ ctl }) {
         React.createElement(
           "div",
           {
-            className:
-              "crush-runner-section-body crush-runner-tab-panel",
+            className: "crush-runner-section-body crush-runner-tab-panel",
           },
           React.createElement(
             "p",
@@ -270,8 +262,7 @@ export function CrushConfigSection({ ctl }) {
             value: draft.env,
             spellCheck: false,
             placeholder: "CRUSH_LOG=info\nOPENAI_API_KEY=...",
-            onChange: (event) =>
-              updateField("env", event.target.value),
+            onChange: (event) => updateField("env", event.target.value),
           }),
           React.createElement(
             "p",
@@ -280,9 +271,7 @@ export function CrushConfigSection({ ctl }) {
               "span",
               {
                 className: "crush-runner-env-override-count",
-                "data-empty": envLines.length === 0
-                  ? "true"
-                  : "false",
+                "data-empty": envLines.length === 0 ? "true" : "false",
               },
               envLines.length === 0
                 ? "Inherits built-ins"
@@ -295,9 +284,7 @@ export function CrushConfigSection({ ctl }) {
               "code",
               null,
               `${
-                envLines.length === 0
-                  ? "(no overrides)"
-                  : envLines.join(" · ")
+                envLines.length === 0 ? "(no overrides)" : envLines.join(" · ")
               }`,
             ),
           ),
@@ -331,8 +318,7 @@ export function CrushConfigSection({ ctl }) {
         React.createElement(
           "div",
           {
-            className:
-              "crush-runner-section-body crush-runner-tab-panel",
+            className: "crush-runner-section-body crush-runner-tab-panel",
             "data-dirty": jsonDraftDirty || undefined,
           },
           React.createElement(
@@ -464,9 +450,7 @@ export function CrushConfigSection({ ctl }) {
       "p",
       { className: "crush-runner-footer" },
       `Profile last refreshed ${
-        savedMarker === 0
-          ? "on first load"
-          : "after the most recent save"
+        savedMarker === 0 ? "on first load" : "after the most recent save"
       }. Changes live in this panel until you press “Save as default”.`,
     ),
   );

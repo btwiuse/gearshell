@@ -3,7 +3,7 @@
 // a starting point from a preset; the interactive panel logic lives in
 // crush-panel*.js and the launch plumbing in crush-config.js.
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260825.1";
+import { crushRunnerDep } from "./crush-deps.js?v=20260826.1";
 
 export const CRUSH_RUNNER_DEFAULT_PROFILE = {
   id: "crush",
@@ -215,8 +215,16 @@ model large minimax-china/MiniMax-M3
   ];
 }
 
-export const BUILTIN_CRUSH_RUNNER_PRESET_IDS = ["crush", "ox", "minimax", "deepseek", "stepfun", "all"];
-export const DEFAULT_CRUSH_RUNNER_ACTIVE_ID = BUILTIN_CRUSH_RUNNER_PRESET_IDS[0];
+export const BUILTIN_CRUSH_RUNNER_PRESET_IDS = [
+  "crush",
+  "ox",
+  "minimax",
+  "deepseek",
+  "stepfun",
+  "all",
+];
+export const DEFAULT_CRUSH_RUNNER_ACTIVE_ID =
+  BUILTIN_CRUSH_RUNNER_PRESET_IDS[0];
 
 export function getCrushRunnerDefaults(preset = null) {
   // Built-in defaults win; if a preset is supplied (active or seeded),

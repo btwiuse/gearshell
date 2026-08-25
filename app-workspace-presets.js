@@ -2,19 +2,32 @@
 // createWorkspace factory (500-line rule split).
 
 import {
-  WORKSPACE_PRESETS, WORKSPACE_SCHEMA_VERSION, WORKSPACE_PRESET_INDEX_KEY,
+  WORKSPACE_PRESET_INDEX_KEY,
   WORKSPACE_PRESET_KEY_PREFIX,
-} from "./app-constants.js?v=20260825.2";
+  WORKSPACE_PRESETS,
+  WORKSPACE_SCHEMA_VERSION,
+} from "./app-constants.js?v=20260826.1";
 import {
-  normalizePresetDescription, normalizeCustomWorkspacePreset, clone,
-  normalizeRuntimeConfig, normalizeSystemConfig, normalizeBind, normalizeTask,
-  normalizeShellConfig, isLegacySystemMirrorBind,
-} from "./app-normalize.js?v=20260825.2";
+  clone,
+  isLegacySystemMirrorBind,
+  normalizeBind,
+  normalizeCustomWorkspacePreset,
+  normalizePresetDescription,
+  normalizeRuntimeConfig,
+  normalizeShellConfig,
+  normalizeSystemConfig,
+  normalizeTask,
+} from "./app-normalize.js?v=20260826.1";
 import {
-  readStoredJson, writeStoredJson, workspacePresetStorageKey,
   createWorkspaceId,
-} from "./app-storage.js?v=20260825.2";
-import { notifyWorkspaceChange, normalizeWorkspaceName } from "./app-workspace.js?v=20260825.2";
+  readStoredJson,
+  workspacePresetStorageKey,
+  writeStoredJson,
+} from "./app-storage.js?v=20260826.1";
+import {
+  normalizeWorkspaceName,
+  notifyWorkspaceChange,
+} from "./app-workspace.js?v=20260826.1";
 
 export function loadWorkspacePresetIndex() {
   const index = readStoredJson(WORKSPACE_PRESET_INDEX_KEY, []);
@@ -26,13 +39,14 @@ export function saveWorkspacePresetIndex(index) {
 }
 
 export function loadCustomWorkspacePreset(id) {
-  if (typeof id !== 'string' || !id.startsWith('custom-')) return null;
+  if (typeof id !== "string" || !id.startsWith("custom-")) return null;
   const preset = readStoredJson(workspacePresetStorageKey(id), null);
   return preset ? normalizeCustomWorkspacePreset(preset) : null;
 }
 
 export function getWorkspacePreset(presetId) {
-  return WORKSPACE_PRESETS[presetId] || loadCustomWorkspacePreset(presetId) || WORKSPACE_PRESETS.empty;
+  return WORKSPACE_PRESETS[presetId] || loadCustomWorkspacePreset(presetId) ||
+    WORKSPACE_PRESETS.empty;
 }
 
 export function listWorkspacePresets() {
@@ -58,12 +72,13 @@ export function listWorkspacePresets() {
 export function workspacePresetNameExists(name, excludedId = null) {
   const target = normalizeWorkspaceName(name).toLocaleLowerCase();
   return listWorkspacePresets().some((preset) =>
-    preset.id !== excludedId && normalizeWorkspaceName(preset.name).toLocaleLowerCase() === target
+    preset.id !== excludedId &&
+    normalizeWorkspaceName(preset.name).toLocaleLowerCase() === target
   );
 }
 
 export function uniqueWorkspacePresetName(baseName, excludedId = null) {
-  const base = normalizeWorkspaceName(baseName) || 'Preset';
+  const base = normalizeWorkspaceName(baseName) || "Preset";
   if (!workspacePresetNameExists(base, excludedId)) return base;
   let index = 2;
   while (workspacePresetNameExists(`${base} ${index}`, excludedId)) index += 1;
@@ -80,11 +95,14 @@ export function workspacePresetTemplate(workspace) {
   };
 }
 
-export function saveCustomWorkspacePreset(id, { name, description, workspace } = {}) {
+export function saveCustomWorkspacePreset(
+  id,
+  { name, description, workspace } = {},
+) {
   const existing = id ? loadCustomWorkspacePreset(id) : null;
-  if (id && !existing) throw new Error('Preset not found.');
+  if (id && !existing) throw new Error("Preset not found.");
   const nextName = normalizeWorkspaceName(name);
-  if (!nextName) throw new Error('A preset name is required.');
+  if (!nextName) throw new Error("A preset name is required.");
   if (workspacePresetNameExists(nextName, id || null)) {
     throw new Error(`A preset named “${nextName}” already exists.`);
   }
@@ -99,14 +117,21 @@ export function saveCustomWorkspacePreset(id, { name, description, workspace } =
     template: workspace ? workspacePresetTemplate(workspace) : existing,
   });
   if (!writeStoredJson(workspacePresetStorageKey(preset.id), preset)) {
-    throw new Error('Unable to save the preset.');
+    throw new Error("Unable to save the preset.");
   }
   const index = loadWorkspacePresetIndex();
-  const entry = { id: preset.id, name: preset.name, description: preset.description, updatedAt: preset.updatedAt };
+  const entry = {
+    id: preset.id,
+    name: preset.name,
+    description: preset.description,
+    updatedAt: preset.updatedAt,
+  };
   const entryIndex = index.findIndex((item) => item.id === preset.id);
   if (entryIndex === -1) index.push(entry);
   else index[entryIndex] = entry;
-  if (!saveWorkspacePresetIndex(index)) throw new Error('Unable to save the preset library.');
+  if (!saveWorkspacePresetIndex(index)) {
+    throw new Error("Unable to save the preset library.");
+  }
   notifyWorkspaceChange();
   return preset;
 }
@@ -116,15 +141,20 @@ export function removeCustomWorkspacePreset(id) {
   if (!preset) return false;
   const index = loadWorkspacePresetIndex().filter((entry) => entry.id !== id);
   if (!saveWorkspacePresetIndex(index)) return false;
-  try { localStorage.removeItem(workspacePresetStorageKey(id)); } catch { return false; }
+  try {
+    localStorage.removeItem(workspacePresetStorageKey(id));
+  } catch {
+    return false;
+  }
   notifyWorkspaceChange();
   return true;
 }
 
-export function createWorkspace(presetId = 'hush-shell', overrides = {}) {
+export function createWorkspace(presetId = "hush-shell", overrides = {}) {
   const preset = getWorkspacePreset(presetId);
   const now = new Date().toISOString();
-  const id = overrides.id || (presetId === 'hush-shell' ? 'hush-shell' : createWorkspaceId());
+  const id = overrides.id ||
+    (presetId === "hush-shell" ? "hush-shell" : createWorkspaceId());
   return {
     version: WORKSPACE_SCHEMA_VERSION,
     id,
@@ -133,7 +163,10 @@ export function createWorkspace(presetId = 'hush-shell', overrides = {}) {
     presetId,
     createdAt: overrides.createdAt || now,
     updatedAt: now,
-    runtime: normalizeRuntimeConfig({ ...clone(preset.runtime), ...overrides.runtime }),
+    runtime: normalizeRuntimeConfig({
+      ...clone(preset.runtime),
+      ...overrides.runtime,
+    }),
     system: normalizeSystemConfig(overrides.system || preset.system),
     binds: clone(overrides.binds || preset.binds).map(normalizeBind),
     tasks: clone(overrides.tasks || preset.tasks).map(normalizeTask),

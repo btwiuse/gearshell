@@ -1,56 +1,186 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { DockviewReact } from 'dockview-react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { DockviewReact } from "dockview-react";
 
 import {
-  addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner,
-} from './crush-runner.js?v=20260825.1';
-import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
-import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker } from './settings.js?v=20260825.1';
-import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
-import { addRuntimePanel, RuntimePanel, initRuntime } from './runtime.js?v=20260812.28';
-import { addDeckPanel, DeckPanel, initDeck } from './deck.js?v=20260812.29';
-import { addFallbackPanel, FallbackPanel, initLauncher, AddTerminalButton } from './launcher.js?v=20260812.33';
+  addCrushRunnerPanel,
+  CrushRunnerPanel,
+  initCrushRunner,
+} from "./crush-runner.js?v=20260826.1";
 import {
+  addLandingPanel,
+  initHome,
+  LandingPanel,
+} from "./home.js?v=20260812.20";
+import {
+  addSettingsPanel,
+  initSettings,
+  SettingsPanel,
+  TerminalPresetIconPicker,
+} from "./settings.js?v=20260826.1";
+import { addFilesPanel, FilesPanel, initFiles } from "./files.js?v=20260812.26";
+import {
+  addRuntimePanel,
+  initRuntime,
+  RuntimePanel,
+} from "./runtime.js?v=20260812.28";
+import { addDeckPanel, DeckPanel, initDeck } from "./deck.js?v=20260812.29";
+import {
+  addFallbackPanel,
+  AddTerminalButton,
+  FallbackPanel,
+  initLauncher,
+} from "./launcher.js?v=20260812.33";
+import {
+  addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-  addPanelByComponent as addPanelByComponentFromPanels,
-  TerminalPanel as TerminalPanelFromPanels,
   GroupPanel as GroupPanelFromPanels,
   IframePanel as IframePanelFromPanels,
-  WorkbenchPanel as WorkbenchPanelFromPanels,
-  VmPanel as VmPanelFromPanels,
-  WorkspaceTaskPanel as WorkspaceTaskPanelFromPanels,
-  PanelTab,
-  WagiDogPet as WagiDogPetFromPanels,
   initPanels,
-} from './panels.js?v=20260812.32';
+  PanelTab,
+  TerminalPanel as TerminalPanelFromPanels,
+  VmPanel as VmPanelFromPanels,
+  WagiDogPet as WagiDogPetFromPanels,
+  WorkbenchPanel as WorkbenchPanelFromPanels,
+  WorkspaceTaskPanel as WorkspaceTaskPanelFromPanels,
+} from "./panels.js?v=20260812.32";
 
-import { setWanixSystem, setSystemReady, systemReady, setTerminalLayer, terminalSessions, workspaceTaskSessions, getWanixRoot } from "./app-state.js?v=20260825.2";
-import { createWanixSystem } from "./app-wanix.js?v=20260825.2";
-import { loadActiveWorkspace, loadWorkspace, loadConfig, saveConfig, resetConfig, setWagiDogEnabled, updateWorkspaceIndex, saveWorkspace, normalizeCrushRunnerPreset, getCrushRunnerPresets, saveCrushRunnerPresets, addWorkspaceBind, removeWorkspaceBind, updateWorkspaceBind, reorderWorkspaceBinds, saveWorkspaceSystemSettings, addWorkspaceSystemBind, updateWorkspaceSystemBind, removeWorkspaceSystemBind, reorderWorkspaceSystemBinds, makeBindItemDraggable, addWorkspaceTask, removeWorkspaceTask, updateWorkspaceTask, getActiveWorkspaceId, setActiveWorkspaceId, createWorkspaceFromPreset, duplicateWorkspace, renameWorkspace, deleteWorkspace, parseWorkspaceJson, importWorkspace, replaceActiveWorkspace, ensureWorkspaceStore } from "./app-workspace.js?v=20260825.2";
-import { listWorkspacePresets, loadCustomWorkspacePreset, removeCustomWorkspacePreset, saveCustomWorkspacePreset, uniqueWorkspacePresetName } from "./app-workspace-presets.js?v=20260825.2";
-import { clone, normalizeTerminalProfile, normalizeTerminalProfileOrder, normalizeLauncherOrder, normalizeVmWispUrl, getTerminalPresetIcon, getActiveCrushRunnerPreset, blankCrushRunnerPresetDraft } from "./app-normalize.js?v=20260825.2";
-import { getTerminalProfiles, getDefaultTerminalProfile, getWorkbenchPanelConfig, getVmPanelConfig, terminalCommand, saveTerminalProfiles, buildEnv } from "./app-terminal-profiles.js?v=20260825.2";
-import { createTerminalSession, attachOverlayTerminalSession, destroyTerminalSession, wakeTerminalSession, hideTerminalLayer, restoreTerminalLayer, attachTerminalSession } from "./app-terminal-sessions.js?v=20260825.2";
-import { wakeWorkspaceTaskSession, attachWorkbenchSession, attachVmSession, attachWorkspaceTaskSession, attachIframeSession, destroyIframeSession, destroyWorkbenchSession, destroyVmSession, destroyWorkspaceTaskSession, getWorkspaceTaskSession, waitForWanixSystem } from "./app-sessions.js?v=20260825.2";
-import { rememberOpenPanel, forgetOpenPanel, setDockviewApi, getDockviewApi } from "./app-panels-store.js?v=20260825.2";
-import { blankTerminalPresetDraft, IFRAME_PANEL_OPTIONS, PANEL_CREATION_OPTIONS, restoreSavedPanels, whenWanixReady, autoStartWorkspaceTasks } from "./app-panels.js?v=20260825.2";
-import { WANIX, HOME, WANIX_RUNTIME, WORKSPACE_CHANGED_EVENT, WORKSPACE_TASK_STATUS_EVENT, TERMINAL_PRESET_ICON_BY_ID, TERMINAL_PRESET_ICON_OPTIONS, reportHomeError, dismissHomeDebugErrors, showHomeDebugErrors } from "./app-constants.js?v=20260825.2";
+import {
+  getWanixRoot,
+  setSystemReady,
+  setTerminalLayer,
+  setWanixSystem,
+  systemReady,
+  terminalSessions,
+  workspaceTaskSessions,
+} from "./app-state.js?v=20260826.1";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.1";
+import {
+  addWorkspaceBind,
+  addWorkspaceSystemBind,
+  addWorkspaceTask,
+  createWorkspaceFromPreset,
+  deleteWorkspace,
+  duplicateWorkspace,
+  ensureWorkspaceStore,
+  getActiveWorkspaceId,
+  getCrushRunnerPresets,
+  importWorkspace,
+  loadActiveWorkspace,
+  loadConfig,
+  loadWorkspace,
+  makeBindItemDraggable,
+  normalizeCrushRunnerPreset,
+  parseWorkspaceJson,
+  removeWorkspaceBind,
+  removeWorkspaceSystemBind,
+  removeWorkspaceTask,
+  renameWorkspace,
+  reorderWorkspaceBinds,
+  reorderWorkspaceSystemBinds,
+  replaceActiveWorkspace,
+  resetConfig,
+  saveConfig,
+  saveCrushRunnerPresets,
+  saveWorkspace,
+  saveWorkspaceSystemSettings,
+  setActiveWorkspaceId,
+  setWagiDogEnabled,
+  updateWorkspaceBind,
+  updateWorkspaceIndex,
+  updateWorkspaceSystemBind,
+  updateWorkspaceTask,
+} from "./app-workspace.js?v=20260826.1";
+import {
+  listWorkspacePresets,
+  loadCustomWorkspacePreset,
+  removeCustomWorkspacePreset,
+  saveCustomWorkspacePreset,
+  uniqueWorkspacePresetName,
+} from "./app-workspace-presets.js?v=20260826.1";
+import {
+  blankCrushRunnerPresetDraft,
+  clone,
+  getActiveCrushRunnerPreset,
+  getTerminalPresetIcon,
+  normalizeLauncherOrder,
+  normalizeTerminalProfile,
+  normalizeTerminalProfileOrder,
+  normalizeVmWispUrl,
+} from "./app-normalize.js?v=20260826.1";
+import {
+  buildEnv,
+  getDefaultTerminalProfile,
+  getTerminalProfiles,
+  getVmPanelConfig,
+  getWorkbenchPanelConfig,
+  saveTerminalProfiles,
+  terminalCommand,
+} from "./app-terminal-profiles.js?v=20260826.1";
+import {
+  attachOverlayTerminalSession,
+  attachTerminalSession,
+  createTerminalSession,
+  destroyTerminalSession,
+  hideTerminalLayer,
+  restoreTerminalLayer,
+  wakeTerminalSession,
+} from "./app-terminal-sessions.js?v=20260826.1";
+import {
+  attachIframeSession,
+  attachVmSession,
+  attachWorkbenchSession,
+  attachWorkspaceTaskSession,
+  destroyIframeSession,
+  destroyVmSession,
+  destroyWorkbenchSession,
+  destroyWorkspaceTaskSession,
+  getWorkspaceTaskSession,
+  waitForWanixSystem,
+  wakeWorkspaceTaskSession,
+} from "./app-sessions.js?v=20260826.1";
+import {
+  forgetOpenPanel,
+  getDockviewApi,
+  rememberOpenPanel,
+  setDockviewApi,
+} from "./app-panels-store.js?v=20260826.1";
+import {
+  autoStartWorkspaceTasks,
+  blankTerminalPresetDraft,
+  IFRAME_PANEL_OPTIONS,
+  PANEL_CREATION_OPTIONS,
+  restoreSavedPanels,
+  whenWanixReady,
+} from "./app-panels.js?v=20260826.1";
+import {
+  dismissHomeDebugErrors,
+  HOME,
+  reportHomeError,
+  showHomeDebugErrors,
+  TERMINAL_PRESET_ICON_BY_ID,
+  TERMINAL_PRESET_ICON_OPTIONS,
+  WANIX,
+  WANIX_RUNTIME,
+  WORKSPACE_CHANGED_EVENT,
+  WORKSPACE_TASK_STATUS_EVENT,
+} from "./app-constants.js?v=20260826.1";
 
 const systemWorkspace = loadActiveWorkspace();
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
 const wanixSystem = createWanixSystem(systemWorkspace);
 setSystemReady(Boolean(wanixSystem?.isReady));
 setWanixSystem(wanixSystem);
-setTerminalLayer(wanixSystem.querySelector('#terminal-layer'));
-wanixSystem?.addEventListener('ready', (event) => {
+setTerminalLayer(wanixSystem.querySelector("#terminal-layer"));
+wanixSystem?.addEventListener("ready", (event) => {
   if (event.target !== wanixSystem) return;
   setSystemReady(true);
   for (const session of terminalSessions.values()) wakeTerminalSession(session);
-  for (const session of workspaceTaskSessions.values()) wakeWorkspaceTaskSession(session);
+  for (const session of workspaceTaskSessions.values()) {
+    wakeWorkspaceTaskSession(session);
+  }
 });
-
 
 function App() {
   const onReady = useCallback((event) => {
@@ -69,7 +199,9 @@ function App() {
       const vmMatch = /^vm-(\d+)$/.exec(panel.id);
       if (vmMatch) destroyVmSession(Number(vmMatch[1]));
       const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
-      if (workspaceTaskMatch) destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
+      if (workspaceTaskMatch) {
+        destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
+      }
       forgetOpenPanel(panel.id);
       requestAnimationFrame(() => {
         if (event.api.panels.length === 0) addFallbackPanel(event.api);
@@ -79,7 +211,9 @@ function App() {
     const cfg = loadConfig();
     const restored = cfg.restoreTabs && restoreSavedPanels(event.api);
     if (!restored) {
-      for (const component of cfg.startupPanels) addPanelByComponentFromPanels(event.api, component);
+      for (const component of cfg.startupPanels) {
+        addPanelByComponentFromPanels(event.api, component);
+      }
     }
     if (event.api.panels.length === 0) addFallbackPanel(event.api);
 
@@ -88,7 +222,9 @@ function App() {
     const dockviewRoot = event.api;
     event.api.onDidActivePanelChange((activeEvent) => {
       if (!activeEvent.panel) return;
-      const idx = dockviewRoot.panels.findIndex((p) => p.id === activeEvent.panel.id);
+      const idx = dockviewRoot.panels.findIndex((p) =>
+        p.id === activeEvent.panel.id
+      );
       if (idx < 0) return;
       const workspace = loadActiveWorkspace();
       if (workspace.ui?.activeOpenPanelIndex === idx) return;
@@ -105,9 +241,11 @@ function App() {
     });
   }, []);
 
-  return React.createElement(React.Fragment, null,
+  return React.createElement(
+    React.Fragment,
+    null,
     React.createElement(DockviewReact, {
-      className: 'dockview-theme-github-dark',
+      className: "dockview-theme-github-dark",
       onReady,
       components: {
         home: LandingPanel,
@@ -122,7 +260,7 @@ function App() {
         terminal: TerminalPanelFromPanels,
         group: GroupPanelFromPanels,
         iframe: IframePanelFromPanels,
-        'crush-runner': CrushRunnerPanel,  // from ./crush-runner.js
+        "crush-runner": CrushRunnerPanel, // from ./crush-runner.js
       },
       defaultTabComponent: PanelTab,
       rightHeaderActionsComponent: AddTerminalButton,
@@ -132,7 +270,7 @@ function App() {
 }
 
 // --- Mount React app ---
-const rootEl = document.getElementById('app-root');
+const rootEl = document.getElementById("app-root");
 if (rootEl) {
   const root = createRoot(rootEl);
   root.render(React.createElement(App));
@@ -170,20 +308,37 @@ initLauncher({
 // the IFRAME panel options table, the WORKSPACE_*_EVENT constants,
 // the per-type id counters, plus the workspace + config helpers).
 initPanels({
-  attachTerminalSession, attachWorkbenchSession, attachVmSession,
-  attachWorkspaceTaskSession, attachIframeSession,
-  loadActiveWorkspace, loadWorkspace, loadConfig, saveConfig, resetConfig,
-  rememberOpenPanel, clone,
-  IFRAME_PANEL_OPTIONS, PANEL_CREATION_OPTIONS,
-  WORKSPACE_CHANGED_EVENT, WORKSPACE_TASK_STATUS_EVENT,
-  getWorkspaceTaskSession, getTerminalPresetIcon,
-  getVmPanelConfig, getWorkbenchPanelConfig,
+  attachTerminalSession,
+  attachWorkbenchSession,
+  attachVmSession,
+  attachWorkspaceTaskSession,
+  attachIframeSession,
+  loadActiveWorkspace,
+  loadWorkspace,
+  loadConfig,
+  saveConfig,
+  resetConfig,
+  rememberOpenPanel,
+  clone,
+  IFRAME_PANEL_OPTIONS,
+  PANEL_CREATION_OPTIONS,
+  WORKSPACE_CHANGED_EVENT,
+  WORKSPACE_TASK_STATUS_EVENT,
+  getWorkspaceTaskSession,
+  getTerminalPresetIcon,
+  getVmPanelConfig,
+  getWorkbenchPanelConfig,
   getDefaultTerminalProfile,
   // Cross-module add*Panel dispatchers so panels.js can route every
   // component name (home / deck / settings / files / runtime /
   // fallback / crush-runner) through a single PANEL_ADDERS table.
-  addLandingPanel, addDeckPanel, addSettingsPanel, addFilesPanel,
-  addRuntimePanel, addFallbackPanel, addCrushRunnerPanel,
+  addLandingPanel,
+  addDeckPanel,
+  addSettingsPanel,
+  addFilesPanel,
+  addRuntimePanel,
+  addFallbackPanel,
+  addCrushRunnerPanel,
 });
 
 // Initialise the Deck submodule with the helpers it needs at
@@ -191,8 +346,8 @@ initPanels({
 // the CDN-loaded Reveal + marked globals (passed through the dep
 // shim so deck.js never reaches into the global scope directly).
 initDeck({
-  Reveal: typeof window !== 'undefined' ? window.Reveal : undefined,
-  marked: typeof window !== 'undefined' ? window.marked : undefined,
+  Reveal: typeof window !== "undefined" ? window.Reveal : undefined,
+  marked: typeof window !== "undefined" ? window.marked : undefined,
   reportHomeError,
   dismissHomeDebugErrors,
   showHomeDebugErrors,
@@ -327,4 +482,3 @@ initCrushRunner({
   WORKSPACE_CHANGED_EVENT,
   rememberOpenPanel,
 });
-

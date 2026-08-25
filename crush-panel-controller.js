@@ -7,20 +7,26 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import {
-  crushRunnerDep,
   __getWanixSystem,
+  crushRunnerDep,
   perPanelLaunchCount,
-} from "./crush-deps.js?v=20260825.1";
+} from "./crush-deps.js?v=20260826.1";
 import {
   CRUSH_RUNNER_DEFAULT_PROFILE,
   DEFAULT_CRUSHRC,
-  getCrushRunnerDefaults,
   getCrushRunnerCrushrcFor,
-} from "./crush-presets.js?v=20260825.1";
-import { crushRunDirFor, prepareCrushLaunch } from "./crush-config.js?v=20260825.1";
-import { detectCrushInstallation, installCrushViaW9y } from "./crush-install.js?v=20260825.1";
-import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260825.1";
-import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260825.1";
+  getCrushRunnerDefaults,
+} from "./crush-presets.js?v=20260826.1";
+import {
+  crushRunDirFor,
+  prepareCrushLaunch,
+} from "./crush-config.js?v=20260826.1";
+import {
+  detectCrushInstallation,
+  installCrushViaW9y,
+} from "./crush-install.js?v=20260826.1";
+import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.1";
+import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.1";
 
 export function useCrushRunnerPanelController({ api, params, containerApi }) {
   const dockApi = containerApi || dockviewApi;
