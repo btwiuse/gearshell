@@ -181,10 +181,12 @@ function resolveConfigDir(runnerId, rcfilePathState) {
 // cross NS boundaries), so we layer the mounts: (1) a fresh ramfs at
 // the per-launch subdirectory so the path is writable, (2) a file
 // bind at `<subdir>/crushrc` carrying the user's config. Each layer
-// uses `#ramfs/new` to get an independent instance so two
-// simultaneous Crush launches never share state. CRUSH_GLOBAL_CONFIG
-// points at the per-launch subdirectory so crush's standard
-// XDG/config-dir lookup picks up the mounted rcfile.
+// references `#ramfs` (the wanix allocfs namespace) so the kernel
+// mints a fresh memfs instance per bind, and the per-launch subdir
+// keeps two simultaneous CrushRunner panels from stomping on each
+// other's crush.json state. CRUSH_GLOBAL_CONFIG points at the
+// per-launch subdirectory so crush's standard XDG/config-dir
+// lookup picks up the mounted rcfile.
 async function prepareCrushLaunch(runnerId, draft, crushrcContent) {
   const userEnv = (draft.env || "").trim();
   const lines = userEnv ? userEnv.split("\n").filter(Boolean) : [];
@@ -206,7 +208,7 @@ async function prepareCrushLaunch(runnerId, draft, crushrcContent) {
       wd: (draft.wd || "").trim(),
       icon: draft.icon || "bot",
       extraBinds: [
-        { type: "ns", dst: configDir, src: "#ramfs/new" },
+        { type: "ns", dst: configDir, src: "#ramfs" },
         { type: "file", dst: `${configDir}/crushrc`, content: crushrcContent },
       ],
     },
