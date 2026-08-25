@@ -161,8 +161,8 @@ const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 const WANIX_RUNTIME = {
-  wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@7111a7b9fb6f192af61498844354d1c758376b2d',
-  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@74b9b3ea72ef67816e938aefe530c0a79942cdd5/dist/wanix.min.js',
+  wasmUrl: 'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.5',
+  moduleUrl: 'https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.5/dist/wanix.min.js',
 };
 const LEGACY_WANIX_RUNTIME_WASM_URLS = new Set([
   'https://w9y.up.railway.app/go/github.com/justwasm/wanix/wasm@v0.4.0',
