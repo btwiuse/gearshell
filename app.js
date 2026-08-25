@@ -1,22 +1,19 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
-import { Activity, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookOpen, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Github, Globe2, GripVertical, House, Layers, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X, Zap, icons as LucideIcons } from 'lucide-react';
+import { DockviewReact } from 'dockview-react';
 
 import {
-  addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner, reserveCrushRunnerIds,
-  getBuiltinCrushRunnerPresets, BUILTIN_CRUSH_RUNNER_PRESET_IDS, DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from './crush-runner.js?v=20260812.20';
+  addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner,
+} from './crush-runner.js?v=20260825.1';
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
-import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker } from './settings.js?v=20260812.31';
+import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker } from './settings.js?v=20260825.1';
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
 import { addRuntimePanel, RuntimePanel, initRuntime } from './runtime.js?v=20260812.28';
 import { addDeckPanel, DeckPanel, initDeck } from './deck.js?v=20260812.29';
 import { addFallbackPanel, FallbackPanel, initLauncher, AddTerminalButton } from './launcher.js?v=20260812.33';
 import {
-  addTerminalPanel as addTerminalPanelFromPanels, addWorkbenchPanel as addWorkbenchPanelFromPanels,
-  addVmPanel as addVmPanelFromPanels, addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-  addGroupPanel as addGroupPanelFromPanels, addIframePanel as addIframePanelFromPanels,
+  addTerminalPanel as addTerminalPanelFromPanels,
+  addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
   addPanelByComponent as addPanelByComponentFromPanels,
   TerminalPanel as TerminalPanelFromPanels,
   GroupPanel as GroupPanelFromPanels,
@@ -26,21 +23,20 @@ import {
   WorkspaceTaskPanel as WorkspaceTaskPanelFromPanels,
   PanelTab,
   WagiDogPet as WagiDogPetFromPanels,
-  initPanels, PANEL_ICONS,
+  initPanels,
 } from './panels.js?v=20260812.32';
 
 import { setWanixSystem, setSystemReady, systemReady, setTerminalLayer, terminalSessions, workspaceTaskSessions, getWanixRoot } from "./app-state.js?v=20260825.2";
 import { createWanixSystem } from "./app-wanix.js?v=20260825.2";
-import { loadActiveWorkspace, loadWorkspace, loadConfig, saveConfig, resetConfig, setWagiDogEnabled, updateWorkspaceIndex, saveWorkspace, normalizeCrushRunnerPreset, getCrushRunnerPresets, saveCrushRunnerPresets, addWorkspaceBind, removeWorkspaceBind, updateWorkspaceBind, reorderWorkspaceBinds, validateSystemBind, updateWorkspaceSystem, saveWorkspaceSystemSettings, addWorkspaceSystemBind, updateWorkspaceSystemBind, removeWorkspaceSystemBind, reorderWorkspaceSystemBinds, makeBindItemDraggable, addWorkspaceTask, removeWorkspaceTask, updateWorkspaceTask, getActiveWorkspaceId, setActiveWorkspaceId, createWorkspaceFromPreset, duplicateWorkspace, renameWorkspace, deleteWorkspace, parseWorkspaceJson, importWorkspace, replaceActiveWorkspace, updateActiveWorkspace, ensureWorkspaceStore } from "./app-workspace.js?v=20260825.2";
+import { loadActiveWorkspace, loadWorkspace, loadConfig, saveConfig, resetConfig, setWagiDogEnabled, updateWorkspaceIndex, saveWorkspace, normalizeCrushRunnerPreset, getCrushRunnerPresets, saveCrushRunnerPresets, addWorkspaceBind, removeWorkspaceBind, updateWorkspaceBind, reorderWorkspaceBinds, saveWorkspaceSystemSettings, addWorkspaceSystemBind, updateWorkspaceSystemBind, removeWorkspaceSystemBind, reorderWorkspaceSystemBinds, makeBindItemDraggable, addWorkspaceTask, removeWorkspaceTask, updateWorkspaceTask, getActiveWorkspaceId, setActiveWorkspaceId, createWorkspaceFromPreset, duplicateWorkspace, renameWorkspace, deleteWorkspace, parseWorkspaceJson, importWorkspace, replaceActiveWorkspace, ensureWorkspaceStore } from "./app-workspace.js?v=20260825.2";
 import { listWorkspacePresets, loadCustomWorkspacePreset, removeCustomWorkspacePreset, saveCustomWorkspacePreset, uniqueWorkspacePresetName } from "./app-workspace-presets.js?v=20260825.2";
 import { clone, normalizeTerminalProfile, normalizeTerminalProfileOrder, normalizeLauncherOrder, normalizeVmWispUrl, getTerminalPresetIcon, getActiveCrushRunnerPreset, blankCrushRunnerPresetDraft } from "./app-normalize.js?v=20260825.2";
 import { getTerminalProfiles, getDefaultTerminalProfile, getWorkbenchPanelConfig, getVmPanelConfig, terminalCommand, saveTerminalProfiles, buildEnv } from "./app-terminal-profiles.js?v=20260825.2";
-import { createTerminalSession, attachOverlayTerminalSession, destroyTerminalSession, wakeTerminalSession, hideTerminalLayer, restoreTerminalLayer, attachTerminalSession, layoutTerminalSession, focusTerminalSession, getTerminalSession } from "./app-terminal-sessions.js?v=20260825.2";
+import { createTerminalSession, attachOverlayTerminalSession, destroyTerminalSession, wakeTerminalSession, hideTerminalLayer, restoreTerminalLayer, attachTerminalSession } from "./app-terminal-sessions.js?v=20260825.2";
 import { wakeWorkspaceTaskSession, attachWorkbenchSession, attachVmSession, attachWorkspaceTaskSession, attachIframeSession, destroyIframeSession, destroyWorkbenchSession, destroyVmSession, destroyWorkspaceTaskSession, getWorkspaceTaskSession, waitForWanixSystem } from "./app-sessions.js?v=20260825.2";
 import { rememberOpenPanel, forgetOpenPanel, setDockviewApi, getDockviewApi } from "./app-panels-store.js?v=20260825.2";
 import { blankTerminalPresetDraft, IFRAME_PANEL_OPTIONS, PANEL_CREATION_OPTIONS, restoreSavedPanels, whenWanixReady, autoStartWorkspaceTasks } from "./app-panels.js?v=20260825.2";
 import { WANIX, HOME, WANIX_RUNTIME, WORKSPACE_CHANGED_EVENT, WORKSPACE_TASK_STATUS_EVENT, TERMINAL_PRESET_ICON_BY_ID, TERMINAL_PRESET_ICON_OPTIONS, reportHomeError, dismissHomeDebugErrors, showHomeDebugErrors } from "./app-constants.js?v=20260825.2";
-import { getWanixRoot as getWanixRoot2 } from "./app-state.js?v=20260825.2";
 
 const systemWorkspace = loadActiveWorkspace();
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);

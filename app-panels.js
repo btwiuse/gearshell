@@ -4,7 +4,7 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260825.2";
 import { loadActiveWorkspace, loadWorkspace } from "./app-workspace.js?v=20260825.2";
 import { getDefaultTerminalProfile, getWorkbenchPanelConfig, getVmPanelConfig } from "./app-terminal-profiles.js?v=20260825.2";
 import { getSavedOpenPanels, parseCrushRunnerPanelId } from "./app-panels-store.js?v=20260825.2";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260812.20";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260825.1";
 import { addTerminalPanel as addTerminalPanelFromPanels, addWorkbenchPanel as addWorkbenchPanelFromPanels, addVmPanel as addVmPanelFromPanels, addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels, addPanelByComponent as addPanelByComponentFromPanels } from "./panels.js?v=20260812.32";
 import { Terminal, Rocket, House, LayoutDashboard, Monitor, Cpu, Settings, FolderOpen, Activity, UsersRound, Globe2, TreePine, Code2, Bot, Music2 } from "lucide-react";
 

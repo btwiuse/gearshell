@@ -13,8 +13,8 @@ import {
   CONFIG_KEY, WANIX, HOME, DEFAULT_LAUNCHER_ITEM_ORDER, DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   DEFAULT_SYSTEM_CONFIG, LAUNCHER_COLLAPSIBLE_PANEL_TYPES, lucideIconId, lucideIconLabel,
 } from "./app-constants.js?v=20260825.2";
-import { BUILTIN_CRUSH_RUNNER_PRESET_IDS, DEFAULT_CRUSH_RUNNER_ACTIVE_ID } from "./crush-runner.js?v=20260812.20";
-import { getCrushRunnerPresets } from "./app-workspace.js?v=20260825.2";
+import { BUILTIN_CRUSH_RUNNER_PRESET_IDS, DEFAULT_CRUSH_RUNNER_ACTIVE_ID } from "./crush-runner.js?v=20260825.1";
+import { getCrushRunnerPresets, normalizeCrushRunnerPreset } from "./app-workspace.js?v=20260825.2";
 
 export function normalizePresetDescription(description) {
   return typeof description === 'string' ? description.trim() : '';
@@ -102,16 +102,6 @@ export function normalizeShellConfig(config) {
 }
 
 // Built-in Crush Runner presets ship in crush-runner.js; getCrushRunnerPresets
-
-export function normalizeCrushRunnerPreset(preset = {}) {
-  const base = normalizeTerminalProfile(preset);
-  return {
-    ...base,
-    crushrc: typeof preset.crushrc === 'string' ? preset.crushrc : '',
-    builtin: preset.builtin === true,
-  };
-}
-
 
 export function getActiveCrushRunnerPreset(config = loadConfig()) {
   const presets = getCrushRunnerPresets(config);

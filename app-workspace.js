@@ -14,7 +14,7 @@ import {
 } from "./app-normalize.js?v=20260825.2";
 import { readStoredJson, writeStoredJson, workspaceStorageKey, createWorkspaceId } from "./app-storage.js?v=20260825.2";
 import { createWorkspace, getWorkspacePreset } from "./app-workspace-presets.js?v=20260825.2";
-import { getBuiltinCrushRunnerPresets, DEFAULT_CRUSH_RUNNER_ACTIVE_ID } from "./crush-runner.js?v=20260812.20";
+import { getBuiltinCrushRunnerPresets, DEFAULT_CRUSH_RUNNER_ACTIVE_ID } from "./crush-runner.js?v=20260825.1";
 
 export function normalizeCrushRunnerPreset(preset = {}) {
   const base = normalizeTerminalProfile(preset);
