@@ -172,7 +172,9 @@ function resolveConfigDir(runnerId, rcfilePathState) {
 // `runnerId`, including writing ${configPath}/crushrc so the binary picks
 // up the user's per-panel defaults. Shared between the inline terminal
 // preview and the dedicated Launch Crush button so the two views always
-// see the same configuration.
+// see the same configuration. The rcfilePathState override (from the
+// Config tab input) lets the user redirect CRUSH_GLOBAL_CONFIG to a
+// path they know is writable when the default /tmp scratch is not.
 async function prepareCrushLaunch(runnerId, draft, crushrcContent, rcfilePathState) {
   const configPath = resolveConfigDir(runnerId, rcfilePathState);
   await writeCrushrc(configPath, crushrcContent);

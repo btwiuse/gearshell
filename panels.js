@@ -350,12 +350,12 @@ const PANEL_ADDERS = {
   'crush-runner': (api, group) => panelsDep("addCrushRunnerPanel")(api, group),
 };
 
-function addPanelByComponent(api, component, group) {
+function addPanelByComponent(api, component, group, options) {
   const adder = PANEL_ADDERS[component];
-  if (adder) return adder(api, group);
+  if (adder) return adder(api, group, options);
   const iframeConfig = panelsDep("IFRAME_PANEL_OPTIONS")[component];
-  if (iframeConfig) return addIframePanel(api, iframeConfig, group);
-  return panelsDep("addLandingPanel")(api, group);
+  if (iframeConfig) return addIframePanel(api, iframeConfig, group, options);
+  return panelsDep("addLandingPanel")(api, group, options);
 }
 
 // Backwards-compatible name: external readers (e.g. the test harness,

@@ -2347,7 +2347,7 @@ function restoreSavedPanels(api) {
       // crush-runner.js would mint fresh numbers and the previous
       // session's panels would silently disappear or collide.
       const restoredId = parseCrushRunnerPanelId(panel.panelId);
-      addPanelByComponentFromPanels(api, panel.component, { id: restoredId });
+      addPanelByComponentFromPanels(api, panel.component, undefined, { id: restoredId });
     } else {
       addPanelByComponentFromPanels(api, panel.component);
     }
