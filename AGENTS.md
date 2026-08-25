@@ -14,6 +14,9 @@ pitch and `memory/repo-layout.md` for the structure.
 - `docs/` and the `神奇海螺队-第一轮评审/` materials are deliverables for the
   HKUST startup competition; changes there should keep the pitch documents in
   sync.
+- **500-line rule**: any JS file over 500 lines must be split into multiple
+  files. Each module stays cohesive (one concern per file); split files when
+  the limit is hit rather than growing them.
 - Reusable research notes live in `memory/` (one Markdown file per topic,
   `Home.md` as the index, auto-loaded every session via `option
   context-path memory/Home.md` in `.crushrc`).
