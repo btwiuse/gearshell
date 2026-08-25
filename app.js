@@ -76,7 +76,7 @@ const HUSH_ENV = {
   WANIX,
   HOME,
   USER,
-  PATH: `${HOME}/go/bin:${WANIX}`,
+  PATH: `${HOME}/go/bin:${WANIX}:/bin`,
   GOPROXY: 'https://goproxy.up.railway.app',
   GONOSUMDB: '*',
   CRUSH_CORE_UTILS: '1',
