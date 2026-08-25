@@ -246,14 +246,14 @@ export function useCrushRunnerPanelController({ api, params, containerApi }) {
   // restart when the user edits the form afterwards.
   const openCrushInNewPanel = async ({ source } = {}) => {
     if (!dockApi) return;
-    // Mint a fresh launch id so each Crush process owns its own
-    // /tmp/crush-runner-<launchId>/crushrc directory. Reusing the panel's
-    // runnerId would mean a second Launch overwrites the first Crush
-    // instance's crushrc while it is still running. The launch id keeps
-    // a strong relationship with the panel id by mixing it into the
-    // counter seed, so CrushRunner panel #2's launches land in
-    // /tmp/crush-runner-2-1, 2-2, 2-3, etc., which makes it obvious
-    // which panel spawned each running Crush instance.
+    // The task-visible rcfile mount is a fixed path (/preset/crushrc,
+    // see CRUSH_RUN_DIR in crush-config.js): isolation comes from wanix
+    // giving each task its own copy-on-write namespace, so every Launch
+    // mints a new task with a fresh ramfs and never touches a running
+    // instance. We still mint a per-launch id so the status messages can
+    // tell launches apart, and so any future write through the shared
+    // kernel-root /tmp (the legacy /tmp/crush-runner-<id> path) stays
+    // per-launch unique.
     const panelId = Number(params?.runnerId);
     const baseId = Number.isFinite(panelId) && panelId > 0 ? panelId : 1;
     const nextIndex = (perPanelLaunchCount[baseId] || 0) + 1;

@@ -23,12 +23,19 @@ export function crushConfigDirFor(runnerId) {
   return `/tmp/crush-runner-${safeId}`;
 }
 
-// Per-launch subdirectory mounted as a fresh ramfs inside the task
-// namespace. The id is sanitised the same way as crushConfigDirFor
-// so concurrent launches never share the same path.
-export function crushRunDirFor(runnerId) {
-  const safeId = String(runnerId || "shared").replace(/[^A-Za-z0-9._-]/g, "_");
-  return `crushrun-${safeId}`;
+// Fixed per-task mount point inside the task namespace. Every
+// CrushRunner instance mounts its rcfile at the same /preset/crushrc
+// path. Isolation does not come from the path name: wanix gives each
+// task its own copy-on-write namespace (parent.ns.Clone in wanix
+// task.go), so a per-task <wanix-bind> at "preset" only ever affects
+// that task, and a second Launch beside a still-running first gets a
+// brand-new task with a brand-new ramfs. Keep paths that live on the
+// shared kernel-root /tmp (see crushConfigDirFor) per-launch unique;
+// this task-visible mount deliberately is fixed.
+export const CRUSH_RUN_DIR = "preset";
+
+export function crushRunDirFor(_runnerId) {
+  return CRUSH_RUN_DIR;
 }
 
 // Resolve the CRUSH_GLOBAL_CONFIG directory, honouring a user-supplied
@@ -55,14 +62,16 @@ export function resolveConfigDir(runnerId, rcfilePathState) {
 // `runnerId`. The wanix-system root is ramfs-backed but won't create
 // missing parent directories for a file bind (wanix-bind refuses to
 // cross NS boundaries), so we layer the mounts: (1) a fresh ramfs at
-// the per-launch subdirectory so the path is writable, (2) a file
-// bind at `<subdir>/crushrc` carrying the user's config. Each layer
-// references `#ramfs/new` (the allocfs allocator path used elsewhere
-// in the workspace) so the kernel mints a fresh memfs instance per
-// bind, and the per-launch subdir keeps two simultaneous CrushRunner
-// panels from stomping on each other's crush.json state.
-// CRUSH_GLOBAL_CONFIG points at the per-launch subdirectory so
-// crush's standard XDG/config-dir lookup picks up the mounted rcfile.
+// the fixed per-task mount point (CRUSH_RUN_DIR) so the path is
+// writable, (2) a file bind at `preset/crushrc` carrying the user's
+// config. Each layer references `#ramfs/new` (the allocfs allocator
+// path used elsewhere in the workspace) so the kernel mints a fresh
+// memfs instance per bind. The mount path is the same for every
+// instance, but wanix gives each task its own copy-on-write namespace,
+// so two simultaneous CrushRunner panels (or a second launch beside a
+// still-running first) never stomp on each other's crush.json state.
+// CRUSH_GLOBAL_CONFIG points at the mounted directory so crush's
+// standard XDG/config-dir lookup picks up the rcfile.
 export async function prepareCrushLaunch(runnerId, draft, crushrcContent) {
   const userEnv = (draft.env || "").trim();
   const lines = userEnv ? userEnv.split("\n").filter(Boolean) : [];

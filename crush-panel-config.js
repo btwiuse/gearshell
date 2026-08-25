@@ -204,7 +204,7 @@ export function CrushConfigSection({ ctl }) {
             ),
             ` inside the task via per-task `,
             React.createElement("code", null, "<wanix-bind>"),
-            ` entries (a fresh ramfs at the per-launch subdirectory plus the user's rcfile), so each CrushRunner instance has its own providers, models, and UI options without touching any shared filesystem state.`,
+            ` entries (a fresh ramfs at the fixed mount point plus the user's rcfile; each task gets its own copy-on-write namespace), so every CrushRunner instance has its own providers, models, and UI options without touching any shared filesystem state.`,
           ),
           React.createElement("textarea", {
             id: "crush-runner-crushrc",
