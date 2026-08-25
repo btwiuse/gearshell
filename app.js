@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { DockviewDefaultTab, DockviewReact } from 'dockview-react';
 import { Activity, Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookOpen, Bot, Check, ChevronDown, Code2, Cpu, Dog, Download, Ellipsis, Eye, EyeOff, FileCode2, FilePlus2, FolderOpen, FolderPlus, Github, Globe2, GripVertical, House, Layers, LayoutDashboard, Monitor, Music2, Pencil, Play, Plus, RefreshCw, Rocket, Save, Settings, Terminal, Trash2, TreePine, Upload, UsersRound, X, Zap, icons as LucideIcons } from 'lucide-react';
 
-import { addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner, reserveCrushRunnerIds } from './crush-runner.js?v=20260812.20';
+import {
+  addCrushRunnerPanel, CrushRunnerPanel, initCrushRunner, reserveCrushRunnerIds,
+  getBuiltinCrushRunnerPresets, BUILTIN_CRUSH_RUNNER_PRESET_IDS, DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
+} from './crush-runner.js?v=20260812.20';
 import { addLandingPanel, LandingPanel, initHome } from './home.js?v=20260812.20';
 import { addSettingsPanel, SettingsPanel, initSettings, TerminalPresetIconPicker } from './settings.js?v=20260812.31';
 import { addFilesPanel, FilesPanel, initFiles } from './files.js?v=20260812.26';
@@ -69,6 +72,7 @@ if (debugMode) {
 const WANIX = '/opfs/wanix';
 const HOME = '/opfs/home';
 const USER = 'me';
+const AGW = 'https://agw.up.railway.app';
 const HUSH_ENV = {
   TERM: 'xterm-256color',
   COLORTERM: 'truecolor',
@@ -76,6 +80,7 @@ const HUSH_ENV = {
   WANIX,
   HOME,
   USER,
+  AGW,
   PATH: `${HOME}/go/bin:${WANIX}:/bin`,
   GOPROXY: 'https://goproxy.up.railway.app',
   GONOSUMDB: '*',
@@ -372,180 +377,8 @@ function normalizeShellConfig(config) {
   return normalized;
 }
 
-// Built-in Crush Runner presets. These ship with the app and are always
-// available alongside the user's saved customs; the order below is also
-// the fallback render order when a workspace has no saved
-// crushRunnerPresetOrder yet. The first entry (`crush`) keeps the
-// legacy default id so existing workspaces that pinned
-// crushRunnerActiveId === 'crush' keep resolving.
-const BUILTIN_CRUSH_RUNNER_PRESETS = [
-  {
-    id: 'crush',
-    name: 'Crush',
-    icon: 'bot',
-    program: 'crush',
-    args: '',
-    type: 'gojs',
-    env: 'USER=me',
-    wd: '/opfs/home',
-    builtin: true,
-  },
-  {
-    id: 'ox',
-    name: 'Ox',
-    icon: 'ghost',
-    program: '/opfs/wanix/crush',
-    args: '',
-    type: 'gojs',
-    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
-    wd: '/opfs/home',
-    builtin: true,
-    crushrc: String.raw`AGW=https://agw.up.railway.app
-
-provider add OpenRouter \
-     --type openai-compat \
-     --base-url "$AGW/api/v1" \
-     --api-key "-" \
-     --extra-header "Model" "stealth/ox-alpha"
-
-model add OpenRouter/stealth/ox-alpha \
-     --name "Stealth Ox Alpha" \
-     --context-window 1000000 \
-     --default-max-tokens 163840 \
-     --can-reason true \
-     --supports-images false
-
-model large OpenRouter/stealth/ox-alpha --think
-model small OpenRouter/stealth/ox-alpha --think
-
-option ui transparent false`,
-  },
-  {
-    id: 'minimax',
-    name: 'MiniMax',
-    icon: 'bot',
-    program: '/opfs/wanix/crush',
-    args: '',
-    type: 'gojs',
-    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
-    wd: '/opfs/home',
-    builtin: true,
-    crushrc: String.raw`AGW=https://agw.up.railway.app
-
-provider add minimax-china \
-  --type anthropic \
-  --base-url "$AGW/anthropic" \
-  --api-key "-"
-
-model small minimax-china/MiniMax-M3
-model large minimax-china/MiniMax-M3
-
-option ui transparent false
-`,
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    icon: 'fish',
-    program: '/opfs/wanix/crush',
-    args: '',
-    type: 'gojs',
-    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
-    wd: '/opfs/home',
-    builtin: true,
-    crushrc: String.raw`AGW=https://agw.up.railway.app
-
-provider add deepseek \
-  --type openai-compat \
-  --base-url "$AGW/v1" \
-  --api-key "-"
-
-model small deepseek/deepseek-v4-flash
-model large deepseek/deepseek-v4-flash
-
-option ui transparent false
-`,
-  },
-  {
-    id: 'stepfun',
-    name: 'StepFun',
-    icon: 'footprints',
-    program: '/opfs/wanix/crush',
-    args: '',
-    type: 'gojs',
-    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
-    wd: '/opfs/home',
-    builtin: true,
-    crushrc: String.raw`AGW=https://agw.up.railway.app
-
-provider add stepfun \
-  --type openai-compat \
-  --base-url "$AGW/v1" \
-  --api-key "-"
-
-model small stepfun/step-3.7-flash
-model large stepfun/step-3.7-flash
-
-option ui transparent false
-`,
-  },
-  {
-    id: 'all',
-    name: 'All',
-    icon: 'bot',
-    program: '/opfs/wanix/crush',
-    args: '',
-    type: 'gojs',
-    env: 'USER=me\nPATH=/opfs/home/go/bin:/opfs/wanix',
-    wd: '/opfs/home',
-    builtin: true,
-    crushrc: String.raw`AGW=https://agw.up.railway.app
-
-provider add deepseek \
-  --type openai-compat \
-  --base-url "$AGW/v1" \
-  --api-key "-"
-
-provider add stepfun \
-  --type openai-compat \
-  --base-url "$AGW/v1" \
-  --api-key "-"
-
-provider add minimax-china \
-  --type anthropic \
-  --base-url "$AGW/anthropic" \
-  --api-key "-"
-
-provider add OpenRouter \
-     --type openai-compat \
-     --base-url "$AGW/api/v1" \
-     --api-key "-" \
-     --extra-header "Model" "stealth/ox-alpha"
-
-model add OpenRouter/stealth/ox-alpha \
-     --name "Stealth Ox Alpha" \
-     --context-window 1000000 \
-     --default-max-tokens 163840 \
-     --can-reason true \
-     --supports-images false
-
-model large OpenRouter/stealth/ox-alpha --think
-model small OpenRouter/stealth/ox-alpha --think
-model small deepseek/deepseek-v4-flash
-model large deepseek/deepseek-v4-flash
-model small stepfun/step-3.7-flash
-model large stepfun/step-3.7-flash
-model small minimax-china/MiniMax-M3
-model large minimax-china/MiniMax-M3
-
-option ui transparent false
-`,
-  },
-];
-
-const BUILTIN_CRUSH_RUNNER_PRESET_IDS = BUILTIN_CRUSH_RUNNER_PRESETS.map((preset) => preset.id);
-const DEFAULT_CRUSH_RUNNER_ACTIVE_ID = BUILTIN_CRUSH_RUNNER_PRESET_IDS[0];
-
+// Built-in Crush Runner presets ship in crush-runner.js; getCrushRunnerPresets
+// layers user-saved overrides on top of them.
 function normalizeCrushRunnerPreset(preset = {}) {
   const base = normalizeTerminalProfile(preset);
   return {
@@ -563,7 +396,7 @@ function getCrushRunnerPresets(config = loadConfig()) {
   // workspaces whose override still stores '' from before the field
   // existed. The legacy `crush` slot keeps merging into the first
   // builtin by id, so workspaces pinned to that id keep working.
-  const builtins = BUILTIN_CRUSH_RUNNER_PRESETS.map((template) => {
+  const builtins = getBuiltinCrushRunnerPresets().map((template) => {
     const merged = { ...template };
     const configured = (config.crushRunnerPresets || []).find((preset) => preset.id === template.id);
     if (configured) {
