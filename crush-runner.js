@@ -147,24 +147,46 @@ function crushConfigDirFor(runnerId) {
   const safeId = String(runnerId).replace(/[^A-Za-z0-9._-]/g, "_");
   return `/tmp/crush-runner-${safeId}`;
 }
+// Pick a per-panel config directory under /tmp. Each CrushRunner instance
+// owns its own directory so concurrent Crush launches don't fight over a
+// shared ${CRUSH_GLOBAL_CONFIG}/crushrc. The path is derived from the
+// runnerId the panel was registered with, which is stable across renders
+// within the same panel. A user-supplied override (rcfilePathState) wins
+// when present so the Config tab input can redirect CRUSH_GLOBAL_CONFIG
+// without changing the panel identity. The override may be either a
+// directory (we just normalise it) or a full file path ending in `rc`
+// (we trim the filename so the env var keeps pointing at a directory,
+// matching crush's own path lookup).
+function resolveConfigDir(runnerId, rcfilePathState) {
+  const override = (typeof rcfilePathState === "string" && rcfilePathState.trim())
+    ? rcfilePathState.trim().replace(/\/+$/, "")
+    : "";
+  if (override) {
+    return override.endsWith("rc")
+      ? override.slice(0, override.lastIndexOf("/"))
+      : override;
+  }
+  return crushConfigDirFor(runnerId);
+}
 // Build the profile that the Crush process should be launched with for
-// `runnerId`, including writing ${configDir}/crushrc so the binary picks
+// `runnerId`, including writing ${configPath}/crushrc so the binary picks
 // up the user's per-panel defaults. Shared between the inline terminal
 // preview and the dedicated Launch Crush button so the two views always
 // see the same configuration.
-async function prepareCrushLaunch(runnerId, draft, crushrcContent) {
-  const configDir = crushConfigDirFor(runnerId);
-  await writeCrushrc(configDir, crushrcContent);
+async function prepareCrushLaunch(runnerId, draft, crushrcContent, rcfilePathState) {
+  const configPath = resolveConfigDir(runnerId, rcfilePathState);
+  await writeCrushrc(configPath, crushrcContent);
   const userEnv = (draft.env || "").trim();
   const lines = userEnv ? userEnv.split("\n").filter(Boolean) : [];
   const withoutConfig = lines.filter((line) =>
     !/^CRUSH_GLOBAL_CONFIG\s*=/.test(line)
   );
-  const mergedEnv = [...withoutConfig, `CRUSH_GLOBAL_CONFIG=${configDir}`].join(
+  // CRUSH_GLOBAL_CONFIG points at the directory crush reads crushrc from.
+  const mergedEnv = [...withoutConfig, `CRUSH_GLOBAL_CONFIG=${configPath}`].join(
     "\n",
   );
   return {
-    configDir,
+    configPath,
     profile: {
       name: (draft.name || "").trim() || "Crush",
       program: (draft.program || "crush").trim(),
@@ -474,6 +496,12 @@ function CrushRunnerPanel({ api, params, containerApi }) {
   );
   const crushrcDirty =
     crushrcContent !== getCrushRunnerCrushrcFor(activePreset);
+  // User-editable CRUSH_GLOBAL_CONFIG directory. Empty string falls back
+  // to the auto-generated per-panel /tmp/crush-runner-<id> directory,
+  // which has always worked. Surfacing it lets users redirect crush to
+  // a writable path their workspace exposes (e.g. /home/me/crushrc) when
+  // they want the config to persist beyond the running task.
+  const [rcfilePathState, setRcfilePathState] = useState("");
   // Active tab inside the configuration section. Three tabs (Profile /
   // Config / Env) collapse what used to be three always-open <details>
   // blocks into a single tabbed panel so the page stops scrolling past
@@ -656,22 +684,23 @@ function CrushRunnerPanel({ api, params, containerApi }) {
     perPanelLaunchCount[baseId] = nextIndex;
     const launchId = `${baseId}-${nextIndex}`;
     setStatus({
-      message: `Writing ${crushConfigDirFor(launchId)}/crushrc…`,
-      isError: false,
-    });
-    try {
-      const { configDir, profile } = await prepareCrushLaunch(
-        launchId,
-        draft,
-        crushrcContent,
-      );
-      crushRunnerDep("addTerminalPanel")(dockApi, undefined, profile);
-      setStatus({
-        message: `Launched ${profile.program}${
+      message: `Writing ${resolveConfigDir(launchId, rcfilePathState)}/crushrc…`,
+        isError: false,
+        });
+        try {
+        const { configPath, profile } = await prepareCrushLaunch(
+          launchId,
+          draft,
+          crushrcContent,
+          rcfilePathState,
+        );
+        crushRunnerDep("addTerminalPanel")(dockApi, undefined, profile);
+        setStatus({
+          message: `Launched ${profile.program}${
           profile.args ? " " + profile.args : ""
-        } with CRUSH_GLOBAL_CONFIG=${configDir}${
+          } with CRUSH_GLOBAL_CONFIG=${configPath}${
           source ? ` (${source})` : ""
-        }.`,
+          }.`,
         isError: false,
       });
     } catch (error) {
@@ -904,7 +933,7 @@ function CrushRunnerPanel({ api, params, containerApi }) {
         {
           profile: draft,
           crushrc: crushrcContent,
-          configDir: crushConfigDirFor(params?.runnerId),
+          configDir: resolveConfigDir(params?.runnerId, rcfilePathState),
         },
         null,
         2,
@@ -1458,12 +1487,31 @@ function CrushRunnerPanel({ api, params, containerApi }) {
                       React.createElement(
                         "code",
                         null,
-                        `${crushConfigDirFor(params?.runnerId)}/crushrc`,
+                        `${resolveConfigDir(params?.runnerId, rcfilePathState)}/crushrc`,
                       ),
                       ` right before launch, then exported as `,
                       React.createElement("code", null, "CRUSH_GLOBAL_CONFIG"),
                       ` so each CrushRunner instance has its own providers, models, and UI options.`,
                     ),
+                    React.createElement(
+                      "label",
+                      {
+                        className: "crush-runner-field-label",
+                        htmlFor: "crush-runner-rcfile-path",
+                      },
+                      "rcfile directory (optional — overrides the per-panel /tmp path)",
+                    ),
+                    React.createElement("input", {
+                      id: "crush-runner-rcfile-path",
+                      className: "crush-runner-input",
+                      type: "text",
+                      value: rcfilePathState,
+                      spellCheck: false,
+                      "aria-label": "Override CRUSH_GLOBAL_CONFIG directory",
+                      placeholder: "/tmp/crush-runner-shared",
+                      onChange: (event) =>
+                        setRcfilePathState(event.target.value),
+                    }),
                     React.createElement("textarea", {
                       id: "crush-runner-crushrc",
                       className: "crush-runner-env crush-runner-crushrc",
