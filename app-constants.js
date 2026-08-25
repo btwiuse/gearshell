@@ -308,7 +308,7 @@ export const DEFAULT_SYSTEM_CONFIG = {
     fi
   done
 }
-export function ensure_home() {
+function ensure_home() {
   [[ -d $HOME ]] || mkdir -p $HOME
 }
 ensure_home
