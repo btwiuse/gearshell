@@ -3,7 +3,7 @@
 // the Wanix kernel, and the headless-task command helpers the detect and
 // install flows share.
 
-import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260826.1";
+import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260826.2";
 
 // Pick a per-panel config directory under /tmp. Each CrushRunner instance
 // owns its own directory so concurrent Crush launches don't fight over a
@@ -107,7 +107,7 @@ export async function writeCrushrc(configDir, content) {
     if (!/exist|exists/i.test(String(error))) throw error;
   }
   // Pass the content as a Uint8Array so multi-byte UTF-8 sequences survive
-  // the kernel's writeFile round-trip; hush task env injection also works
+  // the kernel's writeFile round-trip; bash task env injection also works
   // but going through the kernel API keeps the data on the JS side and
   // avoids spawning a throwaway task for every launch.
   const bytes = new TextEncoder().encode(content);

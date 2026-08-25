@@ -20,10 +20,10 @@ import {
   adoptCrushRunnerId,
   crushRunnerDep,
   nextCrushRunnerId,
-} from "./crush-deps.js?v=20260826.1";
-import { detectCrushInstallation } from "./crush-install.js?v=20260826.1";
-import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260826.1";
-import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.1";
+} from "./crush-deps.js?v=20260826.2";
+import { detectCrushInstallation } from "./crush-install.js?v=20260826.2";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260826.2";
+import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.2";
 
 export function CrushRunnerPanel({ api, params, containerApi }) {
   const ctl = useCrushRunnerPanelController({ api, params, containerApi });

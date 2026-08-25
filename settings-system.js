@@ -1,6 +1,6 @@
 // System form section wiring.
 
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
 export function setupSystemForm(settingsContent) {
   const moduleEl = settingsContent.querySelector('[data-system="module"]');
   const wasmEl = settingsContent.querySelector('[data-system="wasm"]');

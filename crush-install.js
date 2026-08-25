@@ -1,25 +1,25 @@
-// Crush detection and installation flows, driven by small hush scripts
+// Crush detection and installation flows, driven by small bash scripts
 // run through spawnWanixCommand. Both flows observe completion via
 // filesystem side effects (a marker file / marker directory) rather than
 // task events, because short-lived shell tasks emit no completion signal.
 
-import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260826.1";
+import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260826.2";
 import {
   readWanixText,
   spawnWanixCommand,
-} from "./crush-config.js?v=20260826.1";
+} from "./crush-config.js?v=20260826.2";
 
-// `which crush` probe driven by a small hush script so the lookup behaves
+// `which crush` probe driven by a small bash script so the lookup behaves
 // the same way it would in a real terminal: a function we call, output
-// redirected to a marker file we poll from the JS side. Using a real hush
+// redirected to a marker file we poll from the JS side. Using a real bash
 // script (rather than a `which` argv token) means the command stays valid
 // even when PATH or the shell environment changes, and we can swap in more
 // diagnostics later without restructuring the call site. The script
 // intentionally avoids embedded double quotes because the surrounding
-// `hush -c "..."` wrapper would otherwise strip them; `which` only writes
+// `bash -c "..."` wrapper would otherwise strip them; `which` only writes
 // the resolved path or nothing, so the function body stays quote-free.
 // The redirection and the stderr suppression live inside the script body
-// so hush parses them as shell syntax; passing `>` and `2>/dev/null` as
+// so bash parses them as shell syntax; passing `>` and `2>/dev/null` as
 // separate argv tokens would leave them as literal positional args ($1,
 // $2) and the output would just stream to the kernel. The marker path is
 // appended after the script via shell-side parameter expansion so the same
@@ -51,7 +51,7 @@ export async function detectCrushInstallation() {
   } catch { /* nothing to remove */ }
   let spawn;
   try {
-    spawn = spawnWanixCommand(`hush -c "${CRUSH_DETECT_SCRIPT}"`, {
+    spawn = spawnWanixCommand(`bash -c "${CRUSH_DETECT_SCRIPT}"`, {
       env: crushRunnerDep("buildEnv")(`CRUSH_DETECT_OUT=${markerPath}`),
     });
   } catch (error) {
@@ -105,13 +105,13 @@ export async function detectCrushInstallation() {
   return whichResult;
 }
 
-// Crush install driven by a real hush function. The script intentionally
-// avoids embedded double quotes: wrapping it in `hush -c "..."` would have
+// Crush install driven by a real bash function. The script intentionally
+// avoids embedded double quotes: wrapping it in `bash -c "..."` would have
 // the outer shell parser strip those quotes, breaking the function body.
 // The function returns 0 on success and 1 on failure; the JS side surfaces
 // the outcome to the UI and the marker directory at $HOME/.w9y/crush is the
 // canonical install marker (matching what the boot profile creates).
-// The stdout+stderr capture is part of the script body so hush parses the
+// The stdout+stderr capture is part of the script body so bash parses the
 // redirection. The log path comes from $CRUSH_INSTALL_LOG so the same
 // template works for every call.
 const CRUSH_INSTALL_SCRIPT = `function install_crush() {
@@ -136,7 +136,7 @@ export async function installCrushViaW9y() {
   try {
     await crushRunnerDep("getWanixRoot")().remove(logPath);
   } catch { /* nothing to remove */ }
-  const spawn = spawnWanixCommand(`hush -c "${CRUSH_INSTALL_SCRIPT}"`, {
+  const spawn = spawnWanixCommand(`bash -c "${CRUSH_INSTALL_SCRIPT}"`, {
     env: crushRunnerDep("buildEnv")(`CRUSH_INSTALL_LOG=${logPath}`),
   });
   // Poll for the marker directory. Once it appears we know both that w9y

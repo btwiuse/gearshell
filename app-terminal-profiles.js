@@ -6,20 +6,20 @@ import {
   DEFAULT_VM_BACKEND_URL,
   DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
-} from "./app-constants.js?v=20260826.1";
+} from "./app-constants.js?v=20260826.2";
 import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmNetworkMode,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260826.1";
-import { DEFAULT_CMD, HUSH_ENV } from "./app-constants.js?v=20260826.1";
-import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.1";
+} from "./app-normalize.js?v=20260826.2";
+import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260826.2";
+import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.2";
 
 export function getTerminalProfiles(config = loadConfig()) {
-  const hush = {
+  const shell = {
     ...BUILTIN_TERMINAL_PROFILES[0],
-    program: config.cmd.split(/\s+/, 1)[0] || "hush",
+    program: config.cmd.split(/\s+/, 1)[0] || "bash",
     args: config.cmd.replace(/^\S+\s*/, ""),
     env: config.env,
     wd: "",
@@ -30,7 +30,7 @@ export function getTerminalProfiles(config = loadConfig()) {
   const builtinIds = new Set(
     BUILTIN_TERMINAL_PROFILES.map((profile) => profile.id),
   );
-  const builtins = [hush, ...BUILTIN_TERMINAL_PROFILES.slice(1)].map((
+  const builtins = [shell, ...BUILTIN_TERMINAL_PROFILES.slice(1)].map((
     profile,
   ) => ({
     ...profile,
@@ -87,7 +87,7 @@ export function terminalCommand(profile) {
 export function saveTerminalProfiles(profiles, defaultProfileId, profileOrder) {
   const config = loadConfig();
   const normalizedProfiles = profiles.map(normalizeTerminalProfile);
-  const hush = normalizedProfiles.find((profile) => profile.id === "hush");
+  const shell = normalizedProfiles.find((profile) => profile.id === "bash");
   saveConfig({
     ...config,
     terminalProfiles: normalizedProfiles,
@@ -96,14 +96,14 @@ export function saveTerminalProfiles(profiles, defaultProfileId, profileOrder) {
       normalizedProfiles,
     ),
     defaultTerminalProfileId: defaultProfileId,
-    ...(hush
-      ? { cmd: terminalCommand(hush) || DEFAULT_CMD, env: hush.env }
+    ...(shell
+      ? { cmd: terminalCommand(shell) || DEFAULT_CMD, env: shell.env }
       : {}),
   });
 }
 
 export function buildEnv(envText = loadConfig().env) {
-  const env = { ...HUSH_ENV };
+  const env = { ...BASH_ENV };
   if (envText.trim()) {
     for (const line of envText.split("\n")) {
       const trimmed = line.trim();

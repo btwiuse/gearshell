@@ -13,8 +13,8 @@ import {
   User,
 } from "lucide-react";
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260826.1";
-import { crushRunDirFor } from "./crush-config.js?v=20260826.1";
+import { crushRunnerDep } from "./crush-deps.js?v=20260826.2";
+import { crushRunDirFor } from "./crush-config.js?v=20260826.2";
 
 export function CrushConfigSection({ ctl }) {
   const {

@@ -10,20 +10,20 @@ import {
   vmSessions,
   workbenchSessions,
   workspaceTaskSessions,
-} from "./app-state.js?v=20260826.1";
+} from "./app-state.js?v=20260826.2";
 import {
   HOME,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260826.1";
+} from "./app-constants.js?v=20260826.2";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.1";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260826.1";
-import { wanixSystem } from "./app-state.js?v=20260826.1";
-import { createWanixBindElement } from "./app-wanix.js?v=20260826.1";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.1";
+} from "./app-terminal-profiles.js?v=20260826.2";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260826.2";
+import { wanixSystem } from "./app-state.js?v=20260826.2";
+import { createWanixBindElement } from "./app-wanix.js?v=20260826.2";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.2";
 
 export function createBindElement(bind) {
   const element = document.createElement("wanix-bind");

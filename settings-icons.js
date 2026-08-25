@@ -8,7 +8,7 @@ import {
   ArrowUp,
   ChevronDown,
 } from "lucide-react";
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
 // === Terminal preset icon picker ===
 // `TerminalPresetIconPicker` is a 300+-icon Lucide catalog browser
 // used by the terminal preset editor's icon field. It uses the

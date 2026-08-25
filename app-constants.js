@@ -57,7 +57,7 @@ export const WANIX = "/opfs/wanix";
 export const HOME = "/opfs/home";
 export const USER = "me";
 export const AGW = "https://agw.up.railway.app";
-export const HUSH_ENV = {
+export const BASH_ENV = {
   TERM: "xterm-256color",
   COLORTERM: "truecolor",
   CLICOLOR_FORCE: "1",
@@ -77,7 +77,7 @@ export const HUSH_ENV = {
   GOGC: "70",
 };
 export const LEGACY_DEFAULT_CMD = "hush -rcfile /tmp/profile";
-export const DEFAULT_CMD = "hush -rcfile /profile";
+export const DEFAULT_CMD = "bash -rcfile /profile";
 export const DEFAULT_WORKBENCH_ASSETS_URL = "/wanix-workbench";
 export const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL =
   "https://wanix.dev/workbench";
@@ -238,7 +238,7 @@ export const TERMINAL_PRESET_ICON_BY_ID = Object.fromEntries(
 );
 
 export const BUILTIN_TERMINAL_PROFILES = [
-  { id: "hush", name: "Hush", type: "gojs", icon: "terminal", builtin: true },
+  { id: "bash", name: "Bash", type: "gojs", icon: "terminal", builtin: true },
   {
     id: "crush",
     name: "Crush",
@@ -284,9 +284,9 @@ export const DEFAULT_SYSTEM_CONFIG = {
     { id: "opfs", type: "ns", dst: "opfs", src: "#web/opfs", mode: "0755" },
     { id: "tmp", type: "ns", dst: "tmp", src: "#ramfs/new" },
     {
-      id: "hush",
+      id: "bash",
       type: "fetch",
-      dst: "hush",
+      dst: "bash",
       src:
         "https://w9y.up.railway.app/go/github.com/btwiuse/hush/cmd/hush@v0.5.6",
       mode: "0755",
@@ -338,9 +338,9 @@ w9y_detect
 
 export const WORKSPACE_PRESETS = {
   "hush-shell": {
-    name: "Hush Shell",
+    name: "Bash Shell",
     description:
-      "The current Gear Shell environment with Hush and persistent OPFS storage.",
+      "The current Gear Shell environment with Bash and persistent OPFS storage.",
     runtime: { ...WANIX_RUNTIME, debug: false },
     binds: [],
     tasks: [],

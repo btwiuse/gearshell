@@ -3,15 +3,15 @@
 // addSettingsPanel).
 
 import React, { useEffect, useRef } from "react";
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
-import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.1";
-import { setupConfigForm } from "./settings-config.js?v=20260826.1";
-import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.1";
-import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.1";
-import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.1";
-import { setupSystemForm } from "./settings-system.js?v=20260826.1";
-import { setupBindForm } from "./settings-binds.js?v=20260826.1";
-import { setupTaskForm } from "./settings-task.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
+import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.2";
+import { setupConfigForm } from "./settings-config.js?v=20260826.2";
+import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.2";
+import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.2";
+import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.2";
+import { setupSystemForm } from "./settings-system.js?v=20260826.2";
+import { setupBindForm } from "./settings-binds.js?v=20260826.2";
+import { setupTaskForm } from "./settings-task.js?v=20260826.2";
 export function SettingsPanel({ containerApi }) {
   const wrapperRef = useRef(null);
 

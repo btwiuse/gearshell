@@ -3,12 +3,12 @@
 // each module stays small (500-line rule) and the handlers read as a
 // single concern: "editing and persisting presets".
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260826.1";
+import { crushRunnerDep } from "./crush-deps.js?v=20260826.2";
 import {
   CRUSH_RUNNER_DEFAULT_PROFILE,
   DEFAULT_CRUSHRC,
-} from "./crush-presets.js?v=20260826.1";
-import { crushRunDirFor } from "./crush-config.js?v=20260826.1";
+} from "./crush-presets.js?v=20260826.2";
+import { crushRunDirFor } from "./crush-config.js?v=20260826.2";
 
 export function useCrushPresetCrud({
   activePreset,

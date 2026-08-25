@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
 export function LauncherOrderEditor() {
   const [config, setConfig] = useState(() => settingsDep("loadConfig")());
   const [draggedComponent, setDraggedComponent] = useState(null);

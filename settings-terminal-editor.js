@@ -10,7 +10,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
 // auto-start). `TerminalPresetEditor` is the React sub-component
 // that manages the built-in terminal preset catalog (Terminal,
 // Crush, custom entries) — list, drag-reorder, edit, add, remove.
@@ -141,7 +141,7 @@ export function TerminalPresetEditor() {
     settingsDep("saveTerminalProfiles")(
       nextProfiles,
       config.defaultTerminalProfileId === profile.id
-        ? "hush"
+        ? "bash"
         : config.defaultTerminalProfileId,
       nextOrder,
     );
@@ -215,7 +215,7 @@ export function TerminalPresetEditor() {
           "span",
           { className: "terminal-profile-meta" },
           `${settingsDep("terminalCommand")(profile)} · ${profile.type}${
-            profile.id === "hush" ? " · shell defaults" : ""
+            profile.id === "bash" ? " · shell defaults" : ""
           }`,
         ),
       ),

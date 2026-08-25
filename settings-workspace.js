@@ -1,6 +1,6 @@
 // Workspace form section wiring.
 
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
 export function setupWorkspaceForm(settingsContent) {
   const activeSelect = settingsContent.querySelector(
     '[data-workspace="active"]',

@@ -10,23 +10,23 @@ import {
   __getWanixSystem,
   crushRunnerDep,
   perPanelLaunchCount,
-} from "./crush-deps.js?v=20260826.1";
+} from "./crush-deps.js?v=20260826.2";
 import {
   CRUSH_RUNNER_DEFAULT_PROFILE,
   DEFAULT_CRUSHRC,
   getCrushRunnerCrushrcFor,
   getCrushRunnerDefaults,
-} from "./crush-presets.js?v=20260826.1";
+} from "./crush-presets.js?v=20260826.2";
 import {
   crushRunDirFor,
   prepareCrushLaunch,
-} from "./crush-config.js?v=20260826.1";
+} from "./crush-config.js?v=20260826.2";
 import {
   detectCrushInstallation,
   installCrushViaW9y,
-} from "./crush-install.js?v=20260826.1";
-import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.1";
-import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.1";
+} from "./crush-install.js?v=20260826.2";
+import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.2";
+import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.2";
 
 export function useCrushRunnerPanelController({ api, params, containerApi }) {
   const dockApi = containerApi || dockviewApi;

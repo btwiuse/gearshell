@@ -34,15 +34,15 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260826.1";
+} from "./app-constants.js?v=20260826.2";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.1";
+} from "./crush-runner.js?v=20260826.2";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.1";
+} from "./app-workspace.js?v=20260826.2";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -144,10 +144,11 @@ export function normalizeShellConfig(config) {
       config?.terminalProfileOrder,
       terminalProfiles,
     ),
-    defaultTerminalProfileId:
-      typeof config?.defaultTerminalProfileId === "string"
-        ? config.defaultTerminalProfileId
-        : "hush",
+    defaultTerminalProfileId: config?.defaultTerminalProfileId === "hush"
+      ? "bash"
+      : typeof config?.defaultTerminalProfileId === "string"
+      ? config.defaultTerminalProfileId
+      : "bash",
     crushRunnerPresets,
     crushRunnerPresetOrder: normalizeTerminalProfileOrder(
       config?.crushRunnerPresetOrder,
@@ -157,7 +158,13 @@ export function normalizeShellConfig(config) {
       ? config.crushRunnerActiveId
       : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   };
-  if (normalized.cmd === LEGACY_DEFAULT_CMD) normalized.cmd = DEFAULT_CMD;
+  // The shell used to be mounted as `hush`; remap any persisted hush
+  // command (both the current and the older legacy default) to the bash
+  // mount so saved configs keep working unchanged.
+  if (
+    normalized.cmd === LEGACY_DEFAULT_CMD ||
+    normalized.cmd === "hush -rcfile /profile"
+  ) normalized.cmd = DEFAULT_CMD;
   return normalized;
 }
 
@@ -296,13 +303,24 @@ export function getTerminalPresetIcon(profile) {
 }
 
 export function migrateLegacyHushTerminalProfile(profile) {
+  // The shell mount was renamed hush → bash; rewrite persisted profiles
+  // that still carry the old id / program / legacy rcfile path so they
+  // keep mapping onto the built-in Bash profile.
+  const id = profile.id === "hush" ? "bash" : profile.id;
+  const name = profile.id === "hush" && profile.name === "Hush"
+    ? "Bash"
+    : profile.name;
+  const program = profile.program === "hush" ? "bash" : profile.program;
+  const args = profile.args === "-rcfile /tmp/profile"
+    ? "-rcfile /profile"
+    : profile.args;
   if (
-    profile.id !== "hush" || profile.program !== "hush" ||
-    profile.args !== "-rcfile /tmp/profile"
+    id === profile.id && name === profile.name &&
+    program === profile.program && args === profile.args
   ) {
     return profile;
   }
-  return { ...profile, args: "-rcfile /profile" };
+  return { ...profile, id, name, program, args };
 }
 
 export function normalizeBind(bind = {}) {

@@ -1,6 +1,6 @@
 // Task mounts (binds) section wiring.
 
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
 export function setupBindForm(settingsContent) {
   const list = settingsContent.querySelector("[data-bind-list]");
   const typeEl = settingsContent.querySelector('[data-bind="type"]');

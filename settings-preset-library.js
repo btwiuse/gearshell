@@ -1,6 +1,6 @@
 // Workspace preset library section wiring.
 
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
 // `setupPresetLibrary`, `setupWorkspaceForm`, and `setupSystemForm`
 // wire the Workspace / Preset library / Runtime & system <details>
 // blocks. All app.js globals they touch (the workspace store + system

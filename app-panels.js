@@ -1,20 +1,20 @@
 // Panel creation catalog + saved-panel restore (500-line rule split).
 
-import { systemReady, wanixSystem } from "./app-state.js?v=20260826.1";
+import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.1";
+} from "./app-workspace.js?v=20260826.2";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.1";
+} from "./app-terminal-profiles.js?v=20260826.2";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.1";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.1";
+} from "./app-panels-store.js?v=20260826.2";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.2";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,

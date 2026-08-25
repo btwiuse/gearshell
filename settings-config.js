@@ -2,8 +2,8 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { settingsDep } from "./settings-deps.js?v=20260826.1";
-import { LauncherOrderEditor } from "./settings-launcher.js?v=20260826.1";
+import { settingsDep } from "./settings-deps.js?v=20260826.2";
+import { LauncherOrderEditor } from "./settings-launcher.js?v=20260826.2";
 // `setupConfigForm` wires the "Behavior" / "Wanix tools" <details>
 // blocks under the Settings panel: restore-tabs toggle, Wagi-Dog
 // toggle, workbench/vm URL inputs, and the launcher ordering editor.

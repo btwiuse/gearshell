@@ -102,7 +102,7 @@ export const SETTINGS_TEMPLATE_HTML =
                   <option value="import">Remote namespace</option>
                 </select>
                 <label for="system-bind-dst">Destination</label>
-                <input id="system-bind-dst" data-system-bind="dst" type="text" placeholder="hush or profile">
+                <input id="system-bind-dst" data-system-bind="dst" type="text" placeholder="bash or profile">
                 <label for="system-bind-src">Source URL or namespace</label>
                 <input id="system-bind-src" data-system-bind="src" type="text" placeholder="#ramfs, https://example.com/tool, or wss://host">
                 <label for="system-bind-content">Inline file content</label>

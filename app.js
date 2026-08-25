@@ -6,7 +6,7 @@ import {
   addCrushRunnerPanel,
   CrushRunnerPanel,
   initCrushRunner,
-} from "./crush-runner.js?v=20260826.1";
+} from "./crush-runner.js?v=20260826.2";
 import {
   addLandingPanel,
   initHome,
@@ -17,7 +17,7 @@ import {
   initSettings,
   SettingsPanel,
   TerminalPresetIconPicker,
-} from "./settings.js?v=20260826.1";
+} from "./settings.js?v=20260826.2";
 import { addFilesPanel, FilesPanel, initFiles } from "./files.js?v=20260812.26";
 import {
   addRuntimePanel,
@@ -54,8 +54,8 @@ import {
   systemReady,
   terminalSessions,
   workspaceTaskSessions,
-} from "./app-state.js?v=20260826.1";
-import { createWanixSystem } from "./app-wanix.js?v=20260826.1";
+} from "./app-state.js?v=20260826.2";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.2";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -91,14 +91,14 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
-} from "./app-workspace.js?v=20260826.1";
+} from "./app-workspace.js?v=20260826.2";
 import {
   listWorkspacePresets,
   loadCustomWorkspacePreset,
   removeCustomWorkspacePreset,
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
-} from "./app-workspace-presets.js?v=20260826.1";
+} from "./app-workspace-presets.js?v=20260826.2";
 import {
   blankCrushRunnerPresetDraft,
   clone,
@@ -108,7 +108,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260826.1";
+} from "./app-normalize.js?v=20260826.2";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -117,7 +117,7 @@ import {
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.1";
+} from "./app-terminal-profiles.js?v=20260826.2";
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
@@ -126,7 +126,7 @@ import {
   hideTerminalLayer,
   restoreTerminalLayer,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.1";
+} from "./app-terminal-sessions.js?v=20260826.2";
 import {
   attachIframeSession,
   attachVmSession,
@@ -139,13 +139,13 @@ import {
   getWorkspaceTaskSession,
   waitForWanixSystem,
   wakeWorkspaceTaskSession,
-} from "./app-sessions.js?v=20260826.1";
+} from "./app-sessions.js?v=20260826.2";
 import {
   forgetOpenPanel,
   getDockviewApi,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.1";
+} from "./app-panels-store.js?v=20260826.2";
 import {
   autoStartWorkspaceTasks,
   blankTerminalPresetDraft,
@@ -153,7 +153,7 @@ import {
   PANEL_CREATION_OPTIONS,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.1";
+} from "./app-panels.js?v=20260826.2";
 import {
   dismissHomeDebugErrors,
   HOME,
@@ -165,7 +165,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260826.1";
+} from "./app-constants.js?v=20260826.2";
 
 const systemWorkspace = loadActiveWorkspace();
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
