@@ -147,6 +147,13 @@ function crushConfigDirFor(runnerId) {
   const safeId = String(runnerId).replace(/[^A-Za-z0-9._-]/g, "_");
   return `/tmp/crush-runner-${safeId}`;
 }
+// Per-launch subdirectory mounted as a fresh ramfs inside the task
+// namespace. The id is sanitised the same way as crushConfigDirFor
+// so concurrent launches never share the same path.
+function crushRunDirFor(runnerId) {
+  const safeId = String(runnerId || "shared").replace(/[^A-Za-z0-9._-]/g, "_");
+  return `crushrun-${safeId}`;
+}
 // Pick a per-panel config directory under /tmp. Each CrushRunner instance
 // owns its own directory so concurrent Crush launches don't fight over a
 // shared ${CRUSH_GLOBAL_CONFIG}/crushrc. The path is derived from the
@@ -169,21 +176,27 @@ function resolveConfigDir(runnerId, rcfilePathState) {
   return crushConfigDirFor(runnerId);
 }
 // Build the profile that the Crush process should be launched with for
-// `runnerId`. The wanix-system root is ramfs-backed, so we just mount
-// the user's crushrc as a per-task file bind on top — the path is
-// immediately writable, disappears when the task exits, and there is
-// no /tmp scratch directory to coordinate between concurrent panels.
-// CRUSH_GLOBAL_CONFIG=/ tells crush to look at the task root for its
-// config files (crushrc for shell commands, crush.json for state).
+// `runnerId`. The wanix-system root is ramfs-backed but won't create
+// missing parent directories for a file bind (wanix-bind refuses to
+// cross NS boundaries), so we layer the mounts: (1) a fresh ramfs at
+// the per-launch subdirectory so the path is writable, (2) a file
+// bind at `<subdir>/crushrc` carrying the user's config. Each layer
+// uses `#ramfs/new` to get an independent instance so two
+// simultaneous Crush launches never share state. CRUSH_GLOBAL_CONFIG
+// points at the per-launch subdirectory so crush's standard
+// XDG/config-dir lookup picks up the mounted rcfile.
 async function prepareCrushLaunch(runnerId, draft, crushrcContent) {
   const userEnv = (draft.env || "").trim();
   const lines = userEnv ? userEnv.split("\n").filter(Boolean) : [];
   const withoutConfig = lines.filter((line) =>
     !/^CRUSH_GLOBAL_CONFIG\s*=/.test(line)
   );
-  const mergedEnv = [...withoutConfig, "CRUSH_GLOBAL_CONFIG=/"].join("\n");
+  const configDir = crushRunDirFor(runnerId);
+  const mergedEnv = [...withoutConfig, `CRUSH_GLOBAL_CONFIG=/${configDir}`].join(
+    "\n",
+  );
   return {
-    configPath: "/",
+    configPath: configDir,
     profile: {
       name: (draft.name || "").trim() || "Crush",
       program: (draft.program || "crush").trim(),
@@ -193,7 +206,8 @@ async function prepareCrushLaunch(runnerId, draft, crushrcContent) {
       wd: (draft.wd || "").trim(),
       icon: draft.icon || "bot",
       extraBinds: [
-        { type: "file", dst: "crushrc", content: crushrcContent },
+        { type: "ns", dst: configDir, src: "#ramfs/new" },
+        { type: "file", dst: `${configDir}/crushrc`, content: crushrcContent },
       ],
     },
   };
@@ -677,8 +691,9 @@ function CrushRunnerPanel({ api, params, containerApi }) {
     const nextIndex = (perPanelLaunchCount[baseId] || 0) + 1;
     perPanelLaunchCount[baseId] = nextIndex;
     const launchId = `${baseId}-${nextIndex}`;
+    const configDir = crushRunDirFor(launchId);
     setStatus({
-      message: `Mounting /crushrc…`,
+      message: `Mounting /${configDir}/crushrc…`,
       isError: false,
     });
     try {
@@ -691,7 +706,7 @@ function CrushRunnerPanel({ api, params, containerApi }) {
       setStatus({
         message: `Launched ${profile.program}${
           profile.args ? " " + profile.args : ""
-        } with rcfile mounted at /crushrc${
+        } with rcfile mounted at /${configDir}/crushrc${
           source ? ` (${source})` : ""
         }.`,
         isError: false,
@@ -926,7 +941,7 @@ function CrushRunnerPanel({ api, params, containerApi }) {
         {
           profile: draft,
           crushrc: crushrcContent,
-          configDir: "/",
+          configDir: crushRunDirFor(params?.runnerId),
         },
         null,
         2,
@@ -1477,10 +1492,14 @@ function CrushRunnerPanel({ api, params, containerApi }) {
                       "p",
                       { className: "hint" },
                       `Mounted inline at `,
-                      React.createElement("code", null, `/crushrc`),
-                      ` inside the task via a per-task `,
+                      React.createElement(
+                        "code",
+                        null,
+                        `/${crushRunDirFor(params?.runnerId)}/crushrc`,
+                      ),
+                      ` inside the task via per-task `,
                       React.createElement("code", null, "<wanix-bind>"),
-                      `, so each CrushRunner instance has its own providers, models, and UI options without touching any shared filesystem state.`,
+                      ` entries (a fresh ramfs at the per-launch subdirectory plus the user's rcfile), so each CrushRunner instance has its own providers, models, and UI options without touching any shared filesystem state.`,
                     ),
                     React.createElement("textarea", {
                       id: "crush-runner-crushrc",
