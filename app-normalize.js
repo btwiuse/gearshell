@@ -40,6 +40,7 @@ import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
 } from "./app-workspace.js?v=20260826.2";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.2";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
