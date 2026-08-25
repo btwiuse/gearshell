@@ -263,9 +263,6 @@ export function attachIframeSession(id, params, anchor, api) {
     observer.disconnect();
     if (updateFrame) cancelAnimationFrame(updateFrame);
     for (const subscription of subscriptions) subscription.dispose();
-    for (const target of scrollListeners) {
-      target.removeEventListener("scroll", scheduleUpdate);
-    }
     if (session.anchor === anchor) {
       session.anchor = null;
       layoutIframeSession(session, null, false);
@@ -305,9 +302,6 @@ export function createOverlayAttachment(session, anchor, api) {
     observer.disconnect();
     if (updateFrame) cancelAnimationFrame(updateFrame);
     for (const subscription of subscriptions) subscription.dispose();
-    for (const target of scrollListeners) {
-      target.removeEventListener("scroll", scheduleUpdate);
-    }
     if (session.anchor === anchor) {
       session.anchor = null;
       layoutIframeSession(session, null, false);
