@@ -1623,6 +1623,25 @@ function createTerminalSession(id, profile = getDefaultTerminalProfile()) {
   winchBind.setAttribute('src', '#task/self/term/winch');
   task.appendChild(winchBind);
 
+  // Per-task extra binds (any mix of ns/file/fetch/archive). Profiles use
+  // this to attach a private file into the task namespace without having
+  // to round-trip through the wanix kernel writeFile API. Bind `dst`
+  // paths must be relative — wanix-bind rejects leading slashes — and
+  // are mounted inside the task's own namespace.
+  if (Array.isArray(profile.extraBinds)) {
+    for (const bind of profile.extraBinds) {
+      if (!bind || typeof bind.dst !== 'string' || !bind.dst) continue;
+      const element = document.createElement('wanix-bind');
+      element.setAttribute('dst', bind.dst);
+      if (bind.type) element.setAttribute('type', bind.type);
+      if (bind.src) element.setAttribute('src', bind.src);
+      if (bind.mode) element.setAttribute('perm', bind.mode);
+      if (bind.union) element.setAttribute('union', bind.union);
+      if (typeof bind.content === 'string') element.textContent = bind.content;
+      task.appendChild(element);
+    }
+  }
+
   const term = document.createElement('wanix-term');
   term.setAttribute('raw', '');
   term.setAttribute('no-scrollbar', '');
