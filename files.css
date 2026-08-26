@@ -56,7 +56,8 @@
 .files-sidebar-toggle svg { flex: 0 0 auto; color: #8b949e; transition: transform 0.12s; }
 .files-sidebar-toggle svg.open { transform: rotate(90deg); }
 .files-section-header { width: 100%; text-align: left; }
-.files-volumes-header { display: flex; align-items: center; justify-content: space-between; }
+.files-volumes-header { display: flex; align-items: center; gap: 4px; }
+.files-volumes-header .files-sidebar-toggle { flex: 1; justify-content: flex-start; }
 .files-favorites { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 8px; border-bottom: 1px solid #30363d; }
 .files-favorites-list { display: flex; flex-direction: column; gap: 1px; max-height: 40vh; overflow-y: auto; }
 .files-favorite { display: flex; align-items: center; gap: 2px; border-radius: 4px; }
@@ -70,8 +71,8 @@
 .files-favorite:hover .files-favorite-remove { opacity: 1; }
 .files-favorite-remove:hover { border-color: #30363d; background: #161b22; color: #f85149; }
 .files-volumes-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; }
-.files-volumes-header button { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
-.files-volumes-header button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
+.files-volumes-header button:not(.files-sidebar-toggle) { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
+.files-volumes-header button:not(.files-sidebar-toggle):hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
 .files-volumes-empty { margin: 2px 6px 4px; font-size: 11px; color: #6e7681; }
 .files-volumes-list { display: flex; flex-direction: column; gap: 1px; max-height: 140px; overflow-y: auto; }
 .files-volume { display: flex; align-items: center; gap: 2px; border-radius: 4px; }
