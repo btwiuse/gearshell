@@ -251,10 +251,9 @@ export const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 export const WANIX_RUNTIME = {
-  wasmUrl:
-    "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.10",
+  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.11",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.10/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.11/dist/wanix.min.js",
 };
 
 export const DEFAULT_SYSTEM_CONFIG = {
@@ -270,16 +269,14 @@ export const DEFAULT_SYSTEM_CONFIG = {
       id: "bash",
       type: "fetch",
       dst: "bash",
-      src:
-        "https://w9y.io/go/github.com/btwiuse/hush/cmd/hush@v0.5.6",
+      src: "https://w9y.io/go/github.com/btwiuse/hush/cmd/hush@v0.5.6",
       mode: "0755",
     },
     {
       id: "w9y",
       type: "fetch",
       dst: "w9y",
-      src:
-        "https://w9y.io/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.5",
+      src: "https://w9y.io/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.5",
       mode: "0755",
     },
     {

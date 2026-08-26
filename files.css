@@ -21,6 +21,23 @@
 .files-toolbar-actions button:hover:not(:disabled), .files-create button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
 .files-toolbar-actions button:disabled { opacity: 0.45; cursor: default; }
 .files-upload-input { display: none; }
+.files-volumes { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 8px; border-bottom: 1px solid #30363d; }
+.files-volumes-header { display: flex; align-items: center; justify-content: space-between; }
+.files-volumes-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; }
+.files-volumes-header button { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
+.files-volumes-header button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
+.files-volumes-empty { margin: 2px 6px 4px; font-size: 11px; color: #6e7681; }
+.files-volumes-list { display: flex; flex-direction: column; gap: 1px; max-height: 140px; overflow-y: auto; }
+.files-volume { display: flex; align-items: center; gap: 2px; border-radius: 4px; }
+.files-volume:hover { background: #21262d; }
+.files-volume-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 0; background: transparent; color: #c9d1d9; cursor: pointer; text-align: left; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-volume-name svg { flex: 0 0 auto; color: #58a6ff; }
+.files-volume-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-volume-off .files-volume-name { color: #8b949e; }
+.files-volume-off .files-volume-name svg { color: #6e7681; }
+.files-volume-eject { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; opacity: 0; }
+.files-volume:hover .files-volume-eject { opacity: 1; }
+.files-volume-eject:hover { border-color: #30363d; background: #161b22; color: #f85149; }
 .files-create { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid #30363d; }
 .files-create input { min-width: 0; flex: 1; height: 28px; padding: 4px 7px; border: 1px solid #30363d; border-radius: 4px; background: #0d1117; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .files-list { min-height: 0; overflow: auto; padding: 4px; }

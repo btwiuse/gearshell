@@ -25,51 +25,59 @@
     <meta name="apple-mobile-web-app-title" content="GearShell">
     <link rel="apple-touch-icon" href="logo-192-rounded.png" />
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.min.css" />
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/black.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dockview-react@7.0.4/dist/styles/dockview.css" />
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/black.css" />
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/dockview-react@7.0.4/dist/styles/dockview.css" />
     <link rel="stylesheet" href="reveal.css" />
     <script>
-      if (window.location.search.includes('debug')) {
-        window.homeDebugErrors = [];
-        window.addEventListener('error', function (event) {
-          var error = event.error;
-          var details = error && (error.stack || error.message);
-          window.homeDebugErrors.push('Error: ' + (details || event.message || 'Unknown error'));
-        });
-        window.addEventListener('unhandledrejection', function (event) {
-          var reason = event.reason;
-          var details = reason && (reason.stack || reason.message || String(reason));
-          window.homeDebugErrors.push('Unhandled rejection: ' + (details || 'Unknown error'));
-        });
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/eruda/eruda.js';
-        s.onload = function () { eruda.init(); };
-        document.head.appendChild(s);
-      }
+    if (window.location.search.includes('debug')) {
+      window.homeDebugErrors = [];
+      window.addEventListener('error', function (event) {
+        var error = event.error;
+        var details = error && (error.stack || error.message);
+        window.homeDebugErrors.push('Error: ' + (details || event.message || 'Unknown error'));
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event.reason;
+        var details = reason && (reason.stack || reason.message || String(reason));
+        window.homeDebugErrors.push('Unhandled rejection: ' + (details || 'Unknown error'));
+      });
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda/eruda.js';
+      s.onload = function () {
+        eruda.init();
+      };
+      document.head.appendChild(s);
+    }
     </script>
-    <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script crossorigin="anonymous" defer src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.js"></script>
+    <script crossorigin="anonymous"
+      src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script crossorigin="anonymous" defer
+      src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.js"></script>
     <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@18.2.0",
-          "react-dom": "https://esm.sh/react-dom@18.2.0",
-          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-          "dockview-react": "https://esm.sh/dockview-react@7.0.4?deps=react@18.2.0,react-dom@18.2.0",
-          "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
-        }
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "dockview-react": "https://esm.sh/dockview-react@7.0.4?deps=react@18.2.0,react-dom@18.2.0",
+        "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
       }
+    }
     </script>
     <link rel="stylesheet" href="app.css?v=20260812.30" />
     <link rel="stylesheet" href="home.css?v=20260812.20" />
     <link rel="stylesheet" href="settings.css?v=20260812.25" />
-    <link rel="stylesheet" href="files.css?v=20260812.26" />
+    <link rel="stylesheet" href="files.css?v=20260826.3" />
     <link rel="stylesheet" href="runtime.css?v=20260812.27" />
     <link rel="stylesheet" href="deck.css?v=20260812.29" />
     <link rel="stylesheet" href="launcher.css?v=20260812.30" />
@@ -78,19 +86,19 @@
          missing /web-pet/web-pet.css (e.g. when the web-pet submodule
          fails to materialise on the deploy target) never blocks the
          rest of the shell from booting. -->
-    <link rel="preload" href="web-pet/web-pet.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <link rel="preload" href="web-pet/web-pet.css" as="style"
+      onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="web-pet/web-pet.css" /></noscript>
   </head>
   <body>
-
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260826.2"></script>
+    <script type="module" src="app.js?v=20260826.5"></script>
     <script src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3" async defer>
-      new Crate({
-        server: '967111927299969064',
-        channel: '967111927740366888'
-      })
+    new Crate({
+      server: '967111927299969064',
+      channel: '967111927740366888',
+    });
     </script>
   </body>
 </html>

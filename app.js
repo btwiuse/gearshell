@@ -18,7 +18,7 @@ import {
   SettingsPanel,
   TerminalPresetIconPicker,
 } from "./settings.js?v=20260826.2";
-import { addFilesPanel, FilesPanel, initFiles } from "./files.js?v=20260812.26";
+import { addFilesPanel, FilesPanel, initFiles } from "./files.js?v=20260826.5";
 import {
   addRuntimePanel,
   initRuntime,
@@ -165,7 +165,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260826.2";
+} from "./app-constants.js?v=20260826.4";
 
 const systemWorkspace = loadActiveWorkspace();
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
