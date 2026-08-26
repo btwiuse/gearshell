@@ -106,6 +106,11 @@
 .files-info-children button.dir { color: #e6edf3; }
 .files-info-children button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .files-info-children-more { margin: 6px 8px 2px; color: #8b949e; font-size: 12px; }
+.files-info-grid { box-sizing: border-box; display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 4px; width: min(640px, 100%); min-height: 0; max-height: 60%; margin: 0; padding: 8px; overflow: auto; border: 1px solid #30363d; border-radius: 8px; background: #161b22; }
+.files-info-grid button { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 8px 4px; border: 0; border-radius: 6px; background: transparent; color: #c9d1d9; font: 12px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-align: center; cursor: pointer; }
+.files-info-grid button:hover, .files-info-grid button:focus-visible { background: #21262d; outline: none; }
+.files-info-grid button.dir { color: #e6edf3; }
+.files-info-grid button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .files-media-preview { display: grid; min-height: 0; flex: 1; place-items: center; overflow: auto; padding: 14px; background: #0d1117; }
 .files-media-preview img, .files-media-preview video { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 .files-media-preview.audio audio { width: min(480px, 100%); }

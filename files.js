@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useLocalDirMounts,
   VolumesSidebar,
-} from "./files-mounts.js?v=20260826.21";
+} from "./files-mounts.js?v=20260826.23";
 import {
   FilesCreateForm,
   FilesEditorPane,
@@ -29,17 +29,17 @@ import {
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "./files-parts.js?v=20260826.21";
+} from "./files-parts.js?v=20260826.23";
 import {
   FilesContextMenu,
   FavoritesSidebar,
-} from "./files-ui.js?v=20260826.21";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.21";
-import { useFilesEditor } from "./files-editor.js?v=20260826.21";
-import { sniffWasmBytes } from "./files-editor.js?v=20260826.21";
-import { useFilesSidebarResize } from "./files-resize.js?v=20260826.21";
-import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.21";
-import { useFavorites } from "./files-favorites.js?v=20260826.21";
+} from "./files-ui.js?v=20260826.23";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.23";
+import { useFilesEditor } from "./files-editor.js?v=20260826.23";
+import { sniffWasmBytes } from "./files-editor.js?v=20260826.23";
+import { useFilesSidebarResize } from "./files-resize.js?v=20260826.23";
+import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.23";
+import { useFavorites } from "./files-favorites.js?v=20260826.23";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
@@ -115,6 +115,9 @@ function FilesPanel() {
     clearFileSelection();
     setHighlighted(null);
     setSelectedInfo(null);
+    // Drop the previous listing so the right-pane grid cannot flash
+    // stale entries while the new directory is loading.
+    setEntries([]);
   };
 
   const { favorites, addFavorite, removeFavorite, isFavoritePath } =
@@ -137,13 +140,23 @@ function FilesPanel() {
       );
       // Extension-less files are often WebAssembly binaries in this
       // sandbox; sniff the \0asm header so they get the right icon.
+      // Bounded: namespace mirrors like js/ can hold hundreds of entries
+      // whose reads hang, so cap the sniff count and timebox each read.
+      const SNIFF_LIMIT = 12;
+      const SNIFF_TIMEOUT_MS = 400;
+      let sniffed = 0;
       await Promise.all(next.map(async (entry) => {
         if (entry.isDirectory || entry.name.includes(".")) return;
+        if (sniffed >= SNIFF_LIMIT) return;
+        sniffed++;
         try {
-          const data = await getRoot().readFile(
-            filesystemPathJoin(path, entry.name),
-          );
-          if (sniffWasmBytes(data)) entry.iconKind = "wasm";
+          const data = await Promise.race([
+            getRoot().readFile(filesystemPathJoin(path, entry.name)),
+            new Promise((resolve) =>
+              setTimeout(() => resolve(null), SNIFF_TIMEOUT_MS),
+            ),
+          ]);
+          if (data && sniffWasmBytes(data)) entry.iconKind = "wasm";
         } catch {
           // leave the generic icon if the file cannot be read
         }
@@ -465,7 +478,24 @@ function FilesPanel() {
       contents,
       binary,
       dirty,
-      info: selectedInfo,
+      // With nothing selected, preview the current directory itself as a
+      // grid (Windows-Explorer-style): entering a folder or opening a
+      // favorite immediately shows its contents on the right.
+      info: selectedInfo || {
+        path: path === "." ? "/" : `/${path.replace(/^\/+/, "")}`,
+        name: path === "." ? "/" : path.split("/").pop(),
+        isDirectory: true,
+        size: null,
+        modTime: null,
+        previewKind: null,
+        iconKind: null,
+        preview: null,
+        textPreview: null,
+        entries: entries.length,
+        children: entries,
+        childrenTotal: entries.length,
+      },
+      gridView: !selectedInfo,
       status,
       onDownload: downloadFile,
       onSave: saveFileHandler,
@@ -476,7 +506,12 @@ function FilesPanel() {
       onDelete: removeFileHandler,
       onChange: setContents,
       onOpenChild: (child) => {
-        navigateTo(filesystemPathJoin(selectedInfo.path, child.name));
+        const base = (selectedInfo && selectedInfo.path) || path;
+        if (child.isDirectory) {
+          navigateTo(filesystemPathJoin(base, child.name));
+        } else {
+          selectEntry(child, base);
+        }
       },
     }),
   );

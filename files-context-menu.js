@@ -4,13 +4,13 @@
 // excerpt, or metadata for binary files). Split out of files.js so the
 // panel module stays under the 500-line rule.
 import { useEffect, useRef, useState } from "react";
-import { filesystemPathJoin } from "./files-parts.js?v=20260826.21";
+import { filesystemPathJoin } from "./files-parts.js?v=20260826.23";
 import {
   getFilesystemPreviewType,
   isBinaryData,
   sniffWasmBytes,
   toFilesystemBytes,
-} from "./files-editor.js?v=20260826.21";
+} from "./files-editor.js?v=20260826.23";
 
 // === Selection metadata (single-click info panel) ===
 
@@ -26,8 +26,8 @@ export function useFilesSelection({ getRoot, path, setHighlighted, setContextMen
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
   }, []);
 
-  const selectEntry = async (entry) => {
-    const nextPath = filesystemPathJoin(path, entry.name);
+  const selectEntry = async (entry, basePath = path) => {
+    const nextPath = filesystemPathJoin(basePath, entry.name);
     setHighlighted(nextPath);
     setContextMenu(null);
     const base = {
