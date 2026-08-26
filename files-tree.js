@@ -8,8 +8,8 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import {
   filesystemPathJoin,
   normalizeFilesystemPath,
-} from "./files-parts.js?v=20260826.26";
-import { getEntryIcon } from "./files-ui.js?v=20260826.29";
+} from "./files-path.js?v=20260826.38";
+import { getEntryIcon } from "./files-ui.js?v=20260826.38";
 
 export const TREE_ROOT = ".";
 
@@ -70,10 +70,12 @@ export function useFilesTree({ getRoot, path }) {
       } else {
         // Unreadable directories stay collapsed instead of erroring out;
         // the user can retry by expanding again.
-        setChildrenMap((prev) => new Map(prev).set(key, {
-          children: [],
-          error: true,
-        }));
+        setChildrenMap((prev) =>
+          new Map(prev).set(key, {
+            children: [],
+            error: true,
+          })
+        );
       }
     }
   }, [getRoot]);
@@ -176,9 +178,7 @@ function TreeNode({
           } else if (finePointer) onSelect(node);
           else onOpen(node);
         },
-        onDoubleClick: isDir || !finePointer
-          ? undefined
-          : () => onOpen(node),
+        onDoubleClick: isDir || !finePointer ? undefined : () => onOpen(node),
         onContextMenu: onContextMenu
           ? (event) => {
             event.preventDefault();

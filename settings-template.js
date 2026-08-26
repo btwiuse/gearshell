@@ -213,6 +213,10 @@ export const SETTINGS_TEMPLATE_HTML =
                   <span>Show Wagi Dog</span>
                   <input data-config="wagi-dog-enabled" type="checkbox">
                 </label>
+                <label class="cfg-toggle">
+                  <span>Keep playing audio when switching tabs</span>
+                  <input data-config="allow-background-playback" type="checkbox">
+                </label>
               </div>
             </details>
 

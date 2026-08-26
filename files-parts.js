@@ -5,6 +5,7 @@
 import React from "react";
 import {
   Check,
+  ChevronRight,
   Download,
   FileCode2,
   Pencil,
@@ -12,35 +13,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { FilesInfoPane, FavoritesSidebar } from "./files-ui.js?v=20260826.29";
-import { VolumesSidebar } from "./files-mounts.js?v=20260826.26";
-
-// === Path helpers (shared by the panel and the mount sidebar) ===
-
-export function normalizeFilesystemPath(path = ".") {
-  const parts = [];
-  for (const part of String(path).split("/")) {
-    if (!part || part === ".") continue;
-    if (part === "..") parts.pop();
-    else parts.push(part);
-  }
-  return parts.join("/") || ".";
-}
-
-export function filesystemPathJoin(base, name) {
-  if (base.startsWith("/")) {
-    return `${base.replace(/\/+$/, "")}/${name.replace(/^\/+/, "")}`;
-  }
-  return normalizeFilesystemPath(base === "." ? name : `${base}/${name}`);
-}
-
-export function filesystemPathParent(path) {
-  const parts = normalizeFilesystemPath(path).split("/").filter((part) =>
-    part && part !== "."
-  );
-  parts.pop();
-  return parts.join("/") || ".";
-}
+import { FilesInfoPane } from "./files-info.js?v=20260826.38";
+import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.38";
+import { VolumesSidebar } from "./files-mounts.js?v=20260826.38";
 
 // === Right pane (editor / directory grid preview) ===
 // Composes the editor pane with a fallback "current directory" info
@@ -58,11 +33,19 @@ export function FilesRightPane({
   entries,
   loading,
   status,
+  viewMode,
+  onViewModeChange,
+  sort,
+  onSortChange,
+  columnWidths,
+  onColumnWidthChange,
   onDownload,
   onSave,
   onRename,
   onDelete,
   onChange,
+  finePointer,
+  onSelectChild,
   onOpenChild,
   currentPath,
 }) {
@@ -90,13 +73,20 @@ export function FilesRightPane({
       children: entries,
       childrenTotal: entries.length,
     },
-    gridView: !info,
+    viewMode,
+    onViewModeChange,
+    sort,
+    onSortChange,
+    columnWidths,
+    onColumnWidthChange,
     status,
     onDownload,
     onSave,
     onRename,
     onDelete,
     onChange,
+    finePointer,
+    onSelectChild,
     onOpenChild,
   });
 }
@@ -119,22 +109,59 @@ export function FilesSidebar({
   onCreate,
   onCancel,
   onUpload,
+  collapsedSections = {},
+  onToggleSection,
   children,
 }) {
   return React.createElement(
     "section",
     { className: "files-sidebar" },
+    React.createElement(
+      "div",
+      {
+        className: collapsedSections.explorer
+          ? "files-section"
+          : "files-section files-section-expanded",
+      },
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          className: "files-sidebar-toggle files-section-header",
+          onClick: () => onToggleSection("explorer"),
+          "aria-expanded": !collapsedSections.explorer,
+          title: collapsedSections.explorer
+            ? "Expand Explorer"
+            : "Collapse Explorer",
+        },
+        React.createElement(ChevronRight, {
+          size: 13,
+          className: collapsedSections.explorer ? "" : "open",
+          "aria-hidden": true,
+        }),
+        React.createElement(
+          "span",
+          { className: "files-volumes-title" },
+          "Explorer",
+        ),
+      ),
+      !collapsedSections.explorer && children,
+    ),
     React.createElement(FavoritesSidebar, {
       favorites,
       currentPath,
       onOpen,
       onRemove,
+      collapsed: collapsedSections.favorites,
+      onToggle: () => onToggleSection("favorites"),
     }),
     React.createElement(VolumesSidebar, {
       mounts,
       onMount,
       onOpen: onOpenMount,
       onUnmount,
+      collapsed: collapsedSections.volumes,
+      onToggle: () => onToggleSection("volumes"),
     }),
     React.createElement("input", {
       ref: fileInputRef,
@@ -151,7 +178,6 @@ export function FilesSidebar({
         onCreate,
         onCancel,
       }),
-    children,
   );
 }
 
@@ -165,13 +191,20 @@ export function FilesEditorPane({
   binary,
   info,
   status,
+  viewMode,
+  onViewModeChange,
+  sort,
+  onSortChange,
   onDownload,
   onSave,
   onRename,
   onDelete,
   onChange,
+  finePointer,
+  onSelectChild,
   onOpenChild,
-  gridView,
+  columnWidths,
+  onColumnWidthChange,
 }) {
   return React.createElement(
     "section",
@@ -324,7 +357,18 @@ export function FilesEditorPane({
             }),
         )
       : info
-      ? React.createElement(FilesInfoPane, { info, onOpenChild, gridView })
+      ? React.createElement(FilesInfoPane, {
+        info,
+        onOpenChild,
+        onSelectChild,
+        finePointer,
+        viewMode,
+        onViewModeChange,
+        sort,
+        onSortChange,
+        columnWidths,
+        onColumnWidthChange,
+      })
       : React.createElement(
         "div",
         { className: "files-editor-empty" },
@@ -399,17 +443,27 @@ export function FilesResizer({
     onPointerCancel: onResizeStop,
     onKeyDown: (event) => {
       const isRow = stackedLayout;
-      const step = event.key === "Home" ? -1e4 :
-        event.key === "End" ? 1e4 :
-        event.shiftKey ? 64 : 16;
+      const step = event.key === "Home"
+        ? -1e4
+        : event.key === "End"
+        ? 1e4
+        : event.shiftKey
+        ? 64
+        : 16;
       const matches = isRow
         ? event.key === "ArrowUp" || event.key === "ArrowDown"
         : event.key === "ArrowLeft" || event.key === "ArrowRight";
       if (event.key === "Home" || event.key === "End" || matches) {
         event.preventDefault();
-        onResizeBy(event.key === "Home" ? -step :
-          event.key === "End" ? step :
-          event.key === "ArrowUp" || event.key === "ArrowLeft" ? -step : step);
+        onResizeBy(
+          event.key === "Home"
+            ? -step
+            : event.key === "End"
+            ? step
+            : event.key === "ArrowUp" || event.key === "ArrowLeft"
+            ? -step
+            : step,
+        );
       }
     },
   });

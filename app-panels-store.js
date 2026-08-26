@@ -7,7 +7,7 @@ import {
   updateWorkspaceIndex,
 } from "./app-workspace.js?v=20260826.2";
 import { clone } from "./app-normalize.js?v=20260826.2";
-import { STARTUP_PANEL_TYPES } from "./app-constants.js?v=20260826.7";
+import { STARTUP_PANEL_TYPES } from "./app-constants.js?v=20260826.8";
 
 export const openPanelSnapshots = new Map();
 export let dockviewApi = null;

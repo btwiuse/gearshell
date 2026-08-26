@@ -31,7 +31,7 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260826.7";
+} from "./app-constants.js?v=20260826.8";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
@@ -158,6 +158,7 @@ export function normalizeShellConfig(config) {
       ]
       : [],
     restoreTabs: config?.restoreTabs === true,
+    allowBackgroundPlayback: config?.allowBackgroundPlayback !== false,
     workbenchAssetsUrl: normalizeWorkbenchAssetsUrl(config?.workbenchAssetsUrl),
     vmBackendUrl: normalizeVmBackendUrl(config?.vmBackendUrl),
     vmLinuxUrl: normalizeIntegrationUrl(
@@ -174,7 +175,7 @@ export function normalizeShellConfig(config) {
           favorite &&
           typeof favorite === "object" &&
           typeof favorite.path === "string" &&
-          typeof favorite.label === "string"
+          typeof favorite.label === "string",
       )
       : undefined,
     collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)

@@ -114,6 +114,7 @@ export const DEFAULT_CONFIG = {
   env: "",
   startupPanels: ["home"],
   restoreTabs: false,
+  allowBackgroundPlayback: true,
   workbenchAssetsUrl: DEFAULT_WORKBENCH_ASSETS_URL,
   vmBackendUrl: DEFAULT_VM_BACKEND_URL,
   vmLinuxUrl: DEFAULT_VM_LINUX_URL,

@@ -22,6 +22,9 @@ export function setupConfigForm(settingsContent) {
   const wagiDogEnabledEl = settingsContent.querySelector(
     '[data-config="wagi-dog-enabled"]',
   );
+  const allowBgPlaybackEl = settingsContent.querySelector(
+    '[data-config="allow-background-playback"]',
+  );
   const integrationEls = [
     ...settingsContent.querySelectorAll("[data-config-value]"),
   ];
@@ -47,6 +50,9 @@ export function setupConfigForm(settingsContent) {
     const cfg = settingsDep("loadConfig")();
     if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
     if (wagiDogEnabledEl) wagiDogEnabledEl.checked = cfg.wagiDogEnabled;
+    if (allowBgPlaybackEl) {
+      allowBgPlaybackEl.checked = cfg.allowBackgroundPlayback !== false;
+    }
     for (const input of integrationEls) {
       input.value = cfg[input.dataset.configValue] || "";
     }
@@ -80,6 +86,7 @@ export function setupConfigForm(settingsContent) {
       ...config,
       restoreTabs: restoreTabsEl?.checked === true,
       wagiDogEnabled: wagiDogEnabledEl?.checked !== false,
+      allowBackgroundPlayback: allowBgPlaybackEl?.checked !== false,
       ...Object.fromEntries(
         integrationEls.map((input) => [input.dataset.configValue, input.value]),
       ),
@@ -96,6 +103,9 @@ export function setupConfigForm(settingsContent) {
     const c = settingsDep("resetConfig")();
     if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
     if (wagiDogEnabledEl) wagiDogEnabledEl.checked = c.wagiDogEnabled;
+    if (allowBgPlaybackEl) {
+      allowBgPlaybackEl.checked = c.allowBackgroundPlayback !== false;
+    }
     for (const input of integrationEls) {
       input.value = c[input.dataset.configValue] || "";
     }

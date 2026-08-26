@@ -4,7 +4,10 @@
 // excerpt, or metadata for binary files). Split out of files.js so the
 // panel module stays under the 500-line rule.
 import { useEffect, useRef, useState } from "react";
-import { filesystemPathJoin } from "./files-parts.js?v=20260826.26";
+import {
+  enrichEntryStats,
+  filesystemPathJoin,
+} from "./files-path.js?v=20260826.38";
 import {
   getFilesystemPreviewType,
   isBinaryData,
@@ -18,7 +21,9 @@ import {
 // thousands of rows; the info pane reports the full count separately.
 const MAX_INFO_CHILDREN = 50;
 
-export function useFilesSelection({ getRoot, path, setHighlighted, setContextMenu }) {
+export function useFilesSelection(
+  { getRoot, path, setHighlighted, setContextMenu },
+) {
   const [selectedInfo, setSelectedInfo] = useState(null);
   const previewUrlRef = useRef(null);
 
@@ -53,6 +58,7 @@ export function useFilesSelection({ getRoot, path, setHighlighted, setContextMen
             Number(b.isDirectory) - Number(a.isDirectory) ||
             a.name.localeCompare(b.name)
           ).slice(0, MAX_INFO_CHILDREN);
+          await enrichEntryStats(getRoot, nextPath, children);
         } catch {
           // stat info is still useful without the item count
         }

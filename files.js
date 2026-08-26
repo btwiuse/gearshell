@@ -20,46 +20,34 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useLocalDirMounts,
   VolumesSidebar,
-} from "./files-mounts.js?v=20260826.26";
+} from "./files-mounts.js?v=20260826.38";
 import {
   FilesResizer,
   FilesRightPane,
   FilesSidebar,
+} from "./files-parts.js?v=20260826.39";
+import {
+  enrichEntryStats,
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "./files-parts.js?v=20260826.26";
-import {
-  FilesContextMenu,
-  FavoritesSidebar,
-} from "./files-ui.js?v=20260826.29";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.26";
+} from "./files-path.js?v=20260826.38";
+import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.38";
+import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.38";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.38";
 import {
   sniffWasmBytes,
   useFilesActions,
   useFilesEditor,
 } from "./files-editor.js?v=20260826.26";
 import { useFilesSidebarResize } from "./files-resize.js?v=20260826.26";
-import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.26";
-import { useFavorites } from "./files-favorites.js?v=20260826.26";
-import { FilesTree, useFilesTree } from "./files-tree.js?v=20260826.29";
-
-let __filesDeps = null;
-export function initFiles(dependencies) {
-  __filesDeps = dependencies;
-}
-function filesDep(name) {
-  if (__filesDeps == null) {
-    throw new Error(
-      "files: initFiles() has not been called; ensure app.js wires it in.",
-    );
-  }
-  const value = __filesDeps[name];
-  if (value === undefined) {
-    throw new Error(`files: missing dependency ${name}`);
-  }
-  return value;
-}
+import {
+  useFilesContextMenu,
+  useFilesSelection,
+} from "./files-context-menu.js?v=20260826.36";
+import { useFavorites } from "./files-favorites.js?v=20260826.36";
+import { FilesTree, useFilesTree } from "./files-tree.js?v=20260826.38";
+import { filesDep } from "./files-registry.js?v=20260826.9";
 
 function FilesPanel() {
   const fileInputRef = useRef(null);
@@ -73,6 +61,14 @@ function FilesPanel() {
   const [entryName, setEntryName] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState("grid");
+  const [sort, setSort] = useState({ by: "name", desc: false });
+  const [columnWidths, setColumnWidths] = useState({ size: 80, mtime: 164 });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState({
+    explorer: false,
+    favorites: false,
+    volumes: false,
+  });
   const [stackedLayout, setStackedLayout] = useState(() =>
     window.matchMedia("(max-width: 560px)").matches
   );
@@ -166,7 +162,7 @@ function FilesPanel() {
           const data = await Promise.race([
             getRoot().readFile(filesystemPathJoin(path, entry.name)),
             new Promise((resolve) =>
-              setTimeout(() => resolve(null), SNIFF_TIMEOUT_MS),
+              setTimeout(() => resolve(null), SNIFF_TIMEOUT_MS)
             ),
           ]);
           if (data && sniffWasmBytes(data)) entry.iconKind = "wasm";
@@ -174,6 +170,12 @@ function FilesPanel() {
           // leave the generic icon if the file cannot be read
         }
       }));
+      // Stat the listing (bounded: the wasm mirrors hold hundreds of
+      // entries and large directory reads are the same hang risk) so
+      // the info pane can sort by size / modified time.
+      if (next.length <= 50) {
+        await enrichEntryStats(getRoot, path, next, { timeoutMs: 250 });
+      }
       setEntries(next);
       setStatus("");
     } catch (error) {
@@ -342,23 +344,40 @@ function FilesPanel() {
       },
       onDeleteFolder: removeDirectory,
     }),
-    React.createElement(FilesSidebar, {
-      favorites,
-      currentPath: path,
-      onOpen: navigateTo,
-      onRemove: removeFavorite,
-      mounts,
-      onMount: handleMountLocalDir,
-      onOpenMount: openMount,
-      onUnmount: unmountLocalDir,
-      fileInputRef,
-      creating,
-      entryName,
-      onEntryNameChange: setEntryName,
-      onCreate: createEntry,
-      onCancel: () => setCreating(null),
-      onUpload: uploadFiles,
-    },
+    React.createElement(
+      FilesSidebar,
+      {
+        favorites,
+        currentPath: path,
+        onOpen: (favorite) => {
+          if (favorite.isDirectory === false) {
+            openEditorEntry(
+              {
+                name: String(favorite.path).split("/").pop(),
+                isDirectory: false,
+              },
+              filesystemPathParent(favorite.path),
+            );
+          } else {
+            navigateTo(favorite.path);
+          }
+        },
+        onRemove: removeFavorite,
+        mounts,
+        onMount: handleMountLocalDir,
+        onOpenMount: openMount,
+        onUnmount: unmountLocalDir,
+        fileInputRef,
+        creating,
+        entryName,
+        onEntryNameChange: setEntryName,
+        onCreate: createEntry,
+        onCancel: () => setCreating(null),
+        onUpload: uploadFiles,
+        collapsedSections: sidebarCollapsed,
+        onToggleSection: (name) =>
+          setSidebarCollapsed((prev) => ({ ...prev, [name]: !prev[name] })),
+      },
       React.createElement(FilesTree, {
         tree,
         path,
@@ -405,9 +424,7 @@ function FilesPanel() {
         addFavorite(entry);
         setContextMenu(null);
       },
-      isFavorite: contextMenu
-        ? isFavoritePath(contextMenu.entry.path)
-        : false,
+      isFavorite: contextMenu ? isFavoritePath(contextMenu.entry.path) : false,
     }),
     React.createElement(FilesRightPane, {
       selectedPath,
@@ -419,6 +436,12 @@ function FilesPanel() {
       entries,
       loading,
       status,
+      viewMode,
+      onViewModeChange: setViewMode,
+      sort,
+      onSortChange: setSort,
+      columnWidths,
+      onColumnWidthChange: setColumnWidths,
       currentPath: path,
       onDownload: downloadFile,
       onSave: saveFileHandler,
@@ -428,40 +451,21 @@ function FilesPanel() {
       },
       onDelete: removeFileHandler,
       onChange: setContents,
+      // Single click selects in-place (the pane highlights the tile and
+      // shows its details in the footer; the tree highlight mirrors it),
+      // double click opens: directories enter, files open in the editor.
+      // On touch the grid follows the tree and opens on a single tap.
+      finePointer,
+      onSelectChild: (child) => {
+        const base = (selectedInfo && selectedInfo.path) || path;
+        setHighlighted(filesystemPathJoin(base, child.name));
+      },
       onOpenChild: (child) => {
         const base = (selectedInfo && selectedInfo.path) || path;
-        if (child.isDirectory) {
-          navigateTo(filesystemPathJoin(base, child.name));
-        } else {
-          clearFileSelection();
-          selectEntry(child, base);
-        }
+        openEditorEntry(child, base);
       },
     }),
   );
-}
-
-// === Panel registration ===
-// Counter for unique Files panel ids. The counter is module-scoped
-// so it survives React re-renders but resets on page reload.
-let filesIdCounter = 0;
-
-// Register a new Files panel with dockview. Called from app.js's
-// `addPanelByComponent` when the user picks Files from the panel
-// menu, and from the restore-saved-panels path on boot.
-export function addFilesPanel(api, group) {
-  const id = ++filesIdCounter;
-  const panel = api.addPanel({
-    id: `files-${id}`,
-    component: "files",
-    params: { filesId: id, panelType: "files" },
-    title: "Files",
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  const rememberOpenPanel = filesDep("rememberOpenPanel");
-  rememberOpenPanel(panel, { component: "files" });
-  panel.api.setActive();
-  return panel;
 }
 
 export { FilesPanel };

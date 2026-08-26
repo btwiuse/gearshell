@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   filesystemPathJoin,
   filesystemPathParent,
-} from "./files-parts.js?v=20260826.26";
+} from "./files-path.js?v=20260826.38";
 
 // === File helpers (preview-type detection + byte conversion) ===
 // Shared with files-context-menu.js so both modules treat bytes and
@@ -159,7 +159,10 @@ export function useFilesEditor(getRoot) {
       setSavedContents(contents);
       return { ok: true, message: "Saved." };
     } catch (error) {
-      return { ok: false, message: error.message || "Unable to save this file." };
+      return {
+        ok: false,
+        message: error.message || "Unable to save this file.",
+      };
     }
   }, [contents, getRoot]);
 
@@ -169,7 +172,10 @@ export function useFilesEditor(getRoot) {
       clearFileSelection();
       return { ok: true, message: "Deleted." };
     } catch (error) {
-      return { ok: false, message: error.message || "Unable to delete this file." };
+      return {
+        ok: false,
+        message: error.message || "Unable to delete this file.",
+      };
     }
   }, [getRoot, clearFileSelection]);
 
@@ -184,7 +190,8 @@ export function useFilesEditor(getRoot) {
     setTimeout(() => URL.revokeObjectURL(link.href), 0);
   }, [selectedPath, preview, contents]);
 
-  const dirty = selectedPath && !preview && !binary && contents !== savedContents;
+  const dirty = selectedPath && !preview && !binary &&
+    contents !== savedContents;
   return {
     selectedPath,
     contents,

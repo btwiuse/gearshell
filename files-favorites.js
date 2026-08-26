@@ -31,9 +31,14 @@ export function useFavorites({ loadConfig, saveConfig, homePath }) {
       const next = [
         ...prev,
         {
-          id: `fav-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          id: `fav-${Date.now().toString(36)}-${
+            Math.random().toString(36).slice(2, 6)
+          }`,
           label: entry.name,
           path: entry.path,
+          // Files open in the editor instead of navigating; directories
+          // (and legacy favorites without the flag) navigate.
+          isDirectory: entry.isDirectory !== false,
         },
       ];
       saveConfig({ ...loadConfig(), favorites: next });

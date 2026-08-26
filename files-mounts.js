@@ -4,7 +4,7 @@
 // Volumes list. Extracted from files.js to keep every module under the
 // 500-line rule; files.js owns the panel, this module owns the mounts.
 import React, { useCallback, useRef, useState } from "react";
-import { Disc3, FolderInput, X } from "lucide-react";
+import { ChevronRight, Disc3, FolderInput, X } from "lucide-react";
 
 // --- IndexedDB persistence + wanix kernel bridge ---
 
@@ -245,7 +245,14 @@ export function useLocalDirMounts(
 
 // --- Volumes sidebar (macOS-style mount list) ---
 
-export function VolumesSidebar({ mounts, onMount, onOpen, onUnmount }) {
+export function VolumesSidebar({
+  mounts,
+  onMount,
+  onOpen,
+  onUnmount,
+  collapsed = false,
+  onToggle,
+}) {
   return React.createElement(
     "div",
     { className: "files-volumes" },
@@ -253,9 +260,24 @@ export function VolumesSidebar({ mounts, onMount, onOpen, onUnmount }) {
       "div",
       { className: "files-volumes-header" },
       React.createElement(
-        "span",
-        { className: "files-volumes-title" },
-        "Volumes",
+        "button",
+        {
+          type: "button",
+          className: "files-sidebar-toggle",
+          onClick: onToggle,
+          "aria-expanded": !collapsed,
+          title: collapsed ? "Expand Volumes" : "Collapse Volumes",
+        },
+        React.createElement(ChevronRight, {
+          size: 13,
+          className: collapsed ? "" : "open",
+          "aria-hidden": true,
+        }),
+        React.createElement(
+          "span",
+          { className: "files-volumes-title" },
+          "Volumes",
+        ),
       ),
       React.createElement("button", {
         type: "button",
@@ -264,46 +286,47 @@ export function VolumesSidebar({ mounts, onMount, onOpen, onUnmount }) {
         onClick: onMount,
       }, React.createElement(FolderInput, { size: 13, "aria-hidden": true })),
     ),
-    mounts.length === 0
-      ? React.createElement(
-        "p",
-        { className: "files-volumes-empty" },
-        "No mounted volumes.",
-      )
-      : React.createElement(
-        "div",
-        { className: "files-volumes-list" },
-        mounts.map((mount) =>
-          React.createElement(
-            "div",
-            {
-              key: mount.id,
-              className: `files-volume${
-                mount.mounted ? "" : " files-volume-off"
-              }`,
-            },
+    !collapsed &&
+      (mounts.length === 0
+        ? React.createElement(
+          "p",
+          { className: "files-volumes-empty" },
+          "No mounted volumes.",
+        )
+        : React.createElement(
+          "div",
+          { className: "files-volumes-list" },
+          mounts.map((mount) =>
             React.createElement(
-              "button",
+              "div",
               {
-                type: "button",
-                className: "files-volume-name",
-                title: mount.mounted
-                  ? `Open /${mount.dst}`
-                  : "Directory not accessible, click to reconnect",
-                onClick: () => onOpen(mount),
+                key: mount.id,
+                className: `files-volume${
+                  mount.mounted ? "" : " files-volume-off"
+                }`,
               },
-              React.createElement(Disc3, { size: 14, "aria-hidden": true }),
-              React.createElement("span", null, mount.name),
-            ),
-            React.createElement("button", {
-              type: "button",
-              className: "files-volume-eject",
-              title: mount.mounted ? "Unmount" : "Remove",
-              "aria-label": `Unmount ${mount.name}`,
-              onClick: () => onUnmount(mount),
-            }, React.createElement(X, { size: 12, "aria-hidden": true })),
-          )
-        ),
-      ),
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className: "files-volume-name",
+                  title: mount.mounted
+                    ? `Open /${mount.dst}`
+                    : "Directory not accessible, click to reconnect",
+                  onClick: () => onOpen(mount),
+                },
+                React.createElement(Disc3, { size: 14, "aria-hidden": true }),
+                React.createElement("span", null, mount.name),
+              ),
+              React.createElement("button", {
+                type: "button",
+                className: "files-volume-eject",
+                title: mount.mounted ? "Unmount" : "Remove",
+                "aria-label": `Unmount ${mount.name}`,
+                onClick: () => onUnmount(mount),
+              }, React.createElement(X, { size: 12, "aria-hidden": true })),
+            )
+          ),
+        )),
   );
 }

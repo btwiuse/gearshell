@@ -12,7 +12,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { FilesBreadcrumb } from "./files-ui.js?v=20260826.29";
+import { FilesBreadcrumb } from "./files-ui.js?v=20260826.36";
 
 export function FilesTopbar({
   path,
@@ -51,16 +51,20 @@ export function FilesTopbar({
         disabled: path === ".",
         onClick: onParent,
       }, React.createElement(ArrowUp, { size: 15, "aria-hidden": true })),
-      React.createElement("button", {
-        type: "button",
-        title: "Refresh files",
-        "aria-label": "Refresh files",
-        onClick: onRefresh,
-      }, React.createElement(RefreshCw, {
-        className: loading ? "files-spinning" : "",
-        size: 15,
-        "aria-hidden": true,
-      })),
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          title: "Refresh files",
+          "aria-label": "Refresh files",
+          onClick: onRefresh,
+        },
+        React.createElement(RefreshCw, {
+          className: loading ? "files-spinning" : "",
+          size: 15,
+          "aria-hidden": true,
+        }),
+      ),
       React.createElement("button", {
         type: "button",
         title: "Upload files",
@@ -80,7 +84,9 @@ export function FilesTopbar({
         onClick: onNewFolder,
       }, React.createElement(FolderPlus, { size: 15, "aria-hidden": true })),
       path !== "." &&
-        React.createElement(React.Fragment, null,
+        React.createElement(
+          React.Fragment,
+          null,
           React.createElement("button", {
             type: "button",
             title: "Rename folder",
