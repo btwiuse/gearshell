@@ -4,7 +4,7 @@
 import {
   SUPPORTED_SYSTEM_BIND_TYPES,
   SUPPORTED_UNION_MODES,
-} from "./app-constants.js?v=20260826.2";
+} from "./app-constants.js?v=20260826.7";
 import {
   normalizeBind,
   normalizeSystemBind,

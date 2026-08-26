@@ -165,7 +165,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260826.6";
+} from "./app-constants.js?v=20260826.7";
 
 const systemWorkspace = loadActiveWorkspace();
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
