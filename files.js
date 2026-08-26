@@ -114,6 +114,12 @@ function FilesPanel() {
   }, []);
 
   const navigateTo = (nextPath) => {
+    // Re-clicking the folder you are already in is a no-op (favorites,
+    // volumes, breadcrumb): keep the right-pane preview instead of
+    // re-navigating and flashing "Empty folder." while it reloads.
+    if (normalizeFilesystemPath(nextPath) === normalizeFilesystemPath(path)) {
+      return;
+    }
     setPath(nextPath);
     clearFileSelection();
     setHighlighted(null);
