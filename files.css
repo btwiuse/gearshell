@@ -4,25 +4,64 @@
  * Split out of app.css so this feature can ship its own stylesheet
  * alongside files.js without bloating the main bundle.
  */
-.files-panel { display: grid; grid-template-columns: minmax(190px, var(--files-sidebar-width, 280px)) 6px minmax(0, 1fr); min-height: 0; background: #0d1117; color: #c9d1d9; }
+.files-panel { display: grid; grid-template-columns: minmax(190px, var(--files-sidebar-width, 280px)) 6px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); min-height: 0; background: #0d1117; color: #c9d1d9; }
+.files-topbar { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(190px, var(--files-sidebar-width, 280px)) 6px minmax(0, 1fr); align-items: center; min-width: 0; min-height: 40px; border-bottom: 1px solid #30363d; background: #161b22; }
+.files-topbar-location { grid-column: 3; display: flex; align-items: center; gap: 4px; min-width: 0; padding-right: 8px; }
+.files-topbar-breadcrumb-wrap { display: flex; align-items: center; gap: 2px; min-width: 0; flex: 1; }
+.files-topbar .files-breadcrumb { min-width: 0; max-width: 100%; min-height: 0; padding: 0; border-bottom: 0; flex: 0 1 auto; }
+.files-topbar-edit { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; flex: 0 0 auto; margin-left: auto; }
+.files-topbar-edit:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
+.files-topbar-input { min-width: 0; flex: 1; height: 28px; padding: 4px 8px; border: 1px solid #30363d; border-radius: 4px; outline: 0; background: #0d1117; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-topbar-input:focus { border-color: #58a6ff; }
+.files-topbar-actions { grid-column: 1; display: flex; align-items: center; gap: 3px; padding-left: 10px; }
+.files-topbar-actions button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
+.files-topbar-actions button:hover:not(:disabled) { border-color: #30363d; background: #21262d; color: #c9d1d9; }
+.files-topbar-actions button:disabled { opacity: 0.45; cursor: default; }
 .files-sidebar, .files-editor { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .files-sidebar { background: #161b22; }
 .files-resizer { position: relative; z-index: 1; cursor: col-resize; touch-action: none; }
+.files-resizer:focus-visible { outline: 2px solid #58a6ff; outline-offset: -1px; }
 .files-resizer::before { position: absolute; top: 0; bottom: 0; left: 2px; width: 1px; background: #30363d; content: ''; }
+.files-resizer::after { position: absolute; top: 0; bottom: 0; left: -8px; width: 22px; content: ''; }
 .files-resizer:hover::before, .files-resizing .files-resizer::before { width: 2px; left: 2px; background: #58a6ff; }
 .files-resizing { cursor: col-resize; user-select: none; }
 .files-resizing-row { cursor: row-resize; user-select: none; }
-.files-toolbar, .files-editor-toolbar { min-height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border-bottom: 1px solid #30363d; }
-.files-toolbar code, .files-editor-toolbar code { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-.files-toolbar input { min-width: 0; flex: 1; height: 26px; padding: 3px 5px; border: 1px solid transparent; border-radius: 3px; outline: 0; background: transparent; color: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-.files-toolbar input:hover, .files-toolbar input:focus { border-color: #30363d; background: #0d1117; color: #c9d1d9; }
+.files-editor-toolbar { min-height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border-bottom: 1px solid #30363d; }
+.files-editor-toolbar .files-toolbar-actions { margin-left: auto; }
 .files-toolbar-actions { display: flex; align-items: center; gap: 3px; }
+.files-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; min-height: 30px; padding: 4px 8px; border-bottom: 1px solid #30363d; }
+.files-breadcrumb button { display: inline-flex; align-items: center; max-width: 180px; min-height: 22px; padding: 2px 6px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #8b949e; cursor: pointer; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-breadcrumb button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
+.files-breadcrumb-current { padding: 2px 6px; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-breadcrumb-sep { flex: 0 0 auto; color: #484f58; font-size: 12px; }
+.files-context-menu { position: fixed; z-index: 60; min-width: 168px; padding: 4px; border: 1px solid #30363d; border-radius: 6px; background: #161b22; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+.files-context-menu button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 28px; padding: 4px 8px; border: 0; border-radius: 4px; background: transparent; color: #c9d1d9; cursor: pointer; font: 13px system-ui, sans-serif; text-align: left; }
+.files-context-menu button:hover { background: #21262d; }
+.files-context-menu button:disabled { cursor: default; opacity: 0.5; }
+.files-context-menu button:disabled:hover { background: transparent; }
+.files-context-menu button svg { flex: 0 0 auto; color: #8b949e; }
+.files-context-menu button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-context-menu .files-context-menu-danger { color: #f85149; }
+.files-context-menu .files-context-menu-danger:hover { background: rgba(248, 81, 73, 0.12); }
+.files-context-menu-sep { height: 1px; margin: 4px 6px; background: #30363d; }
 .files-toolbar-actions button, .files-create button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
 .files-toolbar-actions button:hover:not(:disabled), .files-create button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
 .files-toolbar-actions button:disabled { opacity: 0.45; cursor: default; }
 .files-upload-input { display: none; }
 .files-volumes { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 8px; border-bottom: 1px solid #30363d; }
 .files-volumes-header { display: flex; align-items: center; justify-content: space-between; }
+.files-favorites { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 8px; border-bottom: 1px solid #30363d; }
+.files-favorites-list { display: flex; flex-direction: column; gap: 1px; max-height: 40vh; overflow-y: auto; }
+.files-favorite { display: flex; align-items: center; gap: 2px; border-radius: 4px; }
+.files-favorite:hover { background: #21262d; }
+.files-favorite-active { background: rgba(88, 166, 255, 0.12); }
+.files-favorite-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 0; background: transparent; color: #c9d1d9; cursor: pointer; text-align: left; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-favorite-name svg { flex: 0 0 auto; color: #58a6ff; }
+.files-favorite-active .files-favorite-name svg { color: #f0f6fc; }
+.files-favorite-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-favorite-remove { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; opacity: 0; }
+.files-favorite:hover .files-favorite-remove { opacity: 1; }
+.files-favorite-remove:hover { border-color: #30363d; background: #161b22; color: #f85149; }
 .files-volumes-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; }
 .files-volumes-header button { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
 .files-volumes-header button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
@@ -47,13 +86,35 @@
 .files-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .files-empty { margin: 10px; color: #8b949e; font-size: 12px; }
 .files-editor textarea { box-sizing: border-box; width: 100%; min-height: 0; flex: 1; resize: none; padding: 12px; border: 0; outline: 0; background: #0d1117; color: #c9d1d9; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; tab-size: 2; }
-.files-editor-empty { display: grid; min-height: 0; flex: 1; place-items: center; color: #484f58; }
+.files-editor-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; flex: 1; gap: 10px; color: #484f58; }
+.files-binary-hint { max-width: 320px; margin: 0; color: #8b949e; font-size: 12px; line-height: 1.5; text-align: center; }
+.files-info { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 0; flex: 1; padding: 24px; overflow: auto; color: #c9d1d9; }
+.files-info-preview { display: grid; min-height: 0; max-height: 55%; flex: 1; place-items: center; overflow: auto; }
+.files-info-preview img, .files-info-preview video { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.files-info-preview.audio audio { width: min(480px, 100%); }
+.files-info-preview.pdf iframe { border: 0; width: 100%; height: 100%; }
+.files-info-text-preview { box-sizing: border-box; width: min(560px, 100%); min-height: 0; max-height: 55%; margin: 0; padding: 12px; overflow: auto; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; color: #c9d1d9; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+.files-info-icon { display: grid; place-items: center; width: 64px; height: 64px; border: 1px solid #30363d; border-radius: 10px; background: #161b22; color: #58a6ff; }
+.files-info-name { margin: 8px 0 0; font-size: 15px; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.files-info-type { margin: 0; color: #8b949e; font-size: 12px; }
+.files-info-list { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; width: min(340px, 100%); margin: 18px 0 0; padding: 12px 16px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; font-size: 12px; }
+.files-info-list dt { color: #8b949e; }
+.files-info-list dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .files-media-preview { display: grid; min-height: 0; flex: 1; place-items: center; overflow: auto; padding: 14px; background: #0d1117; }
 .files-media-preview img, .files-media-preview video { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 .files-media-preview.audio audio { width: min(480px, 100%); }
+.files-media-preview.pdf iframe { border: 0; width: 100%; height: 100%; }
+.files-media-unsupported { color: #8b949e; font-size: 12px; }
 .files-status { min-height: 28px; padding: 6px 10px; border-top: 1px solid #30363d; color: #8b949e; font-size: 12px; }
 .files-spinning { animation: files-spin 0.8s linear infinite; }
+@media (max-width: 560px) {
+  .files-topbar { grid-column: 1; grid-template-columns: auto minmax(0, 1fr); }
+  .files-topbar-actions { grid-column: 1; }
+  .files-topbar-location { grid-column: 2; }
+  .files-panel { grid-template-columns: 1fr; grid-template-rows: auto minmax(130px, var(--files-sidebar-height, 220px)) 6px minmax(0, 1fr); }
   .files-sidebar { border-bottom: 0; }
   .files-resizer { cursor: row-resize; }
   .files-resizer::before { top: 2px; right: 0; bottom: auto; left: 0; width: auto; height: 1px; }
+  .files-resizer::after { top: -8px; right: 0; bottom: auto; left: 0; width: auto; height: 22px; }
   .files-resizer:hover::before, .files-resizing-row .files-resizer::before { top: 2px; right: 0; left: 0; width: auto; height: 2px; background: #58a6ff; }
+}

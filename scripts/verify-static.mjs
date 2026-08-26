@@ -66,6 +66,11 @@ if (!has('isLegacyVmBackendUrl')) throw new Error('Workspaces pinned to the comm
 if (!has('Workbench assets URL or path')) throw new Error('Workbench asset settings must accept local paths.');
 if (!html.match(/src="app\.js\?v=[\d.]+"/)) throw new Error('index.html must cache-bust app.js');
 if (!has('.files-panel') || !has('.runtime-panel')) throw new Error('Missing panel styles');
+if (!has('FilesBreadcrumb')) throw new Error('Files panel must expose the clickable path breadcrumb.');
+if (!has('FilesContextMenu')) throw new Error('Files panel must offer the right-click context menu.');
+if (!has('onResizeBy')) throw new Error('Files sidebar resizer must support keyboard resizing.');
+if (!has('FavoritesSidebar') || !has('defaultFavorites')) throw new Error('Files panel must offer a Favorites sidebar with defaults.');
+if (!has('preview.kind === "pdf"') || !has('React.createElement("iframe"')) throw new Error('PDF preview must render in an iframe, never as a video.');
 if (!css.includes('.workbench-session .explorer-folders-view .monaco-icon-label::before')) throw new Error('Missing scoped Workbench file icon spacing fix.');
 if (!css.includes('.monaco-tl-twistie + .monaco-tl-contents > .monaco-icon-label.folder-icon')) throw new Error('Missing scoped Workbench folder label spacing fix.');
 if (!css.includes('.monaco-list-row[aria-level]:not([aria-level="1"]) .monaco-tl-twistie') || !css.includes('translateX(5px)')) throw new Error('Nested Workbench tree controls must clear their indent guides.');

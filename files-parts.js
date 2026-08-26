@@ -4,19 +4,15 @@
 // this module renders them without touching the filesystem itself.
 import React from "react";
 import {
-  ArrowRight,
-  ArrowUp,
+  Check,
   Download,
   FileCode2,
-  FilePlus2,
-  FolderOpen,
-  FolderPlus,
   Pencil,
-  RefreshCw,
   Save,
   Trash2,
-  Upload,
+  X,
 } from "lucide-react";
+import { FilesInfoPane, getEntryIcon } from "./files-ui.js?v=20260826.17";
 
 // === Path helpers (shared by the panel and the mount sidebar) ===
 
@@ -31,6 +27,9 @@ export function normalizeFilesystemPath(path = ".") {
 }
 
 export function filesystemPathJoin(base, name) {
+  if (base.startsWith("/")) {
+    return `${base.replace(/\/+$/, "")}/${name.replace(/^\/+/, "")}`;
+  }
   return normalizeFilesystemPath(base === "." ? name : `${base}/${name}`);
 }
 
@@ -42,113 +41,25 @@ export function filesystemPathParent(path) {
   return parts.join("/") || ".";
 }
 
-// === Sidebar toolbar ===
+// === Entry list ===
 
-export function FilesToolbar({
-  pathDraft,
+export function FilesEntryList({
+  entries,
+  selectedPath,
   path,
   loading,
-  onPathDraftChange,
-  onNavigate,
-  onParent,
-  onRefresh,
-  onUpload,
-  onNewFile,
-  onNewFolder,
-  onRenameFolder,
-  onDeleteFolder,
+  status,
+  onSelect,
+  onOpen,
+  onContextMenu,
+  finePointer,
 }) {
   return React.createElement(
     "div",
-    { className: "files-toolbar" },
-    React.createElement("input", {
-      value: pathDraft,
-      "aria-label": "Filesystem path",
-      spellCheck: false,
-      onChange: (event) => onPathDraftChange(event.target.value),
-      onKeyDown: (event) => {
-        if (event.key === "Enter") onNavigate();
-      },
-    }),
-    React.createElement(
-      "div",
-      { className: "files-toolbar-actions" },
-      React.createElement("button", {
-        type: "button",
-        title: "Go to path",
-        "aria-label": "Go to path",
-        onClick: onNavigate,
-      }, React.createElement(ArrowRight, { size: 15, "aria-hidden": true })),
-      React.createElement("button", {
-        type: "button",
-        title: "Parent folder",
-        "aria-label": "Parent folder",
-        disabled: path === ".",
-        onClick: onParent,
-      }, React.createElement(ArrowUp, { size: 15, "aria-hidden": true })),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          title: "Refresh files",
-          "aria-label": "Refresh files",
-          onClick: onRefresh,
-        },
-        React.createElement(RefreshCw, {
-          className: loading ? "files-spinning" : "",
-          size: 15,
-          "aria-hidden": true,
-        }),
-      ),
-      React.createElement("button", {
-        type: "button",
-        title: "Upload files",
-        "aria-label": "Upload files",
-        onClick: onUpload,
-      }, React.createElement(Upload, { size: 15, "aria-hidden": true })),
-      React.createElement("button", {
-        type: "button",
-        title: "New file",
-        "aria-label": "New file",
-        onClick: onNewFile,
-      }, React.createElement(FilePlus2, { size: 15, "aria-hidden": true })),
-      React.createElement("button", {
-        type: "button",
-        title: "New folder",
-        "aria-label": "New folder",
-        onClick: onNewFolder,
-      }, React.createElement(FolderPlus, { size: 15, "aria-hidden": true })),
-      path !== "." &&
-        React.createElement(
-          React.Fragment,
-          null,
-          React.createElement("button", {
-            type: "button",
-            title: "Rename folder",
-            "aria-label": "Rename folder",
-            onClick: onRenameFolder,
-          }, React.createElement(Pencil, { size: 15, "aria-hidden": true })),
-          React.createElement("button", {
-            type: "button",
-            title: "Delete empty folder",
-            "aria-label": "Delete empty folder",
-            onClick: onDeleteFolder,
-          }, React.createElement(Trash2, { size: 15, "aria-hidden": true })),
-        ),
-    ),
-  );
-}
-
-// === Entry list ===
-
-export function FilesEntryList(
-  { entries, selectedPath, path, loading, status, onOpen },
-) {
-  return React.createElement(
-    "div",
     { className: "files-list", role: "list" },
-    entries.map((entry) =>
-      React.createElement(
+    entries.map((entry) => {
+      const EntryIcon = getEntryIcon(entry.name, entry.isDirectory, entry.iconKind);
+      return React.createElement(
         "button",
         {
           key: `${entry.isDirectory ? "d" : "f"}:${entry.name}`,
@@ -158,15 +69,19 @@ export function FilesEntryList(
             ? "selected"
             : "",
           title: entry.name,
-          onClick: () => onOpen(entry),
+          onClick: () => (finePointer ? onSelect(entry) : onOpen(entry)),
+          onDoubleClick: finePointer ? () => onOpen(entry) : undefined,
+          onContextMenu: onContextMenu
+            ? (event) => {
+              event.preventDefault();
+              onContextMenu(entry, event.clientX, event.clientY);
+            }
+            : undefined,
         },
-        React.createElement(entry.isDirectory ? FolderOpen : FileCode2, {
-          size: 15,
-          "aria-hidden": true,
-        }),
+        React.createElement(EntryIcon, { size: 15, "aria-hidden": true }),
         React.createElement("span", null, entry.name),
-      )
-    ),
+      );
+    }),
     !loading && entries.length === 0 && !status &&
       React.createElement(
         "p",
@@ -183,6 +98,8 @@ export function FilesEditorPane({
   preview,
   contents,
   dirty,
+  binary,
+  info,
   status,
   onDownload,
   onSave,
@@ -201,11 +118,6 @@ export function FilesEditorPane({
           React.createElement(
             "div",
             { className: "files-editor-toolbar" },
-            React.createElement(
-              "code",
-              { title: selectedPath },
-              `/${selectedPath}`,
-            ),
             React.createElement(
               "div",
               { className: "files-toolbar-actions" },
@@ -258,11 +170,22 @@ export function FilesEditorPane({
                 controls: true,
                 preload: "metadata",
               })
-              : React.createElement("video", {
+              : preview.kind === "video"
+              ? React.createElement("video", {
                 src: preview.url,
                 controls: true,
                 preload: "metadata",
-              }),
+              })
+              : preview.kind === "pdf"
+              ? React.createElement("iframe", {
+                src: preview.url,
+                title: "PDF preview",
+              })
+              : React.createElement(
+                "p",
+                { className: "files-media-unsupported" },
+                "Preview is not available for this file type. Use Download to open it.",
+              ),
           ),
         )
         : React.createElement(
@@ -271,11 +194,6 @@ export function FilesEditorPane({
           React.createElement(
             "div",
             { className: "files-editor-toolbar" },
-            React.createElement(
-              "code",
-              { title: selectedPath },
-              `/${selectedPath}`,
-            ),
             React.createElement(
               "div",
               { className: "files-toolbar-actions" },
@@ -321,13 +239,26 @@ export function FilesEditorPane({
               ),
             ),
           ),
-          React.createElement("textarea", {
-            value: contents,
-            spellCheck: false,
-            "aria-label": `Contents of ${selectedPath}`,
-            onChange: (event) => onChange(event.target.value),
-          }),
+          binary
+            ? React.createElement(
+              "div",
+              { className: "files-editor-empty" },
+              React.createElement(FileCode2, { size: 28, "aria-hidden": true }),
+              React.createElement(
+                "p",
+                { className: "files-binary-hint" },
+                "Binary file — preview is not available. Use Download to open it.",
+              ),
+            )
+            : React.createElement("textarea", {
+              value: contents,
+              spellCheck: false,
+              "aria-label": `Contents of ${selectedPath}`,
+              onChange: (event) => onChange(event.target.value),
+            }),
         )
+      : info
+      ? React.createElement(FilesInfoPane, { info })
       : React.createElement(
         "div",
         { className: "files-editor-empty" },
@@ -343,61 +274,6 @@ export function FilesEditorPane({
 }
 
 // === Create entry form ===
-
-// === File helpers (preview-type detection + byte conversion) ===
-
-const FILE_PREVIEW_TYPES = {
-  image: {
-    mime: (name) => {
-      const lower = name.toLowerCase();
-      if (lower.endsWith(".png") || lower.endsWith(".gif")) return "image/png";
-      if (lower.endsWith(".webp")) return "image/webp";
-      return "image/jpeg";
-    },
-    kind: "image",
-  },
-  video: {
-    mime: (name) => "video/mp4",
-    kind: "video",
-  },
-  audio: {
-    mime: (name) => "audio/mpeg",
-    kind: "audio",
-  },
-  pdf: {
-    mime: "application/pdf",
-    kind: "pdf",
-  },
-};
-
-export function getFilesystemPreviewType(path) {
-  const lower = path.toLowerCase();
-  if (/\.(png|jpe?g|gif|webp)$/.test(lower)) return FILE_PREVIEW_TYPES.image;
-  if (/\.(mp4|webm)$/.test(lower)) return FILE_PREVIEW_TYPES.video;
-  if (/\.(mp3|wav|ogg)$/.test(lower)) return FILE_PREVIEW_TYPES.audio;
-  if (lower.endsWith(".pdf")) return FILE_PREVIEW_TYPES.pdf;
-  return null;
-}
-
-export function toFilesystemBytes(contents) {
-  if (contents instanceof Uint8Array) return contents;
-  if (ArrayBuffer.isView(contents)) {
-    return new Uint8Array(
-      contents.buffer,
-      contents.byteOffset,
-      contents.byteLength,
-    );
-  }
-  return new Uint8Array(contents);
-}
-
-export function decodeFilesystemText(contents) {
-  const bytes = toFilesystemBytes(contents);
-  if (bytes.byteLength > 1024 * 1024) {
-    throw new Error("Files larger than 1 MiB cannot be opened in this editor.");
-  }
-  return new TextDecoder().decode(bytes);
-}
 
 export function FilesCreateForm(
   { creating, entryName, onEntryNameChange, onCreate, onCancel },
@@ -439,10 +315,12 @@ export function FilesResizer({
   onResizeStart,
   onResizeMove,
   onResizeStop,
+  onResizeBy,
 }) {
   return React.createElement("div", {
     className: "files-resizer",
     role: "separator",
+    tabIndex: 0,
     "aria-label": stackedLayout
       ? "Resize file browser file list height"
       : "Resize file browser sidebar",
@@ -453,5 +331,20 @@ export function FilesResizer({
     onPointerMove: onResizeMove,
     onPointerUp: onResizeStop,
     onPointerCancel: onResizeStop,
+    onKeyDown: (event) => {
+      const isRow = stackedLayout;
+      const step = event.key === "Home" ? -1e4 :
+        event.key === "End" ? 1e4 :
+        event.shiftKey ? 64 : 16;
+      const matches = isRow
+        ? event.key === "ArrowUp" || event.key === "ArrowDown"
+        : event.key === "ArrowLeft" || event.key === "ArrowRight";
+      if (event.key === "Home" || event.key === "End" || matches) {
+        event.preventDefault();
+        onResizeBy(event.key === "Home" ? -step :
+          event.key === "End" ? step :
+          event.key === "ArrowUp" || event.key === "ArrowLeft" ? -step : step);
+      }
+    },
   });
 }

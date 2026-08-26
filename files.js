@@ -1,10 +1,12 @@
 // Files: the Files panel — a tree-view file browser over the Wanix
 // filesystem, with a built-in text/image/audio/PDF editor.
 //
-// This module owns the `files` dockview panel end-to-end. The
-// filesystem helpers (path normalization, byte conversion, preview
-// type detection) are all local to this module so the panel logic
-// and its data-shape handling travel together.
+// This module owns the `files` dockview panel end-to-end: panel state,
+// filesystem operations and the sidebar/editor layout. Editor logic,
+// sidebar resize, the per-extension icon map and the breadcrumb /
+// context-menu UI live in sibling modules (files-editor.js,
+// files-resize.js, files-parts.js, files-ui.js) so each file stays
+// under the 500-line rule.
 //
 // Dependency-injection shim: app.js calls `initFiles(dependencies)`
 // from the bottom of its module body, populating a small lookup
@@ -18,20 +20,26 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useLocalDirMounts,
   VolumesSidebar,
-} from "./files-mounts.js?v=20260826.5";
+} from "./files-mounts.js?v=20260826.17";
 import {
-  decodeFilesystemText,
   FilesCreateForm,
   FilesEditorPane,
   FilesEntryList,
   FilesResizer,
-  FilesToolbar,
   filesystemPathJoin,
   filesystemPathParent,
-  getFilesystemPreviewType,
   normalizeFilesystemPath,
-  toFilesystemBytes,
-} from "./files-parts.js?v=20260826.5";
+} from "./files-parts.js?v=20260826.17";
+import {
+  FilesContextMenu,
+  FavoritesSidebar,
+} from "./files-ui.js?v=20260826.17";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.17";
+import { useFilesEditor } from "./files-editor.js?v=20260826.17";
+import { sniffWasmBytes } from "./files-editor.js?v=20260826.17";
+import { useFilesSidebarResize } from "./files-resize.js?v=20260826.17";
+import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.17";
+import { useFavorites } from "./files-favorites.js?v=20260826.17";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
@@ -50,32 +58,49 @@ function filesDep(name) {
   return value;
 }
 
-// === Filesystem helpers ===
-// Path normalization + byte conversion + preview-type detection for
-// the Files panel. Each is a small standalone function that the
-// panel calls per-file/per-path. They are not used outside this
-// module.
-
 function FilesPanel() {
   const fileInputRef = useRef(null);
   const filesPanelRef = useRef(null);
-  const sidebarResizeRef = useRef(null);
   const [path, setPath] = useState(".");
   const [pathDraft, setPathDraft] = useState("/");
   const [entries, setEntries] = useState([]);
-  const [selectedPath, setSelectedPath] = useState(null);
-  const [contents, setContents] = useState("");
-  const [savedContents, setSavedContents] = useState("");
-  const [preview, setPreview] = useState(null);
+  const [highlighted, setHighlighted] = useState(null);
+  const [renameTarget, setRenameTarget] = useState(null);
   const [creating, setCreating] = useState(null);
   const [entryName, setEntryName] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(280);
-  const [sidebarHeight, setSidebarHeight] = useState(220);
   const [stackedLayout, setStackedLayout] = useState(() =>
     window.matchMedia("(max-width: 560px)").matches
   );
+  const [finePointer] = useState(() =>
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  );
+
+  const getRoot = useCallback(() => filesDep("getWanixRoot")(), []);
+  const {
+    selectedPath,
+    contents,
+    preview,
+    binary,
+    dirty,
+    clearFileSelection,
+    openEntry,
+    saveFile,
+    removeFile,
+    downloadFile,
+    setContents,
+    setSelectedPath,
+  } = useFilesEditor(getRoot);
+
+  const {
+    sidebarWidth,
+    sidebarHeight,
+    startSidebarResize,
+    resizeSidebar,
+    stopSidebarResize,
+    resizeSidebarBy,
+  } = useFilesSidebarResize({ stackedLayout, panelRef: filesPanelRef });
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 560px)");
@@ -85,70 +110,24 @@ function FilesPanel() {
     return () => media.removeEventListener("change", updateLayout);
   }, []);
 
-  useEffect(
-    () => () =>
-      document.body.classList.remove("files-resizing", "files-resizing-row"),
-    [],
-  );
-
-  useEffect(() => () => {
-    if (preview?.url) URL.revokeObjectURL(preview.url);
-  }, [preview?.url]);
-
-  const clearFileSelection = () => {
-    setSelectedPath(null);
-    setContents("");
-    setSavedContents("");
-    setPreview(null);
+  const navigateTo = (nextPath) => {
+    setPath(nextPath);
+    clearFileSelection();
+    setHighlighted(null);
+    setSelectedInfo(null);
   };
 
-  const startSidebarResize = (event) => {
-    if (event.button !== 0) return;
-    const panelBounds = filesPanelRef.current?.getBoundingClientRect();
-    if (!panelBounds) return;
-    event.preventDefault();
-    sidebarResizeRef.current = {
-      pointerId: event.pointerId,
-      stacked: stackedLayout,
-      panelLeft: panelBounds.left,
-      panelTop: panelBounds.top,
-      maxSize: stackedLayout
-        ? Math.max(130, panelBounds.height - 180)
-        : Math.max(190, panelBounds.width - 240),
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    document.body.classList.add(
-      stackedLayout ? "files-resizing-row" : "files-resizing",
-    );
-  };
-
-  const resizeSidebar = (event) => {
-    const resize = sidebarResizeRef.current;
-    if (!resize || resize.pointerId !== event.pointerId) return;
-    const nextSize = resize.stacked
-      ? event.clientY - resize.panelTop
-      : event.clientX - resize.panelLeft;
-    if (resize.stacked) {
-      setSidebarHeight(Math.max(130, Math.min(resize.maxSize, nextSize)));
-    } else {
-      setSidebarWidth(Math.max(190, Math.min(resize.maxSize, nextSize)));
-    }
-  };
-
-  const stopSidebarResize = (event) => {
-    const resize = sidebarResizeRef.current;
-    if (!resize || resize.pointerId !== event.pointerId) return;
-    sidebarResizeRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    document.body.classList.remove("files-resizing", "files-resizing-row");
-  };
+  const { favorites, addFavorite, removeFavorite, isFavoritePath } =
+    useFavorites({
+      loadConfig: () => filesDep("loadConfig")(),
+      saveConfig: (config) => filesDep("saveConfig")(config),
+      homePath: filesDep("HOME"),
+    });
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const names = await filesDep("getWanixRoot")().readDir(path);
+      const names = await getRoot().readDir(path);
       const next = (Array.isArray(names) ? names : []).map((entry) => {
         const isDirectory = entry.endsWith("/");
         return { name: entry.replace(/\/$/, ""), isDirectory };
@@ -156,6 +135,19 @@ function FilesPanel() {
         Number(b.isDirectory) - Number(a.isDirectory) ||
         a.name.localeCompare(b.name)
       );
+      // Extension-less files are often WebAssembly binaries in this
+      // sandbox; sniff the \0asm header so they get the right icon.
+      await Promise.all(next.map(async (entry) => {
+        if (entry.isDirectory || entry.name.includes(".")) return;
+        try {
+          const data = await getRoot().readFile(
+            filesystemPathJoin(path, entry.name),
+          );
+          if (sniffWasmBytes(data)) entry.iconKind = "wasm";
+        } catch {
+          // leave the generic icon if the file cannot be read
+        }
+      }));
       setEntries(next);
       setStatus("");
     } catch (error) {
@@ -164,7 +156,43 @@ function FilesPanel() {
     } finally {
       setLoading(false);
     }
-  }, [path]);
+  }, [path, getRoot]);
+
+  const {
+    contextMenu,
+    setContextMenu,
+    menuRef,
+    openEntryFromMenu,
+    deleteEntry,
+    createInFolder,
+    startRenameEntry,
+    downloadEntry,
+  } = useFilesContextMenu({
+    getRoot,
+    setStatus,
+    openEntry: (entry) => openEditorEntry(entry, path),
+    navigateTo,
+    refresh,
+    clearFileSelection,
+    selectedPath,
+    beginCreateIn: (entry, kind) => {
+      setCreating(kind);
+      setEntryName("");
+      navigateTo(entry.path);
+    },
+    beginRename: (entry) => {
+      setRenameTarget(entry);
+      setCreating("rename-entry");
+      setEntryName(entry.name);
+    },
+  });
+
+  const { selectedInfo, setSelectedInfo, selectEntry } = useFilesSelection({
+    getRoot,
+    path,
+    setHighlighted,
+    setContextMenu,
+  });
 
   const {
     mounts,
@@ -174,14 +202,11 @@ function FilesPanel() {
     openMount,
   } = useLocalDirMounts({
     getKernel: useCallback(() => filesDep("wanixSystem")?._kernel, []),
-    getRoot: useCallback(() => filesDep("getWanixRoot")(), []),
+    getRoot,
     currentPath: path,
     parentPath: filesystemPathParent,
     onStatus: setStatus,
-    onNavigate: (nextPath) => {
-      setPath(nextPath);
-      clearFileSelection();
-    },
+    onNavigate: navigateTo,
     onRefresh: refresh,
   });
 
@@ -201,43 +226,23 @@ function FilesPanel() {
   }, [refresh, restoreMounts]);
 
   useEffect(() => {
-    setPathDraft(path === "." ? "/" : `/${path}`);
+    setPathDraft(path === "." ? "/" : `/${path.replace(/^\/+/, "")}`);
+    setHighlighted(null);
+    setContextMenu(null);
   }, [path]);
 
   const navigateToPath = () => {
-    const nextPath = normalizeFilesystemPath(pathDraft);
-    setPath(nextPath);
-    clearFileSelection();
+    navigateTo(normalizeFilesystemPath(pathDraft));
   };
 
-  const openEntry = async (entry) => {
-    const nextPath = filesystemPathJoin(path, entry.name);
-    if (entry.isDirectory) {
-      setPath(nextPath);
-      clearFileSelection();
+  const openEditorEntry = async (entry, currentPath) => {
+    const result = await openEntry(entry, currentPath);
+    if (result.isDirectory) {
+      navigateTo(result.path);
       return;
     }
-    try {
-      const data = await filesDep("getWanixRoot")().readFile(nextPath);
-      const previewType = getFilesystemPreviewType(nextPath);
-      setSelectedPath(nextPath);
-      if (previewType) {
-        const blob = new Blob([toFilesystemBytes(data)], {
-          type: previewType.mime,
-        });
-        setPreview({ ...previewType, blob, url: URL.createObjectURL(blob) });
-        setContents("");
-        setSavedContents("");
-      } else {
-        const text = decodeFilesystemText(data);
-        setPreview(null);
-        setContents(text);
-        setSavedContents(text);
-      }
-      setStatus("");
-    } catch (error) {
-      setStatus(error.message || "Unable to open this file.");
-    }
+    setSelectedInfo(null);
+    setStatus(result.error || "");
   };
 
   const createEntry = async () => {
@@ -248,7 +253,7 @@ function FilesPanel() {
     }
     try {
       const entryPath = filesystemPathJoin(path, name);
-      const root = filesDep("getWanixRoot")();
+      const root = getRoot();
       if (creating === "rename-file" && selectedPath) {
         await root.rename(
           selectedPath,
@@ -261,6 +266,15 @@ function FilesPanel() {
         const nextPath = filesystemPathJoin(filesystemPathParent(path), name);
         await root.rename(path, nextPath);
         setPath(nextPath);
+      } else if (creating === "rename-entry" && renameTarget) {
+        const nextPath = filesystemPathJoin(
+          filesystemPathParent(renameTarget.path),
+          name,
+        );
+        await root.rename(renameTarget.path, nextPath);
+        if (selectedPath === renameTarget.path) {
+          setSelectedPath(nextPath);
+        }
       } else if (creating === "folder") {
         await root.makeDir(entryPath);
       } else {
@@ -269,34 +283,25 @@ function FilesPanel() {
       setCreating(null);
       setEntryName("");
       await refresh();
-      if (creating === "file") await openEntry({ name, isDirectory: false });
+      if (creating === "file") {
+        await openEditorEntry({ name, isDirectory: false }, path);
+      }
     } catch (error) {
       setStatus(error.message || "Unable to create this entry.");
     }
   };
 
-  const saveFile = async () => {
-    if (!selectedPath) return;
-    try {
-      await filesDep("getWanixRoot")().writeFile(selectedPath, contents);
-      setSavedContents(contents);
-      await refresh();
-      setStatus("Saved.");
-    } catch (error) {
-      setStatus(error.message || "Unable to save this file.");
-    }
+  const saveFileHandler = async () => {
+    const result = await saveFile(selectedPath);
+    if (result.message) setStatus(result.message);
+    if (result.ok) await refresh();
   };
 
-  const removeFile = async () => {
+  const removeFileHandler = async () => {
     if (!selectedPath || !window.confirm(`Delete ${selectedPath}?`)) return;
-    try {
-      await filesDep("getWanixRoot")().remove(selectedPath);
-      clearFileSelection();
-      setStatus("Deleted.");
-      await refresh();
-    } catch (error) {
-      setStatus(error.message || "Unable to delete this file.");
-    }
+    const result = await removeFile(selectedPath);
+    if (result.message) setStatus(result.message);
+    if (result.ok) await refresh();
   };
 
   const removeDirectory = async () => {
@@ -305,9 +310,8 @@ function FilesPanel() {
     }
     try {
       const parent = filesystemPathParent(path);
-      await filesDep("getWanixRoot")().remove(path);
-      setPath(parent);
-      clearFileSelection();
+      await getRoot().remove(path);
+      navigateTo(parent);
       setStatus("Deleted empty folder.");
     } catch (error) {
       setStatus(error.message || "Only empty folders can be deleted here.");
@@ -318,7 +322,7 @@ function FilesPanel() {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
     try {
-      const root = filesDep("getWanixRoot")();
+      const root = getRoot();
       for (const file of files) {
         await root.writeFile(
           filesystemPathJoin(path, file.name),
@@ -336,18 +340,6 @@ function FilesPanel() {
     }
   };
 
-  const downloadFile = () => {
-    if (!selectedPath) return;
-    const link = document.createElement("a");
-    const blob = preview?.blob ||
-      new Blob([contents], { type: "text/plain;charset=utf-8" });
-    link.href = URL.createObjectURL(blob);
-    link.download = selectedPath.split("/").pop() || "download";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 0);
-  };
-
-  const dirty = selectedPath && !preview && contents !== savedContents;
   return React.createElement(
     "div",
     {
@@ -358,34 +350,39 @@ function FilesPanel() {
         "--files-sidebar-height": `${sidebarHeight}px`,
       },
     },
+    React.createElement(FilesTopbar, {
+      path,
+      displayPath: selectedPath || selectedInfo?.path || path,
+      pathDraft,
+      loading,
+      onPathDraftChange: setPathDraft,
+      onNavigate: navigateToPath,
+      onBreadcrumbNavigate: navigateTo,
+      onParent: () => navigateTo(filesystemPathParent(path)),
+      onRefresh: refresh,
+      onUpload: () => fileInputRef.current?.click(),
+      onNewFile: () => {
+        setCreating("file");
+        setEntryName("");
+      },
+      onNewFolder: () => {
+        setCreating("folder");
+        setEntryName("");
+      },
+      onRenameFolder: () => {
+        setCreating("rename-folder");
+        setEntryName(path.split("/").pop() || "");
+      },
+      onDeleteFolder: removeDirectory,
+    }),
     React.createElement(
       "section",
       { className: "files-sidebar" },
-      React.createElement(FilesToolbar, {
-        pathDraft,
-        path,
-        loading,
-        onPathDraftChange: setPathDraft,
-        onNavigate: navigateToPath,
-        onParent: () => {
-          setPath(filesystemPathParent(path));
-          clearFileSelection();
-        },
-        onRefresh: refresh,
-        onUpload: () => fileInputRef.current?.click(),
-        onNewFile: () => {
-          setCreating("file");
-          setEntryName("");
-        },
-        onNewFolder: () => {
-          setCreating("folder");
-          setEntryName("");
-        },
-        onRenameFolder: () => {
-          setCreating("rename-folder");
-          setEntryName(path.split("/").pop() || "");
-        },
-        onDeleteFolder: removeDirectory,
+      React.createElement(FavoritesSidebar, {
+        favorites,
+        currentPath: path,
+        onOpen: navigateTo,
+        onRemove: removeFavorite,
       }),
       React.createElement(VolumesSidebar, {
         mounts,
@@ -410,11 +407,22 @@ function FilesPanel() {
         }),
       React.createElement(FilesEntryList, {
         entries,
-        selectedPath,
+        selectedPath: highlighted,
         path,
         loading,
         status,
-        onOpen: openEntry,
+        finePointer,
+        onSelect: selectEntry,
+        onOpen: (entry) => openEditorEntry(entry, path),
+        onContextMenu: finePointer
+          ? (entry, x, y) => {
+            setContextMenu({
+              x: Math.max(4, Math.min(x, window.innerWidth - 180)),
+              y: Math.max(4, Math.min(y, window.innerHeight - 220)),
+              entry: { ...entry, path: filesystemPathJoin(path, entry.name) },
+            });
+          }
+          : null,
       }),
     ),
     React.createElement(FilesResizer, {
@@ -424,20 +432,40 @@ function FilesPanel() {
       onResizeStart: startSidebarResize,
       onResizeMove: resizeSidebar,
       onResizeStop: stopSidebarResize,
+      onResizeBy: resizeSidebarBy,
+    }),
+    React.createElement(FilesContextMenu, {
+      menu: contextMenu,
+      menuRef,
+      onOpen: openEntryFromMenu,
+      onNewFile: (entry) => createInFolder(entry, "file"),
+      onNewFolder: (entry) => createInFolder(entry, "folder"),
+      onDownload: downloadEntry,
+      onRename: startRenameEntry,
+      onDelete: deleteEntry,
+      onAddFavorite: (entry) => {
+        addFavorite(entry);
+        setContextMenu(null);
+      },
+      isFavorite: contextMenu
+        ? isFavoritePath(contextMenu.entry.path)
+        : false,
     }),
     React.createElement(FilesEditorPane, {
       selectedPath,
       preview,
       contents,
+      binary,
       dirty,
+      info: selectedInfo,
       status,
       onDownload: downloadFile,
-      onSave: saveFile,
+      onSave: saveFileHandler,
       onRename: () => {
         setCreating("rename-file");
         setEntryName(selectedPath.split("/").pop() || "");
       },
-      onDelete: removeFile,
+      onDelete: removeFileHandler,
       onChange: setContents,
     }),
   );

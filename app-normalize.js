@@ -168,6 +168,15 @@ export function normalizeShellConfig(config) {
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
     wagiDogEnabled: config?.wagiDogEnabled === true,
+    favorites: Array.isArray(config?.favorites)
+      ? config.favorites.filter(
+        (favorite) =>
+          favorite &&
+          typeof favorite === "object" &&
+          typeof favorite.path === "string" &&
+          typeof favorite.label === "string"
+      )
+      : undefined,
     collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)
       ? [
         ...new Set(config.collapsedLauncherItems.filter((component) =>
