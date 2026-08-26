@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useLocalDirMounts,
   VolumesSidebar,
-} from "./files-mounts.js?v=20260826.17";
+} from "./files-mounts.js?v=20260826.21";
 import {
   FilesCreateForm,
   FilesEditorPane,
@@ -29,17 +29,17 @@ import {
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "./files-parts.js?v=20260826.17";
+} from "./files-parts.js?v=20260826.21";
 import {
   FilesContextMenu,
   FavoritesSidebar,
-} from "./files-ui.js?v=20260826.17";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.17";
-import { useFilesEditor } from "./files-editor.js?v=20260826.17";
-import { sniffWasmBytes } from "./files-editor.js?v=20260826.17";
-import { useFilesSidebarResize } from "./files-resize.js?v=20260826.17";
-import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.17";
-import { useFavorites } from "./files-favorites.js?v=20260826.17";
+} from "./files-ui.js?v=20260826.21";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.21";
+import { useFilesEditor } from "./files-editor.js?v=20260826.21";
+import { sniffWasmBytes } from "./files-editor.js?v=20260826.21";
+import { useFilesSidebarResize } from "./files-resize.js?v=20260826.21";
+import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.21";
+import { useFavorites } from "./files-favorites.js?v=20260826.21";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
@@ -356,6 +356,14 @@ function FilesPanel() {
       pathDraft,
       loading,
       onPathDraftChange: setPathDraft,
+      // Sync the draft from the breadcrumb's display path when entering
+      // edit mode: the breadcrumb may show the selected entry's path
+      // (e.g. /opfs/home) while `path` (and the stale draft) still point
+      // at the current directory (/opfs).
+      onStartEdit: () => {
+        const target = selectedPath || selectedInfo?.path || path;
+        setPathDraft(target === "." ? "/" : `/${target.replace(/^\/+/, "")}`);
+      },
       onNavigate: navigateToPath,
       onBreadcrumbNavigate: navigateTo,
       onParent: () => navigateTo(filesystemPathParent(path)),
@@ -467,6 +475,9 @@ function FilesPanel() {
       },
       onDelete: removeFileHandler,
       onChange: setContents,
+      onOpenChild: (child) => {
+        navigateTo(filesystemPathJoin(selectedInfo.path, child.name));
+      },
     }),
   );
 }

@@ -4,15 +4,19 @@
 // excerpt, or metadata for binary files). Split out of files.js so the
 // panel module stays under the 500-line rule.
 import { useEffect, useRef, useState } from "react";
-import { filesystemPathJoin } from "./files-parts.js?v=20260826.17";
+import { filesystemPathJoin } from "./files-parts.js?v=20260826.21";
 import {
   getFilesystemPreviewType,
   isBinaryData,
   sniffWasmBytes,
   toFilesystemBytes,
-} from "./files-editor.js?v=20260826.17";
+} from "./files-editor.js?v=20260826.21";
 
 // === Selection metadata (single-click info panel) ===
+
+// Cap the directory-children preview so huge folders do not render
+// thousands of rows; the info pane reports the full count separately.
+const MAX_INFO_CHILDREN = 50;
 
 export function useFilesSelection({ getRoot, path, setHighlighted, setContextMenu }) {
   const [selectedInfo, setSelectedInfo] = useState(null);
@@ -34,10 +38,21 @@ export function useFilesSelection({ getRoot, path, setHighlighted, setContextMen
     try {
       const stat = await getRoot().stat(nextPath);
       let entriesCount = null;
+      let children = null;
+      let childrenTotal = null;
       if (entry.isDirectory) {
         try {
-          const names = await getRoot().readDir(nextPath);
-          entriesCount = (Array.isArray(names) ? names : []).length;
+          const rawNames = await getRoot().readDir(nextPath);
+          const names = Array.isArray(rawNames) ? rawNames : [];
+          entriesCount = names.length;
+          childrenTotal = names.length;
+          children = names.map((name) => {
+            const isDirectory = name.endsWith("/");
+            return { name: name.replace(/\/$/, ""), isDirectory };
+          }).sort((a, b) =>
+            Number(b.isDirectory) - Number(a.isDirectory) ||
+            a.name.localeCompare(b.name)
+          ).slice(0, MAX_INFO_CHILDREN);
         } catch {
           // stat info is still useful without the item count
         }
@@ -77,6 +92,8 @@ export function useFilesSelection({ getRoot, path, setHighlighted, setContextMen
         modTime: stat?.ModTime ?? null,
         previewKind: previewType ? previewType.kind : null,
         entries: entriesCount,
+        children,
+        childrenTotal,
         iconKind,
         preview,
         textPreview,
@@ -88,6 +105,8 @@ export function useFilesSelection({ getRoot, path, setHighlighted, setContextMen
         modTime: null,
         previewKind: null,
         entries: null,
+        children: null,
+        childrenTotal: null,
         iconKind: null,
         preview: null,
         textPreview: null,

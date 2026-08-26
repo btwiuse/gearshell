@@ -5,7 +5,7 @@
 // files.js stays under the 500-line rule; all filesystem access goes
 // through getRoot().
 import { useCallback, useEffect, useState } from "react";
-import { filesystemPathJoin } from "./files-parts.js?v=20260826.17";
+import { filesystemPathJoin } from "./files-parts.js?v=20260826.21";
 
 // === File helpers (preview-type detection + byte conversion) ===
 // Shared with files-context-menu.js so both modules treat bytes and

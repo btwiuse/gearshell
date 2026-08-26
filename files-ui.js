@@ -199,7 +199,7 @@ const PREVIEW_KIND_LABELS = {
   pdf: "PDF",
 };
 
-export function FilesInfoPane({ info }) {
+export function FilesInfoPane({ info, onOpenChild }) {
   if (!info) return null;
   const Icon = getEntryIcon(info.name, info.isDirectory, info.iconKind);
   const pathText = `/${String(info.path).replace(/^\/+/, "")}`;
@@ -242,6 +242,40 @@ export function FilesInfoPane({ info }) {
         "pre",
         { className: "files-info-text-preview" },
         info.textPreview,
+      )
+      : info.isDirectory && info.children
+      ? React.createElement(
+        "div",
+        { className: "files-info-children" },
+        info.children.map((child) => {
+          const ChildIcon = getEntryIcon(
+            child.name,
+            child.isDirectory,
+            child.iconKind,
+          );
+          return React.createElement(
+            "button",
+            {
+              key: child.name,
+              type: "button",
+              className: child.isDirectory
+                ? "files-info-child dir"
+                : "files-info-child",
+              title: child.isDirectory ? `${child.name}/` : child.name,
+              onClick: onOpenChild
+                ? () => onOpenChild(child)
+                : undefined,
+            },
+            React.createElement(ChildIcon, { size: 13, "aria-hidden": true }),
+            React.createElement("span", null, child.name),
+          );
+        }),
+        info.childrenTotal > info.children.length &&
+          React.createElement(
+            "p",
+            { className: "files-info-children-more" },
+            `… and ${info.childrenTotal - info.children.length} more`,
+          ),
       )
       : React.createElement(
         "div",

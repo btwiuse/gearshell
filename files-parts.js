@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { FilesInfoPane, getEntryIcon } from "./files-ui.js?v=20260826.17";
+import { FilesInfoPane, getEntryIcon } from "./files-ui.js?v=20260826.21";
 
 // === Path helpers (shared by the panel and the mount sidebar) ===
 
@@ -106,6 +106,7 @@ export function FilesEditorPane({
   onRename,
   onDelete,
   onChange,
+  onOpenChild,
 }) {
   return React.createElement(
     "section",
@@ -258,7 +259,7 @@ export function FilesEditorPane({
             }),
         )
       : info
-      ? React.createElement(FilesInfoPane, { info })
+      ? React.createElement(FilesInfoPane, { info, onOpenChild })
       : React.createElement(
         "div",
         { className: "files-editor-empty" },

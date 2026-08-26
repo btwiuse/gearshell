@@ -12,7 +12,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { FilesBreadcrumb } from "./files-ui.js?v=20260826.17";
+import { FilesBreadcrumb } from "./files-ui.js?v=20260826.21";
 
 export function FilesTopbar({
   path,
@@ -29,10 +29,12 @@ export function FilesTopbar({
   onNewFolder,
   onRenameFolder,
   onDeleteFolder,
+  onStartEdit,
 }) {
   const [editing, setEditing] = useState(false);
   const openEditor = (event) => {
     if (event.target.classList.contains("files-breadcrumb-current")) {
+      onStartEdit();
       setEditing(true);
     }
   };
@@ -125,7 +127,10 @@ export function FilesTopbar({
             className: "files-topbar-edit",
             title: "Edit path",
             "aria-label": "Edit path",
-            onClick: () => setEditing(true),
+            onClick: () => {
+              onStartEdit();
+              setEditing(true);
+            },
           }, React.createElement(Pencil, { size: 13, "aria-hidden": true })),
         ),
     ),
