@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { FilesInfoPane, FavoritesSidebar } from "./files-ui.js?v=20260826.26";
+import { FilesInfoPane, FavoritesSidebar } from "./files-ui.js?v=20260826.29";
 import { VolumesSidebar } from "./files-mounts.js?v=20260826.26";
 
 // === Path helpers (shared by the panel and the mount sidebar) ===
