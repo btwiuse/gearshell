@@ -441,6 +441,86 @@ async function main() {
       console.log(logs.slice(0, 40).join("\n"));
       break;
     }
+    case "repro": {
+      await ensureChrome();
+      await goto(APP);
+      await waitFor("!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true", 180000);
+      await waitFor("!!document.querySelector('button[aria-label=\"Mount local directory\"]')", 60000);
+      const logs = [];
+      ws.on("message", (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.method === "Runtime.consoleAPICalled") {
+          const text = msg.params.args.map((a) => a.value ?? a.description ?? a.type).join(" ");
+          logs.push(text);
+        }
+      });
+      await evalJS(`(() => {
+        window.__realShowDirectoryPicker = window.showDirectoryPicker;
+        window.showDirectoryPicker = async (opts) => {
+          const root = await navigator.storage.getDirectory();
+          const sub = await root.getDirectoryHandle("repro-dir", { create: true });
+          Object.defineProperty(sub, "name", { value: "repro-dir" });
+          return sub;
+        };
+        return "stubbed-with-subdir";
+      })()`);
+      await evalJS(`(() => { document.querySelector('button[aria-label="Mount local directory"]').click(); return "clicked"; })()`);
+      await new Promise((r) => setTimeout(r, 4000));
+      const status = await evalJS(`(() => {
+        const st = document.querySelector(".files-status");
+        const vols = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
+        return JSON.stringify({ status: st?.textContent || "", vols });
+      })()`);
+      console.log("PANEL:", status);
+      console.log("CONSOLE (filtered):\n" + logs.filter((l) => /panic|fsa|localdir|setupNamespace|mount local/i.test(l)).join("\n").slice(0, 4000));
+      break;
+    }
+    case "realpick": {
+      const dir = process.argv[3] || "/Users/gear/Documents/GitHub/wanix";
+      await ensureChrome();
+      await goto(APP);
+      await waitFor("!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true", 180000);
+      await waitFor("!!document.querySelector('button[aria-label=\"Mount local directory\"]')", 60000);
+      await send("Page.setInterceptFileChooserDialog", { enabled: true });
+      const chooser = new Promise((resolve) => {
+        ws.on("message", (data) => {
+          const msg = JSON.parse(data.toString());
+          if (msg.method === "Page.fileChooserOpened") resolve(msg.params);
+        });
+      });
+      const logs = [];
+      ws.on("message", (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.method === "Runtime.consoleAPICalled") {
+          const text = msg.params.args.map((a) => a.value ?? a.description ?? a.type).join(" ");
+          logs.push(text);
+        }
+      });
+      await evalJS(`(() => { window.__pickerInvoked = 0; const orig = window.showDirectoryPicker; window.showDirectoryPicker = async (...a) => { window.__pickerInvoked++; return orig(...a); }; return 1; })()`);
+      const rect = await evalJS(`(() => {
+        const r = document.querySelector('button[aria-label="Mount local directory"]').getBoundingClientRect();
+        return JSON.stringify({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+      })()`);
+      const { x, y } = JSON.parse(rect);
+      await send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+      await send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+      await new Promise((r) => setTimeout(r, 1500));
+      const invoked = await evalJS("window.__pickerInvoked");
+      console.log("picker invoked:", invoked);
+      const params = await Promise.race([chooser, new Promise((r) => setTimeout(() => r(null), 8000))]);
+      if (!params) { console.log("NO CHOOSER EVENT"); break; }
+      console.log("chooser mode:", params.mode, "backendNodeId:", params.backendNodeId);
+      await send("Page.handleFileChooser", { action: "accept", files: [dir] });
+      await new Promise((r) => setTimeout(r, 6000));
+      const status = await evalJS(`(() => {
+        const st = document.querySelector(".files-status");
+        const vols = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
+        return JSON.stringify({ status: st?.textContent || "", vols });
+      })()`);
+      console.log("PANEL:", status);
+      console.log("CONSOLE (filtered):\n" + logs.filter((l) => /panic|fsa|localdir|setupNamespace|mount local|valueof/i.test(l)).join("\n").slice(0, 5000));
+      break;
+    }
     case "screenshot": {
       await ensureChrome();
       await screenshot(args[0] || "/tmp/gearshell.png");
