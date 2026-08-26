@@ -14,13 +14,13 @@ import {
 import {
   HOME,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260827.1";
+} from "./app-constants.js?v=20260827.2";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
 } from "./app-terminal-profiles.js?v=20260826.2";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260827.1";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260827.2";
 import { wanixSystem } from "./app-state.js?v=20260826.2";
 import { createWanixBindElement } from "./app-wanix.js?v=20260826.2";
 import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.2";

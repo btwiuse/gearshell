@@ -256,9 +256,9 @@ export const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 export const WANIX_RUNTIME = {
-  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.11",
+  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.12",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.11/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.12/dist/wanix.min.js",
 };
 
 export const DEFAULT_SYSTEM_CONFIG = {
