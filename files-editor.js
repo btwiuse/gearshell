@@ -373,6 +373,7 @@ export function useFilesActions({
   };
 
   return {
+    fileInputRef,
     createEntry,
     saveFileHandler,
     removeFileHandler,

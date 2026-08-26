@@ -22,13 +22,13 @@ import {
   SettingsPanel,
   TerminalPresetIconPicker,
 } from "./settings.js?v=20260826.9";
-import { FilesPanel } from "./files.js?v=20260826.40";
+import { FilesPanel } from "./files.js?v=20260826.42";
 import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.9";
 import {
   addRuntimePanel,
   initRuntime,
   RuntimePanel,
-} from "./runtime.js?v=20260812.30";
+} from "./runtime.js?v=20260826.42";
 import { addDeckPanel, DeckPanel, initDeck } from "./deck.js?v=20260812.29";
 import {
   addFallbackPanel,

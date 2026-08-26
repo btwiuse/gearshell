@@ -255,7 +255,7 @@ export function VolumesSidebar({
 }) {
   return React.createElement(
     "div",
-    { className: "files-volumes" },
+    { className: "files-section" },
     React.createElement(
       "div",
       { className: "files-volumes-header" },
@@ -263,7 +263,7 @@ export function VolumesSidebar({
         "button",
         {
           type: "button",
-          className: "files-sidebar-toggle",
+          className: "files-sidebar-toggle files-section-header",
           onClick: onToggle,
           "aria-expanded": !collapsed,
           title: collapsed ? "Expand Volumes" : "Collapse Volumes",

@@ -48,7 +48,6 @@
 .files-toolbar-actions button:hover:not(:disabled), .files-create button:hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
 .files-toolbar-actions button:disabled { opacity: 0.45; cursor: default; }
 .files-upload-input { display: none; }
-.files-volumes { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 8px; border-bottom: 1px solid #30363d; }
 .files-section { display: flex; flex-direction: column; min-height: 0; border-bottom: 1px solid #30363d; }
 .files-section-expanded { flex: 1; }
 .files-sidebar-toggle { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 3px 8px; border: 0; border-radius: 4px; background: transparent; color: #8b949e; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; cursor: pointer; }
@@ -58,12 +57,12 @@
 .files-section-header { width: 100%; text-align: left; }
 .files-volumes-header { display: flex; align-items: center; gap: 4px; }
 .files-volumes-header .files-sidebar-toggle { flex: 1; justify-content: flex-start; }
-.files-favorites { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 8px; border-bottom: 1px solid #30363d; }
-.files-favorites-list { display: flex; flex-direction: column; gap: 1px; max-height: 40vh; overflow-y: auto; }
-.files-favorite { display: flex; align-items: center; gap: 2px; border-radius: 4px; }
-.files-favorite:hover { background: #21262d; }
-.files-favorite-active { background: rgba(88, 166, 255, 0.12); }
-.files-favorite-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 0; background: transparent; color: #c9d1d9; cursor: pointer; text-align: left; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-favorites-list { display: flex; flex-direction: column; gap: 1px; max-height: 40vh; overflow-y: auto; padding: 4px 0; }
+.files-favorite { display: flex; align-items: center; gap: 2px; min-height: 26px; padding: 3px 7px; border: 1px solid transparent; border-radius: 4px; }
+.files-favorite:hover { border-color: #30363d; background: #21262d; }
+.files-favorite-active { border-color: #1f6feb; background: #1f2d40; }
+.files-favorite-active .files-favorite-name { color: #e6edf3; }
+.files-favorite-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: #c9d1d9; cursor: pointer; text-align: left; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .files-favorite-name svg { flex: 0 0 auto; color: #58a6ff; }
 .files-favorite-active .files-favorite-name svg { color: #f0f6fc; }
 .files-favorite-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -73,11 +72,11 @@
 .files-volumes-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; }
 .files-volumes-header button:not(.files-sidebar-toggle) { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #8b949e; cursor: pointer; }
 .files-volumes-header button:not(.files-sidebar-toggle):hover { border-color: #30363d; background: #21262d; color: #c9d1d9; }
-.files-volumes-empty { margin: 2px 6px 4px; font-size: 11px; color: #6e7681; }
-.files-volumes-list { display: flex; flex-direction: column; gap: 1px; max-height: 140px; overflow-y: auto; }
-.files-volume { display: flex; align-items: center; gap: 2px; border-radius: 4px; }
-.files-volume:hover { background: #21262d; }
-.files-volume-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 0; background: transparent; color: #c9d1d9; cursor: pointer; text-align: left; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.files-volumes-empty { padding: 2px 8px; margin: 0; font-size: 12px; color: #6e7681; }
+.files-volumes-list { display: flex; flex-direction: column; gap: 1px; max-height: 140px; overflow-y: auto; padding: 4px 0; }
+.files-volume { display: flex; align-items: center; gap: 2px; min-height: 26px; padding: 3px 7px; border: 1px solid transparent; border-radius: 4px; }
+.files-volume:hover { border-color: #30363d; background: #21262d; }
+.files-volume-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: #c9d1d9; cursor: pointer; text-align: left; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .files-volume-name svg { flex: 0 0 auto; color: #58a6ff; }
 .files-volume-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .files-volume-off .files-volume-name { color: #8b949e; }

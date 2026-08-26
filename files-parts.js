@@ -14,8 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { FilesInfoPane } from "./files-info.js?v=20260826.38";
-import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.38";
-import { VolumesSidebar } from "./files-mounts.js?v=20260826.38";
+import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.42";
+import { VolumesSidebar } from "./files-mounts.js?v=20260826.42";
 
 // === Right pane (editor / directory grid preview) ===
 // Composes the editor pane with a fallback "current directory" info

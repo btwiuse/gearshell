@@ -34,29 +34,25 @@ export function FavoritesSidebar({
 }) {
   return React.createElement(
     "div",
-    { className: "files-favorites" },
+    { className: "files-section" },
     React.createElement(
-      "div",
-      { className: "files-volumes-header" },
+      "button",
+      {
+        type: "button",
+        className: "files-sidebar-toggle files-section-header",
+        onClick: onToggle,
+        "aria-expanded": !collapsed,
+        title: collapsed ? "Expand Favorites" : "Collapse Favorites",
+      },
+      React.createElement(ChevronRight, {
+        size: 13,
+        className: collapsed ? "" : "open",
+        "aria-hidden": true,
+      }),
       React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "files-sidebar-toggle",
-          onClick: onToggle,
-          "aria-expanded": !collapsed,
-          title: collapsed ? "Expand Favorites" : "Collapse Favorites",
-        },
-        React.createElement(ChevronRight, {
-          size: 13,
-          className: collapsed ? "" : "open",
-          "aria-hidden": true,
-        }),
-        React.createElement(
-          "span",
-          { className: "files-volumes-title" },
-          "Favorites",
-        ),
+        "span",
+        { className: "files-volumes-title" },
+        "Favorites",
       ),
     ),
     !collapsed &&

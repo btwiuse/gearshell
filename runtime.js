@@ -16,7 +16,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Activity, RefreshCw } from "lucide-react";
-import { loadStoredMounts } from "./files-mounts.js?v=20260826.38";
+import { loadStoredMounts } from "./files-mounts.js?v=20260826.42";
 
 let __runtimeDeps = null;
 export function initRuntime(dependencies) {

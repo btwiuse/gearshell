@@ -19,8 +19,8 @@
 
 import React, { useCallback, useRef } from "react";
 
-import { useFilesEditor } from "./files-editor.js?v=20260826.26";
-import { useFilesSelection } from "./files-context-menu.js?v=20260826.36";
+import { useFilesEditor } from "./files-editor.js?v=20260826.42";
+import { useFilesSelection } from "./files-context-menu.js?v=20260826.42";
 import { useFavorites } from "./files-favorites.js?v=20260826.36";
 import { useFilesTree } from "./files-tree.js?v=20260826.38";
 import { useFilesSidebarResize } from "./files-resize.js?v=20260826.26";
@@ -34,7 +34,7 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.40";
+} from "./files-panel-hooks.js?v=20260826.42";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
