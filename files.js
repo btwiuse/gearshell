@@ -32,7 +32,7 @@ import {
 import {
   FilesContextMenu,
   FavoritesSidebar,
-} from "./files-ui.js?v=20260826.26";
+} from "./files-ui.js?v=20260826.29";
 import { FilesTopbar } from "./files-topbar.js?v=20260826.26";
 import {
   sniffWasmBytes,
@@ -42,7 +42,7 @@ import {
 import { useFilesSidebarResize } from "./files-resize.js?v=20260826.26";
 import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.26";
 import { useFavorites } from "./files-favorites.js?v=20260826.26";
-import { FilesTree, useFilesTree } from "./files-tree.js?v=20260826.27";
+import { FilesTree, useFilesTree } from "./files-tree.js?v=20260826.29";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
@@ -114,13 +114,17 @@ function FilesPanel() {
   }, []);
 
   const navigateTo = (nextPath) => {
-    // Re-clicking the folder you are already in is a no-op (favorites,
-    // volumes, breadcrumb): keep the right-pane preview instead of
-    // re-navigating and flashing "Empty folder." while it reloads.
-    if (normalizeFilesystemPath(nextPath) === normalizeFilesystemPath(path)) {
-      return;
-    }
-    setPath(nextPath);
+    // Canonicalize first: favorites and volumes pass absolute paths
+    // ("/tmp/d29"), while tree/breadcrumb use relative ones ("tmp/d29").
+    // Storing the raw value left a leading slash that never matched the
+    // tree's normalized node paths, so the current node lost its
+    // highlight. Re-clicking the folder you are already in is a no-op
+    // (favorites, volumes, breadcrumb): keep the right-pane preview
+    // instead of re-navigating and flashing "Empty folder." while it
+    // reloads.
+    const target = normalizeFilesystemPath(nextPath);
+    if (target === normalizeFilesystemPath(path)) return;
+    setPath(target);
     clearFileSelection();
     setHighlighted(null);
     setSelectedInfo(null);
@@ -361,8 +365,11 @@ function FilesPanel() {
         selectedPath: highlighted,
         finePointer,
         onToggle: tree.toggleDir,
-        onSelect: (entry) =>
-          selectEntry(entry, filesystemPathParent(entry.path)),
+        onSelect: (entry) => {
+          // Selecting a file shows its preview, closing any open editor.
+          clearFileSelection();
+          selectEntry(entry, filesystemPathParent(entry.path));
+        },
         onOpen: (entry) =>
           openEditorEntry(entry, filesystemPathParent(entry.path)),
         onContextMenu: finePointer
@@ -426,6 +433,7 @@ function FilesPanel() {
         if (child.isDirectory) {
           navigateTo(filesystemPathJoin(base, child.name));
         } else {
+          clearFileSelection();
           selectEntry(child, base);
         }
       },

@@ -134,8 +134,13 @@ export function FavoritesSidebar({ favorites, currentPath, onOpen, onRemove }) {
         { className: "files-favorites-list" },
         favorites.map((favorite) => {
           const FavoriteIcon = getFavoriteIcon(favorite.id);
-          const active = currentPath === favorite.path ||
-            (favorite.path !== "." && currentPath.startsWith(`${favorite.path}/`));
+          // Favorite paths may carry a leading slash while the panel's
+          // current path is canonical; compare normalized forms so the
+          // active highlight works either way.
+          const cur = String(currentPath).replace(/^\/+/, "");
+          const fav = String(favorite.path).replace(/^\/+/, "");
+          const active = cur === fav ||
+            (fav !== "." && cur.startsWith(`${fav}/`));
           return React.createElement(
             "div",
             {

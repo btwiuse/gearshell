@@ -9,7 +9,7 @@ import {
   filesystemPathJoin,
   normalizeFilesystemPath,
 } from "./files-parts.js?v=20260826.26";
-import { getEntryIcon } from "./files-ui.js?v=20260826.26";
+import { getEntryIcon } from "./files-ui.js?v=20260826.29";
 
 export const TREE_ROOT = ".";
 
@@ -253,6 +253,20 @@ export function FilesTree({
   onSelect,
   onContextMenu,
 }) {
+  const treeRef = useRef(null);
+  // Reveal the active node: after navigation (favorites, volumes,
+  // breadcrumb, topbar input) the tree expands the ancestor chain, but
+  // the target may sit above or below the visible area. Scroll it into
+  // view once its children have rendered; "nearest" keeps the current
+  // position unless the node is actually off-screen.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      treeRef.current?.querySelector(".files-tree-node.current")
+        ?.scrollIntoView({ block: "nearest" });
+    }, 0);
+    return () => clearTimeout(id);
+  }, [path, tree.childrenMap, tree.expanded]);
+
   const rootChildren = tree.childrenMap.get(TREE_ROOT)?.children;
   if (!rootChildren) {
     return React.createElement(
@@ -267,7 +281,7 @@ export function FilesTree({
   }
   return React.createElement(
     "div",
-    { className: "files-tree", role: "tree" },
+    { ref: treeRef, className: "files-tree", role: "tree" },
     rootChildren.map((child) =>
       React.createElement(TreeNode, {
         key: child.name,
