@@ -16,6 +16,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Activity, RefreshCw } from "lucide-react";
+import { loadStoredMounts } from "./files-mounts.js?v=20260826.29";
 
 let __runtimeDeps = null;
 export function initRuntime(dependencies) {
@@ -62,6 +63,7 @@ function RuntimePanel() {
       kernelTaskEntries = String((Array.isArray(entries) ? entries : []).filter((entry) => entry !== 'new' && entry !== 'self').length);
     } catch { /* The system may still be starting or the task namespace may be unavailable. */ }
     const activeWorkspaceTasks = taskSessions.filter((session) => session.status === 'running' || session.status === 'starting').length;
+    const fsaMounts = await loadStoredMounts();
     setSnapshot({
       ready: runtimeDep("systemReady"),
       moduleUrl: workspace.runtime.moduleUrl || runtimeDep("WANIX_RUNTIME").moduleUrl,
@@ -71,6 +73,7 @@ function RuntimePanel() {
       taskMounts: workspace.binds.length,
       systemBinds: workspace.system.binds,
       taskBinds: workspace.binds,
+      fsaMounts,
       configuredTasks: workspace.tasks.length,
       terminals: runtimeDep("terminalSessions").size,
       activeTasks: runtimeDep("terminalSessions").size + activeWorkspaceTasks,
@@ -121,6 +124,22 @@ function RuntimePanel() {
         ? React.createElement('p', { className: 'runtime-binds-empty' }, 'No task-level mounts.')
         : snapshot.taskBinds.map((bind) =>
           React.createElement(BindRow, { key: bind.id, bind })
+        ),
+    ),
+    React.createElement('section', { className: 'runtime-binds' },
+      React.createElement('h3', null, `Local directory mounts (${snapshot.fsaMounts.length})`),
+      snapshot.fsaMounts.length === 0
+        ? React.createElement('p', { className: 'runtime-binds-empty' }, 'No local directory (fsa) mounts. Add one from the Files panel Volumes list.')
+        : snapshot.fsaMounts.map((mount) =>
+          React.createElement(BindRow, {
+            key: mount.id,
+            bind: {
+              id: mount.id,
+              type: 'fsa',
+              dst: mount.dst,
+              src: mount.name || mount.dst,
+            },
+          })
         ),
     ),
     React.createElement('section', { className: 'runtime-source' },
