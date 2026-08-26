@@ -23,7 +23,7 @@ import {
   addRuntimePanel,
   initRuntime,
   RuntimePanel,
-} from "./runtime.js?v=20260812.28";
+} from "./runtime.js?v=20260812.29";
 import { addDeckPanel, DeckPanel, initDeck } from "./deck.js?v=20260812.29";
 import {
   addFallbackPanel,

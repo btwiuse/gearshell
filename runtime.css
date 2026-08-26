@@ -17,6 +17,19 @@
 .runtime-grid dd { color: #c9d1d9; }
 .runtime-grid dd.ready { color: #3fb950; }
 .runtime-grid dt:nth-last-of-type(1), .runtime-grid dd:last-child { border-bottom: 0; }
+.runtime-binds { max-width: 680px; margin: 18px auto 0; }
+.runtime-binds h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #8b949e; }
+.runtime-binds-empty { margin: 0; color: #6e7681; font-size: 12px; }
+.runtime-bind { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto minmax(0, 2fr) auto auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid #30363d; border-top: 0; background: #161b22; font-size: 12px; }
+.runtime-bind:first-of-type { border-top: 1px solid #30363d; border-radius: 4px 4px 0 0; }
+.runtime-bind:last-of-type { border-radius: 0 0 4px 4px; }
+.runtime-bind-type { padding: 1px 6px; border-radius: 999px; background: #21262d; color: #8b949e; font-size: 10px; text-align: center; text-transform: uppercase; }
+.runtime-bind-dst, .runtime-bind-src { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.runtime-bind-dst { color: #58a6ff; }
+.runtime-bind-src { color: #8b949e; }
+.runtime-bind-arrow { color: #6e7681; }
+.runtime-bind-mode, .runtime-bind-union { color: #6e7681; font: 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
 .runtime-source { display: grid; gap: 5px; max-width: 680px; margin: 16px auto 0; color: #8b949e; font-size: 12px; }
 .runtime-source code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9d1d9; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .runtime-panel { overflow: auto; padding: 22px; background: #0d1117; color: #c9d1d9; }

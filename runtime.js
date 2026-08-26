@@ -32,6 +32,25 @@ function runtimeDep(name) {
   return value;
 }
 
+function BindRow({ bind }) {
+  const src = bind.src || (bind.type === 'file' ? '(inline)' : '—');
+  return React.createElement('div', {
+    className: 'runtime-bind',
+    title: bind.type === 'file' ? (bind.content || '').slice(0, 200) : src,
+  },
+    React.createElement('span', { className: 'runtime-bind-type' }, bind.type),
+    React.createElement('code', { className: 'runtime-bind-dst' }, bind.dst),
+    React.createElement('span', { className: 'runtime-bind-arrow', 'aria-hidden': true }, '→'),
+    React.createElement('code', { className: 'runtime-bind-src' }, src),
+    bind.mode
+      ? React.createElement('span', { className: 'runtime-bind-mode' }, bind.mode)
+      : null,
+    bind.union && bind.union !== 'after'
+      ? React.createElement('span', { className: 'runtime-bind-union' }, bind.union)
+      : null,
+  );
+}
+
 function RuntimePanel() {
   const [snapshot, setSnapshot] = useState(null);
   const refresh = useCallback(async () => {
@@ -50,6 +69,8 @@ function RuntimePanel() {
       allowedOrigins: workspace.system.allowOrigins || 'None',
       systemMounts: workspace.system.binds.length,
       taskMounts: workspace.binds.length,
+      systemBinds: workspace.system.binds,
+      taskBinds: workspace.binds,
       configuredTasks: workspace.tasks.length,
       terminals: runtimeDep("terminalSessions").size,
       activeTasks: runtimeDep("terminalSessions").size + activeWorkspaceTasks,
@@ -88,6 +109,20 @@ function RuntimePanel() {
       React.createElement('dt', { key: `${label}-label` }, label),
       React.createElement('dd', { key: `${label}-value`, className: label === 'System' && snapshot.ready ? 'ready' : '' }, value),
     ])),
+    React.createElement('section', { className: 'runtime-binds' },
+      React.createElement('h3', null, `System mounts (${snapshot.systemMounts})`),
+      snapshot.systemBinds.map((bind) =>
+        React.createElement(BindRow, { key: bind.id, bind })
+      ),
+    ),
+    React.createElement('section', { className: 'runtime-binds' },
+      React.createElement('h3', null, `Task mounts (${snapshot.taskMounts})`),
+      snapshot.taskBinds.length === 0
+        ? React.createElement('p', { className: 'runtime-binds-empty' }, 'No task-level mounts.')
+        : snapshot.taskBinds.map((bind) =>
+          React.createElement(BindRow, { key: bind.id, bind })
+        ),
+    ),
     React.createElement('section', { className: 'runtime-source' },
       React.createElement('span', null, 'Runtime module'),
       React.createElement('code', { title: snapshot.moduleUrl }, snapshot.moduleUrl),
