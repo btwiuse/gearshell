@@ -167,8 +167,13 @@ function TreeNode({
         style: { "--tree-depth": depth },
         title: isDir ? `${node.name}/` : node.name,
         onClick: () => {
-          if (isDir) onOpen(node);
-          else if (finePointer) onSelect(node);
+          if (isDir) {
+            // Explorer behavior: a click on an already-open (current)
+            // folder toggles it closed instead of re-navigating, so the
+            // right-pane preview never refreshes for a no-op navigation.
+            if (isCurrent) onToggle(node.path);
+            else onOpen(node);
+          } else if (finePointer) onSelect(node);
           else onOpen(node);
         },
         onDoubleClick: isDir || !finePointer

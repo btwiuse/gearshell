@@ -42,7 +42,7 @@ import {
 import { useFilesSidebarResize } from "./files-resize.js?v=20260826.26";
 import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.26";
 import { useFavorites } from "./files-favorites.js?v=20260826.26";
-import { FilesTree, useFilesTree } from "./files-tree.js?v=20260826.26";
+import { FilesTree, useFilesTree } from "./files-tree.js?v=20260826.27";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
