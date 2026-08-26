@@ -120,8 +120,7 @@ export const PANEL_CREATION_OPTIONS = [
   { component: "rickroll", label: "Rick Roll", icon: Music2 },
 ];
 
-export function restoreSavedPanels(api) {
-  const panels = getSavedOpenPanels();
+function reserveMaxCrushRunnerId(panels) {
   // Make sure the Crush Runner id counter never collides with a
   // restored panel id. Legacy snapshots did not record panelId, so
   // lifting the counter past the largest id we can derive from any
@@ -136,41 +135,45 @@ export function restoreSavedPanels(api) {
     }
   }
   reserveCrushRunnerIds(maxCrushRunnerId);
-  for (const panel of panels) {
-    if (panel.component === "terminal") {
-      addTerminalPanelFromPanels(
-        api,
-        undefined,
-        panel.profile || getDefaultTerminalProfile(),
-      );
-    } else if (panel.component === "workbench") {
-      addWorkbenchPanelFromPanels(
-        api,
-        undefined,
-        panel.config || getWorkbenchPanelConfig(),
-      );
-    } else if (panel.component === "vm") {
-      addVmPanelFromPanels(api, undefined, panel.config || getVmPanelConfig());
-    } else if (panel.component === "task" && panel.task) {
-      addWorkspaceTaskPanelFromPanels(
-        api,
-        panel.task,
-        loadWorkspace(panel.workspaceId) || loadActiveWorkspace(),
-      );
-    } else if (panel.component === "crush-runner") {
-      // Restore the original Crush Runner panel id so the tab title
-      // ("Crush Runner N") and the linked terminal launch ids stay
-      // stable across reloads; otherwise the module-level counter in
-      // crush-runner.js would mint fresh numbers and the previous
-      // session's panels would silently disappear or collide.
-      const restoredId = parseCrushRunnerPanelId(panel.panelId);
-      addPanelByComponentFromPanels(api, panel.component, undefined, {
-        id: restoredId,
-      });
-    } else {
-      addPanelByComponentFromPanels(api, panel.component);
-    }
+}
+
+function addRestoredPanel(api, panel) {
+  if (panel.component === "terminal") {
+    addTerminalPanelFromPanels(
+      api,
+      undefined,
+      panel.profile || getDefaultTerminalProfile(),
+    );
+  } else if (panel.component === "workbench") {
+    addWorkbenchPanelFromPanels(
+      api,
+      undefined,
+      panel.config || getWorkbenchPanelConfig(),
+    );
+  } else if (panel.component === "vm") {
+    addVmPanelFromPanels(api, undefined, panel.config || getVmPanelConfig());
+  } else if (panel.component === "task" && panel.task) {
+    addWorkspaceTaskPanelFromPanels(
+      api,
+      panel.task,
+      loadWorkspace(panel.workspaceId) || loadActiveWorkspace(),
+    );
+  } else if (panel.component === "crush-runner") {
+    // Restore the original Crush Runner panel id so the tab title
+    // ("Crush Runner N") and the linked terminal launch ids stay
+    // stable across reloads; otherwise the module-level counter in
+    // crush-runner.js would mint fresh numbers and the previous
+    // session's panels would silently disappear or collide.
+    const restoredId = parseCrushRunnerPanelId(panel.panelId);
+    addPanelByComponentFromPanels(api, panel.component, undefined, {
+      id: restoredId,
+    });
+  } else {
+    addPanelByComponentFromPanels(api, panel.component);
   }
+}
+
+function reactivateSavedPanel(api) {
   // Each add* helper above calls setActive() on the newly added panel, so the
   // last-added panel ends up active. When we remembered which panel was active
   // before refresh, reactivate that one here so the user lands back where they
@@ -183,6 +186,15 @@ export function restoreSavedPanels(api) {
   ) {
     api.panels[savedActiveIndex]?.api.setActive();
   }
+}
+
+export function restoreSavedPanels(api) {
+  const panels = getSavedOpenPanels();
+  reserveMaxCrushRunnerId(panels);
+  for (const panel of panels) {
+    addRestoredPanel(api, panel);
+  }
+  reactivateSavedPanel(api);
   return panels.length > 0;
 }
 

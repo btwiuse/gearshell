@@ -12,112 +12,119 @@ import { LauncherOrderEditor } from "./settings-launcher.js?v=20260826.2";
 // normalizer) are passed via the dep shim so this helper stays
 // loosely coupled to the rest of the shell.
 
-export function setupConfigForm(settingsContent) {
-  const launcherOrderList = settingsContent.querySelector(
-    "[data-config-launcher-order]",
-  );
-  const restoreTabsEl = settingsContent.querySelector(
-    '[data-config="restore-tabs"]',
-  );
-  const wagiDogEnabledEl = settingsContent.querySelector(
-    '[data-config="wagi-dog-enabled"]',
-  );
-  const allowBgPlaybackEl = settingsContent.querySelector(
-    '[data-config="allow-background-playback"]',
-  );
-  const integrationEls = [
-    ...settingsContent.querySelectorAll("[data-config-value]"),
-  ];
-  const vmNetworkModeEl = settingsContent.querySelector(
-    '[data-config-value="vmNetworkMode"]',
-  );
-  const vmWispUrlEl = settingsContent.querySelector(
-    '[data-config-value="vmWispUrl"]',
-  );
-  const saveButton = settingsContent.querySelector(
-    '[data-config-action="save"]',
-  );
-  const resetButton = settingsContent.querySelector(
-    '[data-config-action="reset"]',
-  );
-  if (!saveButton || !resetButton) return;
-  const launcherOrderRoot = launcherOrderList
-    ? createRoot(launcherOrderList)
-    : null;
-  launcherOrderRoot?.render(React.createElement(LauncherOrderEditor));
-
-  const populate = () => {
-    const cfg = settingsDep("loadConfig")();
-    if (restoreTabsEl) restoreTabsEl.checked = cfg.restoreTabs;
-    if (wagiDogEnabledEl) wagiDogEnabledEl.checked = cfg.wagiDogEnabled;
-    if (allowBgPlaybackEl) {
-      allowBgPlaybackEl.checked = cfg.allowBackgroundPlayback !== false;
-    }
-    for (const input of integrationEls) {
-      input.value = cfg[input.dataset.configValue] || "";
-    }
-    syncVmNetworkFields();
+function queryConfigElements(settingsContent) {
+  return {
+    launcherOrderList: settingsContent.querySelector(
+      "[data-config-launcher-order]",
+    ),
+    restoreTabsEl: settingsContent.querySelector(
+      '[data-config="restore-tabs"]',
+    ),
+    wagiDogEnabledEl: settingsContent.querySelector(
+      '[data-config="wagi-dog-enabled"]',
+    ),
+    allowBgPlaybackEl: settingsContent.querySelector(
+      '[data-config="allow-background-playback"]',
+    ),
+    integrationEls: [
+      ...settingsContent.querySelectorAll("[data-config-value]"),
+    ],
+    vmNetworkModeEl: settingsContent.querySelector(
+      '[data-config-value="vmNetworkMode"]',
+    ),
+    vmWispUrlEl: settingsContent.querySelector(
+      '[data-config-value="vmWispUrl"]',
+    ),
+    saveButton: settingsContent.querySelector('[data-config-action="save"]'),
+    resetButton: settingsContent.querySelector('[data-config-action="reset"]'),
   };
-  const syncVmNetworkFields = () => {
-    if (!vmNetworkModeEl || !vmWispUrlEl) return;
-    const enabled = vmNetworkModeEl.value === "wisp";
-    vmWispUrlEl.disabled = !enabled;
-    vmWispUrlEl.closest(".cfg-network-field")?.classList.toggle(
-      "disabled",
-      !enabled,
-    );
-  };
-  populate();
+}
 
-  vmNetworkModeEl?.addEventListener("change", syncVmNetworkFields);
+function syncVmNetworkFields(els) {
+  if (!els.vmNetworkModeEl || !els.vmWispUrlEl) return;
+  const enabled = els.vmNetworkModeEl.value === "wisp";
+  els.vmWispUrlEl.disabled = !enabled;
+  els.vmWispUrlEl.closest(".cfg-network-field")?.classList.toggle(
+    "disabled",
+    !enabled,
+  );
+}
 
-  saveButton.addEventListener("click", () => {
+function fillConfigFields(els, cfg) {
+  if (els.restoreTabsEl) els.restoreTabsEl.checked = cfg.restoreTabs;
+  if (els.wagiDogEnabledEl) els.wagiDogEnabledEl.checked = cfg.wagiDogEnabled;
+  if (els.allowBgPlaybackEl) {
+    els.allowBgPlaybackEl.checked = cfg.allowBackgroundPlayback !== false;
+  }
+  for (const input of els.integrationEls) {
+    input.value = cfg[input.dataset.configValue] || "";
+  }
+  syncVmNetworkFields(els);
+}
+
+function flashConfigStatus(settingsContent, message, color) {
+  const s = settingsContent.querySelector('[data-config="status"]');
+  s.textContent = message;
+  s.style.color = color;
+  setTimeout(() => {
+    s.textContent = "";
+  }, 2000);
+}
+
+function wireConfigSave(settingsContent, els, showConfigStatus) {
+  els.saveButton.addEventListener("click", () => {
     if (
-      vmNetworkModeEl?.value === "wisp" &&
-      !settingsDep("normalizeVmWispUrl")(vmWispUrlEl?.value)
+      els.vmNetworkModeEl?.value === "wisp" &&
+      !settingsDep("normalizeVmWispUrl")(els.vmWispUrlEl?.value)
     ) {
-      const s = settingsContent.querySelector('[data-config="status"]');
-      s.textContent = "Enter a valid Wisp server URL.";
-      s.style.color = "#f85149";
+      showConfigStatus(
+        settingsContent,
+        "Enter a valid Wisp server URL.",
+        "#f85149",
+      );
       return;
     }
     const config = settingsDep("loadConfig")();
     settingsDep("saveConfig")({
       ...config,
-      restoreTabs: restoreTabsEl?.checked === true,
-      wagiDogEnabled: wagiDogEnabledEl?.checked !== false,
-      allowBackgroundPlayback: allowBgPlaybackEl?.checked !== false,
+      restoreTabs: els.restoreTabsEl?.checked === true,
+      wagiDogEnabled: els.wagiDogEnabledEl?.checked !== false,
+      allowBackgroundPlayback: els.allowBgPlaybackEl?.checked !== false,
       ...Object.fromEntries(
-        integrationEls.map((input) => [input.dataset.configValue, input.value]),
+        els.integrationEls.map((
+          input,
+        ) => [input.dataset.configValue, input.value]),
       ),
     });
-    const s = settingsContent.querySelector('[data-config="status"]');
-    s.textContent = "Saved!";
-    s.style.color = "#3fb950";
-    setTimeout(() => {
-      s.textContent = "";
-    }, 2000);
+    showConfigStatus(settingsContent, "Saved!", "#3fb950");
   });
+}
 
-  resetButton.addEventListener("click", () => {
+function wireConfigReset(settingsContent, els, showConfigStatus) {
+  els.resetButton.addEventListener("click", () => {
     const c = settingsDep("resetConfig")();
-    if (restoreTabsEl) restoreTabsEl.checked = c.restoreTabs;
-    if (wagiDogEnabledEl) wagiDogEnabledEl.checked = c.wagiDogEnabled;
-    if (allowBgPlaybackEl) {
-      allowBgPlaybackEl.checked = c.allowBackgroundPlayback !== false;
-    }
-    for (const input of integrationEls) {
-      input.value = c[input.dataset.configValue] || "";
-    }
-    syncVmNetworkFields();
-    const s = settingsContent.querySelector('[data-config="status"]');
-    s.textContent = "Reset to defaults.";
-    s.style.color = "#8b949e";
-    setTimeout(() => {
-      s.textContent = "";
-    }, 2000);
+    fillConfigFields(els, c);
+    showConfigStatus(settingsContent, "Reset to defaults.", "#8b949e");
   });
+}
 
+export function setupConfigForm(settingsContent) {
+  const els = queryConfigElements(settingsContent);
+  if (!els.saveButton || !els.resetButton) return;
+  const launcherOrderRoot = els.launcherOrderList
+    ? createRoot(els.launcherOrderList)
+    : null;
+  launcherOrderRoot?.render(React.createElement(LauncherOrderEditor));
+  const populate = () => {
+    fillConfigFields(els, settingsDep("loadConfig")());
+  };
+  populate();
+  els.vmNetworkModeEl?.addEventListener(
+    "change",
+    () => syncVmNetworkFields(els),
+  );
+  wireConfigSave(settingsContent, els, flashConfigStatus);
+  wireConfigReset(settingsContent, els, flashConfigStatus);
   window.addEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), populate);
   return () => {
     window.removeEventListener(

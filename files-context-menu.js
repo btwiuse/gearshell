@@ -21,6 +21,55 @@ import {
 // thousands of rows; the info pane reports the full count separately.
 const MAX_INFO_CHILDREN = 50;
 
+async function loadDirectoryInfo(getRoot, nextPath) {
+  let entriesCount = null;
+  let children = null;
+  let childrenTotal = null;
+  try {
+    const rawNames = await getRoot().readDir(nextPath);
+    const names = Array.isArray(rawNames) ? rawNames : [];
+    entriesCount = names.length;
+    childrenTotal = names.length;
+    children = names.map((name) => {
+      const isDirectory = name.endsWith("/");
+      return { name: name.replace(/\/$/, ""), isDirectory };
+    }).sort((a, b) =>
+      Number(b.isDirectory) - Number(a.isDirectory) ||
+      a.name.localeCompare(b.name)
+    ).slice(0, MAX_INFO_CHILDREN);
+    await enrichEntryStats(getRoot, nextPath, children);
+  } catch {
+    // stat info is still useful without the item count
+  }
+  return { entriesCount, children, childrenTotal };
+}
+
+async function loadFilePreview(getRoot, nextPath, previewType) {
+  let preview = null;
+  let textPreview = null;
+  let iconKind = null;
+  try {
+    const data = await getRoot().readFile(nextPath);
+    if (previewType) {
+      const blob = new Blob([toFilesystemBytes(data)], {
+        type: previewType.mime,
+      });
+      preview = { ...previewType, url: URL.createObjectURL(blob) };
+    } else if (sniffWasmBytes(data)) {
+      iconKind = "wasm";
+    } else if (!isBinaryData(data)) {
+      const bytes = toFilesystemBytes(data);
+      textPreview = new TextDecoder().decode(bytes.subarray(0, 65536));
+      if (bytes.byteLength > 65536) {
+        textPreview += "\n\n… (truncated, double-click to open)";
+      }
+    }
+  } catch {
+    // metadata still shows even if the content cannot be read
+  }
+  return { preview, textPreview, iconKind };
+}
+
 export function useFilesSelection(
   { getRoot, path, setHighlighted, setContextMenu },
 ) {
@@ -42,54 +91,17 @@ export function useFilesSelection(
     };
     try {
       const stat = await getRoot().stat(nextPath);
-      let entriesCount = null;
-      let children = null;
-      let childrenTotal = null;
-      if (entry.isDirectory) {
-        try {
-          const rawNames = await getRoot().readDir(nextPath);
-          const names = Array.isArray(rawNames) ? rawNames : [];
-          entriesCount = names.length;
-          childrenTotal = names.length;
-          children = names.map((name) => {
-            const isDirectory = name.endsWith("/");
-            return { name: name.replace(/\/$/, ""), isDirectory };
-          }).sort((a, b) =>
-            Number(b.isDirectory) - Number(a.isDirectory) ||
-            a.name.localeCompare(b.name)
-          ).slice(0, MAX_INFO_CHILDREN);
-          await enrichEntryStats(getRoot, nextPath, children);
-        } catch {
-          // stat info is still useful without the item count
-        }
-      }
+      const dirInfo = entry.isDirectory
+        ? await loadDirectoryInfo(getRoot, nextPath)
+        : {};
       const previewType = getFilesystemPreviewType(nextPath);
-      let preview = null;
-      let textPreview = null;
-      let iconKind = null;
-      if (!entry.isDirectory) {
-        try {
-          const data = await getRoot().readFile(nextPath);
-          if (previewType) {
-            const blob = new Blob([toFilesystemBytes(data)], {
-              type: previewType.mime,
-            });
-            preview = { ...previewType, url: URL.createObjectURL(blob) };
-          } else if (sniffWasmBytes(data)) {
-            iconKind = "wasm";
-          } else if (!isBinaryData(data)) {
-            const bytes = toFilesystemBytes(data);
-            textPreview = new TextDecoder().decode(bytes.subarray(0, 65536));
-            if (bytes.byteLength > 65536) {
-              textPreview += "\n\n… (truncated, double-click to open)";
-            }
-          }
-        } catch {
-          // metadata still shows even if the content cannot be read
-        }
-      }
+      const previewInfo = !entry.isDirectory
+        ? await loadFilePreview(getRoot, nextPath, previewType)
+        : {};
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = preview ? preview.url : null;
+      previewUrlRef.current = previewInfo.preview
+        ? previewInfo.preview.url
+        : null;
       setSelectedInfo({
         ...base,
         // wanix stat returns Go-style field names: Size, Mode, IsDir,
@@ -97,12 +109,12 @@ export function useFilesSelection(
         size: stat?.Size ?? null,
         modTime: stat?.ModTime ?? null,
         previewKind: previewType ? previewType.kind : null,
-        entries: entriesCount,
-        children,
-        childrenTotal,
-        iconKind,
-        preview,
-        textPreview,
+        entries: dirInfo.entriesCount ?? null,
+        children: dirInfo.children ?? null,
+        childrenTotal: dirInfo.childrenTotal ?? null,
+        iconKind: previewInfo.iconKind ?? null,
+        preview: previewInfo.preview ?? null,
+        textPreview: previewInfo.textPreview ?? null,
       });
     } catch {
       setSelectedInfo({
@@ -122,7 +134,6 @@ export function useFilesSelection(
 
   return { selectedInfo, setSelectedInfo, selectEntry };
 }
-
 export function useFilesContextMenu({
   getRoot,
   setStatus,

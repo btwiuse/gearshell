@@ -60,7 +60,9 @@ export function useFilesSidebarResize({ stackedLayout, panelRef }) {
     if (!bounds) return;
     if (stackedLayout) {
       const max = Math.max(130, bounds.height - 180);
-      setSidebarHeight((height) => Math.max(130, Math.min(max, height + delta)));
+      setSidebarHeight((height) =>
+        Math.max(130, Math.min(max, height + delta))
+      );
     } else {
       const max = Math.max(190, bounds.width - 240);
       setSidebarWidth((width) => Math.max(190, Math.min(max, width + delta)));

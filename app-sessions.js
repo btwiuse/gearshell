@@ -40,6 +40,20 @@ export function taskEnvironment(env) {
   return env.split("\n").map((line) => line.trim()).filter(Boolean).join(" ");
 }
 
+function createTaskTerminal(task) {
+  const winchBind = document.createElement("wanix-bind");
+  winchBind.setAttribute("dst", "winch");
+  winchBind.setAttribute("src", "#task/self/term/winch");
+  task.appendChild(winchBind);
+
+  const term = document.createElement("wanix-term");
+  term.setAttribute("raw", "");
+  term.setAttribute("no-scrollbar", "");
+  term.setAttribute("path", `#task/${task.id}/term`);
+  term.setAttribute("for", "wanix-system");
+  return term;
+}
+
 export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
   const wrapper = document.createElement("div");
   wrapper.className = "terminal-session";
@@ -59,16 +73,7 @@ export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
 
   let term = null;
   if (taskDefinition.term) {
-    const winchBind = document.createElement("wanix-bind");
-    winchBind.setAttribute("dst", "winch");
-    winchBind.setAttribute("src", "#task/self/term/winch");
-    task.appendChild(winchBind);
-
-    term = document.createElement("wanix-term");
-    term.setAttribute("raw", "");
-    term.setAttribute("no-scrollbar", "");
-    term.setAttribute("path", `#task/${task.id}/term`);
-    term.setAttribute("for", "wanix-system");
+    term = createTaskTerminal(task);
     wrapper.append(task, term);
   } else {
     wrapper.append(task);

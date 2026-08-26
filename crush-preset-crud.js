@@ -10,6 +10,34 @@ import {
 } from "./crush-presets.js?v=20260826.2";
 import { crushRunDirFor } from "./crush-config.js?v=20260826.2";
 
+function uniquePresetName(config, baseName) {
+  let candidate = baseName;
+  let suffix = 2;
+  while (
+    (config.crushRunnerPresets || []).some((preset) =>
+      preset.name.toLocaleLowerCase() === candidate.toLocaleLowerCase()
+    )
+  ) {
+    candidate = `${baseName} (${suffix++})`;
+  }
+  return candidate;
+}
+
+function presetOrderWithSibling(config, sourceId, nextPresetId) {
+  const activeIndex = (config.crushRunnerPresetOrder || []).indexOf(sourceId);
+  // Insert the new preset immediately after the source preset so it
+  // appears as a sibling in the UI ("presets derived from X live next
+  // to X"), rather than jumping to the top of the list.
+  return activeIndex === -1
+    ? [nextPresetId, ...(config.crushRunnerPresetOrder || [])]
+    : [
+      ...(config.crushRunnerPresetOrder || []).slice(0, activeIndex + 1),
+      nextPresetId,
+      ...(config.crushRunnerPresetOrder || []).slice(activeIndex + 1)
+        .filter((id) => id !== nextPresetId),
+    ];
+}
+
 export function useCrushPresetCrud({
   activePreset,
   draft,
@@ -67,15 +95,7 @@ export function useCrushPresetCrud({
       const config = crushRunnerDep("loadConfig")();
       const baseName = (draft.name || "").trim() || activePreset.name ||
         "Crush";
-      let candidate = baseName;
-      let suffix = 2;
-      while (
-        (config.crushRunnerPresets || []).some((preset) =>
-          preset.name.toLocaleLowerCase() === candidate.toLocaleLowerCase()
-        )
-      ) {
-        candidate = `${baseName} (${suffix++})`;
-      }
+      const candidate = uniquePresetName(config, baseName);
       const nextPreset = crushRunnerDep("normalizeCrushRunnerPreset")({
         ...CRUSH_RUNNER_DEFAULT_PROFILE,
         ...activePreset,
@@ -90,20 +110,11 @@ export function useCrushPresetCrud({
         crushrc: crushrcContent,
       });
       const nextPresets = [...(config.crushRunnerPresets || []), nextPreset];
-      const activeIndex = (config.crushRunnerPresetOrder || []).indexOf(
+      const nextOrder = presetOrderWithSibling(
+        config,
         activePreset.id,
+        nextPreset.id,
       );
-      // Insert the new preset immediately after the source preset so it
-      // appears as a sibling in the UI ("presets derived from X live next
-      // to X"), rather than jumping to the top of the list.
-      const nextOrder = activeIndex === -1
-        ? [nextPreset.id, ...(config.crushRunnerPresetOrder || [])]
-        : [
-          ...(config.crushRunnerPresetOrder || []).slice(0, activeIndex + 1),
-          nextPreset.id,
-          ...(config.crushRunnerPresetOrder || []).slice(activeIndex + 1)
-            .filter((id) => id !== nextPreset.id),
-        ];
       crushRunnerDep("saveCrushRunnerPresets")(
         nextPresets,
         nextPreset.id,

@@ -18,7 +18,7 @@ import {
   SettingsPanel,
   TerminalPresetIconPicker,
 } from "./settings.js?v=20260826.9";
-import { FilesPanel } from "./files.js?v=20260826.39";
+import { FilesPanel } from "./files.js?v=20260826.40";
 import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.9";
 import {
   addRuntimePanel,
@@ -183,57 +183,61 @@ wanixSystem?.addEventListener("ready", (event) => {
   }
 });
 
+function handlePanelRemoved(api, panel) {
+  const match = /^terminal-(\d+)$/.exec(panel.id);
+  if (match) destroyTerminalSession(Number(match[1]));
+  const iframeMatch = /^iframe-(\d+)$/.exec(panel.id);
+  if (iframeMatch) destroyIframeSession(Number(iframeMatch[1]));
+  const workbenchMatch = /^workbench-(\d+)$/.exec(panel.id);
+  if (workbenchMatch) destroyWorkbenchSession(Number(workbenchMatch[1]));
+  const vmMatch = /^vm-(\d+)$/.exec(panel.id);
+  if (vmMatch) destroyVmSession(Number(vmMatch[1]));
+  const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
+  if (workspaceTaskMatch) {
+    destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
+  }
+  forgetOpenPanel(panel.id);
+  requestAnimationFrame(() => {
+    if (api.panels.length === 0) addFallbackPanel(api);
+  });
+}
+
+function trackActivePanel(api) {
+  // Remember which panel is active so a future reload with Restore tabs can
+  // reactivate the same tab instead of always landing on the last-added one.
+  api.onDidActivePanelChange((activeEvent) => {
+    if (!activeEvent.panel) return;
+    const idx = api.panels.findIndex((p) => p.id === activeEvent.panel.id);
+    if (idx < 0) return;
+    const workspace = loadActiveWorkspace();
+    if (workspace.ui?.activeOpenPanelIndex === idx) return;
+    workspace.ui = { ...workspace.ui, activeOpenPanelIndex: idx };
+    saveWorkspace(workspace);
+    updateWorkspaceIndex(workspace);
+  });
+}
+
+function openStartupPanels(api) {
+  const cfg = loadConfig();
+  const restored = cfg.restoreTabs && restoreSavedPanels(api);
+  if (!restored) {
+    for (const component of cfg.startupPanels) {
+      addPanelByComponentFromPanels(api, component);
+    }
+  }
+  if (api.panels.length === 0) addFallbackPanel(api);
+  return restored;
+}
+
 function App() {
   const onReady = useCallback((event) => {
     setDockviewApi(event.api);
     // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
-
-    event.api.onDidRemovePanel((panel) => {
-      const match = /^terminal-(\d+)$/.exec(panel.id);
-      if (match) destroyTerminalSession(Number(match[1]));
-      const iframeMatch = /^iframe-(\d+)$/.exec(panel.id);
-      if (iframeMatch) destroyIframeSession(Number(iframeMatch[1]));
-      const workbenchMatch = /^workbench-(\d+)$/.exec(panel.id);
-      if (workbenchMatch) destroyWorkbenchSession(Number(workbenchMatch[1]));
-      const vmMatch = /^vm-(\d+)$/.exec(panel.id);
-      if (vmMatch) destroyVmSession(Number(vmMatch[1]));
-      const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
-      if (workspaceTaskMatch) {
-        destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
-      }
-      forgetOpenPanel(panel.id);
-      requestAnimationFrame(() => {
-        if (event.api.panels.length === 0) addFallbackPanel(event.api);
-      });
-    });
-
-    const cfg = loadConfig();
-    const restored = cfg.restoreTabs && restoreSavedPanels(event.api);
-    if (!restored) {
-      for (const component of cfg.startupPanels) {
-        addPanelByComponentFromPanels(event.api, component);
-      }
-    }
-    if (event.api.panels.length === 0) addFallbackPanel(event.api);
-
-    // Remember which panel is active so a future reload with Restore tabs can
-    // reactivate the same tab instead of always landing on the last-added one.
-    const dockviewRoot = event.api;
-    event.api.onDidActivePanelChange((activeEvent) => {
-      if (!activeEvent.panel) return;
-      const idx = dockviewRoot.panels.findIndex((p) =>
-        p.id === activeEvent.panel.id
-      );
-      if (idx < 0) return;
-      const workspace = loadActiveWorkspace();
-      if (workspace.ui?.activeOpenPanelIndex === idx) return;
-      workspace.ui = { ...workspace.ui, activeOpenPanelIndex: idx };
-      saveWorkspace(workspace);
-      updateWorkspaceIndex(workspace);
-    });
-
+    event.api.onDidRemovePanel((panel) => handlePanelRemoved(event.api, panel));
+    const restored = openStartupPanels(event.api);
+    trackActivePanel(event.api);
     // Start configured processes only after Wanix is ready so they follow the
     // same allocation path as tasks opened from Settings. Restored task tabs
     // already represent the prior session, so do not create duplicates.

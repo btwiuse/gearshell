@@ -1,148 +1,189 @@
 // System form section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.2";
-export function setupSystemForm(settingsContent) {
-  const moduleEl = settingsContent.querySelector('[data-system="module"]');
-  const wasmEl = settingsContent.querySelector('[data-system="wasm"]');
-  const allowOriginsEl = settingsContent.querySelector(
-    '[data-system="allow-origins"]',
-  );
-  const shareUrlEl = settingsContent.querySelector('[data-system="share-url"]');
-  const list = settingsContent.querySelector("[data-system-bind-list]");
-  const typeEl = settingsContent.querySelector('[data-system-bind="type"]');
-  const dstEl = settingsContent.querySelector('[data-system-bind="dst"]');
-  const srcEl = settingsContent.querySelector('[data-system-bind="src"]');
-  const contentEl = settingsContent.querySelector(
-    '[data-system-bind="content"]',
-  );
-  const modeEl = settingsContent.querySelector('[data-system-bind="mode"]');
-  const unionEl = settingsContent.querySelector('[data-system-bind="union"]');
-  const status = settingsContent.querySelector('[data-system="status"]');
-  const saveButton = settingsContent.querySelector(
-    '[data-system-action="save"]',
-  );
-  const restartButton = settingsContent.querySelector(
-    '[data-system-action="restart"]',
-  );
-  const copyShareButton = settingsContent.querySelector(
-    '[data-system-action="copy-share"]',
-  );
-  const addButton = settingsContent.querySelector(
-    '[data-system-bind-action="add"]',
-  );
-  const cancelButton = settingsContent.querySelector(
-    '[data-system-bind-action="cancel"]',
-  );
-  if (
-    !moduleEl || !wasmEl || !allowOriginsEl || !shareUrlEl || !list ||
-    !typeEl || !dstEl || !srcEl || !contentEl || !modeEl || !unionEl ||
-    !status || !saveButton || !restartButton || !copyShareButton ||
-    !addButton || !cancelButton
-  ) return;
 
-  let editingBindId = null;
-  let draggedBindId = null;
-
-  const setStatus = (message, isError = false) => {
-    status.textContent = message;
-    status.style.color = isError ? "#f85149" : "#8b949e";
+function querySystemElements(settingsContent) {
+  return {
+    moduleEl: settingsContent.querySelector('[data-system="module"]'),
+    wasmEl: settingsContent.querySelector('[data-system="wasm"]'),
+    allowOriginsEl: settingsContent.querySelector(
+      '[data-system="allow-origins"]',
+    ),
+    shareUrlEl: settingsContent.querySelector('[data-system="share-url"]'),
+    list: settingsContent.querySelector("[data-system-bind-list]"),
+    typeEl: settingsContent.querySelector('[data-system-bind="type"]'),
+    dstEl: settingsContent.querySelector('[data-system-bind="dst"]'),
+    srcEl: settingsContent.querySelector('[data-system-bind="src"]'),
+    contentEl: settingsContent.querySelector('[data-system-bind="content"]'),
+    modeEl: settingsContent.querySelector('[data-system-bind="mode"]'),
+    unionEl: settingsContent.querySelector('[data-system-bind="union"]'),
+    status: settingsContent.querySelector('[data-system="status"]'),
+    saveButton: settingsContent.querySelector('[data-system-action="save"]'),
+    restartButton: settingsContent.querySelector(
+      '[data-system-action="restart"]',
+    ),
+    copyShareButton: settingsContent.querySelector(
+      '[data-system-action="copy-share"]',
+    ),
+    addButton: settingsContent.querySelector('[data-system-bind-action="add"]'),
+    cancelButton: settingsContent.querySelector(
+      '[data-system-bind-action="cancel"]',
+    ),
   };
+}
+
+function createSystemBindFields(els, state) {
   const resetBindFields = () => {
-    editingBindId = null;
-    typeEl.value = "ns";
-    dstEl.value = "";
-    srcEl.value = "";
-    contentEl.value = "";
-    modeEl.value = "";
-    unionEl.value = "after";
-    addButton.textContent = "Add system mount";
-    cancelButton.hidden = true;
+    state.editingBindId = null;
+    els.typeEl.value = "ns";
+    els.dstEl.value = "";
+    els.srcEl.value = "";
+    els.contentEl.value = "";
+    els.modeEl.value = "";
+    els.unionEl.value = "after";
+    els.addButton.textContent = "Add system mount";
+    els.cancelButton.hidden = true;
   };
-  const render = () => {
-    const workspace = settingsDep("loadActiveWorkspace")();
-    moduleEl.value = workspace.runtime.moduleUrl ||
-      settingsDep("WANIX_RUNTIME").moduleUrl;
-    wasmEl.value = workspace.runtime.wasmUrl ||
-      settingsDep("WANIX_RUNTIME").wasmUrl;
-    allowOriginsEl.value = workspace.system.allowOrigins || "";
-    const shareUrl = new URL(window.location.href);
-    shareUrl.hash = "wanix-system";
-    shareUrlEl.value = shareUrl.href;
-    list.replaceChildren();
-    for (const bind of workspace.system.binds) {
-      const item = document.createElement("div");
-      item.className = "bind-item";
-      settingsDep("makeBindItemDraggable")(item, bind, {
-        list,
-        getDraggedId: () => draggedBindId,
-        setDraggedId: (id) => {
-          draggedBindId = id;
-        },
-        reorder: settingsDep("reorderWorkspaceSystemBinds"),
-        onReordered: () =>
-          setStatus("System mount order saved. Restart to apply changes."),
-      });
-      const details = document.createElement("div");
-      const path = document.createElement("span");
-      path.className = "bind-item-path";
-      path.textContent = `${bind.dst} ← ${bind.src || "inline content"}`;
-      path.title = path.textContent;
-      const meta = document.createElement("span");
-      meta.className = "bind-item-meta";
-      meta.textContent = `${bind.type}${
-        bind.mode ? ` · ${bind.mode}` : ""
-      } · ${bind.union}`;
-      details.append(path, meta);
-      const actions = document.createElement("div");
-      actions.className = "bind-item-actions";
-      const edit = document.createElement("button");
-      edit.type = "button";
-      edit.textContent = "Edit";
-      edit.addEventListener("click", () => {
-        editingBindId = bind.id;
-        typeEl.value = bind.type;
-        dstEl.value = bind.dst;
-        srcEl.value = bind.src;
-        contentEl.value = bind.content;
-        modeEl.value = bind.mode;
-        unionEl.value = bind.union;
-        addButton.textContent = "Save system mount";
-        cancelButton.hidden = false;
-        setStatus(`Editing ${bind.dst}. Save and restart to apply changes.`);
-        dstEl.focus();
-      });
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.textContent = "Remove";
-      remove.addEventListener("click", () => {
-        if (editingBindId === bind.id) resetBindFields();
-        settingsDep("removeWorkspaceSystemBind")(bind.id);
-        setStatus(`Removed ${bind.dst}. Restart to apply changes.`);
-      });
-      actions.append(edit, remove);
-      item.append(details, actions);
-      list.appendChild(item);
-    }
+  const populateBindFields = (bind) => {
+    state.editingBindId = bind.id;
+    els.typeEl.value = bind.type;
+    els.dstEl.value = bind.dst;
+    els.srcEl.value = bind.src;
+    els.contentEl.value = bind.content;
+    els.modeEl.value = bind.mode;
+    els.unionEl.value = bind.union;
+    els.addButton.textContent = "Save system mount";
+    els.cancelButton.hidden = false;
   };
-  const saveSettings = () => {
-    settingsDep("saveWorkspaceSystemSettings")({
-      moduleUrl: moduleEl.value,
-      wasmUrl: wasmEl.value,
-      allowOrigins: allowOriginsEl.value,
-    });
-    setStatus(
-      "System settings saved. Restart the playground to apply changes.",
-    );
-  };
+  return { resetBindFields, populateBindFields };
+}
 
-  saveButton.addEventListener("click", () => {
+function createBindItemButtons(
+  els,
+  bind,
+  state,
+  setStatus,
+  populateBindFields,
+  resetBindFields,
+) {
+  const actions = document.createElement("div");
+  actions.className = "bind-item-actions";
+  const edit = document.createElement("button");
+  edit.type = "button";
+  edit.textContent = "Edit";
+  edit.addEventListener("click", () => {
+    populateBindFields(bind);
+    setStatus(`Editing ${bind.dst}. Save and restart to apply changes.`);
+    els.dstEl.focus();
+  });
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "Remove";
+  remove.addEventListener("click", () => {
+    if (state.editingBindId === bind.id) resetBindFields();
+    settingsDep("removeWorkspaceSystemBind")(bind.id);
+    setStatus(`Removed ${bind.dst}. Restart to apply changes.`);
+  });
+  actions.append(edit, remove);
+  return actions;
+}
+
+function renderSystemBindItem(
+  els,
+  bind,
+  state,
+  setStatus,
+  populateBindFields,
+  resetBindFields,
+) {
+  const item = document.createElement("div");
+  item.className = "bind-item";
+  settingsDep("makeBindItemDraggable")(item, bind, {
+    list: els.list,
+    getDraggedId: () => state.draggedBindId,
+    setDraggedId: (id) => {
+      state.draggedBindId = id;
+    },
+    reorder: settingsDep("reorderWorkspaceSystemBinds"),
+    onReordered: () =>
+      setStatus("System mount order saved. Restart to apply changes."),
+  });
+  const details = document.createElement("div");
+  const path = document.createElement("span");
+  path.className = "bind-item-path";
+  path.textContent = `${bind.dst} ← ${bind.src || "inline content"}`;
+  path.title = path.textContent;
+  const meta = document.createElement("span");
+  meta.className = "bind-item-meta";
+  meta.textContent = `${bind.type}${
+    bind.mode ? ` · ${bind.mode}` : ""
+  } · ${bind.union}`;
+  details.append(path, meta);
+  item.append(
+    details,
+    createBindItemButtons(
+      els,
+      bind,
+      state,
+      setStatus,
+      populateBindFields,
+      resetBindFields,
+    ),
+  );
+  return item;
+}
+
+function renderSystemForm(
+  els,
+  state,
+  setStatus,
+  populateBindFields,
+  resetBindFields,
+) {
+  const workspace = settingsDep("loadActiveWorkspace")();
+  els.moduleEl.value = workspace.runtime.moduleUrl ||
+    settingsDep("WANIX_RUNTIME").moduleUrl;
+  els.wasmEl.value = workspace.runtime.wasmUrl ||
+    settingsDep("WANIX_RUNTIME").wasmUrl;
+  els.allowOriginsEl.value = workspace.system.allowOrigins || "";
+  const shareUrl = new URL(window.location.href);
+  shareUrl.hash = "wanix-system";
+  els.shareUrlEl.value = shareUrl.href;
+  els.list.replaceChildren();
+  for (const bind of workspace.system.binds) {
+    els.list.appendChild(
+      renderSystemBindItem(
+        els,
+        bind,
+        state,
+        setStatus,
+        populateBindFields,
+        resetBindFields,
+      ),
+    );
+  }
+}
+
+function saveSystemSettings(els, setStatus) {
+  settingsDep("saveWorkspaceSystemSettings")({
+    moduleUrl: els.moduleEl.value,
+    wasmUrl: els.wasmEl.value,
+    allowOrigins: els.allowOriginsEl.value,
+  });
+  setStatus(
+    "System settings saved. Restart the playground to apply changes.",
+  );
+}
+
+function wireSystemButtons(els, saveSettings) {
+  els.saveButton.addEventListener("click", () => {
     try {
       saveSettings();
     } catch (error) {
       setStatus(error.message || "Unable to save system settings.", true);
     }
   });
-  restartButton.addEventListener("click", () => {
+  els.restartButton.addEventListener("click", () => {
     try {
       saveSettings();
       window.location.reload();
@@ -150,44 +191,77 @@ export function setupSystemForm(settingsContent) {
       setStatus(error.message || "Unable to save system settings.", true);
     }
   });
-  copyShareButton.addEventListener("click", async () => {
+  els.copyShareButton.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(shareUrlEl.value);
+      await navigator.clipboard.writeText(els.shareUrlEl.value);
       setStatus("Namespace share URL copied.");
     } catch {
-      shareUrlEl.focus();
-      shareUrlEl.select();
+      els.shareUrlEl.focus();
+      els.shareUrlEl.select();
       setStatus("Select the share URL and copy it manually.", true);
     }
   });
-  addButton.addEventListener("click", () => {
+}
+
+function wireSystemBindButtons(els, state, setStatus, resetBindFields) {
+  els.addButton.addEventListener("click", () => {
     try {
       const bind = {
-        type: typeEl.value,
-        dst: dstEl.value,
-        src: srcEl.value,
-        content: contentEl.value,
-        mode: modeEl.value,
-        union: unionEl.value,
+        type: els.typeEl.value,
+        dst: els.dstEl.value,
+        src: els.srcEl.value,
+        content: els.contentEl.value,
+        mode: els.modeEl.value,
+        union: els.unionEl.value,
       };
-      if (editingBindId) {
-        settingsDep("updateWorkspaceSystemBind")(editingBindId, bind);
+      if (state.editingBindId) {
+        settingsDep("updateWorkspaceSystemBind")(state.editingBindId, bind);
       } else settingsDep("addWorkspaceSystemBind")(bind);
       setStatus(
         `${
-          editingBindId ? "Updated" : "Added"
-        } ${dstEl.value.trim()}. Restart to apply changes.`,
+          state.editingBindId ? "Updated" : "Added"
+        } ${els.dstEl.value.trim()}. Restart to apply changes.`,
       );
       resetBindFields();
     } catch (error) {
       setStatus(error.message || "Unable to save the system mount.", true);
     }
   });
-  cancelButton.addEventListener("click", () => {
+  els.cancelButton.addEventListener("click", () => {
     resetBindFields();
     setStatus("Edit cancelled.");
   });
+}
 
+export function setupSystemForm(settingsContent) {
+  const els = querySystemElements(settingsContent);
+  if (
+    !els.moduleEl || !els.wasmEl || !els.allowOriginsEl || !els.shareUrlEl ||
+    !els.list || !els.typeEl || !els.dstEl || !els.srcEl || !els.contentEl ||
+    !els.modeEl || !els.unionEl || !els.status || !els.saveButton ||
+    !els.restartButton || !els.copyShareButton || !els.addButton ||
+    !els.cancelButton
+  ) return;
+  const state = { editingBindId: null, draggedBindId: null };
+  const setStatus = (message, isError = false) => {
+    els.status.textContent = message;
+    els.status.style.color = isError ? "#f85149" : "#8b949e";
+  };
+  const { resetBindFields, populateBindFields } = createSystemBindFields(
+    els,
+    state,
+  );
+  const render = () =>
+    renderSystemForm(
+      els,
+      state,
+      setStatus,
+      populateBindFields,
+      resetBindFields,
+    );
+  const saveSettings = () => saveSystemSettings(els, setStatus);
+  wireSystemButtons(els, saveSettings);
+  wireSystemBindButtons(els, state, setStatus, resetBindFields);
   window.addEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
   render();
   return () =>

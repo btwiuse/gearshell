@@ -133,30 +133,62 @@ export function normalizeRuntimeConfig(runtime = {}) {
   };
 }
 
+function normalizeStartupPanels(config) {
+  return Array.isArray(config?.startupPanels)
+    ? [
+      ...new Set(config.startupPanels.filter((panel) =>
+        STARTUP_PANEL_TYPES.includes(panel)
+      )),
+    ]
+    : [];
+}
+
+function normalizeFavorites(config) {
+  return Array.isArray(config?.favorites)
+    ? config.favorites.filter(
+      (favorite) =>
+        favorite &&
+        typeof favorite === "object" &&
+        typeof favorite.path === "string" &&
+        typeof favorite.label === "string",
+    )
+    : undefined;
+}
+
+function normalizeCollapsedLauncherItems(config) {
+  return Array.isArray(config?.collapsedLauncherItems)
+    ? [
+      ...new Set(config.collapsedLauncherItems.filter((component) =>
+        LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)
+      )),
+    ]
+    : [...DEFAULT_COLLAPSED_LAUNCHER_ITEMS];
+}
+
+function normalizeDefaultTerminalProfileId(config) {
+  if (config?.defaultTerminalProfileId === "hush") return "bash";
+  return typeof config?.defaultTerminalProfileId === "string"
+    ? config.defaultTerminalProfileId
+    : "bash";
+}
+
 export function normalizeShellConfig(config) {
   const terminalProfiles = Array.isArray(config?.terminalProfiles)
-    ? config.terminalProfiles
-      .map(normalizeTerminalProfile)
-      .map(migrateLegacyHushTerminalProfile)
-      .filter((profile) => profile.program)
+    ? config.terminalProfiles.map(normalizeTerminalProfile).map(
+      migrateLegacyHushTerminalProfile,
+    ).filter((profile) => profile.program)
     : [];
   const crushRunnerPresets = Array.isArray(config?.crushRunnerPresets)
-    ? config.crushRunnerPresets
-      .map(normalizeCrushRunnerPreset)
-      .filter((preset) => preset.program)
+    ? config.crushRunnerPresets.map(normalizeCrushRunnerPreset).filter((
+      preset,
+    ) => preset.program)
     : [];
   const normalized = {
     cmd: typeof config?.cmd === "string" && config.cmd.trim()
       ? config.cmd.trim()
       : DEFAULT_CMD,
     env: typeof config?.env === "string" ? config.env : "",
-    startupPanels: Array.isArray(config?.startupPanels)
-      ? [
-        ...new Set(config.startupPanels.filter((panel) =>
-          STARTUP_PANEL_TYPES.includes(panel)
-        )),
-      ]
-      : [],
+    startupPanels: normalizeStartupPanels(config),
     restoreTabs: config?.restoreTabs === true,
     allowBackgroundPlayback: config?.allowBackgroundPlayback !== false,
     workbenchAssetsUrl: normalizeWorkbenchAssetsUrl(config?.workbenchAssetsUrl),
@@ -169,33 +201,15 @@ export function normalizeShellConfig(config) {
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
     wagiDogEnabled: config?.wagiDogEnabled === true,
-    favorites: Array.isArray(config?.favorites)
-      ? config.favorites.filter(
-        (favorite) =>
-          favorite &&
-          typeof favorite === "object" &&
-          typeof favorite.path === "string" &&
-          typeof favorite.label === "string",
-      )
-      : undefined,
-    collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)
-      ? [
-        ...new Set(config.collapsedLauncherItems.filter((component) =>
-          LAUNCHER_COLLAPSIBLE_PANEL_TYPES.includes(component)
-        )),
-      ]
-      : [...DEFAULT_COLLAPSED_LAUNCHER_ITEMS],
+    favorites: normalizeFavorites(config),
+    collapsedLauncherItems: normalizeCollapsedLauncherItems(config),
     launcherOrder: normalizeLauncherOrder(config?.launcherOrder),
     terminalProfiles,
     terminalProfileOrder: normalizeTerminalProfileOrder(
       config?.terminalProfileOrder,
       terminalProfiles,
     ),
-    defaultTerminalProfileId: config?.defaultTerminalProfileId === "hush"
-      ? "bash"
-      : typeof config?.defaultTerminalProfileId === "string"
-      ? config.defaultTerminalProfileId
-      : "bash",
+    defaultTerminalProfileId: normalizeDefaultTerminalProfileId(config),
     crushRunnerPresets,
     crushRunnerPresetOrder: normalizeTerminalProfileOrder(
       config?.crushRunnerPresetOrder,

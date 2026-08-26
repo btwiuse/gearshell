@@ -24,7 +24,9 @@ export function initLauncher(dependencies) {
 }
 function launcherDep(name) {
   if (__launcherDeps == null) {
-    throw new Error('launcher: initLauncher() has not been called; ensure app.js wires it in.');
+    throw new Error(
+      "launcher: initLauncher() has not been called; ensure app.js wires it in.",
+    );
   }
   const value = __launcherDeps[name];
   if (value === undefined) {
@@ -34,66 +36,102 @@ function launcherDep(name) {
 }
 
 // Fallback launcher body for TerminalLaunchPicker:
-function TerminalLaunchPicker({ className, iconSize, inMenu = false, onLaunch }) {
+function TerminalLaunchPicker(
+  { className, iconSize, inMenu = false, onLaunch },
+) {
   const [expanded, setExpanded] = useState(false);
   const defaultProfile = launcherDep("getDefaultTerminalProfile")();
   const DefaultIcon = launcherDep("getTerminalPresetIcon")(defaultProfile);
-  const menuRole = inMenu ? 'menuitem' : undefined;
+  const menuRole = inMenu ? "menuitem" : undefined;
 
-  return React.createElement('div', { className: `terminal-launch-picker ${className}` },
-    React.createElement('div', { className: 'terminal-launch-row' },
-      React.createElement('button', {
-        className: 'terminal-launch-primary',
-        type: 'button',
-        role: menuRole,
-        title: launcherDep("terminalCommand")(defaultProfile),
-        onClick: () => onLaunch(defaultProfile),
-      },
-      React.createElement(DefaultIcon, { size: iconSize, 'aria-hidden': true }),
-      React.createElement('span', null, 'Terminal'),
-      ),
-      React.createElement('button', {
-        className: 'terminal-launch-toggle',
-        type: 'button',
-        'aria-label': expanded ? 'Hide terminal presets' : 'Show terminal presets',
-        'aria-expanded': expanded,
-        onClick: () => setExpanded((open) => !open),
-      }, React.createElement(ChevronDown, {
-        className: expanded ? 'terminal-launch-chevron open' : 'terminal-launch-chevron',
-        size: 14,
-        'aria-hidden': true,
-      })),
-    ),
-    expanded && React.createElement('div', { className: 'terminal-launch-options', role: inMenu ? 'menu' : undefined },
-      launcherDep("getTerminalProfiles")().map((profile) => {
-        const Icon = launcherDep("getTerminalPresetIcon")(profile);
-        return React.createElement('button', {
-          key: profile.id,
-          type: 'button',
+  return React.createElement(
+    "div",
+    { className: `terminal-launch-picker ${className}` },
+    React.createElement(
+      "div",
+      { className: "terminal-launch-row" },
+      React.createElement(
+        "button",
+        {
+          className: "terminal-launch-primary",
+          type: "button",
           role: menuRole,
-          title: launcherDep("terminalCommand")(profile),
-          onClick: () => onLaunch(profile),
+          title: launcherDep("terminalCommand")(defaultProfile),
+          onClick: () => onLaunch(defaultProfile),
         },
-        React.createElement(Icon, { size: iconSize, 'aria-hidden': true }),
-        React.createElement('span', null, profile.name),
-        );
-      }),
+        React.createElement(DefaultIcon, {
+          size: iconSize,
+          "aria-hidden": true,
+        }),
+        React.createElement("span", null, "Terminal"),
+      ),
+      React.createElement(
+        "button",
+        {
+          className: "terminal-launch-toggle",
+          type: "button",
+          "aria-label": expanded
+            ? "Hide terminal presets"
+            : "Show terminal presets",
+          "aria-expanded": expanded,
+          onClick: () => setExpanded((open) => !open),
+        },
+        React.createElement(ChevronDown, {
+          className: expanded
+            ? "terminal-launch-chevron open"
+            : "terminal-launch-chevron",
+          size: 14,
+          "aria-hidden": true,
+        }),
+      ),
     ),
+    expanded &&
+      React.createElement(
+        "div",
+        {
+          className: "terminal-launch-options",
+          role: inMenu ? "menu" : undefined,
+        },
+        launcherDep("getTerminalProfiles")().map((profile) => {
+          const Icon = launcherDep("getTerminalPresetIcon")(profile);
+          return React.createElement(
+            "button",
+            {
+              key: profile.id,
+              type: "button",
+              role: menuRole,
+              title: launcherDep("terminalCommand")(profile),
+              onClick: () => onLaunch(profile),
+            },
+            React.createElement(Icon, { size: iconSize, "aria-hidden": true }),
+            React.createElement("span", null, profile.name),
+          );
+        }),
+      ),
   );
 }
 
 // Fallback launcher body for FallbackPage:
 function FallbackPage({ containerApi, className }) {
   const [showMore, setShowMore] = useState(false);
-  const [collapsedItems, setCollapsedItems] = useState(() => launcherDep("loadConfig")().collapsedLauncherItems);
+  const [collapsedItems, setCollapsedItems] = useState(() =>
+    launcherDep("loadConfig")().collapsedLauncherItems
+  );
 
   useEffect(() => {
     const updateCollapsedItems = () => {
       setCollapsedItems(launcherDep("loadConfig")().collapsedLauncherItems);
       setShowMore(false);
     };
-    window.addEventListener(launcherDep("WORKSPACE_CHANGED_EVENT"), updateCollapsedItems);
-    return () => window.removeEventListener(launcherDep("WORKSPACE_CHANGED_EVENT"), updateCollapsedItems);
+    window.addEventListener(
+      launcherDep("WORKSPACE_CHANGED_EVENT"),
+      updateCollapsedItems,
+    );
+    return () =>
+      window.removeEventListener(
+        launcherDep("WORKSPACE_CHANGED_EVENT"),
+        updateCollapsedItems,
+      );
   }, []);
 
   const addPanel = (component) => {
@@ -101,42 +139,70 @@ function FallbackPage({ containerApi, className }) {
     launcherDep("addPanelByComponent")(containerApi, component);
   };
   const collapsed = new Set(collapsedItems);
-  const options = launcherDep("normalizeLauncherOrder")(launcherDep("loadConfig")().launcherOrder)
-    .map((component) => launcherDep("PANEL_CREATION_OPTIONS").find((option) => option.component === component))
+  const options = launcherDep("normalizeLauncherOrder")(
+    launcherDep("loadConfig")().launcherOrder,
+  )
+    .map((component) =>
+      launcherDep("PANEL_CREATION_OPTIONS").find((option) =>
+        option.component === component
+      )
+    )
     .filter(Boolean);
-  const primaryOptions = options.filter((option) => !collapsed.has(option.component));
-  const moreOptions = options.filter((option) => collapsed.has(option.component));
-  const renderOption = (option) => option.component === 'terminal'
-    ? React.createElement(TerminalLaunchPicker, {
-      key: option.component,
-      className: 'empty-terminal-launch',
-      iconSize: 18,
-      onLaunch: (profile) => containerApi && launcherDep("addTerminalPanel")(containerApi, undefined, profile),
-    })
-    : React.createElement('button', {
-    key: option.component,
-    type: 'button',
-    onClick: () => addPanel(option.component),
-  },
-  React.createElement(option.icon, { size: 18, 'aria-hidden': true }),
-  React.createElement('span', null, option.label),
+  const primaryOptions = options.filter((option) =>
+    !collapsed.has(option.component)
   );
-
-  return React.createElement('div', { className },
-    React.createElement('div', { className: 'empty-workspace-card' },
-      React.createElement('p', null, 'Task Launcher'),
-      React.createElement('div', { className: 'empty-workspace-actions' },
-        primaryOptions.map(renderOption),
-        moreOptions.length > 0 && React.createElement('button', {
-          type: 'button',
-          className: 'launcher-more-toggle',
-          'aria-expanded': showMore,
-          onClick: () => setShowMore((expanded) => !expanded),
+  const moreOptions = options.filter((option) =>
+    collapsed.has(option.component)
+  );
+  const renderOption = (option) =>
+    option.component === "terminal"
+      ? React.createElement(TerminalLaunchPicker, {
+        key: option.component,
+        className: "empty-terminal-launch",
+        iconSize: 18,
+        onLaunch: (profile) =>
+          containerApi &&
+          launcherDep("addTerminalPanel")(containerApi, undefined, profile),
+      })
+      : React.createElement(
+        "button",
+        {
+          key: option.component,
+          type: "button",
+          onClick: () => addPanel(option.component),
         },
-        React.createElement(Ellipsis, { size: 18, 'aria-hidden': true }),
-        React.createElement('span', null, showMore ? 'Less' : 'More'),
+        React.createElement(option.icon, { size: 18, "aria-hidden": true }),
+        React.createElement("span", null, option.label),
+      );
+
+  return React.createElement(
+    "div",
+    { className },
+    React.createElement(
+      "div",
+      { className: "empty-workspace-card" },
+      React.createElement("p", null, "Task Launcher"),
+      React.createElement(
+        "div",
+        { className: "empty-workspace-actions" },
+        primaryOptions.map(renderOption),
+        moreOptions.length > 0 && React.createElement(
+          "button",
+          {
+            type: "button",
+            className: "launcher-more-toggle",
+            "aria-expanded": showMore,
+            onClick: () => setShowMore((expanded) => !expanded),
+          },
+          React.createElement(Ellipsis, { size: 18, "aria-hidden": true }),
+          React.createElement("span", null, showMore ? "Less" : "More"),
         ),
-        showMore && React.createElement('div', { className: 'launcher-more-options' }, moreOptions.map(renderOption)),
+        showMore &&
+          React.createElement(
+            "div",
+            { className: "launcher-more-options" },
+            moreOptions.map(renderOption),
+          ),
       ),
     ),
   );
@@ -144,10 +210,11 @@ function FallbackPage({ containerApi, className }) {
 
 // Fallback launcher body for FallbackPanel:
 function FallbackPanel({ containerApi }) {
-  return React.createElement(FallbackPage, { containerApi, className: 'fallback-panel panel-content' });
+  return React.createElement(FallbackPage, {
+    containerApi,
+    className: "fallback-panel panel-content",
+  });
 }
-
-
 
 // === Panel registration ===
 // Counter for unique fallback / launcher panel ids. The counter is
@@ -162,29 +229,31 @@ export function addFallbackPanel(api, group) {
   const id = ++fallbackIdCounter;
   const panel = api.addPanel({
     id: `fallback-${id}`,
-    component: 'fallback',
-    params: { fallbackId: id, panelType: 'fallback' },
-    title: 'Launcher',
+    component: "fallback",
+    params: { fallbackId: id, panelType: "fallback" },
+    title: "Launcher",
     ...(group && { position: { referenceGroup: group } }),
   });
-  const rememberOpenPanel = launcherDep('rememberOpenPanel');
-  rememberOpenPanel(panel, { component: 'fallback' });
+  const rememberOpenPanel = launcherDep("rememberOpenPanel");
+  rememberOpenPanel(panel, { component: "fallback" });
   panel.api.setActive();
   return panel;
 }
 
-export { FallbackPage, FallbackPanel, TerminalLaunchPicker, AddTerminalButton };
+export { AddTerminalButton, FallbackPage, FallbackPanel, TerminalLaunchPicker };
 function AddTerminalButton({ containerApi, group }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [wagiDogEnabled, setWagiDogEnabledState] = useState(() => launcherDep("loadConfig")().wagiDogEnabled);
+  const [wagiDogEnabled, setWagiDogEnabledState] = useState(() =>
+    launcherDep("loadConfig")().wagiDogEnabled
+  );
   const controlRef = useRef(null);
   const pressTimer = useRef(null);
   const longPress = useRef(false);
 
   useEffect(() => {
-    const groupView = controlRef.current?.closest('.dv-groupview');
-    groupView?.classList.add('panel-action-host');
-    return () => groupView?.classList.remove('panel-action-host');
+    const groupView = controlRef.current?.closest(".dv-groupview");
+    groupView?.classList.add("panel-action-host");
+    return () => groupView?.classList.remove("panel-action-host");
   }, []);
 
   const clearPressTimer = () => {
@@ -201,7 +270,7 @@ function AddTerminalButton({ containerApi, group }) {
   };
 
   const startPress = (event) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
     longPress.current = false;
     pressTimer.current = setTimeout(openMenu, 450);
   };
@@ -211,14 +280,22 @@ function AddTerminalButton({ containerApi, group }) {
     const closeMenu = (event) => {
       if (!controlRef.current?.contains(event.target)) setMenuOpen(false);
     };
-    document.addEventListener('pointerdown', closeMenu, true);
-    return () => document.removeEventListener('pointerdown', closeMenu, true);
+    document.addEventListener("pointerdown", closeMenu, true);
+    return () => document.removeEventListener("pointerdown", closeMenu, true);
   }, [menuOpen]);
 
   useEffect(() => {
-    const syncWagiDog = () => setWagiDogEnabledState(launcherDep("loadConfig")().wagiDogEnabled);
-    window.addEventListener(launcherDep("WORKSPACE_CHANGED_EVENT"), syncWagiDog);
-    return () => window.removeEventListener(launcherDep("WORKSPACE_CHANGED_EVENT"), syncWagiDog);
+    const syncWagiDog = () =>
+      setWagiDogEnabledState(launcherDep("loadConfig")().wagiDogEnabled);
+    window.addEventListener(
+      launcherDep("WORKSPACE_CHANGED_EVENT"),
+      syncWagiDog,
+    );
+    return () =>
+      window.removeEventListener(
+        launcherDep("WORKSPACE_CHANGED_EVENT"),
+        syncWagiDog,
+      );
   }, []);
 
   const createTerminal = (event) => {
@@ -230,57 +307,83 @@ function AddTerminalButton({ containerApi, group }) {
     launcherDep("addTerminalPanel")(containerApi, group);
   };
 
-  return React.createElement('div', { ref: controlRef, className: 'panel-actions' },
-    React.createElement('button', {
-      className: 'panel-action-button',
-      type: 'button',
-      title: 'Add',
-      'aria-label': 'Add panel',
-      'aria-haspopup': 'menu',
-      'aria-expanded': menuOpen,
+  return React.createElement(
+    "div",
+    { ref: controlRef, className: "panel-actions" },
+    React.createElement("button", {
+      className: "panel-action-button",
+      type: "button",
+      title: "Add",
+      "aria-label": "Add panel",
+      "aria-haspopup": "menu",
+      "aria-expanded": menuOpen,
       onPointerDown: startPress,
       onPointerUp: clearPressTimer,
       onPointerCancel: clearPressTimer,
       onPointerLeave: clearPressTimer,
-      onContextMenu: (event) => { event.preventDefault(); openMenu(); },
-      onClick: createTerminal,
-    }, React.createElement(Plus, { size: 18, 'aria-hidden': true })),
-    menuOpen && React.createElement('div', { className: 'panel-action-menu', role: 'menu' },
-      React.createElement(TerminalLaunchPicker, {
-        className: 'panel-action-terminal-launch',
-        iconSize: 16,
-        inMenu: true,
-        onLaunch: (profile) => {
-          setMenuOpen(false);
-          launcherDep("addTerminalPanel")(containerApi, group, profile);
-        },
-      }),
-      React.createElement('div', { className: 'panel-action-menu-divider', role: 'separator' }),
-      React.createElement('button', {
-        type: 'button',
-        role: 'menuitemcheckbox',
-        'aria-checked': wagiDogEnabled,
-        onClick: () => launcherDep("setWagiDogEnabled")(!wagiDogEnabled),
+      onContextMenu: (event) => {
+        event.preventDefault();
+        openMenu();
       },
-      React.createElement(Dog, { size: 16, 'aria-hidden': true }),
-      React.createElement('span', null, 'Wagi Dog'),
-      wagiDogEnabled && React.createElement(Check, { className: 'panel-action-menu-check', size: 15, 'aria-label': 'Enabled' }),
-      ),
-      launcherDep("PANEL_CREATION_OPTIONS").filter((option) => option.component !== 'terminal').map((option) =>
-        React.createElement('button', {
-          key: option.component,
-          type: 'button',
-          role: 'menuitem',
-          onClick: () => {
+      onClick: createTerminal,
+    }, React.createElement(Plus, { size: 18, "aria-hidden": true })),
+    menuOpen &&
+      React.createElement(
+        "div",
+        { className: "panel-action-menu", role: "menu" },
+        React.createElement(TerminalLaunchPicker, {
+          className: "panel-action-terminal-launch",
+          iconSize: 16,
+          inMenu: true,
+          onLaunch: (profile) => {
             setMenuOpen(false);
-            launcherDep("addPanelByComponent")(containerApi, option.component, group);
+            launcherDep("addTerminalPanel")(containerApi, group, profile);
           },
-        },
-        React.createElement(option.icon, { size: 16, 'aria-hidden': true }),
-        React.createElement('span', null, option.label),
-        )
+        }),
+        React.createElement("div", {
+          className: "panel-action-menu-divider",
+          role: "separator",
+        }),
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            role: "menuitemcheckbox",
+            "aria-checked": wagiDogEnabled,
+            onClick: () => launcherDep("setWagiDogEnabled")(!wagiDogEnabled),
+          },
+          React.createElement(Dog, { size: 16, "aria-hidden": true }),
+          React.createElement("span", null, "Wagi Dog"),
+          wagiDogEnabled &&
+            React.createElement(Check, {
+              className: "panel-action-menu-check",
+              size: 15,
+              "aria-label": "Enabled",
+            }),
+        ),
+        launcherDep("PANEL_CREATION_OPTIONS").filter((option) =>
+          option.component !== "terminal"
+        ).map((option) =>
+          React.createElement(
+            "button",
+            {
+              key: option.component,
+              type: "button",
+              role: "menuitem",
+              onClick: () => {
+                setMenuOpen(false);
+                launcherDep("addPanelByComponent")(
+                  containerApi,
+                  option.component,
+                  group,
+                );
+              },
+            },
+            React.createElement(option.icon, { size: 16, "aria-hidden": true }),
+            React.createElement("span", null, option.label),
+          )
+        ),
       ),
-    ),
   );
 }
 
@@ -288,4 +391,3 @@ function AddTerminalButton({ containerApi, group }) {
 // extensions menu. Renders the panel-action-menu next to the dockview
 // tab strip, with launcher buttons for each enabled panel + a Wagi-Dog
 // toggle. Reuses TerminalLaunchPicker above for the Terminal entry.
-

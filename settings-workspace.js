@@ -1,44 +1,41 @@
 // Workspace form section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.2";
-export function setupWorkspaceForm(settingsContent) {
-  const activeSelect = settingsContent.querySelector(
-    '[data-workspace="active"]',
-  );
-  const nameInput = settingsContent.querySelector('[data-workspace="name"]');
-  const presetSelect = settingsContent.querySelector(
-    '[data-workspace="preset"]',
-  );
-  const status = settingsContent.querySelector('[data-workspace="status"]');
-  const jsonEl = settingsContent.querySelector('[data-workspace="json"]');
-  const jsonStatus = settingsContent.querySelector(
-    '[data-workspace="json-status"]',
-  );
-  const jsonFileInput = settingsContent.querySelector(
-    '[data-workspace="json-file"]',
-  );
-  const deleteButton = settingsContent.querySelector(
-    '[data-workspace-action="delete"]',
-  );
-  if (
-    !activeSelect || !nameInput || !presetSelect || !status || !jsonEl ||
-    !jsonStatus || !jsonFileInput
-  ) return;
 
-  let jsonDirty = false;
-  let jsonWorkspaceId = null;
+function queryWorkspaceElements(settingsContent) {
+  return {
+    activeSelect: settingsContent.querySelector('[data-workspace="active"]'),
+    nameInput: settingsContent.querySelector('[data-workspace="name"]'),
+    presetSelect: settingsContent.querySelector('[data-workspace="preset"]'),
+    status: settingsContent.querySelector('[data-workspace="status"]'),
+    jsonEl: settingsContent.querySelector('[data-workspace="json"]'),
+    jsonStatus: settingsContent.querySelector('[data-workspace="json-status"]'),
+    jsonFileInput: settingsContent.querySelector(
+      '[data-workspace="json-file"]',
+    ),
+    deleteButton: settingsContent.querySelector(
+      '[data-workspace-action="delete"]',
+    ),
+  };
+}
 
+function createWorkspaceStatusSetters(els) {
   const setStatus = (message, isError = false) => {
-    status.textContent = message;
-    status.style.color = isError ? "#f85149" : "#8b949e";
+    els.status.textContent = message;
+    els.status.style.color = isError ? "#f85149" : "#8b949e";
   };
   const setJsonStatus = (message, isError = false) => {
-    jsonStatus.textContent = message;
-    jsonStatus.style.color = isError ? "#f85149" : "#8b949e";
+    els.jsonStatus.textContent = message;
+    els.jsonStatus.style.color = isError ? "#f85149" : "#8b949e";
   };
+  return { setStatus, setJsonStatus };
+}
+
+function createWorkspaceJsonEditor(els, setJsonStatus) {
+  const state = { dirty: false, workspaceId: null };
   const validateJson = () => {
     try {
-      const workspace = settingsDep("parseWorkspaceJson")(jsonEl.value);
+      const workspace = settingsDep("parseWorkspaceJson")(els.jsonEl.value);
       setJsonStatus(
         `${workspace.name} · v${workspace.version} · ${workspace.system.binds.length} system mounts · ${workspace.binds.length} mounts · ${workspace.tasks.length} tasks`,
       );
@@ -50,49 +47,54 @@ export function setupWorkspaceForm(settingsContent) {
   };
   const loadCurrentJson = () => {
     const workspace = settingsDep("loadActiveWorkspace")();
-    jsonEl.value = JSON.stringify(workspace, null, 2);
-    jsonWorkspaceId = workspace.id;
-    jsonDirty = false;
+    els.jsonEl.value = JSON.stringify(workspace, null, 2);
+    state.workspaceId = workspace.id;
+    state.dirty = false;
     validateJson();
   };
-  const addOption = (select, value, label, selected) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    option.selected = selected;
-    select.appendChild(option);
-  };
-  const render = () => {
-    const activeId = settingsDep("getActiveWorkspaceId")();
-    activeSelect.replaceChildren();
-    for (const workspace of settingsDep("ensureWorkspaceStore")()) {
-      addOption(
-        activeSelect,
-        workspace.id,
-        workspace.name,
-        workspace.id === activeId,
-      );
-    }
-    const workspace = settingsDep("loadActiveWorkspace")();
-    nameInput.value = workspace.name;
-    if (!jsonDirty || jsonWorkspaceId !== workspace.id) loadCurrentJson();
-    presetSelect.replaceChildren();
-    for (const preset of settingsDep("listWorkspacePresets")()) {
-      addOption(
-        presetSelect,
-        preset.id,
-        preset.name,
-        preset.id === "hush-shell",
-      );
-    }
-    if (deleteButton) {
-      deleteButton.disabled = activeId === "hush-shell" ||
-        activeSelect.options.length <= 1;
-    }
-  };
+  return { state, validateJson, loadCurrentJson };
+}
 
-  activeSelect.addEventListener("change", () => {
-    if (settingsDep("setActiveWorkspaceId")(activeSelect.value)) {
+function addOption(select, value, label, selected) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  option.selected = selected;
+  select.appendChild(option);
+}
+
+function renderWorkspaceForm(els, state, loadCurrentJson) {
+  const activeId = settingsDep("getActiveWorkspaceId")();
+  els.activeSelect.replaceChildren();
+  for (const workspace of settingsDep("ensureWorkspaceStore")()) {
+    addOption(
+      els.activeSelect,
+      workspace.id,
+      workspace.name,
+      workspace.id === activeId,
+    );
+  }
+  const workspace = settingsDep("loadActiveWorkspace")();
+  els.nameInput.value = workspace.name;
+  if (!state.dirty || state.workspaceId !== workspace.id) loadCurrentJson();
+  els.presetSelect.replaceChildren();
+  for (const preset of settingsDep("listWorkspacePresets")()) {
+    addOption(
+      els.presetSelect,
+      preset.id,
+      preset.name,
+      preset.id === "hush-shell",
+    );
+  }
+  if (els.deleteButton) {
+    els.deleteButton.disabled = activeId === "hush-shell" ||
+      els.activeSelect.options.length <= 1;
+  }
+}
+
+function wireWorkspaceButtons(settingsContent, els, setStatus) {
+  els.activeSelect.addEventListener("change", () => {
+    if (settingsDep("setActiveWorkspaceId")(els.activeSelect.value)) {
       setStatus("Workspace selected.");
     } else setStatus("Unable to select this workspace.", true);
   });
@@ -101,7 +103,7 @@ export function setupWorkspaceForm(settingsContent) {
       try {
         const workspace = settingsDep("renameWorkspace")(
           settingsDep("getActiveWorkspaceId")(),
-          nameInput.value,
+          els.nameInput.value,
         );
         setStatus(`Renamed workspace to ${workspace.name}.`);
       } catch (error) {
@@ -111,7 +113,7 @@ export function setupWorkspaceForm(settingsContent) {
   settingsContent.querySelector('[data-workspace-action="create"]')
     .addEventListener("click", () => {
       const workspace = settingsDep("createWorkspaceFromPreset")(
-        presetSelect.value,
+        els.presetSelect.value,
       );
       if (workspace) setStatus(`Created ${workspace.name}.`);
       else setStatus("Unable to create workspace.", true);
@@ -132,6 +134,13 @@ export function setupWorkspaceForm(settingsContent) {
         setStatus(`Deleted ${workspace.name}.`);
       } else setStatus("The default workspace cannot be deleted.", true);
     });
+}
+
+function wireWorkspaceJsonButtons(
+  settingsContent,
+  els,
+  { setStatus, validateJson, loadCurrentJson },
+) {
   settingsContent.querySelector('[data-workspace-action="json-reset"]')
     .addEventListener("click", () => {
       loadCurrentJson();
@@ -141,22 +150,22 @@ export function setupWorkspaceForm(settingsContent) {
     .addEventListener("click", async () => {
       if (!validateJson()) return;
       try {
-        await navigator.clipboard.writeText(jsonEl.value);
+        await navigator.clipboard.writeText(els.jsonEl.value);
         setStatus("Workspace JSON copied.");
       } catch {
         setStatus(
           "Unable to copy. Select the JSON and copy it manually.",
           true,
         );
-        jsonEl.focus();
-        jsonEl.select();
+        els.jsonEl.focus();
+        els.jsonEl.select();
       }
     });
   settingsContent.querySelector('[data-workspace-action="json-download"]')
     .addEventListener("click", () => {
       const workspace = validateJson();
       if (!workspace) return;
-      const blob = new Blob([jsonEl.value], { type: "application/json" });
+      const blob = new Blob([els.jsonEl.value], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const download = document.createElement("a");
       download.href = url;
@@ -167,33 +176,14 @@ export function setupWorkspaceForm(settingsContent) {
       URL.revokeObjectURL(url);
       setStatus("Workspace JSON downloaded.");
     });
-  jsonEl.addEventListener("input", () => {
-    jsonDirty = true;
-    validateJson();
-  });
-  jsonFileInput.addEventListener("change", async () => {
-    const [file] = jsonFileInput.files || [];
-    if (!file) return;
-    try {
-      jsonEl.value = await file.text();
-      jsonDirty = true;
-      const workspace = validateJson();
-      if (workspace) {
-        setStatus(
-          `Loaded ${workspace.name}. Review it, then choose how to apply it.`,
-        );
-      }
-    } catch (error) {
-      setStatus(error.message || "Unable to read workspace JSON.", true);
-    } finally {
-      jsonFileInput.value = "";
-    }
-  });
+}
+
+function wireWorkspaceJsonActions(settingsContent, els, { setStatus, state }) {
   settingsContent.querySelector('[data-workspace-action="json-create"]')
     .addEventListener("click", () => {
       try {
-        const workspace = settingsDep("importWorkspace")(jsonEl.value);
-        jsonDirty = false;
+        const workspace = settingsDep("importWorkspace")(els.jsonEl.value);
+        state.dirty = false;
         setStatus(`Created ${workspace.name} from JSON.`);
       } catch (error) {
         setStatus(error.message || "Unable to create workspace.", true);
@@ -206,14 +196,71 @@ export function setupWorkspaceForm(settingsContent) {
         !window.confirm(`Replace ${current.name} with the JSON in this editor?`)
       ) return;
       try {
-        const workspace = settingsDep("replaceActiveWorkspace")(jsonEl.value);
-        jsonDirty = false;
+        const workspace = settingsDep("replaceActiveWorkspace")(
+          els.jsonEl.value,
+        );
+        state.dirty = false;
         setStatus(`Replaced the current workspace with ${workspace.name}.`);
       } catch (error) {
         setStatus(error.message || "Unable to replace workspace.", true);
       }
     });
+}
 
+function wireWorkspaceJsonInputs(
+  settingsContent,
+  els,
+  { setStatus, validateJson, state },
+) {
+  els.jsonEl.addEventListener("input", () => {
+    state.dirty = true;
+    validateJson();
+  });
+  els.jsonFileInput.addEventListener("change", async () => {
+    const [file] = els.jsonFileInput.files || [];
+    if (!file) return;
+    try {
+      els.jsonEl.value = await file.text();
+      state.dirty = true;
+      const workspace = validateJson();
+      if (workspace) {
+        setStatus(
+          `Loaded ${workspace.name}. Review it, then choose how to apply it.`,
+        );
+      }
+    } catch (error) {
+      setStatus(error.message || "Unable to read workspace JSON.", true);
+    } finally {
+      els.jsonFileInput.value = "";
+    }
+  });
+}
+
+export function setupWorkspaceForm(settingsContent) {
+  const els = queryWorkspaceElements(settingsContent);
+  if (
+    !els.activeSelect || !els.nameInput || !els.presetSelect || !els.status ||
+    !els.jsonEl || !els.jsonStatus || !els.jsonFileInput
+  ) return;
+  const { setStatus, setJsonStatus } = createWorkspaceStatusSetters(els);
+  const json = createWorkspaceJsonEditor(els, setJsonStatus);
+  const render = () =>
+    renderWorkspaceForm(els, json.state, json.loadCurrentJson);
+  wireWorkspaceButtons(settingsContent, els, setStatus);
+  wireWorkspaceJsonButtons(settingsContent, els, {
+    setStatus,
+    validateJson: json.validateJson,
+    loadCurrentJson: json.loadCurrentJson,
+  });
+  wireWorkspaceJsonActions(settingsContent, els, {
+    setStatus,
+    state: json.state,
+  });
+  wireWorkspaceJsonInputs(settingsContent, els, {
+    setStatus,
+    validateJson: json.validateJson,
+    state: json.state,
+  });
   window.addEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), render);
   render();
   return () =>

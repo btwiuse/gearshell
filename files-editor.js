@@ -96,6 +96,99 @@ export function sniffWasmBytes(contents) {
     bytes[3] === 0x6d;
 }
 
+async function openEntryInEditor(
+  {
+    getRoot,
+    nextPath,
+    setSelectedPath,
+    setPreview,
+    setContents,
+    setSavedContents,
+    setBinary,
+  },
+) {
+  try {
+    const data = await getRoot().readFile(nextPath);
+    const previewType = getFilesystemPreviewType(nextPath);
+    setSelectedPath(nextPath);
+    if (previewType) {
+      const blob = new Blob([toFilesystemBytes(data)], {
+        type: previewType.mime,
+      });
+      setPreview({ ...previewType, blob, url: URL.createObjectURL(blob) });
+      setContents("");
+      setSavedContents("");
+      setBinary(false);
+    } else if (isBinaryData(data)) {
+      setPreview(null);
+      setContents("");
+      setSavedContents("");
+      setBinary(true);
+    } else {
+      const text = decodeFilesystemText(data);
+      setPreview(null);
+      setContents(text);
+      setSavedContents(text);
+      setBinary(false);
+    }
+    return { isDirectory: false, path: nextPath, error: null };
+  } catch (error) {
+    return {
+      isDirectory: false,
+      path: nextPath,
+      error: error.message || "Unable to open this file.",
+    };
+  }
+}
+
+function useFilesFileOps(
+  {
+    getRoot,
+    contents,
+    selectedPath,
+    preview,
+    clearFileSelection,
+    setSavedContents,
+  },
+) {
+  const saveFile = useCallback(async (targetPath) => {
+    if (!targetPath) return { ok: false, message: null };
+    try {
+      await getRoot().writeFile(targetPath, contents);
+      setSavedContents(contents);
+      return { ok: true, message: "Saved." };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error.message || "Unable to save this file.",
+      };
+    }
+  }, [contents, getRoot]);
+  const removeFile = useCallback(async (targetPath) => {
+    try {
+      await getRoot().remove(targetPath);
+      clearFileSelection();
+      return { ok: true, message: "Deleted." };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error.message || "Unable to delete this file.",
+      };
+    }
+  }, [getRoot, clearFileSelection]);
+  const downloadFile = useCallback(() => {
+    if (!selectedPath) return;
+    const link = document.createElement("a");
+    const blob = preview?.blob ||
+      new Blob([contents], { type: "text/plain;charset=utf-8" });
+    link.href = URL.createObjectURL(blob);
+    link.download = selectedPath.split("/").pop() || "download";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  }, [selectedPath, preview, contents]);
+  return { saveFile, removeFile, downloadFile };
+}
+
 export function useFilesEditor(getRoot) {
   const [selectedPath, setSelectedPath] = useState(null);
   const [contents, setContents] = useState("");
@@ -118,77 +211,32 @@ export function useFilesEditor(getRoot) {
   const openEntry = useCallback(async (entry, currentPath) => {
     const nextPath = filesystemPathJoin(currentPath, entry.name);
     if (entry.isDirectory) return { isDirectory: true, path: nextPath };
-    try {
-      const data = await getRoot().readFile(nextPath);
-      const previewType = getFilesystemPreviewType(nextPath);
-      setSelectedPath(nextPath);
-      if (previewType) {
-        const blob = new Blob([toFilesystemBytes(data)], {
-          type: previewType.mime,
-        });
-        setPreview({ ...previewType, blob, url: URL.createObjectURL(blob) });
-        setContents("");
-        setSavedContents("");
-        setBinary(false);
-      } else if (isBinaryData(data)) {
-        setPreview(null);
-        setContents("");
-        setSavedContents("");
-        setBinary(true);
-      } else {
-        const text = decodeFilesystemText(data);
-        setPreview(null);
-        setContents(text);
-        setSavedContents(text);
-        setBinary(false);
-      }
-      return { isDirectory: false, path: nextPath, error: null };
-    } catch (error) {
-      return {
-        isDirectory: false,
-        path: nextPath,
-        error: error.message || "Unable to open this file.",
-      };
-    }
-  }, [getRoot]);
+    return openEntryInEditor({
+      getRoot,
+      nextPath,
+      setSelectedPath,
+      setPreview,
+      setContents,
+      setSavedContents,
+      setBinary,
+    });
+  }, [
+    getRoot,
+    setSelectedPath,
+    setPreview,
+    setContents,
+    setSavedContents,
+    setBinary,
+  ]);
 
-  const saveFile = useCallback(async (targetPath) => {
-    if (!targetPath) return { ok: false, message: null };
-    try {
-      await getRoot().writeFile(targetPath, contents);
-      setSavedContents(contents);
-      return { ok: true, message: "Saved." };
-    } catch (error) {
-      return {
-        ok: false,
-        message: error.message || "Unable to save this file.",
-      };
-    }
-  }, [contents, getRoot]);
-
-  const removeFile = useCallback(async (targetPath) => {
-    try {
-      await getRoot().remove(targetPath);
-      clearFileSelection();
-      return { ok: true, message: "Deleted." };
-    } catch (error) {
-      return {
-        ok: false,
-        message: error.message || "Unable to delete this file.",
-      };
-    }
-  }, [getRoot, clearFileSelection]);
-
-  const downloadFile = useCallback(() => {
-    if (!selectedPath) return;
-    const link = document.createElement("a");
-    const blob = preview?.blob ||
-      new Blob([contents], { type: "text/plain;charset=utf-8" });
-    link.href = URL.createObjectURL(blob);
-    link.download = selectedPath.split("/").pop() || "download";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 0);
-  }, [selectedPath, preview, contents]);
+  const fileOps = useFilesFileOps({
+    getRoot,
+    contents,
+    selectedPath,
+    preview,
+    clearFileSelection,
+    setSavedContents,
+  });
 
   const dirty = selectedPath && !preview && !binary &&
     contents !== savedContents;
@@ -201,14 +249,11 @@ export function useFilesEditor(getRoot) {
     dirty,
     clearFileSelection,
     openEntry,
-    saveFile,
-    removeFile,
-    downloadFile,
+    ...fileOps,
     setContents,
     setSelectedPath,
   };
 }
-
 // === Filesystem actions (create / rename / save / delete / upload) ===
 // The mutation handlers for FilesPanel, kept here so files.js only
 // orchestrates. All filesystem access goes through getRoot().

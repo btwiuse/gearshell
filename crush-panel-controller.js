@@ -28,6 +28,72 @@ import {
 import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.2";
 import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.2";
 
+function makeCrushDetector(
+  { setCrushInstalled, setDetectSource, applyDetectedProgram },
+) {
+  let cancelled = false;
+  let activeTask = 0;
+  const detect = async () => {
+    const id = ++activeTask;
+    const result = await detectCrushInstallation();
+    if (cancelled || id !== activeTask) return;
+    if (result == null) {
+      setCrushInstalled(null);
+      setDetectSource("waiting for wanix");
+    } else {
+      setCrushInstalled(result.installed);
+      setDetectSource(
+        result.path
+          ? `${result.via} → ${result.path}`
+          : (result.via || "which crush"),
+      );
+      if (result.installed && result.path) applyDetectedProgram(result.path);
+    }
+  };
+  return detect;
+}
+
+function makeWorkspaceChangeHandler({ setPresets, switchToPreset, detect }) {
+  // Workspace changes also need to reset the form to the active preset
+  // and give us a fresh chance to keep the program field in sync with
+  // detection until the user takes ownership of it.
+  return () => {
+    const fresh = crushRunnerDep("getCrushRunnerPresets")(
+      crushRunnerDep("loadConfig")(),
+    );
+    setPresets(fresh);
+    const nextActive = fresh.find((preset) =>
+      preset.id ===
+        (crushRunnerDep("loadConfig")().crushRunnerActiveId || "crush")
+    ) || fresh[0];
+    switchToPreset(nextActive);
+    detect();
+  };
+}
+
+function subscribeCrushEvents({ detect, onWorkspaceChange }) {
+  // Re-run detection whenever the Wanix kernel finishes starting up; the
+  // first detect() call often races the boot and would otherwise leave
+  // the user staring at "Checking for crush…" forever.
+  const onReady = () => detect();
+  const onError = () => detect();
+  __getWanixSystem()?.addEventListener("ready", onReady);
+  __getWanixSystem()?.addEventListener("error", onError);
+  window.addEventListener(
+    crushRunnerDep("WORKSPACE_CHANGED_EVENT"),
+    onWorkspaceChange,
+  );
+  detect();
+  return () => {
+    __getWanixSystem()?.removeEventListener("ready", onReady);
+    __getWanixSystem()?.removeEventListener("error", onError);
+    window.removeEventListener(
+      crushRunnerDep("WORKSPACE_CHANGED_EVENT"),
+      onWorkspaceChange,
+    );
+  };
+}
+
 export function useCrushRunnerPanelController({ api, params, containerApi }) {
   const dockApi = containerApi || dockviewApi;
   // Preset model: every Crush configuration the user has saved lives in
@@ -95,61 +161,17 @@ export function useCrushRunnerPanelController({ api, params, containerApi }) {
   };
 
   useEffect(() => {
-    let cancelled = false;
-    let activeTask = 0;
-    const detect = async () => {
-      const id = ++activeTask;
-      const result = await detectCrushInstallation();
-      if (cancelled || id !== activeTask) return;
-      if (result == null) {
-        setCrushInstalled(null);
-        setDetectSource("waiting for wanix");
-      } else {
-        setCrushInstalled(result.installed);
-        setDetectSource(
-          result.path
-            ? `${result.via} → ${result.path}`
-            : (result.via || "which crush"),
-        );
-        if (result.installed && result.path) applyDetectedProgram(result.path);
-      }
-    };
-    detect();
-    const onReady = () => detect();
-    const onError = () => detect();
-    // Workspace changes also need to reset the form to the active preset
-    // and give us a fresh chance to keep the program field in sync with
-    // detection until the user takes ownership of it.
-    const onWorkspaceChange = () => {
-      const fresh = crushRunnerDep("getCrushRunnerPresets")(
-        crushRunnerDep("loadConfig")(),
-      );
-      setPresets(fresh);
-      const nextActive = fresh.find((preset) =>
-        preset.id ===
-          (crushRunnerDep("loadConfig")().crushRunnerActiveId || "crush")
-      ) || fresh[0];
-      switchToPreset(nextActive);
-      detect();
-    };
-    // Re-run detection whenever the Wanix kernel finishes starting up; the
-    // first detect() call often races the boot and would otherwise leave
-    // the user staring at "Checking for crush…" forever.
-    __getWanixSystem()?.addEventListener("ready", onReady);
-    __getWanixSystem()?.addEventListener("error", onError);
-    window.addEventListener(
-      crushRunnerDep("WORKSPACE_CHANGED_EVENT"),
-      onWorkspaceChange,
-    );
-    return () => {
-      cancelled = true;
-      __getWanixSystem()?.removeEventListener("ready", onReady);
-      __getWanixSystem()?.removeEventListener("error", onError);
-      window.removeEventListener(
-        crushRunnerDep("WORKSPACE_CHANGED_EVENT"),
-        onWorkspaceChange,
-      );
-    };
+    const detect = makeCrushDetector({
+      setCrushInstalled,
+      setDetectSource,
+      applyDetectedProgram,
+    });
+    const onWorkspaceChange = makeWorkspaceChangeHandler({
+      setPresets,
+      switchToPreset,
+      detect,
+    });
+    return subscribeCrushEvents({ detect, onWorkspaceChange });
   }, []);
 
   const updateField = (field, value) =>

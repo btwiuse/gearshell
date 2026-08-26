@@ -25,7 +25,7 @@ import { DockviewDefaultTab } from "dockview-react";
 let webPetModulePromise = null;
 function loadWebPetModule() {
   if (webPetModulePromise) return webPetModulePromise;
-  webPetModulePromise = import('./web-pet/index.js')
+  webPetModulePromise = import("./web-pet/index.js")
     .then((mod) => mod.default || mod.WebPet)
     .catch((error) => {
       // Reset so a later retry (e.g. after a config toggle) can try
@@ -33,7 +33,9 @@ function loadWebPetModule() {
       // it's diagnosable but don't throw — the shell has to keep
       // running without the desktop pet.
       webPetModulePromise = null;
-      if (typeof console !== 'undefined') console.warn('web-pet unavailable:', error);
+      if (typeof console !== "undefined") {
+        console.warn("web-pet unavailable:", error);
+      }
       return null;
     });
   return webPetModulePromise;
@@ -45,7 +47,9 @@ export function initPanels(dependencies) {
 }
 function panelsDep(name) {
   if (__panelsDeps == null) {
-    throw new Error('panels: initPanels() has not been called; ensure app.js wires it in.');
+    throw new Error(
+      "panels: initPanels() has not been called; ensure app.js wires it in.",
+    );
   }
   const value = __panelsDeps[name];
   if (value === undefined) {
@@ -53,7 +57,6 @@ function panelsDep(name) {
   }
   return value;
 }
-
 
 // === Counters ===
 // Per-panel-type counters so multiple instances of the same panel
@@ -66,7 +69,6 @@ let vmIdCounter = 0;
 let workspaceTaskPanelCounter = 0;
 let groupIdCounter = 0;
 let iframeIdCounter = 0;
-
 
 // === Panel icon catalog ===
 // `Object.fromEntries(PANEL_CREATION_OPTIONS.map(...))` builds the
@@ -84,13 +86,14 @@ let __panelsIconsCache = null;
 function getPanelIcons() {
   if (__panelsIconsCache == null) {
     __panelsIconsCache = Object.fromEntries(
-      panelsDep("PANEL_CREATION_OPTIONS").map(({ component, icon }) => [component, icon]),
+      panelsDep("PANEL_CREATION_OPTIONS").map((
+        { component, icon },
+      ) => [component, icon]),
     );
     __panelsIconsCache.task = Play;
   }
   return __panelsIconsCache;
 }
-
 
 // === TerminalPanel ===
 function TerminalPanel({ api, params }) {
@@ -103,13 +106,18 @@ function TerminalPanel({ api, params }) {
     return panelsDep("attachTerminalSession")(id, params.profile, wrapper, api);
   }, [id, params.profile]);
 
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+  return React.createElement("div", {
+    ref: wrapperRef,
+    className: "panel-content",
+  });
 }
 
 // === GroupPanel ===
 function GroupPanel() {
-  return React.createElement('div', { className: 'group-panel panel-content' },
-    React.createElement('img', { src: 'group.png', alt: 'Gear Shell group' }),
+  return React.createElement(
+    "div",
+    { className: "group-panel panel-content" },
+    React.createElement("img", { src: "group.png", alt: "Gear Shell group" }),
   );
 }
 
@@ -120,10 +128,18 @@ function IframePanel({ api, params }) {
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    return panelsDep("attachIframeSession")(params.iframeId, params, wrapper, api);
+    return panelsDep("attachIframeSession")(
+      params.iframeId,
+      params,
+      wrapper,
+      api,
+    );
   }, [api, params.iframeId]);
 
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+  return React.createElement("div", {
+    ref: wrapperRef,
+    className: "panel-content",
+  });
 }
 
 // === WorkbenchPanel ===
@@ -132,9 +148,17 @@ function WorkbenchPanel({ api, params }) {
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    return panelsDep("attachWorkbenchSession")(params.workbenchId, params.config || panelsDep("getWorkbenchPanelConfig")(), wrapper, api);
+    return panelsDep("attachWorkbenchSession")(
+      params.workbenchId,
+      params.config || panelsDep("getWorkbenchPanelConfig")(),
+      wrapper,
+      api,
+    );
   }, [api, params.workbenchId]);
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+  return React.createElement("div", {
+    ref: wrapperRef,
+    className: "panel-content",
+  });
 }
 
 // === VmPanel ===
@@ -143,18 +167,32 @@ function VmPanel({ api, params }) {
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    return panelsDep("attachVmSession")(params.vmId, params.config || panelsDep("getVmPanelConfig")(), wrapper, api);
+    return panelsDep("attachVmSession")(
+      params.vmId,
+      params.config || panelsDep("getVmPanelConfig")(),
+      wrapper,
+      api,
+    );
   }, [api, params.vmId]);
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+  return React.createElement("div", {
+    ref: wrapperRef,
+    className: "panel-content",
+  });
 }
 
 // === PanelTab ===
 function PanelTab(props) {
-  const Icon = props.params.panelType === 'terminal'
+  const Icon = props.params.panelType === "terminal"
     ? panelsDep("getTerminalPresetIcon")(props.params.profile)
     : getPanelIcons()[props.params.panelType] || Terminal;
-  return React.createElement('div', { className: 'panel-tab' },
-    React.createElement(Icon, { className: 'panel-tab-icon', size: 14, 'aria-hidden': true }),
+  return React.createElement(
+    "div",
+    { className: "panel-tab" },
+    React.createElement(Icon, {
+      className: "panel-tab-icon",
+      size: 14,
+      "aria-hidden": true,
+    }),
     React.createElement(DockviewDefaultTab, props),
   );
 }
@@ -163,35 +201,69 @@ function PanelTab(props) {
 function WorkspaceTaskPanel({ api, params }) {
   const wrapperRef = useRef(null);
   const hasTerminal = params.task.term;
-  const [taskStatus, setTaskStatus] = useState({ status: 'created', error: null });
+  const [taskStatus, setTaskStatus] = useState({
+    status: "created",
+    error: null,
+  });
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    const workspace = panelsDep("loadWorkspace")(params.workspaceId) || panelsDep("loadActiveWorkspace")();
-    const session = panelsDep("getWorkspaceTaskSession")(params.sessionId, params.task, workspace);
+    const workspace = panelsDep("loadWorkspace")(params.workspaceId) ||
+      panelsDep("loadActiveWorkspace")();
+    const session = panelsDep("getWorkspaceTaskSession")(
+      params.sessionId,
+      params.task,
+      workspace,
+    );
     const updateStatus = (event) => setTaskStatus(event.detail);
-    session.task.addEventListener(panelsDep("WORKSPACE_TASK_STATUS_EVENT"), updateStatus);
-    setTaskStatus({ status: session.status || 'created', error: session.error || null });
-    const detach = panelsDep("attachWorkspaceTaskSession")(params.sessionId, params.task, workspace, wrapper, api);
+    session.task.addEventListener(
+      panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
+      updateStatus,
+    );
+    setTaskStatus({
+      status: session.status || "created",
+      error: session.error || null,
+    });
+    const detach = panelsDep("attachWorkspaceTaskSession")(
+      params.sessionId,
+      params.task,
+      workspace,
+      wrapper,
+      api,
+    );
     return () => {
-      session.task.removeEventListener(panelsDep("WORKSPACE_TASK_STATUS_EVENT"), updateStatus);
+      session.task.removeEventListener(
+        panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
+        updateStatus,
+      );
       detach?.();
     };
   }, [api, params.sessionId]);
 
   if (!hasTerminal) {
-    return React.createElement('div', { ref: wrapperRef, className: 'task-headless panel-content' },
-      React.createElement('h2', null, params.task.name),
-      React.createElement('p', null, taskStatus.status === 'failed'
-        ? taskStatus.error?.message || 'Task failed to start.'
-        : taskStatus.status === 'starting'
-          ? 'Starting task…'
-          : 'Task started without a terminal. Its output is available in the browser console.'),
-      React.createElement('span', { className: `task-headless-status ${taskStatus.status}` }, taskStatus.status),
+    return React.createElement(
+      "div",
+      { ref: wrapperRef, className: "task-headless panel-content" },
+      React.createElement("h2", null, params.task.name),
+      React.createElement(
+        "p",
+        null,
+        taskStatus.status === "failed"
+          ? taskStatus.error?.message || "Task failed to start."
+          : taskStatus.status === "starting"
+          ? "Starting task…"
+          : "Task started without a terminal. Its output is available in the browser console.",
+      ),
+      React.createElement("span", {
+        className: `task-headless-status ${taskStatus.status}`,
+      }, taskStatus.status),
     );
   }
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+  return React.createElement("div", {
+    ref: wrapperRef,
+    className: "panel-content",
+  });
 }
 
 // === WagiDogPet ===
@@ -208,7 +280,9 @@ function WagiDogPet() {
     });
     function syncWagiDog() {
       if (panelsDep("loadConfig")().wagiDogEnabled) {
-        if (WebPetRef.current && !petRef.current) petRef.current = new WebPetRef.current();
+        if (WebPetRef.current && !petRef.current) {
+          petRef.current = new WebPetRef.current();
+        }
       } else {
         petRef.current?.destroy();
         petRef.current = null;
@@ -218,7 +292,10 @@ function WagiDogPet() {
     window.addEventListener(panelsDep("WORKSPACE_CHANGED_EVENT"), syncWagiDog);
     return () => {
       cancelled = true;
-      window.removeEventListener(panelsDep("WORKSPACE_CHANGED_EVENT"), syncWagiDog);
+      window.removeEventListener(
+        panelsDep("WORKSPACE_CHANGED_EVENT"),
+        syncWagiDog,
+      );
       petRef.current?.destroy();
       petRef.current = null;
     };
@@ -228,22 +305,39 @@ function WagiDogPet() {
 }
 
 // === addTerminalPanel ===
-function addTerminalPanel(api, group, profile = panelsDep("getDefaultTerminalProfile")()) {
+function addTerminalPanel(
+  api,
+  group,
+  profile = panelsDep("getDefaultTerminalProfile")(),
+) {
   const id = ++terminalIdCounter;
   const panel = api.addPanel({
     id: `terminal-${id}`,
-    component: 'terminal',
-    params: { terminalId: id, panelType: 'terminal', profile: panelsDep("clone")(profile) },
-    title: `${profile.name || 'Terminal'} ${id}`,
+    component: "terminal",
+    params: {
+      terminalId: id,
+      panelType: "terminal",
+      profile: panelsDep("clone")(profile),
+    },
+    title: `${profile.name || "Terminal"} ${id}`,
     ...(group && { position: { referenceGroup: group } }),
   });
-  panelsDep("rememberOpenPanel")(panel, { component: 'terminal', profile: panelsDep("clone")(profile) });
+  panelsDep("rememberOpenPanel")(panel, {
+    component: "terminal",
+    profile: panelsDep("clone")(profile),
+  });
   panel.api.setActive();
 }
 
 // === addWorkbenchPanel ===
-function addWorkbenchPanel(api, group, config = panelsDep("getWorkbenchPanelConfig")()) {
-  const existing = api.panels.find((panel) => panel.id.startsWith('workbench-'));
+function addWorkbenchPanel(
+  api,
+  group,
+  config = panelsDep("getWorkbenchPanelConfig")(),
+) {
+  const existing = api.panels.find((panel) =>
+    panel.id.startsWith("workbench-")
+  );
   if (existing) {
     existing.api.setActive();
     return existing;
@@ -251,12 +345,19 @@ function addWorkbenchPanel(api, group, config = panelsDep("getWorkbenchPanelConf
   const id = ++workbenchIdCounter;
   const panel = api.addPanel({
     id: `workbench-${id}`,
-    component: 'workbench',
-    params: { workbenchId: id, panelType: 'workbench', config: panelsDep("clone")(config) },
-    title: 'Workbench',
+    component: "workbench",
+    params: {
+      workbenchId: id,
+      panelType: "workbench",
+      config: panelsDep("clone")(config),
+    },
+    title: "Workbench",
     ...(group && { position: { referenceGroup: group } }),
   });
-  panelsDep("rememberOpenPanel")(panel, { component: 'workbench', config: panelsDep("clone")(config) });
+  panelsDep("rememberOpenPanel")(panel, {
+    component: "workbench",
+    config: panelsDep("clone")(config),
+  });
   panel.api.setActive();
   return panel;
 }
@@ -266,32 +367,44 @@ function addVmPanel(api, group, config = panelsDep("getVmPanelConfig")()) {
   const id = ++vmIdCounter;
   const panel = api.addPanel({
     id: `vm-${id}`,
-    component: 'vm',
-    params: { vmId: id, panelType: 'vm', config: panelsDep("clone")(config) },
+    component: "vm",
+    params: { vmId: id, panelType: "vm", config: panelsDep("clone")(config) },
     title: `VM ${id}`,
     ...(group && { position: { referenceGroup: group } }),
   });
-  panelsDep("rememberOpenPanel")(panel, { component: 'vm', config: panelsDep("clone")(config) });
+  panelsDep("rememberOpenPanel")(panel, {
+    component: "vm",
+    config: panelsDep("clone")(config),
+  });
   panel.api.setActive();
   return panel;
 }
 
 // === addWorkspaceTaskPanel ===
-function addWorkspaceTaskPanel(api, task, workspace = panelsDep("loadActiveWorkspace")(), group) {
+function addWorkspaceTaskPanel(
+  api,
+  task,
+  workspace = panelsDep("loadActiveWorkspace")(),
+  group,
+) {
   const sessionId = ++workspaceTaskPanelCounter;
   const panel = api.addPanel({
     id: `workspace-task-${sessionId}`,
-    component: 'task',
+    component: "task",
     params: {
       sessionId,
       task: panelsDep("clone")(task),
       workspaceId: workspace.id,
-      panelType: 'task',
+      panelType: "task",
     },
     title: task.name || task.cmd,
     ...(group && { position: { referenceGroup: group } }),
   });
-  panelsDep("rememberOpenPanel")(panel, { component: 'task', task: panelsDep("clone")(task), workspaceId: workspace.id });
+  panelsDep("rememberOpenPanel")(panel, {
+    component: "task",
+    task: panelsDep("clone")(task),
+    workspaceId: workspace.id,
+  });
   panel.api.setActive();
   return panel;
 }
@@ -301,12 +414,12 @@ function addGroupPanel(api, group) {
   const id = ++groupIdCounter;
   const panel = api.addPanel({
     id: `group-${id}`,
-    component: 'group',
-    params: { groupId: id, panelType: 'group' },
-    title: 'Group',
+    component: "group",
+    params: { groupId: id, panelType: "group" },
+    title: "Group",
     ...(group && { position: { referenceGroup: group } }),
   });
-  panelsDep("rememberOpenPanel")(panel, { component: 'group' });
+  panelsDep("rememberOpenPanel")(panel, { component: "group" });
   panel.api.setActive();
   return panel;
 }
@@ -316,7 +429,7 @@ function addIframePanel(api, config, group) {
   const id = ++iframeIdCounter;
   const panel = api.addPanel({
     id: `iframe-${id}`,
-    component: 'iframe',
+    component: "iframe",
     params: { iframeId: id, panelType: config.panelType, ...config },
     title: config.title,
     ...(group && { position: { referenceGroup: group } }),
@@ -339,7 +452,7 @@ const PANEL_ADDERS = {
   terminal: addTerminalPanel,
   workbench: addWorkbenchPanel,
   vm: addVmPanel,
-  'workspace-task': addWorkspaceTaskPanel,
+  "workspace-task": addWorkspaceTaskPanel,
   group: addGroupPanel,
   home: (api, group) => panelsDep("addLandingPanel")(api, group),
   deck: (api, group) => panelsDep("addDeckPanel")(api, group),
@@ -347,7 +460,7 @@ const PANEL_ADDERS = {
   files: (api, group) => panelsDep("addFilesPanel")(api, group),
   runtime: (api, group) => panelsDep("addRuntimePanel")(api, group),
   fallback: (api, group) => panelsDep("addFallbackPanel")(api, group),
-  'crush-runner': (api, group) => panelsDep("addCrushRunnerPanel")(api, group),
+  "crush-runner": (api, group) => panelsDep("addCrushRunnerPanel")(api, group),
 };
 
 function addPanelByComponent(api, component, group, options) {
@@ -363,35 +476,43 @@ function addPanelByComponent(api, component, group, options) {
 // we route through the lazy `getPanelIcons()` so the dep table is
 // always populated before the map is built.
 const PANEL_ICONS = new Proxy({}, {
-  get(_target, prop) { return getPanelIcons()[prop]; },
-  has(_target, prop) { return prop in getPanelIcons(); },
-  ownKeys() { return Object.keys(getPanelIcons()); },
+  get(_target, prop) {
+    return getPanelIcons()[prop];
+  },
+  has(_target, prop) {
+    return prop in getPanelIcons();
+  },
+  ownKeys() {
+    return Object.keys(getPanelIcons());
+  },
   getOwnPropertyDescriptor(_target, prop) {
     const map = getPanelIcons();
-    return prop in map ? {
-      configurable: true,
-      enumerable: true,
-      writable: false,
-      value: map[prop],
-    } : undefined;
+    return prop in map
+      ? {
+        configurable: true,
+        enumerable: true,
+        writable: false,
+        value: map[prop],
+      }
+      : undefined;
   },
 });
 
 export {
-  PANEL_ICONS,
-  PanelTab,
-  TerminalPanel,
-  GroupPanel,
-  IframePanel,
-  WorkbenchPanel,
-  VmPanel,
-  WorkspaceTaskPanel,
-  WagiDogPet,
-  addTerminalPanel,
-  addWorkbenchPanel,
-  addVmPanel,
-  addWorkspaceTaskPanel,
   addGroupPanel,
   addIframePanel,
   addPanelByComponent,
+  addTerminalPanel,
+  addVmPanel,
+  addWorkbenchPanel,
+  addWorkspaceTaskPanel,
+  GroupPanel,
+  IframePanel,
+  PANEL_ICONS,
+  PanelTab,
+  TerminalPanel,
+  VmPanel,
+  WagiDogPet,
+  WorkbenchPanel,
+  WorkspaceTaskPanel,
 };

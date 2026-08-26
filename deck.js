@@ -25,7 +25,9 @@ export function initDeck(dependencies) {
 }
 function deckDep(name) {
   if (__deckDeps == null) {
-    throw new Error('deck: initDeck() has not been called; ensure app.js wires it in.');
+    throw new Error(
+      "deck: initDeck() has not been called; ensure app.js wires it in.",
+    );
   }
   const value = __deckDeps[name];
   if (value === undefined) {
@@ -60,10 +62,14 @@ let slidesMarkdownPromise = null;
 
 function loadSlidesMarkdown() {
   if (!slidesMarkdownPromise) {
-    slidesMarkdownPromise = fetch('slides.md?v=20260725.1').then(async (response) => {
-      if (!response.ok) throw new Error(`Unable to load slides.md (${response.status})`);
-      return response.text();
-    });
+    slidesMarkdownPromise = fetch("slides.md?v=20260725.1").then(
+      async (response) => {
+        if (!response.ok) {
+          throw new Error(`Unable to load slides.md (${response.status})`);
+        }
+        return response.text();
+      },
+    );
   }
   return slidesMarkdownPromise;
 }
@@ -73,12 +79,12 @@ function layoutReveal(homeContent) {
 }
 
 async function prepareRevealSlides(homeContent) {
-  const placeholder = homeContent.querySelector('[data-home-slides-markdown]');
+  const placeholder = homeContent.querySelector("[data-home-slides-markdown]");
   if (!placeholder) return;
 
-  const stack = document.createElement('section');
+  const stack = document.createElement("section");
   for (const source of (await loadSlidesMarkdown()).split(/^\s*--\s*$/m)) {
-    const slide = document.createElement('section');
+    const slide = document.createElement("section");
     slide.innerHTML = deckDep("marked").parse(source);
     stack.appendChild(slide);
   }
@@ -92,25 +98,28 @@ function initReveal(homeContent, api) {
   const state = { deck: null, destroyed: false };
   revealStates.set(homeContent, state);
   state.ready = (async () => {
-    while (typeof deckDep("Reveal") === 'undefined') {
+    while (typeof deckDep("Reveal") === "undefined") {
       await new Promise((resolve) => setTimeout(resolve));
       if (state.destroyed) return;
     }
     await prepareRevealSlides(homeContent);
     if (state.destroyed) return;
 
-    const el = homeContent.querySelector('.reveal');
+    const el = homeContent.querySelector(".reveal");
     if (!el) return;
     state.deck = new deckDep("Reveal")(el, {
       hash: false,
       controls: true,
       progress: true,
       center: true,
-      transition: 'slide',
-      backgroundTransition: 'fade',
+      transition: "slide",
+      backgroundTransition: "fade",
       keyboard: true,
-      keyboardCondition: () => api.isActive &&
-        !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName),
+      keyboardCondition: () =>
+        api.isActive &&
+        !["INPUT", "TEXTAREA", "BUTTON"].includes(
+          document.activeElement.tagName,
+        ),
       overview: true,
       touch: true,
       mouseWheel: true,
@@ -122,7 +131,9 @@ function initReveal(homeContent, api) {
     if (state.destroyed) return;
     layoutReveal(homeContent);
   })().catch((error) => {
-    if (!state.destroyed) deckDep("reportHomeError")('Reveal initialization failed', error);
+    if (!state.destroyed) {
+      deckDep("reportHomeError")("Reveal initialization failed", error);
+    }
   });
   return state;
 }
@@ -135,7 +146,6 @@ function destroyReveal(homeContent) {
   revealStates.delete(homeContent);
 }
 
-
 // === DeckPanel ===
 
 function DeckPanel({ api }) {
@@ -143,41 +153,46 @@ function DeckPanel({ api }) {
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    const homeContent = document.createElement('div');
+    const homeContent = document.createElement("div");
     homeContent.innerHTML = DECK_TEMPLATE_HTML;
     const root = homeContent.firstElementChild;
     if (!wrapper || !root) return;
 
     wrapper.appendChild(root);
-    const panelView = wrapper.closest('.dv-view');
-    if (panelView) panelView.classList.add('home-view');
+    const panelView = wrapper.closest(".dv-view");
+    if (panelView) panelView.classList.add("home-view");
     // Reveal also emits a bubbling "ready" event. Keep it from waking wanix.
     const stopReadyEvent = (event) => event.stopPropagation();
-    root.addEventListener('ready', stopReadyEvent);
-    const dismiss = root.querySelector('.home-debug-dismiss');
-    dismiss?.addEventListener('click', deckDep("dismissHomeDebugErrors"));
+    root.addEventListener("ready", stopReadyEvent);
+    const dismiss = root.querySelector(".home-debug-dismiss");
+    dismiss?.addEventListener("click", deckDep("dismissHomeDebugErrors"));
     deckDep("showHomeDebugErrors")();
     initReveal(root, api);
     const layout = () => requestAnimationFrame(() => layoutReveal(root));
     const subscriptions = [
       api.onDidDimensionsChange(layout),
-      api.onDidVisibilityChange((event) => { if (event.isVisible) layout(); }),
+      api.onDidVisibilityChange((event) => {
+        if (event.isVisible) layout();
+      }),
       api.onDidLocationChange(layout),
       api.onDidGroupChange(layout),
     ];
     layout();
 
     return () => {
-      root.removeEventListener('ready', stopReadyEvent);
-      dismiss?.removeEventListener('click', deckDep("dismissHomeDebugErrors"));
-      if (panelView) panelView.classList.remove('home-view');
+      root.removeEventListener("ready", stopReadyEvent);
+      dismiss?.removeEventListener("click", deckDep("dismissHomeDebugErrors"));
+      if (panelView) panelView.classList.remove("home-view");
       for (const subscription of subscriptions) subscription.dispose();
       destroyReveal(root);
       root.remove();
     };
   }, [api]);
 
-  return React.createElement('div', { ref: wrapperRef, className: 'panel-content' });
+  return React.createElement("div", {
+    ref: wrapperRef,
+    className: "panel-content",
+  });
 }
 
 // === Panel registration ===
@@ -192,13 +207,13 @@ export function addDeckPanel(api, group) {
   const id = ++deckIdCounter;
   const panel = api.addPanel({
     id: `deck-${id}`,
-    component: 'deck',
-    params: { deckId: id, panelType: 'deck' },
-    title: 'Deck',
+    component: "deck",
+    params: { deckId: id, panelType: "deck" },
+    title: "Deck",
     ...(group && { position: { referenceGroup: group } }),
   });
-  const rememberOpenPanel = deckDep('rememberOpenPanel');
-  rememberOpenPanel(panel, { component: 'deck' });
+  const rememberOpenPanel = deckDep("rememberOpenPanel");
+  rememberOpenPanel(panel, { component: "deck" });
   panel.api.setActive();
   return panel;
 }

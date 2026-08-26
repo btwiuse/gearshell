@@ -68,20 +68,16 @@ export const DEFAULT_CRUSHRC = [
 // crushRunnerActiveId === 'crush' keep resolving.
 // Built at call time because the default profile resolves wd lazily from
 // the HOME dependency, which initCrushRunner wires after module load.
-export function getBuiltinCrushRunnerPresets() {
-  return [
-    { ...CRUSH_RUNNER_DEFAULT_PROFILE, builtin: true },
-    {
-      id: "ox",
-      name: "Ox",
-      icon: "ghost",
-      program: "/opfs/wanix/crush",
-      args: "",
-      type: "gojs",
-      env: "",
-      wd: crushRunnerDep("HOME"),
-      builtin: true,
-      crushrc: String.raw`option ui transparent false
+// Built-in Crush Runner presets. These ship with the app and are always
+// available alongside the user's saved customs; the order below is also
+// the fallback render order when a workspace has no saved
+// crushRunnerPresetOrder yet. The first entry (`crush`) keeps the
+// legacy default id so existing workspaces that pinned
+// crushRunnerActiveId === 'crush' keep resolving.
+// Built at call time because the default profile resolves wd lazily from
+// the HOME dependency, which initCrushRunner wires after module load.
+
+const CRUSHRC_OX = String.raw`option ui transparent false
 
 provider add OpenRouter \
      --type openai-compat \
@@ -97,19 +93,9 @@ model add OpenRouter/stealth/ox-alpha \
      --supports-images false
 
 model large OpenRouter/stealth/ox-alpha --think
-model small OpenRouter/stealth/ox-alpha --think`,
-    },
-    {
-      id: "minimax",
-      name: "MiniMax",
-      icon: "bot",
-      program: "/opfs/wanix/crush",
-      args: "",
-      type: "gojs",
-      env: "",
-      wd: crushRunnerDep("HOME"),
-      builtin: true,
-      crushrc: String.raw`option ui transparent false
+model small OpenRouter/stealth/ox-alpha --think`;
+
+const CRUSHRC_MINIMAX = String.raw`option ui transparent false
 
 provider add minimax-china \
   --type anthropic \
@@ -118,19 +104,9 @@ provider add minimax-china \
 
 model small minimax-china/MiniMax-M3
 model large minimax-china/MiniMax-M3
-`,
-    },
-    {
-      id: "deepseek",
-      name: "DeepSeek",
-      icon: "fish",
-      program: "/opfs/wanix/crush",
-      args: "",
-      type: "gojs",
-      env: "",
-      wd: crushRunnerDep("HOME"),
-      builtin: true,
-      crushrc: String.raw`option ui transparent false
+`;
+
+const CRUSHRC_DEEPSEEK = String.raw`option ui transparent false
 
 provider add deepseek \
   --type openai-compat \
@@ -139,19 +115,9 @@ provider add deepseek \
 
 model small deepseek/deepseek-v4-flash
 model large deepseek/deepseek-v4-flash
-`,
-    },
-    {
-      id: "stepfun",
-      name: "StepFun",
-      icon: "footprints",
-      program: "/opfs/wanix/crush",
-      args: "",
-      type: "gojs",
-      env: "",
-      wd: crushRunnerDep("HOME"),
-      builtin: true,
-      crushrc: String.raw`option ui transparent false
+`;
+
+const CRUSHRC_STEPFUN = String.raw`option ui transparent false
 
 provider add stepfun \
   --type openai-compat \
@@ -160,19 +126,9 @@ provider add stepfun \
 
 model small stepfun/step-3.7-flash
 model large stepfun/step-3.7-flash
-`,
-    },
-    {
-      id: "all",
-      name: "All",
-      icon: "bot",
-      program: "/opfs/wanix/crush",
-      args: "",
-      type: "gojs",
-      env: "",
-      wd: crushRunnerDep("HOME"),
-      builtin: true,
-      crushrc: String.raw`option ui transparent false
+`;
+
+const CRUSHRC_ALL = String.raw`option ui transparent false
 
 provider add deepseek \
   --type openai-compat \
@@ -210,8 +166,31 @@ model small stepfun/step-3.7-flash
 model large stepfun/step-3.7-flash
 model small minimax-china/MiniMax-M3
 model large minimax-china/MiniMax-M3
-`,
-    },
+`;
+
+function builtinPreset(id, name, icon, crushrc) {
+  return {
+    id,
+    name,
+    icon,
+    program: "/opfs/wanix/crush",
+    args: "",
+    type: "gojs",
+    env: "",
+    wd: crushRunnerDep("HOME"),
+    builtin: true,
+    crushrc,
+  };
+}
+
+export function getBuiltinCrushRunnerPresets() {
+  return [
+    { ...CRUSH_RUNNER_DEFAULT_PROFILE, builtin: true },
+    builtinPreset("ox", "Ox", "ghost", CRUSHRC_OX),
+    builtinPreset("minimax", "MiniMax", "bot", CRUSHRC_MINIMAX),
+    builtinPreset("deepseek", "DeepSeek", "fish", CRUSHRC_DEEPSEEK),
+    builtinPreset("stepfun", "StepFun", "footprints", CRUSHRC_STEPFUN),
+    builtinPreset("all", "All", "bot", CRUSHRC_ALL),
   ];
 }
 

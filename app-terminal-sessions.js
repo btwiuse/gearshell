@@ -55,8 +55,33 @@ export function createTerminalSession(
 ) {
   const wrapper = document.createElement("div");
   wrapper.className = "terminal-session";
-  const waitsForSystemReady = !systemReady;
+  const task = createTaskElement(id, profile);
+  const term = document.createElement("wanix-term");
+  term.setAttribute("raw", "");
+  term.setAttribute("no-scrollbar", "");
+  term.setAttribute("path", `#task/repl-${id}/term`);
+  term.setAttribute("for", "wanix-system");
 
+  wrapper.append(task, term);
+  terminalLayer?.appendChild(wrapper);
+
+  const session = {
+    id,
+    wrapper,
+    task,
+    term,
+    anchor: null,
+    layout: null,
+    started: false,
+    profile,
+    waitsForSystemReady: !systemReady,
+    autoActivates: "_connectStarted" in task,
+  };
+  terminalSessions.set(id, session);
+  return session;
+}
+
+function createTaskElement(id, profile) {
   const task = document.createElement("wanix-task");
   task.id = `repl-${id}`;
   task.setAttribute("cmd", terminalCommand(profile) || DEFAULT_CMD);
@@ -90,30 +115,7 @@ export function createTerminalSession(
       task.appendChild(element);
     }
   }
-
-  const term = document.createElement("wanix-term");
-  term.setAttribute("raw", "");
-  term.setAttribute("no-scrollbar", "");
-  term.setAttribute("path", `#task/repl-${id}/term`);
-  term.setAttribute("for", "wanix-system");
-
-  wrapper.append(task, term);
-  terminalLayer?.appendChild(wrapper);
-
-  const session = {
-    id,
-    wrapper,
-    task,
-    term,
-    anchor: null,
-    layout: null,
-    started: false,
-    profile,
-    waitsForSystemReady,
-    autoActivates: "_connectStarted" in task,
-  };
-  terminalSessions.set(id, session);
-  return session;
+  return task;
 }
 
 export function getTerminalSession(id, profile) {
@@ -202,8 +204,70 @@ export function focusTerminalSession(session, anchor, api, deferred = true) {
 }
 
 export function attachOverlayTerminalSession(session, anchor, api) {
-  let updateFrame = 0;
+  const focus = (deferred) =>
+    focusTerminalSession(session, anchor, api, deferred);
+  const updater = createOverlayUpdater(session, anchor, api, focus);
+  const { scheduleUpdate } = updater;
+  const observer = new ResizeObserver(scheduleUpdate);
+  observer.observe(anchor);
+  // The overlay wrapper is positioned inside the shared terminal-layer using
+  // the anchor's viewport coordinates. Anything that scrolls between the
+  // anchor and the layer shifts the anchor without firing ResizeObserver,
+  // so without these listeners the overlay detaches whenever a panel
+  // scrolls. Walk up the tree and subscribe to every scrollable ancestor
+  // plus the window so both panel-internal and page-level scrolling are
+  // covered.
+  const scrollListeners = trackScrollParents(
+    anchor,
+    session.wrapper,
+    scheduleUpdate,
+  );
+  const focusFromTerminalInteraction = () => {
+    if (!api.isActive) {
+      api.setActive();
+      focus();
+      return;
+    }
+    focus(false);
+  };
+  session.wrapper.addEventListener("pointerdown", focusFromTerminalInteraction);
+  session.wrapper.addEventListener("touchstart", focusFromTerminalInteraction, {
+    passive: true,
+  });
+  const subscriptions = subscribeOverlayEvents(
+    session,
+    anchor,
+    api,
+    scheduleUpdate,
+    focus,
+  );
+  scheduleUpdate();
+  if (api.isActive) focus();
 
+  return () => {
+    observer.disconnect();
+    updater.cancelUpdateFrame();
+    session.wrapper.removeEventListener(
+      "pointerdown",
+      focusFromTerminalInteraction,
+    );
+    session.wrapper.removeEventListener(
+      "touchstart",
+      focusFromTerminalInteraction,
+    );
+    for (const subscription of subscriptions) subscription.dispose();
+    for (const target of scrollListeners) {
+      target.removeEventListener("scroll", scheduleUpdate);
+    }
+    if (session.anchor === anchor) {
+      session.anchor = null;
+      layoutTerminalSession(session, null, false);
+    }
+  };
+}
+
+function createOverlayUpdater(session, anchor, api, focus) {
+  let updateFrame = 0;
   const update = () => {
     updateFrame = 0;
     session.anchor = anchor;
@@ -220,11 +284,7 @@ export function attachOverlayTerminalSession(session, anchor, api) {
         ) {
           const needsFocusAfterWake = !session.started && api.isActive;
           wakeTerminalSession(session);
-          if (needsFocusAfterWake) {
-            requestAnimationFrame(() =>
-              focusTerminalSession(session, anchor, api, false)
-            );
-          }
+          if (needsFocusAfterWake) requestAnimationFrame(() => focus(false));
         }
       });
     }
@@ -232,18 +292,17 @@ export function attachOverlayTerminalSession(session, anchor, api) {
   const scheduleUpdate = () => {
     if (!updateFrame) updateFrame = requestAnimationFrame(update);
   };
-  const observer = new ResizeObserver(scheduleUpdate);
-  observer.observe(anchor);
-  // The overlay wrapper is positioned inside the shared terminal-layer using
-  // the anchor's viewport coordinates. Anything that scrolls between the
-  // anchor and the layer shifts the anchor without firing ResizeObserver,
-  // so without these listeners the overlay detaches whenever a panel
-  // scrolls. Walk up the tree and subscribe to every scrollable ancestor
-  // plus the window so both panel-internal and page-level scrolling are
-  // covered.
+  return {
+    update,
+    scheduleUpdate,
+    cancelUpdateFrame: () => cancelAnimationFrame(updateFrame),
+  };
+}
+
+function trackScrollParents(anchor, wrapper, scheduleUpdate) {
   const scrollListeners = [];
   const trackScrollParent = (parent) => {
-    if (!parent || parent === session.wrapper) return;
+    if (!parent || parent === wrapper) return;
     const style = getComputedStyle(parent);
     const overflows = [style.overflow, style.overflowX, style.overflowY];
     if (
@@ -262,55 +321,23 @@ export function attachOverlayTerminalSession(session, anchor, api) {
   }
   window.addEventListener("scroll", scheduleUpdate, { passive: true });
   scrollListeners.push(window);
-  const focusFromTerminalInteraction = () => {
-    if (!api.isActive) {
-      api.setActive();
-      focusTerminalSession(session, anchor, api);
-      return;
-    }
-    focusTerminalSession(session, anchor, api, false);
-  };
-  session.wrapper.addEventListener("pointerdown", focusFromTerminalInteraction);
-  session.wrapper.addEventListener("touchstart", focusFromTerminalInteraction, {
-    passive: true,
-  });
-  const subscriptions = [
+  return scrollListeners;
+}
+
+function subscribeOverlayEvents(session, anchor, api, scheduleUpdate, focus) {
+  return [
     api.onDidDimensionsChange(scheduleUpdate),
     api.onDidActiveChange((event) => {
       scheduleUpdate();
-      if (event.isActive) focusTerminalSession(session, anchor, api);
+      if (event.isActive) focus();
     }),
     api.onDidFocusChange((event) => {
-      if (event.isFocused) focusTerminalSession(session, anchor, api);
+      if (event.isFocused) focus();
     }),
     api.onDidVisibilityChange(scheduleUpdate),
     api.onDidLocationChange(scheduleUpdate),
     api.onDidGroupChange(scheduleUpdate),
   ];
-
-  scheduleUpdate();
-  if (api.isActive) focusTerminalSession(session, anchor, api);
-
-  return () => {
-    observer.disconnect();
-    if (updateFrame) cancelAnimationFrame(updateFrame);
-    session.wrapper.removeEventListener(
-      "pointerdown",
-      focusFromTerminalInteraction,
-    );
-    session.wrapper.removeEventListener(
-      "touchstart",
-      focusFromTerminalInteraction,
-    );
-    for (const subscription of subscriptions) subscription.dispose();
-    for (const target of scrollListeners) {
-      target.removeEventListener("scroll", scheduleUpdate);
-    }
-    if (session.anchor === anchor) {
-      session.anchor = null;
-      layoutTerminalSession(session, null, false);
-    }
-  };
 }
 
 export function attachTerminalSession(id, profile, anchor, api) {

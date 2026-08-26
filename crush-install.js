@@ -30,6 +30,35 @@ const CRUSH_DETECT_SCRIPT = `function detect_crush() {
 detect_crush > "$CRUSH_DETECT_OUT"
 `;
 
+async function pollForMarkerText(markerPath, deadline, intervalMs) {
+  while (Date.now() < deadline) {
+    const text = await readWanixText(markerPath);
+    if (text != null) return text.trim();
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  return null;
+}
+
+async function checkCachedCrushInstall() {
+  // If `which crush` did not find the binary, check for the boot-time
+  // install marker. The boot profile's w9y_detect skips re-installing once
+  // the marker exists, which means a reload can leave the crush binding
+  // missing from the namespace even though the install itself succeeded
+  // previously. In that case surface the canonical install path so the
+  // program field still points at the real binary.
+  try {
+    await crushRunnerDep("getWanixRoot")().readDir(
+      `${crushRunnerDep("HOME")}/.w9y/crush`,
+    );
+    return {
+      installed: true,
+      path: `${crushRunnerDep("WANIX")}/crush`,
+      via: "reusing cached install",
+    };
+  } catch { /* marker absent either */ }
+  return null;
+}
+
 export async function detectCrushInstallation() {
   if (!__getWanixSystem()) return null;
   try {
@@ -61,46 +90,22 @@ export async function detectCrushInstallation() {
   // 15s deadline covers even a cold kernel. `which` writes a single path on
   // success and writes nothing on miss; we infer the install state from the
   // resulting file content rather than relying on a task completion event.
-  const deadline = Date.now() + 15000;
   let whichResult = null;
   try {
-    while (Date.now() < deadline) {
-      const text = await readWanixText(markerPath);
-      if (text != null) {
-        const path = text.trim();
-        if (path.length > 0) {
-          whichResult = { installed: true, path, via: "which crush" };
-        } else whichResult = { installed: false, via: "which crush" };
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
-    if (!whichResult) {
-      whichResult = { installed: false, via: "which crush (timeout)" };
-    }
+    const text = await pollForMarkerText(markerPath, Date.now() + 15000, 150);
+    if (text != null) {
+      whichResult = text.length > 0
+        ? { installed: true, path: text, via: "which crush" }
+        : { installed: false, via: "which crush" };
+    } else whichResult = { installed: false, via: "which crush (timeout)" };
   } finally {
     spawn?.dispose();
     try {
       await crushRunnerDep("getWanixRoot")().remove(markerPath);
     } catch { /* ignore */ }
   }
-  // If `which crush` did not find the binary, check for the boot-time
-  // install marker. The boot profile's w9y_detect skips re-installing once
-  // the marker exists, which means a reload can leave the crush binding
-  // missing from the namespace even though the install itself succeeded
-  // previously. In that case surface the canonical install path so the
-  // program field still points at the real binary.
   if (!whichResult.installed) {
-    try {
-      await crushRunnerDep("getWanixRoot")().readDir(
-        `${crushRunnerDep("HOME")}/.w9y/crush`,
-      );
-      return {
-        installed: true,
-        path: `${crushRunnerDep("WANIX")}/crush`,
-        via: "reusing cached install",
-      };
-    } catch { /* marker absent either */ }
+    return (await checkCachedCrushInstall()) || whichResult;
   }
   return whichResult;
 }
