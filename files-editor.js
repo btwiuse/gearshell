@@ -5,7 +5,10 @@
 // files.js stays under the 500-line rule; all filesystem access goes
 // through getRoot().
 import { useCallback, useEffect, useState } from "react";
-import { filesystemPathJoin } from "./files-parts.js?v=20260826.23";
+import {
+  filesystemPathJoin,
+  filesystemPathParent,
+} from "./files-parts.js?v=20260826.26";
 
 // === File helpers (preview-type detection + byte conversion) ===
 // Shared with files-context-menu.js so both modules treat bytes and
@@ -196,5 +199,132 @@ export function useFilesEditor(getRoot) {
     downloadFile,
     setContents,
     setSelectedPath,
+  };
+}
+
+// === Filesystem actions (create / rename / save / delete / upload) ===
+// The mutation handlers for FilesPanel, kept here so files.js only
+// orchestrates. All filesystem access goes through getRoot().
+
+export function useFilesActions({
+  getRoot,
+  path,
+  selectedPath,
+  renameTarget,
+  creating,
+  entryName,
+  setCreating,
+  setEntryName,
+  setSelectedPath,
+  setPath,
+  setStatus,
+  refresh,
+  navigateTo,
+  openEditorEntry,
+  saveFile,
+  removeFile,
+  fileInputRef,
+}) {
+  const createEntry = async () => {
+    const name = entryName.trim();
+    if (!name || name.includes("/") || name === "." || name === "..") {
+      setStatus("Enter a name without a path separator.");
+      return;
+    }
+    try {
+      const entryPath = filesystemPathJoin(path, name);
+      const root = getRoot();
+      if (creating === "rename-file" && selectedPath) {
+        await root.rename(
+          selectedPath,
+          filesystemPathJoin(filesystemPathParent(selectedPath), name),
+        );
+        setSelectedPath(
+          filesystemPathJoin(filesystemPathParent(selectedPath), name),
+        );
+      } else if (creating === "rename-folder") {
+        const nextPath = filesystemPathJoin(filesystemPathParent(path), name);
+        await root.rename(path, nextPath);
+        setPath(nextPath);
+      } else if (creating === "rename-entry" && renameTarget) {
+        const nextPath = filesystemPathJoin(
+          filesystemPathParent(renameTarget.path),
+          name,
+        );
+        await root.rename(renameTarget.path, nextPath);
+        if (selectedPath === renameTarget.path) {
+          setSelectedPath(nextPath);
+        }
+      } else if (creating === "folder") {
+        await root.makeDir(entryPath);
+      } else {
+        await root.writeFile(entryPath, "");
+      }
+      setCreating(null);
+      setEntryName("");
+      await refresh();
+      if (creating === "file") {
+        await openEditorEntry({ name, isDirectory: false }, path);
+      }
+    } catch (error) {
+      setStatus(error.message || "Unable to create this entry.");
+    }
+  };
+
+  const saveFileHandler = async () => {
+    const result = await saveFile(selectedPath);
+    if (result.message) setStatus(result.message);
+    if (result.ok) await refresh();
+  };
+
+  const removeFileHandler = async () => {
+    if (!selectedPath || !window.confirm(`Delete ${selectedPath}?`)) return;
+    const result = await removeFile(selectedPath);
+    if (result.message) setStatus(result.message);
+    if (result.ok) await refresh();
+  };
+
+  const removeDirectory = async () => {
+    if (path === "." || !window.confirm(`Delete the empty folder /${path}?`)) {
+      return;
+    }
+    try {
+      const parent = filesystemPathParent(path);
+      await getRoot().remove(path);
+      navigateTo(parent);
+      setStatus("Deleted empty folder.");
+    } catch (error) {
+      setStatus(error.message || "Only empty folders can be deleted here.");
+    }
+  };
+
+  const uploadFiles = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+    try {
+      const root = getRoot();
+      for (const file of files) {
+        await root.writeFile(
+          filesystemPathJoin(path, file.name),
+          new Uint8Array(await file.arrayBuffer()),
+        );
+      }
+      await refresh();
+      setStatus(
+        `Uploaded ${files.length} file${files.length === 1 ? "" : "s"}.`,
+      );
+    } catch (error) {
+      setStatus(error.message || "Unable to upload these files.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  return {
+    createEntry,
+    saveFileHandler,
+    removeFileHandler,
+    removeDirectory,
+    uploadFiles,
   };
 }

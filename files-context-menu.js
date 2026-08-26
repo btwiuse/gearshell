@@ -4,13 +4,13 @@
 // excerpt, or metadata for binary files). Split out of files.js so the
 // panel module stays under the 500-line rule.
 import { useEffect, useRef, useState } from "react";
-import { filesystemPathJoin } from "./files-parts.js?v=20260826.23";
+import { filesystemPathJoin } from "./files-parts.js?v=20260826.26";
 import {
   getFilesystemPreviewType,
   isBinaryData,
   sniffWasmBytes,
   toFilesystemBytes,
-} from "./files-editor.js?v=20260826.23";
+} from "./files-editor.js?v=20260826.26";
 
 // === Selection metadata (single-click info panel) ===
 

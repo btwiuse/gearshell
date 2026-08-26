@@ -20,26 +20,29 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useLocalDirMounts,
   VolumesSidebar,
-} from "./files-mounts.js?v=20260826.24";
+} from "./files-mounts.js?v=20260826.26";
 import {
-  FilesCreateForm,
-  FilesEditorPane,
-  FilesEntryList,
   FilesResizer,
+  FilesRightPane,
+  FilesSidebar,
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "./files-parts.js?v=20260826.24";
+} from "./files-parts.js?v=20260826.26";
 import {
   FilesContextMenu,
   FavoritesSidebar,
-} from "./files-ui.js?v=20260826.24";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.24";
-import { useFilesEditor } from "./files-editor.js?v=20260826.24";
-import { sniffWasmBytes } from "./files-editor.js?v=20260826.24";
-import { useFilesSidebarResize } from "./files-resize.js?v=20260826.24";
-import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.24";
-import { useFavorites } from "./files-favorites.js?v=20260826.24";
+} from "./files-ui.js?v=20260826.26";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.26";
+import {
+  sniffWasmBytes,
+  useFilesActions,
+  useFilesEditor,
+} from "./files-editor.js?v=20260826.26";
+import { useFilesSidebarResize } from "./files-resize.js?v=20260826.26";
+import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.26";
+import { useFavorites } from "./files-favorites.js?v=20260826.26";
+import { FilesTree, useFilesTree } from "./files-tree.js?v=20260826.26";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
@@ -207,6 +210,8 @@ function FilesPanel() {
     setContextMenu,
   });
 
+  const tree = useFilesTree({ getRoot, path });
+
   const {
     mounts,
     restoreMounts,
@@ -258,100 +263,31 @@ function FilesPanel() {
     setStatus(result.error || "");
   };
 
-  const createEntry = async () => {
-    const name = entryName.trim();
-    if (!name || name.includes("/") || name === "." || name === "..") {
-      setStatus("Enter a name without a path separator.");
-      return;
-    }
-    try {
-      const entryPath = filesystemPathJoin(path, name);
-      const root = getRoot();
-      if (creating === "rename-file" && selectedPath) {
-        await root.rename(
-          selectedPath,
-          filesystemPathJoin(filesystemPathParent(selectedPath), name),
-        );
-        setSelectedPath(
-          filesystemPathJoin(filesystemPathParent(selectedPath), name),
-        );
-      } else if (creating === "rename-folder") {
-        const nextPath = filesystemPathJoin(filesystemPathParent(path), name);
-        await root.rename(path, nextPath);
-        setPath(nextPath);
-      } else if (creating === "rename-entry" && renameTarget) {
-        const nextPath = filesystemPathJoin(
-          filesystemPathParent(renameTarget.path),
-          name,
-        );
-        await root.rename(renameTarget.path, nextPath);
-        if (selectedPath === renameTarget.path) {
-          setSelectedPath(nextPath);
-        }
-      } else if (creating === "folder") {
-        await root.makeDir(entryPath);
-      } else {
-        await root.writeFile(entryPath, "");
-      }
-      setCreating(null);
-      setEntryName("");
-      await refresh();
-      if (creating === "file") {
-        await openEditorEntry({ name, isDirectory: false }, path);
-      }
-    } catch (error) {
-      setStatus(error.message || "Unable to create this entry.");
-    }
-  };
-
-  const saveFileHandler = async () => {
-    const result = await saveFile(selectedPath);
-    if (result.message) setStatus(result.message);
-    if (result.ok) await refresh();
-  };
-
-  const removeFileHandler = async () => {
-    if (!selectedPath || !window.confirm(`Delete ${selectedPath}?`)) return;
-    const result = await removeFile(selectedPath);
-    if (result.message) setStatus(result.message);
-    if (result.ok) await refresh();
-  };
-
-  const removeDirectory = async () => {
-    if (path === "." || !window.confirm(`Delete the empty folder /${path}?`)) {
-      return;
-    }
-    try {
-      const parent = filesystemPathParent(path);
-      await getRoot().remove(path);
-      navigateTo(parent);
-      setStatus("Deleted empty folder.");
-    } catch (error) {
-      setStatus(error.message || "Only empty folders can be deleted here.");
-    }
-  };
-
-  const uploadFiles = async (event) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-    try {
-      const root = getRoot();
-      for (const file of files) {
-        await root.writeFile(
-          filesystemPathJoin(path, file.name),
-          new Uint8Array(await file.arrayBuffer()),
-        );
-      }
-      await refresh();
-      setStatus(
-        `Uploaded ${files.length} file${files.length === 1 ? "" : "s"}.`,
-      );
-    } catch (error) {
-      setStatus(error.message || "Unable to upload these files.");
-    } finally {
-      event.target.value = "";
-    }
-  };
+  const {
+    createEntry,
+    saveFileHandler,
+    removeFileHandler,
+    removeDirectory,
+    uploadFiles,
+  } = useFilesActions({
+    getRoot,
+    path,
+    selectedPath,
+    renameTarget,
+    creating,
+    entryName,
+    setCreating,
+    setEntryName,
+    setSelectedPath,
+    setPath,
+    setStatus,
+    refresh,
+    navigateTo,
+    openEditorEntry,
+    saveFile,
+    removeFile,
+    fileInputRef,
+  });
 
   return React.createElement(
     "div",
@@ -396,51 +332,39 @@ function FilesPanel() {
       },
       onDeleteFolder: removeDirectory,
     }),
-    React.createElement(
-      "section",
-      { className: "files-sidebar" },
-      React.createElement(FavoritesSidebar, {
-        favorites,
-        currentPath: path,
-        onOpen: navigateTo,
-        onRemove: removeFavorite,
-      }),
-      React.createElement(VolumesSidebar, {
-        mounts,
-        onMount: handleMountLocalDir,
-        onOpen: openMount,
-        onUnmount: unmountLocalDir,
-      }),
-      React.createElement("input", {
-        ref: fileInputRef,
-        className: "files-upload-input",
-        type: "file",
-        multiple: true,
-        onChange: uploadFiles,
-      }),
-      creating &&
-        React.createElement(FilesCreateForm, {
-          creating,
-          entryName,
-          onEntryNameChange: setEntryName,
-          onCreate: createEntry,
-          onCancel: () => setCreating(null),
-        }),
-      React.createElement(FilesEntryList, {
-        entries,
-        selectedPath: highlighted,
+    React.createElement(FilesSidebar, {
+      favorites,
+      currentPath: path,
+      onOpen: navigateTo,
+      onRemove: removeFavorite,
+      mounts,
+      onMount: handleMountLocalDir,
+      onOpenMount: openMount,
+      onUnmount: unmountLocalDir,
+      fileInputRef,
+      creating,
+      entryName,
+      onEntryNameChange: setEntryName,
+      onCreate: createEntry,
+      onCancel: () => setCreating(null),
+      onUpload: uploadFiles,
+    },
+      React.createElement(FilesTree, {
+        tree,
         path,
-        loading,
-        status,
+        selectedPath: highlighted,
         finePointer,
-        onSelect: selectEntry,
-        onOpen: (entry) => openEditorEntry(entry, path),
+        onToggle: tree.toggleDir,
+        onSelect: (entry) =>
+          selectEntry(entry, filesystemPathParent(entry.path)),
+        onOpen: (entry) =>
+          openEditorEntry(entry, filesystemPathParent(entry.path)),
         onContextMenu: finePointer
           ? (entry, x, y) => {
             setContextMenu({
               x: Math.max(4, Math.min(x, window.innerWidth - 180)),
               y: Math.max(4, Math.min(y, window.innerHeight - 220)),
-              entry: { ...entry, path: filesystemPathJoin(path, entry.name) },
+              entry: { ...entry, path: entry.path },
             });
           }
           : null,
@@ -472,32 +396,17 @@ function FilesPanel() {
         ? isFavoritePath(contextMenu.entry.path)
         : false,
     }),
-    React.createElement(FilesEditorPane, {
+    React.createElement(FilesRightPane, {
       selectedPath,
       preview,
       contents,
       binary,
       dirty,
-      // With nothing selected, preview the current directory itself as a
-      // grid (Windows-Explorer-style): entering a folder or opening a
-      // favorite immediately shows its contents on the right.
-      info: selectedInfo || {
-        path: path === "." ? "/" : `/${path.replace(/^\/+/, "")}`,
-        name: path === "." ? "/" : path.split("/").pop(),
-        isDirectory: true,
-        size: null,
-        modTime: null,
-        previewKind: null,
-        iconKind: null,
-        preview: null,
-        textPreview: null,
-        loading,
-        entries: entries.length,
-        children: entries,
-        childrenTotal: entries.length,
-      },
-      gridView: !selectedInfo,
+      info: selectedInfo,
+      entries,
+      loading,
       status,
+      currentPath: path,
       onDownload: downloadFile,
       onSave: saveFileHandler,
       onRename: () => {

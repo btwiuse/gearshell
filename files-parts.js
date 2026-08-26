@@ -12,7 +12,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { FilesInfoPane, getEntryIcon } from "./files-ui.js?v=20260826.23";
+import { FilesInfoPane, FavoritesSidebar } from "./files-ui.js?v=20260826.26";
+import { VolumesSidebar } from "./files-mounts.js?v=20260826.26";
 
 // === Path helpers (shared by the panel and the mount sidebar) ===
 
@@ -41,53 +42,116 @@ export function filesystemPathParent(path) {
   return parts.join("/") || ".";
 }
 
-// === Entry list ===
+// === Right pane (editor / directory grid preview) ===
+// Composes the editor pane with a fallback "current directory" info
+// object: with nothing selected, the right side previews the folder you
+// are in as an Explorer-style icon grid. Kept in files-parts.js so
+// files.js stays under the 500-line rule.
 
-export function FilesEntryList({
-  entries,
+export function FilesRightPane({
   selectedPath,
-  path,
+  preview,
+  contents,
+  binary,
+  dirty,
+  info,
+  entries,
   loading,
   status,
-  onSelect,
+  onDownload,
+  onSave,
+  onRename,
+  onDelete,
+  onChange,
+  onOpenChild,
+  currentPath,
+}) {
+  return React.createElement(FilesEditorPane, {
+    selectedPath,
+    preview,
+    contents,
+    binary,
+    dirty,
+    // With nothing selected, preview the current directory itself as a
+    // grid (Windows-Explorer-style): entering a folder or opening a
+    // favorite immediately shows its contents on the right.
+    info: info || {
+      path: currentPath === "." ? "/" : `/${currentPath.replace(/^\/+/, "")}`,
+      name: currentPath === "." ? "/" : currentPath.split("/").pop(),
+      isDirectory: true,
+      size: null,
+      modTime: null,
+      previewKind: null,
+      iconKind: null,
+      preview: null,
+      textPreview: null,
+      loading,
+      entries: entries.length,
+      children: entries,
+      childrenTotal: entries.length,
+    },
+    gridView: !info,
+    status,
+    onDownload,
+    onSave,
+    onRename,
+    onDelete,
+    onChange,
+    onOpenChild,
+  });
+}
+
+// === Sidebar (favorites + volumes + creation form) ===
+
+export function FilesSidebar({
+  favorites,
+  currentPath,
   onOpen,
-  onContextMenu,
-  finePointer,
+  onRemove,
+  mounts,
+  onMount,
+  onOpenMount,
+  onUnmount,
+  fileInputRef,
+  creating,
+  entryName,
+  onEntryNameChange,
+  onCreate,
+  onCancel,
+  onUpload,
+  children,
 }) {
   return React.createElement(
-    "div",
-    { className: "files-list", role: "list" },
-    entries.map((entry) => {
-      const EntryIcon = getEntryIcon(entry.name, entry.isDirectory, entry.iconKind);
-      return React.createElement(
-        "button",
-        {
-          key: `${entry.isDirectory ? "d" : "f"}:${entry.name}`,
-          type: "button",
-          role: "listitem",
-          className: selectedPath === filesystemPathJoin(path, entry.name)
-            ? "selected"
-            : "",
-          title: entry.name,
-          onClick: () => (finePointer ? onSelect(entry) : onOpen(entry)),
-          onDoubleClick: finePointer ? () => onOpen(entry) : undefined,
-          onContextMenu: onContextMenu
-            ? (event) => {
-              event.preventDefault();
-              onContextMenu(entry, event.clientX, event.clientY);
-            }
-            : undefined,
-        },
-        React.createElement(EntryIcon, { size: 15, "aria-hidden": true }),
-        React.createElement("span", null, entry.name),
-      );
+    "section",
+    { className: "files-sidebar" },
+    React.createElement(FavoritesSidebar, {
+      favorites,
+      currentPath,
+      onOpen,
+      onRemove,
     }),
-    !loading && entries.length === 0 && !status &&
-      React.createElement(
-        "p",
-        { className: "files-empty" },
-        "Folder is empty.",
-      ),
+    React.createElement(VolumesSidebar, {
+      mounts,
+      onMount,
+      onOpen: onOpenMount,
+      onUnmount,
+    }),
+    React.createElement("input", {
+      ref: fileInputRef,
+      className: "files-upload-input",
+      type: "file",
+      multiple: true,
+      onChange: onUpload,
+    }),
+    creating &&
+      React.createElement(FilesCreateForm, {
+        creating,
+        entryName,
+        onEntryNameChange,
+        onCreate,
+        onCancel,
+      }),
+    children,
   );
 }
 
