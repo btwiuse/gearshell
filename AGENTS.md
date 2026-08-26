@@ -24,6 +24,18 @@ pitch and `memory/repo-layout.md` for the structure.
   Generated code is exempt: minified bundles and build artifacts (e.g.
   `browser/*.sw.js`, which are webpack output of the `browser.js` submodule)
   must not be hand-refactored, only regenerated from their source.
+- **Module URL consistency**: every JS module must use the SAME `?v=` version
+  in all importers — browsers cache ES modules by full URL, so a version
+  split loads the module twice (two instances), breaking DI/singleton state
+  (e.g. `files-registry.js` "initFiles has not been called"). When bumping a
+  version, grep the whole tree and update every importer.
+- **Verify ESM after editing modules**: `node --check file.js` uses CommonJS
+  detection on .js files without a `package.json` type and misses strict-mode
+  errors (duplicate declarations, top-level hooks). Use
+  `node --input-type=module --check < file.js` and a full import/export
+  resolution pass after rewriting any module; see
+  `memory/verification-pitfalls.md` for the scripts and the heredoc/splice
+  traps that caused the last regression.
 - Reusable research notes live in `memory/` (one Markdown file per topic,
   `Home.md` as the index, auto-loaded every session via `option
   context-path memory/Home.md` in `.crushrc`).
