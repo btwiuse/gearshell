@@ -280,6 +280,18 @@ export function FilesInfoPane({ info, onOpenChild, gridView }) {
               { className: "files-info-children-more" },
               `… and ${info.childrenTotal - info.children.length} more`,
             ),
+          info.loading
+            ? React.createElement(
+              "p",
+              { className: "files-info-grid-note" },
+              "Loading…",
+            )
+            : info.children.length === 0 &&
+              React.createElement(
+                "p",
+                { className: "files-info-grid-note" },
+                "Empty folder.",
+              ),
         )
         : React.createElement(
           "div",
@@ -312,6 +324,12 @@ export function FilesInfoPane({ info, onOpenChild, gridView }) {
               "p",
               { className: "files-info-children-more" },
               `… and ${info.childrenTotal - info.children.length} more`,
+            ),
+          !info.loading && info.children.length === 0 &&
+            React.createElement(
+              "p",
+              { className: "files-info-children-empty" },
+              "Empty folder.",
             ),
         )
       : React.createElement(

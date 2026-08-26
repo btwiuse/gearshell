@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useLocalDirMounts,
   VolumesSidebar,
-} from "./files-mounts.js?v=20260826.23";
+} from "./files-mounts.js?v=20260826.24";
 import {
   FilesCreateForm,
   FilesEditorPane,
@@ -29,17 +29,17 @@ import {
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "./files-parts.js?v=20260826.23";
+} from "./files-parts.js?v=20260826.24";
 import {
   FilesContextMenu,
   FavoritesSidebar,
-} from "./files-ui.js?v=20260826.23";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.23";
-import { useFilesEditor } from "./files-editor.js?v=20260826.23";
-import { sniffWasmBytes } from "./files-editor.js?v=20260826.23";
-import { useFilesSidebarResize } from "./files-resize.js?v=20260826.23";
-import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.23";
-import { useFavorites } from "./files-favorites.js?v=20260826.23";
+} from "./files-ui.js?v=20260826.24";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.24";
+import { useFilesEditor } from "./files-editor.js?v=20260826.24";
+import { sniffWasmBytes } from "./files-editor.js?v=20260826.24";
+import { useFilesSidebarResize } from "./files-resize.js?v=20260826.24";
+import { useFilesContextMenu, useFilesSelection } from "./files-context-menu.js?v=20260826.24";
+import { useFavorites } from "./files-favorites.js?v=20260826.24";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
@@ -491,6 +491,7 @@ function FilesPanel() {
         iconKind: null,
         preview: null,
         textPreview: null,
+        loading,
         entries: entries.length,
         children: entries,
         childrenTotal: entries.length,

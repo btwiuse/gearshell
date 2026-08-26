@@ -18,7 +18,7 @@ import {
   SettingsPanel,
   TerminalPresetIconPicker,
 } from "./settings.js?v=20260826.2";
-import { addFilesPanel, FilesPanel, initFiles } from "./files.js?v=20260826.23";
+import { addFilesPanel, FilesPanel, initFiles } from "./files.js?v=20260826.24";
 import {
   addRuntimePanel,
   initRuntime,

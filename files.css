@@ -111,6 +111,8 @@
 .files-info-grid button:hover, .files-info-grid button:focus-visible { background: #21262d; outline: none; }
 .files-info-grid button.dir { color: #e6edf3; }
 .files-info-grid button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-info-grid-note { grid-column: 1 / -1; margin: auto; padding: 12px; color: #8b949e; font-size: 12px; }
+.files-info-children-empty { margin: 0; padding: 8px; color: #8b949e; font-size: 12px; text-align: center; }
 .files-media-preview { display: grid; min-height: 0; flex: 1; place-items: center; overflow: auto; padding: 14px; background: #0d1117; }
 .files-media-preview img, .files-media-preview video { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 .files-media-preview.audio audio { width: min(480px, 100%); }
