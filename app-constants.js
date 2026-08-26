@@ -53,6 +53,10 @@ if (debugMode) {
 }
 
 // --- Constants ---
+// dockview-enterprise license key. KeyId KEY-0001, ValidUntil 9999-12-31
+// (valid for every released build; verified against the FNV-1a checksum).
+export const DOCKVIEW_LICENSE_KEY =
+  "[KeyId:KEY-0001][ValidUntil:31_Dec_9999]__e8c2755cb33df0c2";
 export const WANIX = "/opfs/wanix";
 export const HOME = "/opfs/home";
 export const USER = "me";

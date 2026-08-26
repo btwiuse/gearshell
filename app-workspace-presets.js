@@ -6,7 +6,7 @@ import {
   WORKSPACE_PRESET_KEY_PREFIX,
   WORKSPACE_PRESETS,
   WORKSPACE_SCHEMA_VERSION,
-} from "./app-constants.js?v=20260826.8";
+} from "./app-constants.js?v=20260827.1";
 import {
   clone,
   isLegacySystemMirrorBind,

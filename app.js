@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { DockviewReact } from "dockview-react";
+// Side-effect import: registers all enterprise modules (incl. the license
+// gate) onto the shared `dockview` instance (importmap resolves both
+// packages to the same module URL). Kept deliberately, do not remove.
+import { LicenseManager } from "dockview-enterprise";
 
 import {
   addCrushRunnerPanel,
@@ -157,6 +161,7 @@ import {
 } from "./app-panels.js?v=20260826.2";
 import {
   dismissHomeDebugErrors,
+  DOCKVIEW_LICENSE_KEY,
   HOME,
   reportHomeError,
   showHomeDebugErrors,
@@ -166,7 +171,12 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260826.8";
+} from "./app-constants.js?v=20260827.1";
+
+// Set the license key before any DockviewComponent is created so the
+// watermark never renders; a late setLicenseKey also works (LicenseModule
+// subscribes to the registry change and refreshes).
+LicenseManager.setLicenseKey(DOCKVIEW_LICENSE_KEY);
 
 const systemWorkspace = loadActiveWorkspace();
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
@@ -252,6 +262,26 @@ function App() {
     React.createElement(DockviewReact, {
       className: "dockview-theme-github-dark",
       onReady,
+      // --- dockview-enterprise 特性 (opt-in 选项, 模块已由
+      // `import { LicenseManager } from "dockview-enterprise"` 注册) ---
+      // 固定标签: 独立第二行 + VS Code 式跨边界拖拽翻转
+      pinnedTabs: {
+        enabled: true,
+        mode: "separate-row",
+        togglePinOnCrossBoundaryDrag: true,
+      },
+      // 高级溢出: 弹出层带搜索 + MRU 排序 (换行模式用 mode: "wrap")
+      overflow: { mode: "show", mru: true, search: true },
+      // 布局历史: 误关面板可 api.undo() 恢复
+      layoutHistory: { enabled: true },
+      // 拖拽罗盘 + 智能参考线 (浮动窗口)
+      dndCompass: {},
+      smartGuides: {},
+      // 左边缘自动隐藏组 (VS 式工具窗)
+      autoHideEdgeGroups: { left: true },
+      // 键盘导航 + 键盘移动共用一个选项; dock 键重绑为 Ctrl+Shift+M,
+      // 避免劫持终端里的 Ctrl+M (bash 回车)
+      keyboardNavigation: { keymap: { dock: "ctrl+shift+m" } },
       components: {
         home: LandingPanel,
         deck: DeckPanel,

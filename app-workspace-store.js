@@ -9,7 +9,7 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_INDEX_KEY,
   WORKSPACE_SCHEMA_VERSION,
-} from "./app-constants.js?v=20260826.8";
+} from "./app-constants.js?v=20260827.1";
 import {
   isLegacySystemMirrorBind,
   normalizeBind,

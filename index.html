@@ -37,7 +37,7 @@
     <link rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/black.css" />
     <link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/dockview-react@7.0.4/dist/styles/dockview.css" />
+      href="https://cdn.jsdelivr.net/npm/dockview-react@8.2.0/dist/styles/dockview.css" />
     <link rel="stylesheet" href="reveal.css" />
     <script>
     if (window.location.search.includes("debug")) {
@@ -74,7 +74,9 @@
         "react": "https://esm.sh/react@18.2.0",
         "react-dom": "https://esm.sh/react-dom@18.2.0",
         "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "dockview-react": "https://esm.sh/dockview-react@7.0.4?deps=react@18.2.0,react-dom@18.2.0",
+        "dockview": "https://esm.sh/dockview@8.2.0",
+        "dockview-react": "https://esm.sh/dockview-react@8.2.0?external=dockview&deps=react@18.2.0,react-dom@18.2.0",
+        "dockview-enterprise": "https://esm.sh/dockview-enterprise@8.2.0?external=dockview",
         "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
       }
     }
@@ -98,7 +100,7 @@
   <body>
     <div id="wanix-host"></div>
 
-    <script type="module" src="app.js?v=20260826.6"></script>
+    <script type="module" src="app.js?v=20260827.3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3" async defer>
     new Crate({
       server: "967111927299969064",
