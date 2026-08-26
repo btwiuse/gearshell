@@ -226,7 +226,7 @@
 .task-fields textarea { min-height: 76px; resize: vertical; }
 .task-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .task-toggle input { width: auto; accent-color: #58a6ff; }
-.cfg-toggle { display: flex; align-items: center; gap: 6px; color: #c9d1d9; font-size: 13px; cursor: pointer; }
+.cfg-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; color: #c9d1d9; font-size: 13px; cursor: pointer; }
 .cfg-toggle input { width: auto; accent-color: #58a6ff; }
 .task-headless { display: grid; align-content: center; justify-items: center; gap: 8px; padding: 24px; overflow: auto; background: #0d1117; text-align: center; }
 .task-headless h2 { margin: 0; color: #c9d1d9; font-size: 18px; }

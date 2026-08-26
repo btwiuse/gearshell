@@ -206,12 +206,12 @@ export const SETTINGS_TEMPLATE_HTML =
               <div class="body">
                 <div class="launcher-order-list" data-config-launcher-order aria-label="Launcher item order"></div>
                 <label class="cfg-toggle">
-                  <input data-config="restore-tabs" type="checkbox">
                   <span>Restore tabs from the previous session</span>
+                  <input data-config="restore-tabs" type="checkbox">
                 </label>
                 <label class="cfg-toggle">
-                  <input data-config="wagi-dog-enabled" type="checkbox">
                   <span>Show Wagi Dog</span>
+                  <input data-config="wagi-dog-enabled" type="checkbox">
                 </label>
               </div>
             </details>
