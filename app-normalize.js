@@ -167,7 +167,7 @@ export function normalizeShellConfig(config) {
     vmMemory: normalizeVmMemory(config?.vmMemory),
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
-    wagiDogEnabled: config?.wagiDogEnabled !== false,
+    wagiDogEnabled: config?.wagiDogEnabled === true,
     collapsedLauncherItems: Array.isArray(config?.collapsedLauncherItems)
       ? [
         ...new Set(config.collapsedLauncherItems.filter((component) =>

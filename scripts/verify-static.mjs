@@ -48,7 +48,7 @@ if (!has('DEFAULT_LAUNCHER_ITEM_ORDER') || !has("'bonsai'")) throw new Error('La
 if (!has("import('./web-pet/index.js')")) throw new Error('Wagi Dog must use the bundled web-pet runtime.');
 if (!has('new WebPetRef.current()')) throw new Error('GearShell must start the Wagi Dog web pet when enabled.');
 if (!has('href="web-pet/web-pet.css"')) throw new Error('GearShell must load the web-pet stylesheet.');
-if (!has('wagiDogEnabled: config?.wagiDogEnabled !== false')) throw new Error('Wagi Dog must default to enabled for existing workspaces.');
+if (!has('wagiDogEnabled: config?.wagiDogEnabled === true')) throw new Error('Wagi Dog must default to disabled for existing workspaces.');
 if (!has('data-config="wagi-dog-enabled"')) throw new Error('Settings must expose the Wagi Dog toggle.');
 if (!has("'aria-checked': wagiDogEnabled")) throw new Error('The panel menu must expose the Wagi Dog toggle.');
 if (!has('TERMINAL_PRESET_ICON_OPTIONS')) throw new Error('Terminal presets need configurable Lucide icons.');

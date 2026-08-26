@@ -120,7 +120,7 @@ export const DEFAULT_CONFIG = {
   vmMemory: "512M",
   vmNetworkMode: "none",
   vmWispUrl: "",
-  wagiDogEnabled: true,
+  wagiDogEnabled: false,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   launcherOrder: DEFAULT_LAUNCHER_ITEM_ORDER,
 };
