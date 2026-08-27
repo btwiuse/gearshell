@@ -12,7 +12,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { FilesBreadcrumb } from "./files-ui.js?v=20260826.36";
+import { FilesBreadcrumb } from "./files-ui.js?v=20260826.38";
 
 export function FilesTopbar({
   path,

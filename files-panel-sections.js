@@ -11,13 +11,13 @@ import {
   FilesResizer,
   FilesRightPane,
   FilesSidebar,
-} from "./files-parts.js?v=20260826.39";
+} from "./files-parts.js?v=20260826.40";
 import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.38";
 import {
   filesystemPathJoin,
   filesystemPathParent,
 } from "./files-path.js?v=20260826.38";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.38";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.39";
 import { FilesTree } from "./files-tree.js?v=20260826.38";
 
 function FilesPanelTopbar({ panel }) {

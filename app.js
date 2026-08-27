@@ -22,7 +22,7 @@ import {
   SettingsPanel,
   TerminalPresetIconPicker,
 } from "./settings.js?v=20260826.9";
-import { FilesPanel } from "./files.js?v=20260826.43";
+import { FilesPanel } from "./files.js?v=20260826.44";
 import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.10";
 import {
   addRuntimePanel,

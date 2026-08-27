@@ -5,7 +5,7 @@
 // files-ui.js when that module crossed the 500-line rule.
 import React, { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, LayoutGrid, List } from "lucide-react";
-import { getEntryIcon } from "./files-ui.js?v=20260826.36";
+import { getEntryIcon } from "./files-ui.js?v=20260826.38";
 // === Info pane (metadata for a single-click selection) ===
 
 export function formatFileSize(bytes) {

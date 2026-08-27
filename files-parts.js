@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { FilesInfoPane } from "./files-info.js?v=20260826.38";
+import { FilesInfoPane } from "./files-info.js?v=20260826.39";
 import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.42";
 import { VolumesSidebar } from "./files-mounts.js?v=20260826.42";
 
