@@ -3,7 +3,7 @@
 import {
   WORKSPACE_KEY_PREFIX,
   WORKSPACE_PRESET_KEY_PREFIX,
-} from "./app-constants.js?v=20260828.4";
+} from "./app-constants.js?v=20260828.5";
 
 export function readStoredJson(key, fallback) {
   try {

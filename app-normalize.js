@@ -33,7 +33,7 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.4";
+} from "./app-constants.js?v=20260828.5";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
@@ -41,8 +41,8 @@ import {
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.2";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.2";
+} from "./app-workspace.js?v=20260826.3";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.3";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
