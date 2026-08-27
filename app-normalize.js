@@ -33,7 +33,7 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.2";
+} from "./app-constants.js?v=20260828.4";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
@@ -519,6 +519,7 @@ export function normalizeTask(task = {}) {
     type: SUPPORTED_TASK_TYPES.includes(task.type) ? task.type : "auto",
     env: typeof task.env === "string" ? task.env : "",
     wd: typeof task.wd === "string" ? task.wd.trim() : "",
+    log: typeof task.log === "string" ? task.log.trim() : "",
     fsys: typeof task.fsys === "string" ? task.fsys.trim() : "",
     term: task.term !== false,
     autoStart: task.autoStart === true,

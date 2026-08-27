@@ -9,13 +9,13 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_INDEX_KEY,
   WORKSPACE_SCHEMA_VERSION,
-} from "./app-constants.js?v=20260828.2";
+} from "./app-constants.js?v=20260828.4";
 import {
   isLegacySystemMirrorBind,
   normalizeBind,
   normalizeShellConfig,
   normalizeTask,
-} from "./app-normalize.js?v=20260828.1";
+} from "./app-normalize.js?v=20260828.2";
 import {
   createWorkspaceId,
   readStoredJson,

@@ -3,12 +3,13 @@
 // workspace (500-line rule split out of app-sessions.js).
 
 import {
+  getWanixRoot,
   systemReady,
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.2";
-import { normalizeTask } from "./app-normalize.js?v=20260828.1";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.4";
+import { normalizeTask } from "./app-normalize.js?v=20260828.2";
 import { buildEnv } from "./app-terminal-profiles.js?v=20260826.2";
 import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.2";
 
@@ -40,10 +41,65 @@ export function taskEnvAttribute(def) {
   return taskEnvLines(def).join(" ");
 }
 
+// Headless task output capture: the task cmd is wrapped at create time
+// with a shell redirection into a per-task log in its own ramfs tmp
+// (exec > tmp/<id>.log 2>&1; ...). Ramfs writes are in-place, so a
+// page-side poller reads the live file at /task/workspace-task-N/ns/tmp/
+// without losing or stalling bytes. (The gojs runtime routes fd 1 to the
+// worker console at the runtime level, so kernel fd-binding cannot capture
+// gojs stdout — the wrapper is the reliable path.)
+const taskOutputs = new Map();
+
+export function taskLogPath(def) {
+  return def.log || `tmp/${def.id || "task"}.log`;
+}
+
+export function taskLogKernelPath(session) {
+  const def = session.taskDefinition;
+  return `task/workspace-task-${session.id}/ns/tmp/${def.id || "task"}.log`;
+}
+
+export function getTaskOutput(id) {
+  return taskOutputs.get(id) ?? "";
+}
+
+export function startTaskOutputCapture(session) {
+  const path = taskLogKernelPath(session);
+  const poll = async () => {
+    try {
+      const root = getWanixRoot();
+      if (!root) return;
+      taskOutputs.set(session.id, await root.readText(path));
+    } catch {
+      // Task namespace not provisioned yet (kernel busy / task not
+      // started); keep the last mirrored value.
+    }
+  };
+  poll();
+  session._outputTimer = setInterval(poll, 800);
+}
+
+export function stopTaskOutputCapture(session) {
+  if (session._outputTimer) clearInterval(session._outputTimer);
+  session._outputTimer = null;
+}
+
+// Wrap a headless cmd so stdout+stderr land in the task's own log file
+// (ramfs tmp), from the first byte. Uses a block redirect `{ cmd; } > log
+// 2>&1`, NOT `exec > log` — the gojs kernel mounts files as WritableStreams
+// that only commit on close, and an exec-kept fd never closes, so its
+// writes stay buffered and vanish. A block's redirection closes at the end
+// of the statement, committing every byte. The panel/API keep the ORIGINAL
+// cmd; only the task element runs the wrapped form.
+function wrapHeadlessCmd(def) {
+  const escaped = def.cmd.replace(/'/g, `'\\''`);
+  return `bash -c '{ ${escaped}; } > ${taskLogPath(def)} 2>&1'`;
+}
+
 function createWorkspaceTaskElement(id, def, workspace) {
   const task = document.createElement("wanix-task");
   task.id = `workspace-task-${id}`;
-  task.setAttribute("cmd", def.cmd);
+  task.setAttribute("cmd", def.term ? def.cmd : wrapHeadlessCmd(def));
   task.setAttribute("type", def.type);
   task.setAttribute("start", "");
   task.setAttribute("for", "wanix-system");
@@ -114,6 +170,7 @@ export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
     session.started = true;
     setWorkspaceTaskStatus(session, "running");
   }
+  if (!def.term) startTaskOutputCapture(session);
   return session;
 }
 
@@ -126,6 +183,7 @@ export function destroyWorkspaceTaskSession(id) {
   const session = workspaceTaskSessions.get(id);
   if (!session) return;
   workspaceTaskSessions.delete(id);
+  stopTaskOutputCapture(session);
   session.anchor = null;
   session.wrapper.remove();
 }

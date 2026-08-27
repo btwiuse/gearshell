@@ -53,7 +53,7 @@ import {
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
-} from "./workspace-api.js?v=20260828.9";
+} from "./workspace-api.js?v=20260828.11";
 
 import {
   getWanixRoot,
@@ -117,7 +117,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.1";
+} from "./app-normalize.js?v=20260828.2";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -151,7 +151,7 @@ import {
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.1";
+} from "./app-workspace-task-sessions.js?v=20260828.5";
 import {
   forgetOpenPanel,
   getDockviewApi,
@@ -178,7 +178,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.2";
+} from "./app-constants.js?v=20260828.4";
 
 // Set the license key before any DockviewComponent is created so the
 // watermark never renders; a late setLicenseKey also works (LicenseModule

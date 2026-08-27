@@ -38,7 +38,11 @@ import {
   addPanelByComponent,
   addWorkspaceTaskPanel,
 } from "./panels.js?v=20260812.35";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.1";
+import {
+  destroyWorkspaceTaskSession,
+  getTaskOutput,
+  taskLogKernelPath,
+} from "./app-workspace-task-sessions.js?v=20260828.5";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
@@ -174,6 +178,19 @@ const api = {
       destroyWorkspaceTaskSession(id);
       getDockviewApi()?.getPanel(`workspace-task-${id}`)?.api.close();
       return { ok: true };
+    },
+    output: (id) => {
+      const session = workspaceTaskSessions.get(Number(id));
+      if (!session) return { ok: false, error: "task not found" };
+      if (session.term) {
+        return { ok: false, error: "task has a terminal; read its panel" };
+      }
+      return {
+        ok: true,
+        taskId: id,
+        path: `/${taskLogKernelPath(session)}`,
+        output: getTaskOutput(Number(id)),
+      };
     },
   }),
 
