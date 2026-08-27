@@ -4,8 +4,8 @@
 
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.2";
-import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.9";
-import { setupConfigForm } from "./settings-config.js?v=20260826.9";
+import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.10";
+import { setupConfigForm } from "./settings-config.js?v=20260826.10";
 import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.2";
 import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.2";
 import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.2";

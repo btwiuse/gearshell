@@ -126,6 +126,7 @@ export const DEFAULT_CONFIG = {
   vmNetworkMode: "none",
   vmWispUrl: "",
   wagiDogEnabled: false,
+  widgetbot: false,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   launcherOrder: DEFAULT_LAUNCHER_ITEM_ORDER,
 };
@@ -256,9 +257,9 @@ export const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 export const WANIX_RUNTIME = {
-  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.20",
+  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.22",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.20/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.22/dist/wanix.min.js",
 };
 
 // The bundled shell binary (hush, mounted as /bin/bash). Pinned to a

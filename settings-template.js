@@ -217,6 +217,10 @@ export const SETTINGS_TEMPLATE_HTML =
                   <span>Keep playing audio when switching tabs</span>
                   <input data-config="allow-background-playback" type="checkbox">
                 </label>
+                <label class="cfg-toggle">
+                  <span>Show Discord community widget</span>
+                  <input data-config="widgetbot" type="checkbox">
+                </label>
               </div>
             </details>
 

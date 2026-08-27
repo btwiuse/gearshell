@@ -275,7 +275,7 @@ const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
         ? status.error?.message || "Task failed to start."
         : status.status === "starting"
         ? "Starting task…"
-        : "Task started without a terminal. Its output is available in the browser console.",
+        : "Headless task: no terminal. Output is captured to a per-task log; read it with gctl tasks.output <id> (live with wanix v0.4.20).",
     ),
     React.createElement(
       "div",

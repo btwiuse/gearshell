@@ -21,9 +21,9 @@ import {
   initSettings,
   SettingsPanel,
   TerminalPresetIconPicker,
-} from "./settings.js?v=20260826.9";
-import { FilesPanel } from "./files.js?v=20260826.44";
-import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.10";
+} from "./settings.js?v=20260826.10";
+import { FilesPanel } from "./files.js?v=20260826.46";
+import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.12";
 import {
   addRuntimePanel,
   initRuntime,
@@ -49,11 +49,12 @@ import {
   WagiDogPet as WagiDogPetFromPanels,
   WorkbenchPanel as WorkbenchPanelFromPanels,
   WorkspaceTaskPanel as WorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.35";
+} from "./panels.js?v=20260812.36";
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
-} from "./workspace-api.js?v=20260828.12";
+} from "./workspace-api.js?v=20260828.15";
+import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 
 import {
   getWanixRoot,
@@ -64,7 +65,7 @@ import {
   terminalSessions,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { createWanixSystem } from "./app-wanix.js?v=20260826.3";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.5";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -100,14 +101,14 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
-} from "./app-workspace.js?v=20260826.3";
+} from "./app-workspace.js?v=20260826.5";
 import {
   listWorkspacePresets,
   loadCustomWorkspacePreset,
   removeCustomWorkspacePreset,
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
-} from "./app-workspace-presets.js?v=20260826.3";
+} from "./app-workspace-presets.js?v=20260826.5";
 import {
   blankCrushRunnerPresetDraft,
   clone,
@@ -117,7 +118,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.3";
+} from "./app-normalize.js?v=20260828.5";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -126,7 +127,7 @@ import {
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.3";
+} from "./app-terminal-profiles.js?v=20260826.5";
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
@@ -135,7 +136,7 @@ import {
   hideTerminalLayer,
   restoreTerminalLayer,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.3";
+} from "./app-terminal-sessions.js?v=20260826.5";
 import {
   attachIframeSession,
   attachVmSession,
@@ -144,20 +145,20 @@ import {
   destroyVmSession,
   destroyWorkbenchSession,
   waitForWanixSystem,
-} from "./app-sessions.js?v=20260828.6";
+} from "./app-sessions.js?v=20260828.8";
 import {
   attachWorkspaceTaskSession,
   destroyWorkspaceTaskSession,
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.6";
+} from "./app-workspace-task-sessions.js?v=20260828.8";
 import {
   forgetOpenPanel,
   getDockviewApi,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.3";
+} from "./app-panels-store.js?v=20260826.5";
 import {
   autoStartWorkspaceTasks,
   blankTerminalPresetDraft,
@@ -165,7 +166,7 @@ import {
   PANEL_CREATION_OPTIONS,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.3";
+} from "./app-panels.js?v=20260826.6";
 import {
   dismissHomeDebugErrors,
   DOCKVIEW_LICENSE_KEY,
@@ -178,7 +179,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.5";
+} from "./app-constants.js?v=20260828.7";
 
 // Set the license key before any DockviewComponent is created so the
 // watermark never renders; a late setLicenseKey also works (LicenseModule
@@ -252,6 +253,7 @@ function openStartupPanels(api) {
 function App() {
   const onReady = useCallback((event) => {
     setDockviewApi(event.api);
+    initWidgetBot(loadConfig().widgetbot);
     // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);

@@ -34,7 +34,7 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.43";
+} from "./files-panel-hooks.js?v=20260826.45";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
@@ -42,7 +42,7 @@ import {
   FilesPanelTopbar,
 } from "./files-panel-sections.js?v=20260826.41";
 import { FilesResizer } from "./files-parts.js?v=20260826.40";
-import { filesDep } from "./files-registry.js?v=20260826.10";
+import { filesDep } from "./files-registry.js?v=20260826.12";
 function FilesPanel() {
   const fileInputRef = useRef(null);
   const filesPanelRef = useRef(null);

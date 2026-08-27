@@ -17,7 +17,7 @@ import {
 } from "./files-editor.js?v=20260826.42";
 import { useFilesContextMenu } from "./files-context-menu.js?v=20260826.42";
 import { useLocalDirMounts } from "./files-mounts.js?v=20260826.42";
-import { filesDep } from "./files-registry.js?v=20260826.10";
+import { filesDep } from "./files-registry.js?v=20260826.12";
 
 async function sniffWasmEntries(getRoot, path, entries) {
   // Extension-less files are often WebAssembly binaries in this sandbox;

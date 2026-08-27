@@ -26,6 +26,9 @@ function queryConfigElements(settingsContent) {
     allowBgPlaybackEl: settingsContent.querySelector(
       '[data-config="allow-background-playback"]',
     ),
+    widgetbotEl: settingsContent.querySelector(
+      '[data-config="widgetbot"]',
+    ),
     integrationEls: [
       ...settingsContent.querySelectorAll("[data-config-value]"),
     ],
@@ -56,6 +59,7 @@ function fillConfigFields(els, cfg) {
   if (els.allowBgPlaybackEl) {
     els.allowBgPlaybackEl.checked = cfg.allowBackgroundPlayback !== false;
   }
+  if (els.widgetbotEl) els.widgetbotEl.checked = cfg.widgetbot === true;
   for (const input of els.integrationEls) {
     input.value = cfg[input.dataset.configValue] || "";
   }
@@ -90,6 +94,7 @@ function wireConfigSave(settingsContent, els, showConfigStatus) {
       restoreTabs: els.restoreTabsEl?.checked === true,
       wagiDogEnabled: els.wagiDogEnabledEl?.checked !== false,
       allowBackgroundPlayback: els.allowBgPlaybackEl?.checked !== false,
+      widgetbot: els.widgetbotEl?.checked === true,
       ...Object.fromEntries(
         els.integrationEls.map((
           input,

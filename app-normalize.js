@@ -33,7 +33,7 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.5";
+} from "./app-constants.js?v=20260828.7";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
@@ -41,8 +41,8 @@ import {
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.3";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.3";
+} from "./app-workspace.js?v=20260826.5";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.5";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -203,6 +203,7 @@ export function normalizeShellConfig(config) {
     vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
     wagiDogEnabled: config?.wagiDogEnabled === true,
+    widgetbot: config?.widgetbot === true,
     favorites: normalizeFavorites(config),
     collapsedLauncherItems: normalizeCollapsedLauncherItems(config),
     launcherOrder: normalizeLauncherOrder(config?.launcherOrder),
