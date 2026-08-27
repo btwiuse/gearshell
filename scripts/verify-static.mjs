@@ -79,5 +79,8 @@ if (!css.includes('.monaco-list-row[aria-level]:not([aria-level="1"]) .indent-gu
 if (css.includes('.workbench-session .monaco-tl-twistie')) throw new Error('GearShell must not override Workbench disclosure geometry.');
 if (!workbenchExtension.includes('bind #task/self/term/winch winch')) throw new Error('Workbench terminals must mount their resize signal through the task namespace.');
 if (!workbenchExtension.includes('setDimensions: async (dimensions')) throw new Error('Workbench terminals must forward VS Code resize events.');
+if (!has('window.GearShell')) throw new Error('Workspace API must be exposed to agents via window.GearShell (jsfs /js bridge).');
+if (!has('initWorkspaceApi') || !has('GCTL_BIND')) throw new Error('Workspace API boot hook and gctl bind must exist for agent-side control.');
+if (!has('app.js?v=20260828.14')) throw new Error('index.html must load the current app.js build.');
 
 console.log('Static verification passed.');

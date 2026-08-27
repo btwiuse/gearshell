@@ -1,5 +1,5 @@
-// Workspace task / iframe / workbench / VM session management (500-line
-// rule split).
+// Iframe / workbench / VM session management (500-line rule split; the
+// workspace-task sessions live in app-workspace-task-sessions.js).
 
 import {
   getWanixRoot,
@@ -9,152 +9,16 @@ import {
   vmDriverInstallations,
   vmSessions,
   workbenchSessions,
-  workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import {
-  HOME,
-  WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260827.2";
+import { HOME } from "./app-constants.js?v=20260828.2";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
 } from "./app-terminal-profiles.js?v=20260826.2";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260827.2";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.2";
 import { wanixSystem } from "./app-state.js?v=20260826.2";
 import { createWanixBindElement } from "./app-wanix.js?v=20260826.2";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.2";
-
-export function createBindElement(bind) {
-  const element = document.createElement("wanix-bind");
-  element.setAttribute("dst", bind.dst);
-  element.setAttribute("type", bind.type);
-  element.setAttribute("perm", bind.perm);
-  element.setAttribute("union", bind.union);
-  if (bind.src) element.setAttribute("src", bind.src);
-  if (bind.content) element.textContent = bind.content;
-  return element;
-}
-
-export function taskEnvironment(env) {
-  return env.split("\n").map((line) => line.trim()).filter(Boolean).join(" ");
-}
-
-function createTaskTerminal(task) {
-  const winchBind = document.createElement("wanix-bind");
-  winchBind.setAttribute("dst", "winch");
-  winchBind.setAttribute("src", "#task/self/term/winch");
-  task.appendChild(winchBind);
-
-  const term = document.createElement("wanix-term");
-  term.setAttribute("raw", "");
-  term.setAttribute("no-scrollbar", "");
-  term.setAttribute("path", `#task/${task.id}/term`);
-  term.setAttribute("for", "wanix-system");
-  return term;
-}
-
-export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "terminal-session";
-
-  const task = document.createElement("wanix-task");
-  task.id = `workspace-task-${id}`;
-  task.setAttribute("cmd", taskDefinition.cmd);
-  task.setAttribute("type", taskDefinition.type);
-  task.setAttribute("start", "");
-  task.setAttribute("for", "wanix-system");
-  if (taskDefinition.wd) task.setAttribute("wd", taskDefinition.wd);
-  if (taskDefinition.env.trim()) {
-    task.setAttribute("env", taskEnvironment(taskDefinition.env));
-  }
-  if (taskDefinition.term) task.setAttribute("term", "");
-  for (const bind of workspace.binds) task.appendChild(createBindElement(bind));
-
-  let term = null;
-  if (taskDefinition.term) {
-    term = createTaskTerminal(task);
-    wrapper.append(task, term);
-  } else {
-    wrapper.append(task);
-  }
-  terminalLayer?.appendChild(wrapper);
-
-  const session = {
-    id,
-    wrapper,
-    task,
-    term,
-    anchor: null,
-    layout: null,
-    started: false,
-    taskDefinition,
-    error: null,
-  };
-  task.addEventListener("error", (event) => {
-    setWorkspaceTaskStatus(
-      session,
-      "failed",
-      event.detail?.error || event.detail || event,
-    );
-  });
-  workspaceTaskSessions.set(id, session);
-  return session;
-}
-
-export function getWorkspaceTaskSession(id, taskDefinition, workspace) {
-  return workspaceTaskSessions.get(id) ||
-    createWorkspaceTaskSession(id, taskDefinition, workspace);
-}
-
-export function destroyWorkspaceTaskSession(id) {
-  const session = workspaceTaskSessions.get(id);
-  if (!session) return;
-  workspaceTaskSessions.delete(id);
-  session.anchor = null;
-  session.wrapper.remove();
-}
-
-export function setWorkspaceTaskStatus(session, status, error = null) {
-  session.status = status;
-  session.error = error;
-  session.task.dispatchEvent(
-    new CustomEvent(WORKSPACE_TASK_STATUS_EVENT, {
-      detail: { status, error },
-    }),
-  );
-}
-
-export function wakeWorkspaceTaskSession(session) {
-  if (!systemReady || session.started) return;
-  session.started = true;
-  queueMicrotask(async () => {
-    try {
-      setWorkspaceTaskStatus(session, "starting");
-      await session.task._awake?.();
-      await session.term?._awake?.();
-      setWorkspaceTaskStatus(session, "running");
-    } catch (error) {
-      setWorkspaceTaskStatus(session, "failed", error);
-      console.error("Workspace task failed to start", error);
-    }
-  });
-}
-
-export function attachWorkspaceTaskSession(
-  id,
-  taskDefinition,
-  workspace,
-  anchor,
-  api,
-) {
-  const session = getWorkspaceTaskSession(id, taskDefinition, workspace);
-  if (!session.term) {
-    wakeWorkspaceTaskSession(session);
-    return () => {};
-  }
-  return attachOverlayTerminalSession(session, anchor, api);
-}
 
 export const DEFAULT_IFRAME_ALLOW = "clipboard-read; clipboard-write";
 

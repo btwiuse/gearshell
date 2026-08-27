@@ -6,7 +6,7 @@ import {
   WORKSPACE_PRESET_KEY_PREFIX,
   WORKSPACE_PRESETS,
   WORKSPACE_SCHEMA_VERSION,
-} from "./app-constants.js?v=20260827.2";
+} from "./app-constants.js?v=20260828.2";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -17,7 +17,7 @@ import {
   normalizeShellConfig,
   normalizeSystemConfig,
   normalizeTask,
-} from "./app-normalize.js?v=20260826.2";
+} from "./app-normalize.js?v=20260828.1";
 import {
   createWorkspaceId,
   readStoredJson,

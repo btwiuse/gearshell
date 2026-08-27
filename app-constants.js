@@ -256,10 +256,23 @@ export const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 export const WANIX_RUNTIME = {
-  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.12",
+  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.16",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.12/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.16/dist/wanix.min.js",
 };
+
+// The bundled shell binary (hush, mounted as /bin/bash). Pinned to a
+// semver tag; isLegacyHushBinaryUrl auto-upgrades older pins on load so
+// kernel-interpreter fixes (e.g. fd>2 redirects, script args) reach
+// existing workspaces without a manual reset.
+export const HUSH_BINARY_VERSION = "v0.5.9";
+export const DEFAULT_HUSH_BINARY_URL =
+  "https://w9y.io/go/github.com/btwiuse/hush/cmd/hush@v0.5.9";
+export function isLegacyHushBinaryUrl(url) {
+  return typeof url === "string" &&
+    url.includes("github.com/btwiuse/hush/cmd/hush@") &&
+    !url.includes(`hush@${HUSH_BINARY_VERSION}`);
+}
 
 export const DEFAULT_SYSTEM_CONFIG = {
   binds: [
@@ -275,7 +288,7 @@ export const DEFAULT_SYSTEM_CONFIG = {
       id: "hush",
       type: "fetch",
       dst: "bin/bash",
-      src: "https://w9y.io/go/github.com/btwiuse/hush/cmd/hush@v0.5.6",
+      src: DEFAULT_HUSH_BINARY_URL,
       mode: "0755",
     },
     {

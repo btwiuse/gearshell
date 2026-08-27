@@ -49,7 +49,11 @@ import {
   WagiDogPet as WagiDogPetFromPanels,
   WorkbenchPanel as WorkbenchPanelFromPanels,
   WorkspaceTaskPanel as WorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.32";
+} from "./panels.js?v=20260812.34";
+import {
+  ensureGearShellBinds,
+  initWorkspaceApi,
+} from "./workspace-api.js?v=20260828.9";
 
 import {
   getWanixRoot,
@@ -113,7 +117,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260826.6";
+} from "./app-normalize.js?v=20260828.1";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -136,15 +140,18 @@ import {
   attachIframeSession,
   attachVmSession,
   attachWorkbenchSession,
-  attachWorkspaceTaskSession,
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
+  waitForWanixSystem,
+} from "./app-sessions.js?v=20260828.5";
+import {
+  attachWorkspaceTaskSession,
   destroyWorkspaceTaskSession,
   getWorkspaceTaskSession,
-  waitForWanixSystem,
+  taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-sessions.js?v=20260826.2";
+} from "./app-workspace-task-sessions.js?v=20260828.1";
 import {
   forgetOpenPanel,
   getDockviewApi,
@@ -171,7 +178,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260827.2";
+} from "./app-constants.js?v=20260828.2";
 
 // Set the license key before any DockviewComponent is created so the
 // watermark never renders; a late setLicenseKey also works (LicenseModule
@@ -179,6 +186,9 @@ import {
 LicenseManager.setLicenseKey(DOCKVIEW_LICENSE_KEY);
 
 const systemWorkspace = loadActiveWorkspace();
+// Inject the agent-control binds (shared /gearshell dir + the gctl CLI)
+// before the namespace is built, so every task sees them this session.
+ensureGearShellBinds(systemWorkspace);
 await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
 const wanixSystem = createWanixSystem(systemWorkspace);
 setSystemReady(Boolean(wanixSystem?.isReady));
@@ -360,6 +370,7 @@ initPanels({
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
   getWorkspaceTaskSession,
+  taskEnvLines,
   getTerminalPresetIcon,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
@@ -520,3 +531,8 @@ initCrushRunner({
   WORKSPACE_CHANGED_EVENT,
   rememberOpenPanel,
 });
+
+// Initialise the Workspace API: expose window.GearShell to agents (via
+// the kernel's jsfs /js projection) and ensure the active workspace
+// carries the gctl bind.
+initWorkspaceApi();

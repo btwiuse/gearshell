@@ -8,12 +8,14 @@ import {
   DEFAULT_CMD,
   DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   DEFAULT_CONFIG,
+  DEFAULT_HUSH_BINARY_URL,
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_SYSTEM_CONFIG,
   DEFAULT_VM_BACKEND_URL,
   DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
   HOME,
+  isLegacyHushBinaryUrl,
   LAUNCHER_COLLAPSIBLE_PANEL_TYPES,
   LEGACY_DEFAULT_CMD,
   LEGACY_DEFAULT_WORKBENCH_ASSETS_URL,
@@ -31,7 +33,7 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260827.2";
+} from "./app-constants.js?v=20260828.2";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
@@ -433,9 +435,16 @@ export function normalizeSystemBind(bind = {}) {
 
 export function normalizeSystemConfig(system) {
   const defaults = clone(DEFAULT_SYSTEM_CONFIG);
-  const binds = Array.isArray(system?.binds)
-    ? system.binds.map(normalizeSystemBind)
-    : defaults.binds.map(normalizeSystemBind);
+  const binds =
+    (Array.isArray(system?.binds)
+      ? system.binds.map(normalizeSystemBind)
+      : defaults.binds.map(normalizeSystemBind)).map((bind) =>
+        // Auto-upgrade the bundled shell binary so interpreter fixes reach
+        // existing workspaces; mirrors the wanix runtime URL migration.
+        bind.dst === "bin/bash" && isLegacyHushBinaryUrl(bind.src)
+          ? { ...bind, src: DEFAULT_HUSH_BINARY_URL }
+          : bind
+      );
   const legacyProfile = system?.profile;
   if (
     legacyProfile &&

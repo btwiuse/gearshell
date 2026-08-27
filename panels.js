@@ -200,71 +200,110 @@ function PanelTab(props) {
 // === WorkspaceTaskPanel ===
 function WorkspaceTaskPanel({ api, params }) {
   const wrapperRef = useRef(null);
-  const hasTerminal = params.task.term;
   const [taskStatus, setTaskStatus] = useState({
     status: "created",
     error: null,
   });
 
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    const workspace = panelsDep("loadWorkspace")(params.workspaceId) ||
-      panelsDep("loadActiveWorkspace")();
-    const session = panelsDep("getWorkspaceTaskSession")(
-      params.sessionId,
-      params.task,
-      workspace,
-    );
-    const updateStatus = (event) => setTaskStatus(event.detail);
-    session.task.addEventListener(
-      panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
-      updateStatus,
-    );
-    setTaskStatus({
-      status: session.status || "created",
-      error: session.error || null,
-    });
-    const detach = panelsDep("attachWorkspaceTaskSession")(
-      params.sessionId,
-      params.task,
-      workspace,
-      wrapper,
-      api,
-    );
-    return () => {
-      session.task.removeEventListener(
-        panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
-        updateStatus,
-      );
-      detach?.();
-    };
-  }, [api, params.sessionId]);
+  useEffect(
+    () => attachTaskPanelSession(params, api, wrapperRef, setTaskStatus),
+    [api, params.sessionId],
+  );
 
-  if (!hasTerminal) {
-    return React.createElement(
-      "div",
-      { ref: wrapperRef, className: "task-headless panel-content" },
-      React.createElement("h2", null, params.task.name),
-      React.createElement(
-        "p",
-        null,
-        taskStatus.status === "failed"
-          ? taskStatus.error?.message || "Task failed to start."
-          : taskStatus.status === "starting"
-          ? "Starting task…"
-          : "Task started without a terminal. Its output is available in the browser console.",
-      ),
-      React.createElement("span", {
-        className: `task-headless-status ${taskStatus.status}`,
-      }, taskStatus.status),
-    );
+  if (!params.task.term) {
+    return React.createElement(HeadlessTaskPanel, {
+      ref: wrapperRef,
+      task: params.task,
+      status: taskStatus,
+    });
   }
   return React.createElement("div", {
     ref: wrapperRef,
     className: "panel-content",
   });
 }
+
+function attachTaskPanelSession(params, api, wrapperRef, setTaskStatus) {
+  const wrapper = wrapperRef.current;
+  if (!wrapper) return undefined;
+  const workspace = panelsDep("loadWorkspace")(params.workspaceId) ||
+    panelsDep("loadActiveWorkspace")();
+  const session = panelsDep("getWorkspaceTaskSession")(
+    params.sessionId,
+    params.task,
+    workspace,
+  );
+  const updateStatus = (event) => setTaskStatus(event.detail);
+  session.task.addEventListener(
+    panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
+    updateStatus,
+  );
+  setTaskStatus({
+    status: session.status || "created",
+    error: session.error || null,
+  });
+  const detach = panelsDep("attachWorkspaceTaskSession")(
+    params.sessionId,
+    params.task,
+    workspace,
+    wrapper,
+    api,
+  );
+  return () => {
+    session.task.removeEventListener(
+      panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
+      updateStatus,
+    );
+    detach?.();
+  };
+}
+
+// === HeadlessTaskPanel ===
+const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
+  { task, status },
+  ref,
+) {
+  const envLines = panelsDep("taskEnvLines")(task);
+  return React.createElement(
+    "div",
+    { ref, className: "task-headless panel-content" },
+    React.createElement("h2", null, task.name),
+    React.createElement(
+      "p",
+      null,
+      status.status === "failed"
+        ? status.error?.message || "Task failed to start."
+        : status.status === "starting"
+        ? "Starting task…"
+        : "Task started without a terminal. Its output is available in the browser console.",
+    ),
+    React.createElement(
+      "div",
+      { className: "task-headless-command" },
+      React.createElement("span", {
+        className: "task-headless-prompt",
+      }, "$"),
+      React.createElement(
+        "code",
+        null,
+        task.cmd || "(no command)",
+      ),
+    ),
+    React.createElement(
+      "details",
+      { className: "task-headless-env" },
+      React.createElement("summary", null, `env (${envLines.length})`),
+      React.createElement(
+        "pre",
+        null,
+        envLines.join("\n"),
+      ),
+    ),
+    React.createElement("span", {
+      className: `task-headless-status ${status.status}`,
+    }, status.status),
+  );
+});
 
 // === WagiDogPet ===
 function WagiDogPet() {
