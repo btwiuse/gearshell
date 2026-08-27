@@ -290,6 +290,20 @@ const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
       ),
     ),
     React.createElement(
+      "div",
+      { className: "task-headless-wd" },
+      React.createElement(
+        "span",
+        { className: "task-headless-wd-label" },
+        "workdir",
+      ),
+      React.createElement(
+        "code",
+        null,
+        task.wd || "/",
+      ),
+    ),
+    React.createElement(
       "details",
       { className: "task-headless-env" },
       React.createElement("summary", null, `env (${envLines.length})`),

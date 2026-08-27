@@ -21,7 +21,7 @@ import {
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.34";
+} from "./panels.js?v=20260812.35";
 import {
   Activity,
   Bot,

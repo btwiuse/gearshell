@@ -37,7 +37,7 @@ import {
 import {
   addPanelByComponent,
   addWorkspaceTaskPanel,
-} from "./panels.js?v=20260812.34";
+} from "./panels.js?v=20260812.35";
 import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.1";
 
 // --- Sync-only wrapper ---

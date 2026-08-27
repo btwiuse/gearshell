@@ -49,7 +49,7 @@ import {
   WagiDogPet as WagiDogPetFromPanels,
   WorkbenchPanel as WorkbenchPanelFromPanels,
   WorkspaceTaskPanel as WorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.34";
+} from "./panels.js?v=20260812.35";
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
