@@ -4,7 +4,7 @@
 // injection table as panels.js via the exported `panelsDep`.
 
 import React, { useEffect, useRef, useState } from "react";
-import { panelsDep } from "./panels.js?v=20260812.37";
+import { panelsDep } from "./panels.js?v=20260812.38";
 
 // Per-workspace-task counter so multiple task panels can coexist.
 // Module-scoped so it survives React re-renders but resets on reload.
@@ -187,11 +187,17 @@ export function addWorkspaceTaskPanel(
     title: task.name || task.cmd,
     ...(options.group && { position: { referenceGroup: options.group } }),
   });
-  panelsDep("rememberOpenPanel")(panel, {
-    component: "task",
-    task: panelsDep("clone")(task),
-    workspaceId: workspace.id,
-  });
+  // persist = remember the panel for tab restore on reload. Ephemeral
+  // (agent-created) tasks skip this: a restored task panel respawns its
+  // worker on boot, which is how agent one-shots used to pile up
+  // zombies and eventually wedge the kernel.
+  if (options.persist !== false) {
+    panelsDep("rememberOpenPanel")(panel, {
+      component: "task",
+      task: panelsDep("clone")(task),
+      workspaceId: workspace.id,
+    });
+  }
   // silent = open in the background so the caller (e.g. the Crush install
   // button) keeps focus. Without this the new tab steals focus and
   // overwrites the active panel selection.

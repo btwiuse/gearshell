@@ -38,7 +38,7 @@ import {
 import {
   addPanelByComponent,
   addWorkspaceTaskPanel,
-} from "./panels.js?v=20260812.37";
+} from "./panels.js?v=20260812.38";
 import {
   destroyWorkspaceTaskSession,
   getTaskOutput,
@@ -74,6 +74,21 @@ function wrapNamespace(obj) {
 // --- Event pub/sub (in-memory + window CustomEvent mirror) ---
 const listeners = new Map();
 
+// Bounded ring buffer so AGENTS can read page events: the jsfs bridge is
+// synchronous and functions do not survive JSON serialization, so a
+// callback-based subscribe cannot cross the boundary. Agents poll
+// events.drain (or `gctl events.drain`) at the same 800ms rhythm used
+// for tasks.output and get everything buffered since the last drain.
+const eventBuffer = [];
+const EVENT_BUFFER_LIMIT = 200;
+
+function pushEvent(topic, payload) {
+  eventBuffer.push({ topic, payload: payload ?? null, ts: Date.now() });
+  if (eventBuffer.length > EVENT_BUFFER_LIMIT) {
+    eventBuffer.splice(0, eventBuffer.length - EVENT_BUFFER_LIMIT);
+  }
+}
+
 function on(topic, fn) {
   if (!listeners.has(topic)) listeners.set(topic, new Set());
   listeners.get(topic).add(fn);
@@ -85,6 +100,7 @@ function off(topic, fn) {
 }
 
 function emit(topic, payload) {
+  pushEvent(topic, payload);
   for (const fn of [...(listeners.get(topic) || [])]) {
     try {
       fn(payload);
@@ -111,7 +127,9 @@ const api = {
     getShell: () => loadConfig(),
     updateShell: (patch) => {
       saveConfig({ ...loadConfig(), ...patch });
-      return loadConfig();
+      const result = loadConfig();
+      pushEvent("config.changed", { result });
+      return result;
     },
     getWorkspace: () => loadActiveWorkspace(),
     getBinds: () => loadActiveWorkspace().system.binds,
@@ -185,12 +203,43 @@ const api = {
           background: true,
         };
       }
+      // Ephemeral by default: agent tasks are one-shots, so they must not
+      // survive a reload. Restored task panels respawn their workers, and
+      // a few rounds of test tasks used to pile up zombies that eventually
+      // wedged the kernel. persist: true opts back into the old behavior
+      // (definition saved to the workspace + panel remembered for tab
+      // restore, then GC'd once it reaches a terminal status).
+      if (options.persist !== true) {
+        const normalized = normalizeTask(spec);
+        const error = validateTask(normalized);
+        if (error) return { ok: false, error };
+        const panel = addWorkspaceTaskPanel(
+          getDockviewApi(),
+          normalized,
+          workspace,
+          {
+            silent: options.silent === true,
+            group: options.group,
+            persist: false,
+          },
+        );
+        return {
+          ok: true,
+          panelId: panel?.id ?? null,
+          taskId: normalized.id,
+          ephemeral: true,
+          autoClose: options.autoClose === true,
+        };
+      }
       const stored = addWorkspaceTask(spec);
       // Open the panel with the NORMALIZED task (addWorkspaceTask fills
       // env/wd/type/term defaults): the panel session reads
       // taskDefinition.env.trim() and would crash on a raw spec.
       const tasks = stored?.tasks ?? [];
       const normalized = tasks.length > 0 ? tasks[tasks.length - 1] : spec;
+      // Track the persisted definition in the agent-task registry so the
+      // boot-time GC prunes it once it reaches a terminal status.
+      if (normalized) markAgentTask(normalized.id);
       const panel = addWorkspaceTaskPanel(
         getDockviewApi(),
         normalized,
@@ -208,6 +257,12 @@ const api = {
       };
     },
     cancel: (id) => {
+      // Persisted agent-managed definitions get a terminal status so the
+      // boot-time GC prunes them; ephemeral tasks are never stored.
+      const session = workspaceTaskSessions.get(Number(id));
+      if (session?.taskDefinition) {
+        markAgentTaskStatus(session.taskDefinition.id, "cancelled");
+      }
       destroyWorkspaceTaskSession(id);
       getDockviewApi()?.getPanel(`workspace-task-${id}`)?.api.close();
       return { ok: true };
@@ -268,7 +323,17 @@ const api = {
     },
   }),
 
-  events: { on: safe(on), off: safe(off), emit: safe(emit) },
+  events: {
+    on: safe(on),
+    off: safe(off),
+    emit: safe(emit),
+    // Agent-side read of the event ring buffer (see pushEvent above).
+    drain: safe(() => {
+      const events = eventBuffer.splice(0, eventBuffer.length);
+      return { ok: true, events };
+    }),
+    pending: safe(() => ({ ok: true, count: eventBuffer.length })),
+  },
 };
 
 function resolveSession(id) {
@@ -381,6 +446,122 @@ export function initWorkspaceApi() {
   } catch {
     // non-browser environment
   }
+  // Permanent task-status listener: mirrors every status into the event
+  // ring buffer (agents poll it via events.drain / gctl events.drain) and
+  // writes terminal statuses into the agent-task registry so the boot-time
+  // GC can prune persisted one-shots. The per-call runHeadlessTask
+  // listener below is separate and short-lived.
+  window.addEventListener(WORKSPACE_TASK_STATUS_EVENT, (event) => {
+    const detail = event.detail || {};
+    pushEvent("task.status", detail);
+    if (!["succeeded", "failed", "cancelled"].includes(detail.status)) return;
+    const session = workspaceTaskSessions.get(Number(detail.taskId));
+    if (session?.taskDefinition) {
+      markAgentTaskStatus(session.taskDefinition.id, detail.status);
+    }
+  });
+}
+
+// --- Agent-managed task registry ---
+// Persisted tasks created via tasks.create({ persist: true }) are tracked
+// here, NOT inside the workspace schema: task status is runtime lifecycle
+// data, and workspace task definitions are re-normalized on every save
+// and load (which would strip foreign fields). A parallel localStorage
+// registry survives reloads so the boot-time GC knows which definitions
+// are finished agent one-shots and can prune them.
+const AGENT_TASKS_KEY = "gear-shell-agent-tasks";
+
+function loadAgentTaskRegistry() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AGENT_TASKS_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveAgentTaskRegistry(registry) {
+  try {
+    localStorage.setItem(AGENT_TASKS_KEY, JSON.stringify(registry));
+  } catch {
+    // storage unavailable; GC simply has nothing to prune next boot
+  }
+}
+
+function markAgentTask(defId) {
+  if (!defId) return;
+  const registry = loadAgentTaskRegistry();
+  if (!registry[defId]) {
+    registry[defId] = { status: "", ts: Date.now() };
+    saveAgentTaskRegistry(registry);
+  }
+}
+
+function markAgentTaskStatus(defId, status) {
+  if (!defId) return;
+  const registry = loadAgentTaskRegistry();
+  // Only tracked (persisted agent-managed) definitions; ephemeral tasks
+  // are never in the registry, so nothing to record.
+  if (!registry[defId] || registry[defId].status === status) return;
+  registry[defId] = { ...registry[defId], status, ts: Date.now() };
+  saveAgentTaskRegistry(registry);
+}
+
+// Boot-time GC: drop persisted agent-managed task definitions that reached
+// a terminal status (succeeded/failed/cancelled), and forget registry
+// entries whose definition no longer exists. Called from app-shell at
+// startup, before any task panels are restored. Settings-created tasks are
+// never tracked and never pruned.
+export function gcWorkspaceTasks() {
+  const workspace = loadActiveWorkspace();
+  if (!Array.isArray(workspace.tasks)) return;
+  const registry = loadAgentTaskRegistry();
+  const terminal = new Set(["succeeded", "failed", "cancelled"]);
+  let pruned = false;
+  const surviving = workspace.tasks.filter((task) => {
+    const entry = registry[task.id];
+    if (entry && terminal.has(entry.status)) {
+      pruned = true;
+      return false;
+    }
+    return true;
+  });
+  if (pruned) {
+    workspace.tasks = surviving;
+    saveWorkspace(workspace);
+    updateWorkspaceIndex(workspace);
+  }
+  let registryPruned = false;
+  for (const defId of Object.keys(registry)) {
+    if (!surviving.some((task) => task.id === defId)) {
+      delete registry[defId];
+      registryPruned = true;
+    }
+  }
+  if (registryPruned) saveAgentTaskRegistry(registry);
+}
+
+// Dockview panel lifecycle -> event ring buffer. Called from app-shell's
+// onReady where the other dockview hooks live (getDockviewApi() is null
+// before then, so the api instance is passed in).
+export function wirePanelEvents(api) {
+  if (!api) return;
+  const info = (panel) => ({
+    id: panel?.id ?? null,
+    component: typeof panel?.params?.panelType === "string"
+      ? panel.params.panelType
+      : null,
+    title: panel?.title ?? null,
+  });
+  api.onDidAddPanel?.((event) => {
+    if (event?.panel) pushEvent("panel.added", info(event.panel));
+  });
+  api.onDidRemovePanel?.((event) => {
+    if (event?.panel) pushEvent("panel.removed", info(event.panel));
+  });
+  api.onDidActivePanelChange?.((event) => {
+    if (event?.panel) pushEvent("panel.activated", info(event.panel));
+  });
 }
 
 // Run a headless (no panel, no persistence) background task and resolve

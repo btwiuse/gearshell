@@ -26,13 +26,13 @@ import {
   addTerminalPanel as addTerminalPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
   initPanels,
-} from "./panels.js?v=20260812.37";
+} from "./panels.js?v=20260812.38";
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
   workspaceApi,
-} from "./workspace-api.js?v=20260828.21";
-import { App } from "./app-shell.js?v=20260828.2";
+} from "./workspace-api.js?v=20260828.22";
+import { App } from "./app-shell.js?v=20260828.3";
 
 import {
   getWanixRoot,

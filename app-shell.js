@@ -26,7 +26,7 @@ import {
   WagiDogPet,
   WorkbenchPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.37";
+} from "./panels.js?v=20260812.38";
 import { setDockviewApi } from "./app-panels-store.js?v=20260826.7";
 import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 import {
@@ -52,7 +52,11 @@ import {
   updateWorkspaceIndex,
 } from "./app-workspace.js?v=20260826.7";
 import { forgetOpenPanel } from "./app-panels-store.js?v=20260826.7";
-import { addPanelByComponent } from "./panels.js?v=20260812.37";
+import { addPanelByComponent } from "./panels.js?v=20260812.38";
+import {
+  gcWorkspaceTasks,
+  wirePanelEvents,
+} from "./workspace-api.js?v=20260828.22";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -89,6 +93,9 @@ function trackActivePanel(api) {
 }
 
 function openStartupPanels(api) {
+  // Prune finished agent-managed task definitions before anything can
+  // restore or respawn them (ephemeral agent tasks were never stored).
+  gcWorkspaceTasks();
   const cfg = loadConfig();
   const restored = cfg.restoreTabs && restoreSavedPanels(api);
   if (!restored) {
@@ -155,6 +162,8 @@ function App() {
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
     event.api.onDidRemovePanel((panel) => handlePanelRemoved(event.api, panel));
+    // Mirror panel lifecycle into the agent event ring buffer.
+    wirePanelEvents(event.api);
     const restored = openStartupPanels(event.api);
     trackActivePanel(event.api);
     // Start configured processes only after Wanix is ready so they follow the

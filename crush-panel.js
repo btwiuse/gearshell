@@ -18,7 +18,7 @@ import {
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "./crush-runner-parts.js?v=20260828.5";
+} from "./crush-runner-parts.js?v=20260828.6";
 
 function CrushHero({ children }) {
   return React.createElement(
