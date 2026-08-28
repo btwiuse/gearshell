@@ -16,6 +16,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Play, Terminal } from "lucide-react";
 import { DockviewDefaultTab } from "dockview-react";
+import {
+  addWorkspaceTaskPanel,
+  WorkspaceTaskPanel,
+} from "./panels-task.js?v=20260828.1";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -45,7 +49,7 @@ let __panelsDeps = null;
 export function initPanels(dependencies) {
   __panelsDeps = dependencies;
 }
-function panelsDep(name) {
+export function panelsDep(name) {
   if (__panelsDeps == null) {
     throw new Error(
       "panels: initPanels() has not been called; ensure app.js wires it in.",
@@ -66,7 +70,6 @@ function panelsDep(name) {
 let terminalIdCounter = 0;
 let workbenchIdCounter = 0;
 let vmIdCounter = 0;
-let workspaceTaskPanelCounter = 0;
 let groupIdCounter = 0;
 let iframeIdCounter = 0;
 
@@ -197,128 +200,6 @@ function PanelTab(props) {
   );
 }
 
-// === WorkspaceTaskPanel ===
-function WorkspaceTaskPanel({ api, params }) {
-  const wrapperRef = useRef(null);
-  const [taskStatus, setTaskStatus] = useState({
-    status: "created",
-    error: null,
-  });
-
-  useEffect(
-    () => attachTaskPanelSession(params, api, wrapperRef, setTaskStatus),
-    [api, params.sessionId],
-  );
-
-  if (!params.task.term) {
-    return React.createElement(HeadlessTaskPanel, {
-      ref: wrapperRef,
-      task: params.task,
-      status: taskStatus,
-    });
-  }
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
-}
-
-function attachTaskPanelSession(params, api, wrapperRef, setTaskStatus) {
-  const wrapper = wrapperRef.current;
-  if (!wrapper) return undefined;
-  const workspace = panelsDep("loadWorkspace")(params.workspaceId) ||
-    panelsDep("loadActiveWorkspace")();
-  const session = panelsDep("getWorkspaceTaskSession")(
-    params.sessionId,
-    params.task,
-    workspace,
-  );
-  const updateStatus = (event) => setTaskStatus(event.detail);
-  session.task.addEventListener(
-    panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
-    updateStatus,
-  );
-  setTaskStatus({
-    status: session.status || "created",
-    error: session.error || null,
-  });
-  const detach = panelsDep("attachWorkspaceTaskSession")(
-    params.sessionId,
-    params.task,
-    workspace,
-    wrapper,
-    api,
-  );
-  return () => {
-    session.task.removeEventListener(
-      panelsDep("WORKSPACE_TASK_STATUS_EVENT"),
-      updateStatus,
-    );
-    detach?.();
-  };
-}
-
-// === HeadlessTaskPanel ===
-const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
-  { task, status },
-  ref,
-) {
-  const envLines = panelsDep("taskEnvLines")(task);
-  return React.createElement(
-    "div",
-    { ref, className: "task-headless panel-content" },
-    React.createElement("h2", null, task.name),
-    React.createElement(
-      "p",
-      null,
-      status.status === "failed"
-        ? status.error?.message || "Task failed to start."
-        : status.status === "starting"
-        ? "Starting task…"
-        : "Headless task: no terminal. Output is captured to a per-task log; read it with gctl tasks.output <id> (live with wanix v0.4.20).",
-    ),
-    React.createElement(
-      "div",
-      { className: "task-headless-command" },
-      React.createElement("span", {
-        className: "task-headless-prompt",
-      }, "$"),
-      React.createElement(
-        "code",
-        null,
-        task.cmd || "(no command)",
-      ),
-    ),
-    React.createElement(
-      "div",
-      { className: "task-headless-wd" },
-      React.createElement(
-        "span",
-        { className: "task-headless-wd-label" },
-        "workdir",
-      ),
-      React.createElement(
-        "code",
-        null,
-        task.wd || "/",
-      ),
-    ),
-    React.createElement(
-      "details",
-      { className: "task-headless-env" },
-      React.createElement("summary", null, `env (${envLines.length})`),
-      React.createElement(
-        "pre",
-        null,
-        envLines.join("\n"),
-      ),
-    ),
-    React.createElement("span", {
-      className: `task-headless-status ${status.status}`,
-    }, status.status),
-  );
-});
-
 // === WagiDogPet ===
 function WagiDogPet() {
   const petRef = useRef(null);
@@ -428,35 +309,6 @@ function addVmPanel(api, group, config = panelsDep("getVmPanelConfig")()) {
   panelsDep("rememberOpenPanel")(panel, {
     component: "vm",
     config: panelsDep("clone")(config),
-  });
-  panel.api.setActive();
-  return panel;
-}
-
-// === addWorkspaceTaskPanel ===
-function addWorkspaceTaskPanel(
-  api,
-  task,
-  workspace = panelsDep("loadActiveWorkspace")(),
-  group,
-) {
-  const sessionId = ++workspaceTaskPanelCounter;
-  const panel = api.addPanel({
-    id: `workspace-task-${sessionId}`,
-    component: "task",
-    params: {
-      sessionId,
-      task: panelsDep("clone")(task),
-      workspaceId: workspace.id,
-      panelType: "task",
-    },
-    title: task.name || task.cmd,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  panelsDep("rememberOpenPanel")(panel, {
-    component: "task",
-    task: panelsDep("clone")(task),
-    workspaceId: workspace.id,
   });
   panel.api.setActive();
   return panel;

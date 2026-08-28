@@ -15,7 +15,7 @@ import {
   normalizeBind,
   normalizeShellConfig,
   normalizeTask,
-} from "./app-normalize.js?v=20260828.7";
+} from "./app-normalize.js?v=20260828.8";
 import {
   createWorkspaceId,
   readStoredJson,

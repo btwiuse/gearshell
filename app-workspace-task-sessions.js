@@ -9,7 +9,7 @@ import {
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
 import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.9";
-import { normalizeTask } from "./app-normalize.js?v=20260828.7";
+import { normalizeTask } from "./app-normalize.js?v=20260828.8";
 import { buildEnv } from "./app-terminal-profiles.js?v=20260826.7";
 import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.7";
 

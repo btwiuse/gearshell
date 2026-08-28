@@ -36,12 +36,52 @@ function launcherDep(name) {
 }
 
 // Fallback launcher body for TerminalLaunchPicker:
+function TerminalLaunchPrimary({ iconSize, menuRole, onLaunch }) {
+  const defaultProfile = launcherDep("getDefaultTerminalProfile")();
+  const DefaultIcon = launcherDep("getTerminalPresetIcon")(defaultProfile);
+  return React.createElement(
+    "button",
+    {
+      className: "terminal-launch-primary",
+      type: "button",
+      role: menuRole,
+      title: launcherDep("terminalCommand")(defaultProfile),
+      onClick: () => onLaunch(defaultProfile),
+    },
+    React.createElement(DefaultIcon, { size: iconSize, "aria-hidden": true }),
+    React.createElement("span", null, "Terminal"),
+  );
+}
+
+function TerminalProfileOptions({ iconSize, menuRole, onLaunch }) {
+  return React.createElement(
+    "div",
+    {
+      className: "terminal-launch-options",
+      role: menuRole ? "menu" : undefined,
+    },
+    ...launcherDep("getTerminalProfiles")().map((profile) => {
+      const Icon = launcherDep("getTerminalPresetIcon")(profile);
+      return React.createElement(
+        "button",
+        {
+          key: profile.id,
+          type: "button",
+          role: menuRole,
+          title: launcherDep("terminalCommand")(profile),
+          onClick: () => onLaunch(profile),
+        },
+        React.createElement(Icon, { size: iconSize, "aria-hidden": true }),
+        React.createElement("span", null, profile.name),
+      );
+    }),
+  );
+}
+
 function TerminalLaunchPicker(
   { className, iconSize, inMenu = false, onLaunch },
 ) {
   const [expanded, setExpanded] = useState(false);
-  const defaultProfile = launcherDep("getDefaultTerminalProfile")();
-  const DefaultIcon = launcherDep("getTerminalPresetIcon")(defaultProfile);
   const menuRole = inMenu ? "menuitem" : undefined;
 
   return React.createElement(
@@ -50,21 +90,11 @@ function TerminalLaunchPicker(
     React.createElement(
       "div",
       { className: "terminal-launch-row" },
-      React.createElement(
-        "button",
-        {
-          className: "terminal-launch-primary",
-          type: "button",
-          role: menuRole,
-          title: launcherDep("terminalCommand")(defaultProfile),
-          onClick: () => onLaunch(defaultProfile),
-        },
-        React.createElement(DefaultIcon, {
-          size: iconSize,
-          "aria-hidden": true,
-        }),
-        React.createElement("span", null, "Terminal"),
-      ),
+      React.createElement(TerminalLaunchPrimary, {
+        iconSize,
+        menuRole,
+        onLaunch,
+      }),
       React.createElement(
         "button",
         {
@@ -86,33 +116,16 @@ function TerminalLaunchPicker(
       ),
     ),
     expanded &&
-      React.createElement(
-        "div",
-        {
-          className: "terminal-launch-options",
-          role: inMenu ? "menu" : undefined,
-        },
-        launcherDep("getTerminalProfiles")().map((profile) => {
-          const Icon = launcherDep("getTerminalPresetIcon")(profile);
-          return React.createElement(
-            "button",
-            {
-              key: profile.id,
-              type: "button",
-              role: menuRole,
-              title: launcherDep("terminalCommand")(profile),
-              onClick: () => onLaunch(profile),
-            },
-            React.createElement(Icon, { size: iconSize, "aria-hidden": true }),
-            React.createElement("span", null, profile.name),
-          );
-        }),
-      ),
+      React.createElement(TerminalProfileOptions, {
+        iconSize,
+        menuRole,
+        onLaunch,
+      }),
   );
 }
 
 // Fallback launcher body for FallbackPage:
-function FallbackPage({ containerApi, className }) {
+function useLauncherCollapsedState() {
   const [showMore, setShowMore] = useState(false);
   const [collapsedItems, setCollapsedItems] = useState(() =>
     launcherDep("loadConfig")().collapsedLauncherItems
@@ -134,6 +147,47 @@ function FallbackPage({ containerApi, className }) {
       );
   }, []);
 
+  return { showMore, setShowMore, collapsedItems };
+}
+
+function renderLauncherOption(option, containerApi, addPanel) {
+  return option.component === "terminal"
+    ? React.createElement(TerminalLaunchPicker, {
+      key: option.component,
+      className: "empty-terminal-launch",
+      iconSize: 18,
+      onLaunch: (profile) =>
+        containerApi &&
+        launcherDep("addTerminalPanel")(containerApi, undefined, profile),
+    })
+    : React.createElement(
+      "button",
+      {
+        key: option.component,
+        type: "button",
+        onClick: () => addPanel(option.component),
+      },
+      React.createElement(option.icon, { size: 18, "aria-hidden": true }),
+      React.createElement("span", null, option.label),
+    );
+}
+
+function LauncherMoreToggle({ showMore, setShowMore }) {
+  return React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "launcher-more-toggle",
+      "aria-expanded": showMore,
+      onClick: () => setShowMore((expanded) => !expanded),
+    },
+    React.createElement(Ellipsis, { size: 18, "aria-hidden": true }),
+    React.createElement("span", null, showMore ? "Less" : "More"),
+  );
+}
+
+function FallbackPage({ containerApi, className }) {
+  const { showMore, setShowMore, collapsedItems } = useLauncherCollapsedState();
   const addPanel = (component) => {
     if (!containerApi) return;
     launcherDep("addPanelByComponent")(containerApi, component);
@@ -154,27 +208,6 @@ function FallbackPage({ containerApi, className }) {
   const moreOptions = options.filter((option) =>
     collapsed.has(option.component)
   );
-  const renderOption = (option) =>
-    option.component === "terminal"
-      ? React.createElement(TerminalLaunchPicker, {
-        key: option.component,
-        className: "empty-terminal-launch",
-        iconSize: 18,
-        onLaunch: (profile) =>
-          containerApi &&
-          launcherDep("addTerminalPanel")(containerApi, undefined, profile),
-      })
-      : React.createElement(
-        "button",
-        {
-          key: option.component,
-          type: "button",
-          onClick: () => addPanel(option.component),
-        },
-        React.createElement(option.icon, { size: 18, "aria-hidden": true }),
-        React.createElement("span", null, option.label),
-      );
-
   return React.createElement(
     "div",
     { className },
@@ -185,23 +218,18 @@ function FallbackPage({ containerApi, className }) {
       React.createElement(
         "div",
         { className: "empty-workspace-actions" },
-        primaryOptions.map(renderOption),
-        moreOptions.length > 0 && React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "launcher-more-toggle",
-            "aria-expanded": showMore,
-            onClick: () => setShowMore((expanded) => !expanded),
-          },
-          React.createElement(Ellipsis, { size: 18, "aria-hidden": true }),
-          React.createElement("span", null, showMore ? "Less" : "More"),
+        primaryOptions.map((option) =>
+          renderLauncherOption(option, containerApi, addPanel)
         ),
+        moreOptions.length > 0 &&
+          React.createElement(LauncherMoreToggle, { showMore, setShowMore }),
         showMore &&
           React.createElement(
             "div",
             { className: "launcher-more-options" },
-            moreOptions.map(renderOption),
+            moreOptions.map((option) =>
+              renderLauncherOption(option, containerApi, addPanel)
+            ),
           ),
       ),
     ),

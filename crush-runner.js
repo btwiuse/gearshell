@@ -27,4 +27,4 @@ export {
 export {
   addCrushRunnerPanel,
   CrushRunnerPanel,
-} from "./crush-panel.js?v=20260826.2";
+} from "./crush-panel.js?v=20260826.3";

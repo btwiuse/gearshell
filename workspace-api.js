@@ -37,7 +37,7 @@ import {
 import {
   addPanelByComponent,
   addWorkspaceTaskPanel,
-} from "./panels.js?v=20260812.36";
+} from "./panels.js?v=20260812.37";
 import {
   destroyWorkspaceTaskSession,
   getTaskOutput,

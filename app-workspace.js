@@ -14,7 +14,7 @@ import {
   normalizeShellConfig,
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
-} from "./app-normalize.js?v=20260828.7";
+} from "./app-normalize.js?v=20260828.8";
 import { writeStoredJson } from "./app-storage.js?v=20260826.7";
 import {
   loadActiveWorkspace,
