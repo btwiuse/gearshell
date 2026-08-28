@@ -17,7 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import { crushRunnerDep } from "./crush-deps.js?v=20260828.3";
-import { detectCrushInstallation } from "./crush-install.js?v=20260828.8";
+import { detectCrushInstallation } from "./crush-install.js?v=20260828.9";
 
 function CrushInstallBody({
   crushInstalled,
@@ -43,7 +43,7 @@ function CrushInstallBody({
       "p",
       { className: "crush-runner-install-copy" },
       crushInstalled === null
-        ? "Probing the kernel environment with `type -a crush`."
+        ? "Probing the kernel environment with `command -v crush`."
         : crushInstalled
         ? React.createElement(
           "span",
