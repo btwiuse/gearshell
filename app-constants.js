@@ -257,9 +257,9 @@ export const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 export const WANIX_RUNTIME = {
-  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.24",
+  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.25",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.24/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.25/dist/wanix.min.js",
 };
 
 // The bundled shell binary (hush, mounted as /bin/bash). Pinned to a
