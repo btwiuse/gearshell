@@ -104,6 +104,7 @@ export const DEFAULT_LAUNCHER_ITEM_ORDER = [
   "settings",
   "files",
   "runtime",
+  "music",
   "group",
   "browser",
   "bonsai",
