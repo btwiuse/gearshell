@@ -15,6 +15,13 @@ provider add minimax-china \
   --base-url "${AGW}/anthropic" \
   --api-key "-"
 
+model add minimax-china/MiniMax-M3 \
+     --name "MiniMax-M3" \
+     --context-window 1000000 \
+     --default-max-tokens 163840 \
+     --can-reason true \
+     --supports-images true
+
 model small deepseek/deepseek-v4-flash
 model large deepseek/deepseek-v4-flash
 model small stepfun/step-3.7-flash
