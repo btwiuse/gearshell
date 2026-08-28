@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260826.2";
+import { crushRunnerDep } from "./crush-deps.js?v=20260828.3";
 
 const SUPPORTED_TASK_TYPES = ["auto", "gojs", "wasi", "js"];
 

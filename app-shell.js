@@ -39,7 +39,7 @@ import {
   destroyVmSession,
   destroyWorkbenchSession,
 } from "./app-sessions.js?v=20260828.10";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.11";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.13";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,

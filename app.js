@@ -30,7 +30,8 @@ import {
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
-} from "./workspace-api.js?v=20260828.18";
+  workspaceApi,
+} from "./workspace-api.js?v=20260828.21";
 import { App } from "./app-shell.js?v=20260828.2";
 
 import {
@@ -121,7 +122,7 @@ import {
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.11";
+} from "./app-workspace-task-sessions.js?v=20260828.13";
 import {
   getDockviewApi,
   rememberOpenPanel,
@@ -362,6 +363,8 @@ initHome({
 initCrushRunner({
   HOME,
   WANIX,
+  workspaceApi,
+  WORKSPACE_TASK_STATUS_EVENT,
   createTerminalSession,
   attachOverlayTerminalSession,
   destroyTerminalSession,

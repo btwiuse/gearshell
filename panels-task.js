@@ -135,6 +135,8 @@ const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
       null,
       status.status === "failed"
         ? status.error?.message || "Task failed to start."
+        : status.status === "succeeded"
+        ? "Task finished."
         : status.status === "starting"
         ? "Starting task…"
         : "Headless task: no terminal. Output is captured to a per-task log; read it with gctl tasks.output <id> (live with wanix v0.4.20).",
@@ -150,9 +152,29 @@ export function addWorkspaceTaskPanel(
   api,
   task,
   workspace = panelsDep("loadActiveWorkspace")(),
-  group,
+  options = {},
 ) {
   const sessionId = ++workspaceTaskPanelCounter;
+  // background = pure headless task with no dockview panel at all. The
+  // session is created and woken, status events fire as usual, and the
+  // caller (e.g. the Crush install flow) subscribes and cleans up via
+  // tasks.cancel when it reaches a terminal status. Nothing is
+  // remembered for restore.
+  if (options.background) {
+    const session = panelsDep("getWorkspaceTaskSession")(
+      sessionId,
+      task,
+      workspace,
+    );
+    panelsDep("attachWorkspaceTaskSession")(
+      sessionId,
+      task,
+      workspace,
+      null,
+      api,
+    );
+    return { id: `workspace-task-${sessionId}`, sessionId };
+  }
   const panel = api.addPanel({
     id: `workspace-task-${sessionId}`,
     component: "task",
@@ -163,13 +185,16 @@ export function addWorkspaceTaskPanel(
       panelType: "task",
     },
     title: task.name || task.cmd,
-    ...(group && { position: { referenceGroup: group } }),
+    ...(options.group && { position: { referenceGroup: options.group } }),
   });
   panelsDep("rememberOpenPanel")(panel, {
     component: "task",
     task: panelsDep("clone")(task),
     workspaceId: workspace.id,
   });
-  panel.api.setActive();
+  // silent = open in the background so the caller (e.g. the Crush install
+  // button) keeps focus. Without this the new tab steals focus and
+  // overwrites the active panel selection.
+  if (!options.silent) panel.api.setActive();
   return panel;
 }

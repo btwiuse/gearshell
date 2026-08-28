@@ -3,7 +3,7 @@
 // each module stays small (500-line rule) and the handlers read as a
 // single concern: "editing and persisting presets".
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260826.2";
+import { crushRunnerDep } from "./crush-deps.js?v=20260828.3";
 import {
   CRUSH_RUNNER_DEFAULT_PROFILE,
   DEFAULT_CRUSHRC,

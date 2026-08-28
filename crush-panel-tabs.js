@@ -6,7 +6,7 @@
 
 import React from "react";
 import { RefreshCw, Save } from "lucide-react";
-import { crushRunnerDep } from "./crush-deps.js?v=20260826.2";
+import { crushRunnerDep } from "./crush-deps.js?v=20260828.3";
 import { crushRunDirFor } from "./crush-config.js?v=20260826.2";
 
 export function TabResetButton({ onClick, disabled, title }) {

@@ -19,7 +19,7 @@ import { DockviewDefaultTab } from "dockview-react";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.1";
+} from "./panels-task.js?v=20260828.2";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production

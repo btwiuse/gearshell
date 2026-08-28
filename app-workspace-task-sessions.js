@@ -51,7 +51,11 @@ export function taskEnvAttribute(def) {
 const taskOutputs = new Map();
 
 export function taskLogPath(def) {
-  return def.log || `tmp/${def.id || "task"}.log`;
+  // Absolute path inside the task's own namespace: /tmp is the ramfs
+  // mount every task gets, so the log lands in ns/tmp regardless of the
+  // task's wd. A relative tmp/ would follow the cwd and break capture
+  // for tasks that set a working directory.
+  return def.log || `/tmp/${def.id || "task"}.log`;
 }
 
 export function taskLogKernelPath(session) {
@@ -183,6 +187,7 @@ export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
     setWorkspaceTaskStatus(session, "running");
   }
   if (!def.term) startTaskOutputCapture(session);
+  startTaskExitPolling(session);
   return session;
 }
 
@@ -196,6 +201,7 @@ export function destroyWorkspaceTaskSession(id) {
   if (!session) return;
   workspaceTaskSessions.delete(id);
   stopTaskOutputCapture(session);
+  stopTaskExitPolling(session);
   session.anchor = null;
   session.wrapper.remove();
 }
@@ -203,11 +209,57 @@ export function destroyWorkspaceTaskSession(id) {
 export function setWorkspaceTaskStatus(session, status, error = null) {
   session.status = status;
   session.error = error;
+  const detail = { status, error, taskId: session.id };
+  // Panels listen on the task element directly (bindSessionEvents in
+  // panels-task.js). Non-panel callers (runHeadlessTask, the install
+  // flow) hold only the task id, so mirror the event on window — a
+  // CustomEvent dispatched on the element does not bubble (bubbles:
+  // false by default) and window listeners would never fire.
   session.task.dispatchEvent(
-    new CustomEvent(WORKSPACE_TASK_STATUS_EVENT, {
-      detail: { status, error },
-    }),
+    new CustomEvent(WORKSPACE_TASK_STATUS_EVENT, { detail }),
   );
+  window.dispatchEvent(
+    new CustomEvent(WORKSPACE_TASK_STATUS_EVENT, { detail }),
+  );
+}
+
+// Terminal task status: poll the kernel's exit file for the task. Wanix
+// writes the process exit code (or "" while alive) to
+// task/<taskId>/exit; a non-empty value means the process is gone. We
+// surface exit=0 as "succeeded" and anything else as "failed" so the
+// existing WORKSPACE_TASK_STATUS_EVENT listener gets a real terminal
+// state. The poll is cheap (small file, ramfs-backed) and stops as soon
+// as it sees an exit value.
+function startTaskExitPolling(session) {
+  if (session.term) return;
+  const path = `task/workspace-task-${session.id}/exit`;
+  const poll = async () => {
+    if (!workspaceTaskSessions.has(session.id)) return;
+    let text;
+    try {
+      const root = getWanixRoot();
+      if (!root) return;
+      text = await root.readText(path);
+    } catch {
+      return;
+    }
+    if (text == null) return;
+    const trimmed = text.trim();
+    if (trimmed === "") return;
+    stopTaskExitPolling(session);
+    if (trimmed === "0") {
+      setWorkspaceTaskStatus(session, "succeeded");
+    } else {
+      setWorkspaceTaskStatus(session, "failed", `exit ${trimmed}`);
+    }
+  };
+  poll();
+  session._exitTimer = setInterval(poll, 500);
+}
+
+function stopTaskExitPolling(session) {
+  if (session._exitTimer) clearInterval(session._exitTimer);
+  session._exitTimer = null;
 }
 
 export function wakeWorkspaceTaskSession(session) {

@@ -23,6 +23,7 @@
 
 import { getDockviewApi } from "./app-panels-store.js?v=20260826.7";
 import {
+  getWanixRoot,
   terminalSessions,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
@@ -42,7 +43,12 @@ import {
   destroyWorkspaceTaskSession,
   getTaskOutput,
   taskLogKernelPath,
-} from "./app-workspace-task-sessions.js?v=20260828.11";
+} from "./app-workspace-task-sessions.js?v=20260828.13";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.9";
+import {
+  normalizeTask,
+  validateTask,
+} from "./app-normalize-system.js?v=20260828.1";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
@@ -155,8 +161,30 @@ const api = {
         status: session.status || "created",
         panelId: `workspace-task-${session.id}`,
       })),
-    create: (spec) => {
+    create: (spec, options = {}) => {
       const workspace = loadActiveWorkspace();
+      // background = pure headless task with no panel and no workspace
+      // persistence: normalize+validate directly, open the session
+      // via addWorkspaceTaskPanel's background branch, and return the
+      // task id for status-event subscription. Used by one-shot probes
+      // (type -a) and installs where a visible tab would be noise.
+      if (options.background === true) {
+        const normalized = normalizeTask(spec);
+        const error = validateTask(normalized);
+        if (error) return { ok: false, error };
+        const opened = addWorkspaceTaskPanel(
+          getDockviewApi(),
+          normalized,
+          workspace,
+          { background: true },
+        );
+        return {
+          ok: true,
+          panelId: null,
+          taskId: opened?.sessionId ?? null,
+          background: true,
+        };
+      }
       const stored = addWorkspaceTask(spec);
       // Open the panel with the NORMALIZED task (addWorkspaceTask fills
       // env/wd/type/term defaults): the panel session reads
@@ -167,11 +195,16 @@ const api = {
         getDockviewApi(),
         normalized,
         workspace,
+        { silent: options.silent === true, group: options.group },
       );
+      // autoClose: when the task reaches the terminal status event, close
+      // its own panel. Implemented by the caller (not here) so the install
+      // flow can also react to the status (re-detect, update banner).
       return {
         ok: true,
         panelId: panel?.id ?? null,
         taskId: tasks.length > 0 ? tasks[tasks.length - 1].id : null,
+        autoClose: options.autoClose === true,
       };
     },
     cancel: (id) => {
@@ -349,6 +382,105 @@ export function initWorkspaceApi() {
     // non-browser environment
   }
 }
+
+// Run a headless (no panel, no persistence) background task and resolve
+// with its captured output once the process reaches a terminal status.
+// This is the "execute and capture output" primitive for in-page callers:
+// the kernel routes task stdout to the worker console, so the only way to
+// observe it is to redirect into the per-task log (wrapHeadlessCmd does
+// that), wait for the exit code, and read the log file back. Not bridged
+// through window.GearShell because the jsfs bridge is synchronous and
+// cannot await a promise — the agent-side equivalent is
+// tasks.create({ background: true }) + listening for the status event.
+export function runHeadlessTask(spec, { timeoutMs = 60000 } = {}) {
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer = null;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener(WORKSPACE_TASK_STATUS_EVENT, onEvent);
+      destroyWorkspaceTaskSession(taskId);
+      resolve(result);
+    };
+    let taskId;
+    let opened;
+    try {
+      const normalized = normalizeTask(spec);
+      const error = validateTask(normalized);
+      if (error) {
+        resolve({ ok: false, error });
+        return;
+      }
+      opened = addWorkspaceTaskPanel(
+        getDockviewApi(),
+        normalized,
+        loadActiveWorkspace(),
+        { background: true },
+      );
+      taskId = opened?.sessionId;
+    } catch (error) {
+      resolve({ ok: false, error: error?.message || String(error) });
+      return;
+    }
+    if (taskId == null) {
+      resolve({ ok: false, error: "could not start headless task" });
+      return;
+    }
+    const onEvent = async (event) => {
+      if (event.detail?.taskId !== taskId) return;
+      const status = event.detail.status;
+      if (status !== "succeeded" && status !== "failed") return;
+      // Read the log file directly instead of trusting the polled
+      // taskOutputs cache: the 800ms output poll can lag a fast-exiting
+      // task, so a short-lived probe (type -a) would otherwise resolve
+      // with empty output. The kernel keeps the task namespace alive
+      // until the session is destroyed, so the file is still readable.
+      let output = getTaskOutput(taskId);
+      try {
+        const root = getWanixRoot();
+        const session = workspaceTaskSessions.get(taskId);
+        if (root && session) {
+          const live = await root.readText(taskLogKernelPath(session));
+          if (live) output = live;
+        }
+      } catch {
+        // keep the polled cache value
+      }
+      finish({
+        ok: status === "succeeded",
+        exitCode: status === "succeeded"
+          ? 0
+          : (typeof event.detail.error === "number" ? event.detail.error : 1),
+        output,
+        error: event.detail.error || null,
+      });
+    };
+    window.addEventListener(WORKSPACE_TASK_STATUS_EVENT, onEvent);
+    // Race guard: the task may have reached a terminal status before the
+    // listener was registered (fast failures). Check the live session.
+    const session = workspaceTaskSessions.get(taskId);
+    if (
+      session && (session.status === "succeeded" || session.status === "failed")
+    ) {
+      onEvent({
+        detail: { taskId, status: session.status, error: session.error },
+      });
+    }
+    timer = setTimeout(
+      () => finish({ ok: false, error: "headless task timed out" }),
+      timeoutMs,
+    );
+  });
+}
+
+// Direct reference to the api for in-page callers (crush install flow,
+// etc.) so they don't have to read window.GearShell at call time. The
+// reference is the same object that gets published to the kernel via
+// window.GearShell = api, so calls here are identical to calls from
+// an agent via gctl.
+export const workspaceApi = api;
 
 export { api };
 export default api;

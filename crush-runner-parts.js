@@ -16,8 +16,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { crushRunnerDep } from "./crush-deps.js?v=20260826.2";
-import { detectCrushInstallation } from "./crush-install.js?v=20260826.2";
+import { crushRunnerDep } from "./crush-deps.js?v=20260828.3";
+import { detectCrushInstallation } from "./crush-install.js?v=20260828.8";
 
 function CrushInstallBody({
   crushInstalled,
@@ -43,7 +43,7 @@ function CrushInstallBody({
       "p",
       { className: "crush-runner-install-copy" },
       crushInstalled === null
-        ? "Probing PATH via `which crush` to resolve the binary location."
+        ? "Probing the kernel environment with `type -a crush`."
         : crushInstalled
         ? React.createElement(
           "span",

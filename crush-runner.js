@@ -18,7 +18,7 @@
 export {
   initCrushRunner,
   reserveCrushRunnerIds,
-} from "./crush-deps.js?v=20260826.2";
+} from "./crush-deps.js?v=20260828.3";
 export {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
@@ -27,4 +27,4 @@ export {
 export {
   addCrushRunnerPanel,
   CrushRunnerPanel,
-} from "./crush-panel.js?v=20260828.2";
+} from "./crush-panel.js?v=20260828.3";

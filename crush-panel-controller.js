@@ -10,7 +10,7 @@ import {
   __getWanixSystem,
   crushRunnerDep,
   perPanelLaunchCount,
-} from "./crush-deps.js?v=20260826.2";
+} from "./crush-deps.js?v=20260828.3";
 import {
   CRUSH_RUNNER_DEFAULT_PROFILE,
   DEFAULT_CRUSHRC,
@@ -24,7 +24,7 @@ import {
 import {
   detectCrushInstallation,
   installCrushViaW9y,
-} from "./crush-install.js?v=20260826.2";
+} from "./crush-install.js?v=20260828.8";
 import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.2";
 import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.2";
 
@@ -186,28 +186,22 @@ export function useCrushRunnerPanelController({ api, params, containerApi }) {
     });
     try {
       const result = await installCrushViaW9y();
-      if (!result.installed) {
+      if (!result.ok) {
         setCrushInstalled(false);
         setStatus({
-          message: result.error || "Crush install did not complete.",
+          message: result.error || "Crush install did not start.",
           isError: true,
         });
         return;
       }
-      // The marker directory the boot script creates proves w9y finished
-      // cleanly, so we treat that as the source of truth and immediately
-      // mark Crush as installed. A follow-up `which crush` probe races the
-      // namespace binding (the binary appears in PATH slightly after the
-      // marker is created) and frequently times out, so we only re-run it
-      // when the user explicitly hits the re-check button.
-      // w9y always installs the crush binary at ${WANIX}/crush, so mirror
-      // that exact path here. Detection runs may have timed out because the
-      // namespace binding races the marker creation, so we cannot rely on
-      // `which crush` to discover the path at this point.
+      // w9y installs crush at ${WANIX}/crush; mirror that exact path so
+      // the program field points at the real binary. A follow-up probe
+      // races the namespace binding, so don't re-detect here — the user
+      // can hit re-check if they want a probe.
       const installedPath = `${crushRunnerDep("WANIX")}/crush`;
       applyDetectedProgram(installedPath);
       setCrushInstalled(true);
-      setDetectSource(`reusing cached install at ${installedPath}`);
+      setDetectSource(`installed by w9y at ${installedPath}`);
       setStatus({
         message: "Crush installed. You can launch it now.",
         isError: false,
