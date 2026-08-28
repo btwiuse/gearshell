@@ -19,11 +19,11 @@
 
 import React, { useCallback, useEffect, useRef } from "react";
 
-import { useFilesEditor } from "./files-editor.js?v=20260826.42";
-import { useFilesSelection } from "./files-context-menu.js?v=20260826.42";
+import { useFilesEditor } from "./files-editor.js?v=20260826.43";
+import { useFilesSelection } from "./files-context-menu.js?v=20260826.43";
 import { useFavorites } from "./files-favorites.js?v=20260826.36";
-import { useFilesTree } from "./files-tree.js?v=20260826.38";
-import { useFilesSidebarResize } from "./files-resize.js?v=20260826.26";
+import { useFilesTree } from "./files-tree.js?v=20260826.39";
+import { useFilesSidebarResize } from "./files-resize.js?v=20260826.27";
 import {
   useFilesMediaLayout,
   useFilesNavigation,
@@ -34,14 +34,14 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.48";
+} from "./files-panel-hooks.js?v=20260826.49";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
   FilesPanelSidebar,
   FilesPanelTopbar,
-} from "./files-panel-sections.js?v=20260826.46";
-import { FilesResizer } from "./files-parts.js?v=20260826.45";
+} from "./files-panel-sections.js?v=20260826.49";
+import { FilesResizer } from "./files-parts.js?v=20260826.48";
 import {
   filesystemPathParent,
   normalizeFilesystemPath,
@@ -65,11 +65,9 @@ export function requestFilesOpen(path) {
   return { queued: true };
 }
 
-function FilesPanel() {
-  const fileInputRef = useRef(null);
-  const filesPanelRef = useRef(null);
-  const selectedInfoSetterRef = useRef(null);
-  const panel = useFilesPanelState();
+// Wire the shared panel state hooks (editor, sidebar resize, favorites,
+// refresh) onto the panel object.
+function useFilesPanelCore(panel, panelRef) {
   panel.stackedLayout = useFilesMediaLayout().stackedLayout;
   panel.getRoot = useCallback(() => filesDep("getWanixRoot")(), []);
   Object.assign(panel, useFilesEditor(panel.getRoot));
@@ -77,7 +75,7 @@ function FilesPanel() {
     panel,
     useFilesSidebarResize({
       stackedLayout: panel.stackedLayout,
-      panelRef: filesPanelRef,
+      panelRef,
     }),
   );
   Object.assign(
@@ -95,8 +93,12 @@ function FilesPanel() {
     setStatus: panel.setStatus,
     setLoading: panel.setLoading,
   });
-  // setSelectedInfo lives in useFilesSelection below; route it through a
-  // ref so navigation can clear the info pane without a declaration cycle.
+}
+
+// Wire navigation / open-entry / context-menu, routing the info-pane
+// setter through a ref so navigation can clear it without a declaration
+// cycle (setSelectedInfo is created by useFilesSelection below).
+function useFilesPanelNavigation(panel, selectedInfoSetterRef) {
   const setSelectedInfoViaRef = (value) =>
     selectedInfoSetterRef.current?.(value);
   Object.assign(
@@ -132,6 +134,12 @@ function FilesPanel() {
       setRenameTarget: panel.setRenameTarget,
     }),
   );
+}
+
+// Wire selection, tree, mounts, actions and lifecycle effects; the
+// selection hook finally creates setSelectedInfo, so the ref indirection
+// above is resolved here.
+function useFilesPanelSelection(panel, selectedInfoSetterRef) {
   Object.assign(
     panel,
     useFilesSelection({
@@ -143,6 +151,11 @@ function FilesPanel() {
   );
   selectedInfoSetterRef.current = panel.setSelectedInfo;
   panel.tree = useFilesTree({ getRoot: panel.getRoot, path: panel.path });
+}
+
+// Wire mounts, panel actions and lifecycle effects (split from the
+// selection wiring so both stay under the 50-line rule).
+function useFilesPanelActionsWire(panel, fileInputRef) {
   Object.assign(
     panel,
     useFilesPanelMounts({
@@ -184,9 +197,12 @@ function FilesPanel() {
     setHighlighted: panel.setHighlighted,
     setContextMenu: panel.setContextMenu,
   });
-  // Drain the external-open bridge (gctl open). No dep array: re-runs each
-  // render so the closure always sees the freshest panel actions, and the
-  // cleanup unregisters the handler when the panel unmounts.
+}
+
+// Drain the external-open bridge (gctl open). No dep array: re-runs each
+// render so the closure always sees the freshest panel actions, and the
+// cleanup unregisters the handler when the panel unmounts.
+function useFilesOpenBridge(panel) {
   useEffect(() => {
     filesOpenHandler = (target) => {
       const dir = filesystemPathParent(target);
@@ -204,9 +220,9 @@ function FilesPanel() {
       filesOpenHandler = null;
     };
   });
-  panel.displayPath = panel.selectedPath || panel.selectedInfo?.path ||
-    panel.path;
+}
 
+function renderFilesPanel(panel, filesPanelRef) {
   return React.createElement(
     "div",
     {
@@ -231,6 +247,21 @@ function FilesPanel() {
     React.createElement(FilesPanelContextMenu, { panel }),
     React.createElement(FilesPanelRightPane, { panel }),
   );
+}
+
+function FilesPanel() {
+  const fileInputRef = useRef(null);
+  const filesPanelRef = useRef(null);
+  const selectedInfoSetterRef = useRef(null);
+  const panel = useFilesPanelState();
+  useFilesPanelCore(panel, filesPanelRef);
+  useFilesPanelNavigation(panel, selectedInfoSetterRef);
+  useFilesPanelSelection(panel, selectedInfoSetterRef);
+  useFilesPanelActionsWire(panel, fileInputRef);
+  useFilesOpenBridge(panel);
+  panel.displayPath = panel.selectedPath || panel.selectedInfo?.path ||
+    panel.path;
+  return renderFilesPanel(panel, filesPanelRef);
 }
 
 export { FilesPanel };

@@ -14,6 +14,21 @@ import {
 } from "lucide-react";
 // === Context menu ===
 
+function menuItem({ icon, label, onClick, danger, disabled }) {
+  return React.createElement(
+    "button",
+    {
+      type: "button",
+      role: "menuitem",
+      ...(danger && { className: "files-context-menu-danger" }),
+      ...(disabled && { disabled }),
+      onClick,
+    },
+    React.createElement(icon, { size: 14, "aria-hidden": true }),
+    React.createElement("span", null, label),
+  );
+}
+
 export function FilesContextMenu({
   menu,
   menuRef,
@@ -29,6 +44,10 @@ export function FilesContextMenu({
   if (!menu) return null;
   const { x, y, entry } = menu;
   const isDirectory = entry.isDirectory;
+  const mi = (label, icon, onClick, extra = {}) =>
+    menuItem({ icon, label, onClick, ...extra });
+  const sep = () =>
+    React.createElement("div", { className: "files-context-menu-sep" });
   return React.createElement(
     "div",
     {
@@ -38,80 +57,29 @@ export function FilesContextMenu({
       style: { left: x, top: y },
       onContextMenu: (event) => event.preventDefault(),
     },
-    React.createElement(
-      "button",
-      { type: "button", role: "menuitem", onClick: () => onOpen(entry) },
-      React.createElement(isDirectory ? FolderOpen : Play, {
-        size: 14,
-        "aria-hidden": true,
-      }),
-      React.createElement(
-        "span",
-        null,
-        isDirectory ? "Open folder" : "Open file",
-      ),
+    mi(
+      isDirectory ? "Open folder" : "Open file",
+      isDirectory ? FolderOpen : Play,
+      () => onOpen(entry),
     ),
     !isDirectory &&
-      React.createElement(
-        "button",
-        { type: "button", role: "menuitem", onClick: () => onDownload(entry) },
-        React.createElement(Download, { size: 14, "aria-hidden": true }),
-        React.createElement("span", null, "Download"),
-      ),
+      mi("Download", Download, () => onDownload(entry)),
     isDirectory &&
       React.createElement(
         React.Fragment,
         null,
-        React.createElement("div", { className: "files-context-menu-sep" }),
-        React.createElement(
-          "button",
-          { type: "button", role: "menuitem", onClick: () => onNewFile(entry) },
-          React.createElement(FilePlus2, { size: 14, "aria-hidden": true }),
-          React.createElement("span", null, "New file here"),
-        ),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            role: "menuitem",
-            onClick: () => onNewFolder(entry),
-          },
-          React.createElement(FolderPlus, { size: 14, "aria-hidden": true }),
-          React.createElement("span", null, "New folder here"),
-        ),
+        sep(),
+        mi("New file here", FilePlus2, () => onNewFile(entry)),
+        mi("New folder here", FolderPlus, () => onNewFolder(entry)),
       ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        role: "menuitem",
-        onClick: () => onAddFavorite(entry),
-        disabled: isFavorite,
-      },
-      React.createElement(Star, { size: 14, "aria-hidden": true }),
-      React.createElement(
-        "span",
-        null,
-        isFavorite ? "Already in Favorites" : "Add to Favorites",
-      ),
+    mi(
+      isFavorite ? "Already in Favorites" : "Add to Favorites",
+      Star,
+      () => onAddFavorite(entry),
+      { disabled: isFavorite },
     ),
-    React.createElement("div", { className: "files-context-menu-sep" }),
-    React.createElement(
-      "button",
-      { type: "button", role: "menuitem", onClick: () => onRename(entry) },
-      React.createElement(Pencil, { size: 14, "aria-hidden": true }),
-      React.createElement("span", null, "Rename"),
-    ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        role: "menuitem",
-        className: "files-context-menu-danger",
-        onClick: () => onDelete(entry),
-      },
-      React.createElement(Trash2, { size: 14, "aria-hidden": true }),
-      React.createElement("span", null, "Delete"),
-    ),
+    sep(),
+    mi("Rename", Pencil, () => onRename(entry)),
+    mi("Delete", Trash2, () => onDelete(entry), { danger: true }),
   );
 }

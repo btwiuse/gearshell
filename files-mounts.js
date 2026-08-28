@@ -103,147 +103,231 @@ export async function bindLocalDir(handle, dst, getKernel) {
 // owns mount lifecycle: restore on kernel-ready, pick/bind, unmount,
 // and reconnect after the user re-grants a lost permission.
 
-export function useLocalDirMounts(
-  {
+async function restoreStoredMounts(ctx) {
+  const { getKernel, restoredMountsRef, setMounts } = ctx;
+  const stored = await loadStoredMounts();
+  const kernel = getKernel();
+  const next = [];
+  for (const mount of stored) {
+    if (restoredMountsRef.current.has(mount.id)) {
+      next.push(mount);
+      continue;
+    }
+    let granted = false;
+    if (typeof mount.handle?.queryPermission === "function") {
+      granted = (await mount.handle.queryPermission({
+        mode: mount.mode || "readwrite",
+      })) === "granted";
+    } else {
+      granted = Boolean(mount.handle);
+    }
+    if (granted && kernel?.isReady) {
+      try {
+        await bindLocalDir(mount.handle, mount.dst, getKernel);
+        restoredMountsRef.current.add(mount.id);
+        next.push({ ...mount, mounted: true });
+        continue;
+      } catch (err) {
+        console.error("restore mount", mount.dst, err);
+      }
+    }
+    next.push({ ...mount, mounted: false });
+  }
+  setMounts(next);
+}
+
+async function handleMountLocalDir(ctx) {
+  const {
     getKernel,
-    getRoot,
-    currentPath,
-    parentPath,
+    mounts,
+    setMounts,
+    restoredMountsRef,
     onStatus,
     onNavigate,
     onRefresh,
-  },
-) {
+  } = ctx;
+  if (typeof window.showDirectoryPicker !== "function") {
+    onStatus("File System Access API is not supported in this browser.");
+    return;
+  }
+  try {
+    const id = `gear-mount-${Date.now().toString(36)}-${
+      Math.random().toString(36).slice(2, 7)
+    }`;
+    const handle = await window.showDirectoryPicker({
+      mode: "readwrite",
+      id,
+    });
+    const name = sanitizeMountName(handle.name);
+    const used = new Set(mounts.map((m) => m.dst));
+    let dst = `mnt/${name}`;
+    for (let i = 2; used.has(dst); i++) dst = `mnt/${name}-${i}`;
+    await bindLocalDir(handle, dst, getKernel);
+    const mount = { id, name, dst, mode: "readwrite", handle, mounted: true };
+    await storeMount(mount);
+    restoredMountsRef.current.add(id);
+    setMounts((prev) => [...prev, mount]);
+    onStatus(`Mounted local directory "${name}" at /${dst}`);
+    onNavigate(dst);
+    onRefresh();
+  } catch (err) {
+    if (err?.name === "AbortError") return; // user dismissed the picker
+    console.error("mount local directory:", err);
+    onStatus(`Mount failed: ${err?.message || err}`);
+  }
+}
+
+async function unmountLocalDir(ctx, mount) {
+  const {
+    getRoot,
+    setMounts,
+    restoredMountsRef,
+    currentPath,
+    parentPath,
+    onNavigate,
+    onRefresh,
+    onStatus,
+  } = ctx;
+  try {
+    if (mount.mounted) await getRoot().unbind(mount.dst, mount.dst);
+    await removeStoredMount(mount.id);
+    restoredMountsRef.current.delete(mount.id);
+    setMounts((prev) => prev.filter((m) => m.id !== mount.id));
+    if (
+      currentPath === mount.dst || currentPath.startsWith(`${mount.dst}/`)
+    ) {
+      onNavigate(
+        parentPath(mount.dst) === "." ? "mnt" : parentPath(mount.dst),
+      );
+    }
+    onRefresh();
+    onStatus(`Unmounted "${mount.name}".`);
+  } catch (err) {
+    onStatus(`Unmount failed: ${err?.message || err}`);
+  }
+}
+
+async function reconnectLocalDir(ctx, mount) {
+  const {
+    getKernel,
+    setMounts,
+    restoredMountsRef,
+    onStatus,
+    onNavigate,
+    onRefresh,
+  } = ctx;
+  if (typeof window.showDirectoryPicker !== "function") {
+    onStatus("File System Access API is not supported in this browser.");
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({
+      mode: mount.mode || "readwrite",
+      id: mount.id,
+    });
+    const name = sanitizeMountName(handle.name);
+    await bindLocalDir(handle, mount.dst, getKernel);
+    const updated = { ...mount, name, handle, mounted: true };
+    await storeMount(updated);
+    restoredMountsRef.current.add(mount.id);
+    setMounts((prev) => prev.map((m) => (m.id === mount.id ? updated : m)));
+    onStatus(`Reconnected local directory "${name}".`);
+    onNavigate(mount.dst);
+    onRefresh();
+  } catch (err) {
+    if (err?.name === "AbortError") return;
+    onStatus(`Reconnect failed: ${err?.message || err}`);
+  }
+}
+
+export function useLocalDirMounts(props) {
   const [mounts, setMounts] = useState([]);
   const restoredMountsRef = useRef(new Set());
-
-  const restoreMounts = useCallback(async () => {
-    const stored = await loadStoredMounts();
-    const kernel = getKernel();
-    const next = [];
-    for (const mount of stored) {
-      if (restoredMountsRef.current.has(mount.id)) {
-        next.push(mount);
-        continue;
-      }
-      let granted = false;
-      if (typeof mount.handle?.queryPermission === "function") {
-        granted = (await mount.handle.queryPermission({
-          mode: mount.mode || "readwrite",
-        })) === "granted";
-      } else {
-        granted = Boolean(mount.handle);
-      }
-      if (granted && kernel?.isReady) {
-        try {
-          await bindLocalDir(mount.handle, mount.dst, getKernel);
-          restoredMountsRef.current.add(mount.id);
-          next.push({ ...mount, mounted: true });
-          continue;
-        } catch (err) {
-          console.error("restore mount", mount.dst, err);
-        }
-      }
-      next.push({ ...mount, mounted: false });
-    }
-    setMounts(next);
-  }, [getKernel]);
-
-  const handleMountLocalDir = async () => {
-    if (typeof window.showDirectoryPicker !== "function") {
-      onStatus("File System Access API is not supported in this browser.");
-      return;
-    }
-    try {
-      const id = `gear-mount-${Date.now().toString(36)}-${
-        Math.random().toString(36).slice(2, 7)
-      }`;
-      const handle = await window.showDirectoryPicker({
-        mode: "readwrite",
-        id,
-      });
-      const name = sanitizeMountName(handle.name);
-      const used = new Set(mounts.map((m) => m.dst));
-      let dst = `mnt/${name}`;
-      for (let i = 2; used.has(dst); i++) dst = `mnt/${name}-${i}`;
-      await bindLocalDir(handle, dst, getKernel);
-      const mount = { id, name, dst, mode: "readwrite", handle, mounted: true };
-      await storeMount(mount);
-      restoredMountsRef.current.add(id);
-      setMounts((prev) => [...prev, mount]);
-      onStatus(`Mounted local directory "${name}" at /${dst}`);
-      onNavigate(dst);
-      onRefresh();
-    } catch (err) {
-      if (err?.name === "AbortError") return; // user dismissed the picker
-      console.error("mount local directory:", err);
-      onStatus(`Mount failed: ${err?.message || err}`);
-    }
-  };
-
-  const unmountLocalDir = async (mount) => {
-    try {
-      if (mount.mounted) await getRoot().unbind(mount.dst, mount.dst);
-      await removeStoredMount(mount.id);
-      restoredMountsRef.current.delete(mount.id);
-      setMounts((prev) => prev.filter((m) => m.id !== mount.id));
-      if (
-        currentPath === mount.dst || currentPath.startsWith(`${mount.dst}/`)
-      ) {
-        onNavigate(
-          parentPath(mount.dst) === "." ? "mnt" : parentPath(mount.dst),
-        );
-      }
-      onRefresh();
-      onStatus(`Unmounted "${mount.name}".`);
-    } catch (err) {
-      onStatus(`Unmount failed: ${err?.message || err}`);
-    }
-  };
-
-  const reconnectLocalDir = async (mount) => {
-    if (typeof window.showDirectoryPicker !== "function") {
-      onStatus("File System Access API is not supported in this browser.");
-      return;
-    }
-    try {
-      const handle = await window.showDirectoryPicker({
-        mode: mount.mode || "readwrite",
-        id: mount.id,
-      });
-      const name = sanitizeMountName(handle.name);
-      await bindLocalDir(handle, mount.dst, getKernel);
-      const updated = { ...mount, name, handle, mounted: true };
-      await storeMount(updated);
-      restoredMountsRef.current.add(mount.id);
-      setMounts((prev) => prev.map((m) => (m.id === mount.id ? updated : m)));
-      onStatus(`Reconnected local directory "${name}".`);
-      onNavigate(mount.dst);
-      onRefresh();
-    } catch (err) {
-      if (err?.name === "AbortError") return;
-      onStatus(`Reconnect failed: ${err?.message || err}`);
-    }
-  };
-
+  const ctx = { ...props, mounts, setMounts, restoredMountsRef };
+  const restoreMounts = useCallback(
+    () => restoreStoredMounts(ctx),
+    [ctx.getKernel],
+  );
   const openMount = (mount) => {
     if (!mount.mounted) {
-      reconnectLocalDir(mount);
+      reconnectLocalDir(ctx, mount);
       return;
     }
-    onNavigate(mount.dst);
+    ctx.onNavigate(mount.dst);
   };
-
   return {
     mounts,
     restoreMounts,
-    handleMountLocalDir,
-    unmountLocalDir,
+    handleMountLocalDir: () => handleMountLocalDir(ctx),
+    unmountLocalDir: (mount) => unmountLocalDir(ctx, mount),
     openMount,
   };
 }
 
 // --- Volumes sidebar (macOS-style mount list) ---
+
+function renderVolumesHeader({ collapsed, onToggle, onMount }) {
+  return React.createElement(
+    "div",
+    { className: "files-volumes-header" },
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "files-sidebar-toggle files-section-header",
+        onClick: onToggle,
+        "aria-expanded": !collapsed,
+        title: collapsed ? "Expand Volumes" : "Collapse Volumes",
+      },
+      React.createElement(ChevronRight, {
+        size: 13,
+        className: collapsed ? "" : "open",
+        "aria-hidden": true,
+      }),
+      React.createElement(
+        "span",
+        { className: "files-volumes-title" },
+        "Volumes",
+      ),
+    ),
+    React.createElement("button", {
+      type: "button",
+      title: "Mount local directory",
+      "aria-label": "Mount local directory",
+      onClick: onMount,
+    }, React.createElement(FolderInput, { size: 13, "aria-hidden": true })),
+  );
+}
+
+function renderVolumeRow(mount, onOpen, onUnmount) {
+  return React.createElement(
+    "div",
+    {
+      key: mount.id,
+      className: `files-volume${mount.mounted ? "" : " files-volume-off"}`,
+    },
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "files-volume-name",
+        title: mount.mounted
+          ? `Open /${mount.dst}`
+          : "Directory not accessible, click to reconnect",
+        onClick: () => onOpen(mount),
+      },
+      React.createElement(Disc3, { size: 14, "aria-hidden": true }),
+      React.createElement("span", null, mount.name),
+    ),
+    React.createElement("button", {
+      type: "button",
+      className: "files-volume-eject",
+      title: mount.mounted ? "Unmount" : "Remove",
+      "aria-label": `Unmount ${mount.name}`,
+      onClick: () => onUnmount(mount),
+    }, React.createElement(X, { size: 12, "aria-hidden": true })),
+  );
+}
 
 export function VolumesSidebar({
   mounts,
@@ -256,36 +340,7 @@ export function VolumesSidebar({
   return React.createElement(
     "div",
     { className: "files-section" },
-    React.createElement(
-      "div",
-      { className: "files-volumes-header" },
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "files-sidebar-toggle files-section-header",
-          onClick: onToggle,
-          "aria-expanded": !collapsed,
-          title: collapsed ? "Expand Volumes" : "Collapse Volumes",
-        },
-        React.createElement(ChevronRight, {
-          size: 13,
-          className: collapsed ? "" : "open",
-          "aria-hidden": true,
-        }),
-        React.createElement(
-          "span",
-          { className: "files-volumes-title" },
-          "Volumes",
-        ),
-      ),
-      React.createElement("button", {
-        type: "button",
-        title: "Mount local directory",
-        "aria-label": "Mount local directory",
-        onClick: onMount,
-      }, React.createElement(FolderInput, { size: 13, "aria-hidden": true })),
-    ),
+    renderVolumesHeader({ collapsed, onToggle, onMount }),
     !collapsed &&
       (mounts.length === 0
         ? React.createElement(
@@ -296,37 +351,7 @@ export function VolumesSidebar({
         : React.createElement(
           "div",
           { className: "files-volumes-list" },
-          mounts.map((mount) =>
-            React.createElement(
-              "div",
-              {
-                key: mount.id,
-                className: `files-volume${
-                  mount.mounted ? "" : " files-volume-off"
-                }`,
-              },
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  className: "files-volume-name",
-                  title: mount.mounted
-                    ? `Open /${mount.dst}`
-                    : "Directory not accessible, click to reconnect",
-                  onClick: () => onOpen(mount),
-                },
-                React.createElement(Disc3, { size: 14, "aria-hidden": true }),
-                React.createElement("span", null, mount.name),
-              ),
-              React.createElement("button", {
-                type: "button",
-                className: "files-volume-eject",
-                title: mount.mounted ? "Unmount" : "Remove",
-                "aria-label": `Unmount ${mount.name}`,
-                onClick: () => onUnmount(mount),
-              }, React.createElement(X, { size: 12, "aria-hidden": true })),
-            )
-          ),
+          mounts.map((mount) => renderVolumeRow(mount, onOpen, onUnmount)),
         )),
   );
 }

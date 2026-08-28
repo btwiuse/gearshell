@@ -125,58 +125,64 @@ function buildTerminalProfilesNext(config, editingProfileId, profile) {
     : [...config.terminalProfiles, profile];
 }
 
-export function useTerminalPresetSave(
-  { config, profiles, editingProfileId, draft, setStatus, resetDraft },
-) {
-  const saveDraft = () => {
-    try {
-      const profile = validateTerminalProfileDraft({
-        draft,
-        editingProfileId,
-        profiles,
-      });
-      const nextProfiles = buildTerminalProfilesNext(
-        config,
-        editingProfileId,
-        profile,
-      );
-      const nextOrder = settingsDep("normalizeTerminalProfileOrder")(
-        config.terminalProfileOrder,
-        nextProfiles,
-      );
-      settingsDep("saveTerminalProfiles")(
-        nextProfiles,
-        config.defaultTerminalProfileId,
-        nextOrder,
-      );
-      setStatus({
-        message: `${editingProfileId ? "Updated" : "Added"} ${profile.name}.`,
-        isError: false,
-      });
-      resetDraft();
-    } catch (error) {
-      setStatus({
-        message: error.message || "Unable to save the terminal preset.",
-        isError: true,
-      });
-    }
-  };
-  const removeProfile = (profile) => {
-    const nextProfiles = config.terminalProfiles.filter((item) =>
-      item.id !== profile.id
+function savePresetDraft(ctx) {
+  const { config, profiles, editingProfileId, draft, setStatus, resetDraft } =
+    ctx;
+  try {
+    const profile = validateTerminalProfileDraft({
+      draft,
+      editingProfileId,
+      profiles,
+    });
+    const nextProfiles = buildTerminalProfilesNext(
+      config,
+      editingProfileId,
+      profile,
     );
-    const nextOrder = config.terminalProfileOrder.filter((id) =>
-      id !== profile.id
+    const nextOrder = settingsDep("normalizeTerminalProfileOrder")(
+      config.terminalProfileOrder,
+      nextProfiles,
     );
     settingsDep("saveTerminalProfiles")(
       nextProfiles,
-      config.defaultTerminalProfileId === profile.id
-        ? "bash"
-        : config.defaultTerminalProfileId,
+      config.defaultTerminalProfileId,
       nextOrder,
     );
-    if (editingProfileId === profile.id) resetDraft();
-    setStatus({ message: `Removed ${profile.name}.`, isError: false });
+    setStatus({
+      message: `${editingProfileId ? "Updated" : "Added"} ${profile.name}.`,
+      isError: false,
+    });
+    resetDraft();
+  } catch (error) {
+    setStatus({
+      message: error.message || "Unable to save the terminal preset.",
+      isError: true,
+    });
+  }
+}
+
+function removePresetProfile(ctx, profile) {
+  const { config, editingProfileId, setStatus, resetDraft } = ctx;
+  const nextProfiles = config.terminalProfiles.filter((item) =>
+    item.id !== profile.id
+  );
+  const nextOrder = config.terminalProfileOrder.filter((id) =>
+    id !== profile.id
+  );
+  settingsDep("saveTerminalProfiles")(
+    nextProfiles,
+    config.defaultTerminalProfileId === profile.id
+      ? "bash"
+      : config.defaultTerminalProfileId,
+    nextOrder,
+  );
+  if (editingProfileId === profile.id) resetDraft();
+  setStatus({ message: `Removed ${profile.name}.`, isError: false });
+}
+
+export function useTerminalPresetSave(props) {
+  return {
+    saveDraft: () => savePresetDraft(props),
+    removeProfile: (profile) => removePresetProfile(props, profile),
   };
-  return { saveDraft, removeProfile };
 }

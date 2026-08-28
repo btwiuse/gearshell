@@ -11,7 +11,7 @@ import {
   useTerminalPresetOrder,
   useTerminalPresetSave,
   useTerminalPresetState,
-} from "./settings-terminal-presets.js?v=20260828.1";
+} from "./settings-terminal-presets.js?v=20260828.2";
 import {
   TerminalProfileBasicFields,
   TerminalProfileItem,

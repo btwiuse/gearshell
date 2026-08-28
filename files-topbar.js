@@ -14,6 +14,106 @@ import {
 } from "lucide-react";
 import { FilesBreadcrumb } from "./files-ui.js?v=20260826.38";
 
+function renderTopbarAction({
+  title,
+  label,
+  disabled,
+  onClick,
+  icon,
+  loading,
+}) {
+  return React.createElement(
+    "button",
+    {
+      type: "button",
+      title,
+      "aria-label": label,
+      ...(disabled != null && { disabled }),
+      onClick,
+    },
+    React.createElement(icon, {
+      className: loading ? "files-spinning" : "",
+      size: 15,
+      "aria-hidden": true,
+    }),
+  );
+}
+
+function renderTopbarActions({
+  path,
+  onParent,
+  onRefresh,
+  loading,
+  onUpload,
+  onNewFile,
+  onNewFolder,
+  onRenameFolder,
+  onDeleteFolder,
+}) {
+  const btn = (title, icon, onClick, extra = {}) =>
+    renderTopbarAction({ title, label: title, icon, onClick, ...extra });
+  return React.createElement(
+    "div",
+    { className: "files-topbar-actions" },
+    btn("Parent folder", ArrowUp, onParent, { disabled: path === "." }),
+    btn("Refresh files", RefreshCw, onRefresh, { loading }),
+    btn("Upload files", Upload, onUpload),
+    btn("New file", FilePlus2, onNewFile),
+    btn("New folder", FolderPlus, onNewFolder),
+    path !== "." &&
+      React.createElement(
+        React.Fragment,
+        null,
+        btn("Rename folder", Pencil, onRenameFolder),
+        btn("Delete empty folder", Trash2, onDeleteFolder),
+      ),
+  );
+}
+
+function renderPathEditor(
+  { pathDraft, onPathDraftChange, onNavigate, setEditing },
+) {
+  return React.createElement("input", {
+    className: "files-topbar-input",
+    value: pathDraft,
+    autoFocus: true,
+    spellCheck: false,
+    "aria-label": "Filesystem path",
+    onChange: (event) => onPathDraftChange(event.target.value),
+    onKeyDown: (event) => {
+      if (event.key === "Enter") {
+        onNavigate();
+        setEditing(false);
+      }
+      if (event.key === "Escape") setEditing(false);
+    },
+    onBlur: () => setEditing(false),
+  });
+}
+
+function renderBreadcrumbWrap(
+  { displayPath, onBreadcrumbNavigate, openEditor, onStartEdit, setEditing },
+) {
+  return React.createElement(
+    "div",
+    { className: "files-topbar-breadcrumb-wrap", onClick: openEditor },
+    React.createElement(FilesBreadcrumb, {
+      path: displayPath,
+      onNavigate: onBreadcrumbNavigate,
+    }),
+    React.createElement("button", {
+      type: "button",
+      className: "files-topbar-edit",
+      title: "Edit path",
+      "aria-label": "Edit path",
+      onClick: () => {
+        onStartEdit();
+        setEditing(true);
+      },
+    }, React.createElement(Pencil, { size: 13, "aria-hidden": true })),
+  );
+}
+
 export function FilesTopbar({
   path,
   displayPath,
@@ -41,104 +141,34 @@ export function FilesTopbar({
   return React.createElement(
     "div",
     { className: "files-topbar" },
-    React.createElement(
-      "div",
-      { className: "files-topbar-actions" },
-      React.createElement("button", {
-        type: "button",
-        title: "Parent folder",
-        "aria-label": "Parent folder",
-        disabled: path === ".",
-        onClick: onParent,
-      }, React.createElement(ArrowUp, { size: 15, "aria-hidden": true })),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          title: "Refresh files",
-          "aria-label": "Refresh files",
-          onClick: onRefresh,
-        },
-        React.createElement(RefreshCw, {
-          className: loading ? "files-spinning" : "",
-          size: 15,
-          "aria-hidden": true,
-        }),
-      ),
-      React.createElement("button", {
-        type: "button",
-        title: "Upload files",
-        "aria-label": "Upload files",
-        onClick: onUpload,
-      }, React.createElement(Upload, { size: 15, "aria-hidden": true })),
-      React.createElement("button", {
-        type: "button",
-        title: "New file",
-        "aria-label": "New file",
-        onClick: onNewFile,
-      }, React.createElement(FilePlus2, { size: 15, "aria-hidden": true })),
-      React.createElement("button", {
-        type: "button",
-        title: "New folder",
-        "aria-label": "New folder",
-        onClick: onNewFolder,
-      }, React.createElement(FolderPlus, { size: 15, "aria-hidden": true })),
-      path !== "." &&
-        React.createElement(
-          React.Fragment,
-          null,
-          React.createElement("button", {
-            type: "button",
-            title: "Rename folder",
-            "aria-label": "Rename folder",
-            onClick: onRenameFolder,
-          }, React.createElement(Pencil, { size: 15, "aria-hidden": true })),
-          React.createElement("button", {
-            type: "button",
-            title: "Delete empty folder",
-            "aria-label": "Delete empty folder",
-            onClick: onDeleteFolder,
-          }, React.createElement(Trash2, { size: 15, "aria-hidden": true })),
-        ),
-    ),
+    renderTopbarActions({
+      path,
+      onParent,
+      onRefresh,
+      loading,
+      onUpload,
+      onNewFile,
+      onNewFolder,
+      onRenameFolder,
+      onDeleteFolder,
+    }),
     React.createElement(
       "div",
       { className: "files-topbar-location" },
       editing
-        ? React.createElement("input", {
-          className: "files-topbar-input",
-          value: pathDraft,
-          autoFocus: true,
-          spellCheck: false,
-          "aria-label": "Filesystem path",
-          onChange: (event) => onPathDraftChange(event.target.value),
-          onKeyDown: (event) => {
-            if (event.key === "Enter") {
-              onNavigate();
-              setEditing(false);
-            }
-            if (event.key === "Escape") setEditing(false);
-          },
-          onBlur: () => setEditing(false),
+        ? renderPathEditor({
+          pathDraft,
+          onPathDraftChange,
+          onNavigate,
+          setEditing,
         })
-        : React.createElement(
-          "div",
-          { className: "files-topbar-breadcrumb-wrap", onClick: openEditor },
-          React.createElement(FilesBreadcrumb, {
-            path: displayPath,
-            onNavigate: onBreadcrumbNavigate,
-          }),
-          React.createElement("button", {
-            type: "button",
-            className: "files-topbar-edit",
-            title: "Edit path",
-            "aria-label": "Edit path",
-            onClick: () => {
-              onStartEdit();
-              setEditing(true);
-            },
-          }, React.createElement(Pencil, { size: 13, "aria-hidden": true })),
-        ),
+        : renderBreadcrumbWrap({
+          displayPath,
+          onBreadcrumbNavigate,
+          openEditor,
+          onStartEdit,
+          setEditing,
+        }),
     ),
   );
 }

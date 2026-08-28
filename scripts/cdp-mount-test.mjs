@@ -4,6 +4,7 @@
 // harness, not a framework: each `node cdp-mount-test.mjs <command>` is a
 // short-lived process that (re)connects to a persistent Chrome instance
 // (port 9222, profile /tmp/gearshell-cdp) and keeps it alive between runs.
+// CDP primitives live in ./cdp-mount-driver.mjs (500-line rule split).
 //
 // Prerequisites:
 //   1. Serve the app:      python3 -m http.server 8080 (from the repo root)
@@ -17,6 +18,7 @@
 //   boot          launch chrome, open the app, wait for the wanix kernel
 //   set-runtime   point the active workspace at the local debug wasm +
 //                 open the Files panel on boot (restoreTabs), reload
+//   clear-runtime remove the runtime override, fall back to the default
 //   stub          reload the app and install a showDirectoryPicker stub
 //                 that returns the OPFS root (skips the native picker)
 //   click-mount   click the "Mount local directory" button (after stub)
@@ -25,141 +27,218 @@
 //   fulltest2     mount -> reload -> verify auto-restore -> unmount -> verify
 //   eval <expr>   evaluate JS in the page and print the JSON result
 //   console       navigate and dump page console/exception messages
+//   repro         mount a stub subdir and dump filtered console output
+//   realpick      intercept the real file chooser and mount a real dir
 //   screenshot    save a PNG of the current tab
 //   kill          stop the Chrome instance
-import { spawn } from "node:child_process";
-import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
-const { WebSocket } = require(
-  "/Users/gear/Documents/GitHub/wanix/node_modules/ws",
-);
-import fs from "node:fs";
+import {
+  APP,
+  collectConsole,
+  ensureChrome,
+  evalJS,
+  goto,
+  killChrome,
+  screenshot,
+  send,
+  waitFor,
+  waitForFileChooser,
+  waitLoad,
+} from "./cdp-mount-driver.mjs";
 
-const PORT = 9222;
-const APP = "http://127.0.0.1:8080/";
+const KERNEL_READY =
+  "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true";
+const MOUNT_BTN = 'button[aria-label="Mount local directory"]';
 
-let chromeProc = null;
-let ws = null;
-let msgId = 0;
-const pending = new Map();
-
-function connect(wsUrl) {
-  return new Promise((resolve, reject) => {
-    ws = new WebSocket(wsUrl);
-    ws.on("open", () => resolve());
-    ws.on("error", reject);
-    ws.on("message", (data) => {
-      const msg = JSON.parse(data.toString());
-      if (msg.id && pending.has(msg.id)) {
-        const { resolve, reject } = pending.get(msg.id);
-        pending.delete(msg.id);
-        if (msg.error) reject(new Error(msg.error.message));
-        else resolve(msg.result);
-      }
-    });
-  });
+function kernelReady() {
+  return waitFor(KERNEL_READY, 180000);
 }
 
-function send(method, params = {}) {
-  return new Promise((resolve, reject) => {
-    const id = ++msgId;
-    pending.set(id, { resolve, reject });
-    ws.send(JSON.stringify({ id, method, params }));
-  });
+function mountButtonReady() {
+  return waitFor(`!!document.querySelector('${MOUNT_BTN}')`, 60000);
 }
 
-async function evalJS(expr) {
-  const res = await send("Runtime.evaluate", {
-    expression: expr,
-    returnByValue: true,
-    awaitPromise: true,
-  });
-  if (res.exceptionDetails) {
-    throw new Error(
-      "eval exception: " +
-        JSON.stringify(
-          res.exceptionDetails.exception?.description || res.exceptionDetails,
-        ),
-    );
+function clickMount() {
+  return evalJS(`(() => {
+    const btn = document.querySelector('${MOUNT_BTN}');
+    if (!btn) return "no button";
+    btn.click();
+    return "clicked";
+  })()`);
+}
+
+function clickEject() {
+  return evalJS(`(() => {
+    const btn = document.querySelector('.files-volume-eject');
+    if (!btn) return "no eject";
+    btn.click();
+    return "clicked-eject";
+  })()`);
+}
+
+// showDirectoryPicker stub: return the OPFS root as "opfs-root", or a
+// subdirectory of it (repro) — skips the native picker in headless.
+function stubPickerScript(name) {
+  if (name === "opfs-root") {
+    return `(() => {
+        window.__realShowDirectoryPicker = window.showDirectoryPicker;
+        window.showDirectoryPicker = async (opts) => {
+          const root = await navigator.storage.getDirectory();
+          Object.defineProperty(root, "name", { value: "opfs-root" });
+          return root;
+        };
+        return "stubbed";
+      })()`;
   }
-  return res.result?.value;
+  return `(() => {
+        window.__realShowDirectoryPicker = window.showDirectoryPicker;
+        window.showDirectoryPicker = async (opts) => {
+          const root = await navigator.storage.getDirectory();
+          const sub = await root.getDirectoryHandle("${name}", { create: true });
+          Object.defineProperty(sub, "name", { value: "${name}" });
+          return sub;
+        };
+        return "stubbed-with-subdir";
+      })()`;
 }
 
-async function launch() {
-  chromeProc = spawn(
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    [
-      "--headless=new",
-      `--remote-debugging-port=${PORT}`,
-      "--user-data-dir=/tmp/gearshell-cdp",
-      "--no-first-run",
-      "--disable-gpu",
-      "--window-size=1400,900",
-      "about:blank",
-    ],
-    { stdio: "ignore" },
-  );
-  // wait for debugging endpoint
-  for (let i = 0; i < 60; i++) {
-    try {
-      const r = await fetch(`http://127.0.0.1:${PORT}/json/version`);
-      if (r.ok) break;
-    } catch {}
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
-  const page = list.find((t) => t.type === "page");
-  if (!page) throw new Error("no page target");
-  await connect(page.webSocketDebuggerUrl);
-  await send("Page.enable");
-  await send("Runtime.enable");
+function probeFulltest() {
+  return `(async () => {
+    const root = window.__wanix['1'].root;
+    const j = (v) => JSON.stringify(v);
+    const mnt = await root.readDir("mnt").catch(e => "ERR " + e);
+    const inner = await root.readDir("mnt/opfs-root").catch(e => "ERR " + String(e));
+    const write = await root.writeFile("mnt/opfs-root/cdp-test2.txt", "roundtrip-ok").then(() => "written").catch(e => "ERR " + String(e));
+    const read = await root.readFile("mnt/opfs-root/cdp-test2.txt").then(b => new TextDecoder().decode(b)).catch(e => "ERR " + String(e));
+    const ui = [...document.querySelectorAll(".files-list button")].map(b => b.textContent.trim()).slice(0, 12);
+    const status = document.querySelector(".files-status")?.textContent || "";
+    return j({ mnt, inner, write, read, ui, status });
+  })()`;
 }
 
-async function goto(url) {
-  await send("Page.navigate", { url });
+function probePanelStatus() {
+  return `(() => {
+    const st = document.querySelector(".files-status");
+    const vols = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
+    return JSON.stringify({ status: st?.textContent || "", vols });
+  })()`;
+}
+
+function probeAfterMount() {
+  return `(async () => {
+    const root = window.__wanix['1'].root;
+    const j = (v) => JSON.stringify(v);
+    const inner = await root.readDir("mnt/opfs-root").catch(e => "ERR " + String(e));
+    const volumes = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
+    const volsOff = document.querySelectorAll(".files-volume-off").length;
+    return j({ inner, volumes, volsOff });
+  })()`;
+}
+
+function probeAfterReload() {
+  return `(async () => {
+    const root = window.__wanix['1'].root;
+    const j = (v) => JSON.stringify(v);
+    const inner = await root.readDir("mnt/opfs-root").catch(e => "ERR " + String(e));
+    const read = await root.readFile("mnt/opfs-root/cdp-test2.txt").then(b => new TextDecoder().decode(b)).catch(e => "ERR " + String(e));
+    const volumes = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
+    const volsOff = document.querySelectorAll(".files-volume-off").length;
+    const tabs = [...document.querySelectorAll(".dv-tab")].map(t => t.textContent).slice(0, 6);
+    return j({ inner, read, volumes, volsOff, tabs });
+  })()`;
+}
+
+function probeAfterUnmount() {
+  return `(async () => {
+    const root = window.__wanix['1'].root;
+    const j = (v) => JSON.stringify(v);
+    const inner = await root.readDir("mnt/opfs-root").then(() => "STILL-MOUNTED").catch(e => "unmounted: " + String(e));
+    const volumes = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
+    return j({ inner, volumes });
+  })()`;
+}
+
+function filterConsole(logs, pattern, maxChars) {
+  return "CONSOLE (filtered):\n" +
+    logs.filter((l) => pattern.test(l)).join("\n").slice(0, maxChars);
+}
+
+async function runFulltest2() {
+  await ensureChrome();
+  await goto(APP);
+  await kernelReady();
+  await mountButtonReady();
+  await evalJS(stubPickerScript("opfs-root"));
+  console.log(await clickMount());
+  await new Promise((r) => setTimeout(r, 3000));
+  console.log("AFTER MOUNT:", await evalJS(probeAfterMount()));
+  // reload: auto-restore must re-bind from IDB
+  await send("Page.reload", { ignoreCache: true });
   await waitLoad();
+  await kernelReady();
+  await waitFor("!!document.querySelector('.files-volumes')", 60000);
+  await new Promise((r) => setTimeout(r, 2500));
+  console.log("AFTER RELOAD:", await evalJS(probeAfterReload()));
+  console.log(await clickEject());
+  await new Promise((r) => setTimeout(r, 1500));
+  console.log("AFTER UNMOUNT:", await evalJS(probeAfterUnmount()));
 }
 
-async function waitLoad() {
-  for (let i = 0; i < 120; i++) {
-    const state = await evalJS("document.readyState");
-    if (state === "complete") return;
-    await new Promise((r) => setTimeout(r, 500));
+async function runRealPick(dir) {
+  await ensureChrome();
+  await goto(APP);
+  await kernelReady();
+  await mountButtonReady();
+  await send("Page.setInterceptFileChooserDialog", { enabled: true });
+  const chooser = waitForFileChooser();
+  const collector = collectConsole();
+  await evalJS(`(() => {
+      window.__pickerInvoked = 0;
+      const orig = window.showDirectoryPicker;
+      window.showDirectoryPicker = async (...a) => { window.__pickerInvoked++; return orig(...a); };
+      return 1;
+    })()`);
+  const rect = await evalJS(`(() => {
+    const r = document.querySelector('${MOUNT_BTN}').getBoundingClientRect();
+    return JSON.stringify({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+  })()`);
+  const { x, y } = JSON.parse(rect);
+  await send("Input.dispatchMouseEvent", {
+    type: "mousePressed",
+    x,
+    y,
+    button: "left",
+    clickCount: 1,
+  });
+  await send("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    x,
+    y,
+    button: "left",
+    clickCount: 1,
+  });
+  await new Promise((r) => setTimeout(r, 1500));
+  console.log("picker invoked:", await evalJS("window.__pickerInvoked"));
+  const params = await chooser;
+  if (!params) {
+    console.log("NO CHOOSER EVENT");
+    collector.kill();
+    return;
   }
-  throw new Error("page load timeout");
-}
-
-async function waitFor(expr, timeoutMs = 120000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      if (await evalJS(expr)) return;
-    } catch {}
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  throw new Error(`waitFor timeout: ${expr}`);
-}
-
-async function screenshot(file) {
-  const { data } = await send("Page.captureScreenshot", { format: "png" });
-  fs.writeFileSync(file, Buffer.from(data, "base64"));
-  console.log("saved", file);
-}
-
-async function ensureChrome() {
-  try {
-    const r = await fetch(`http://127.0.0.1:${PORT}/json/list`);
-    if (r.ok && ws) return;
-    if (r.ok) {
-      const list = await r.json();
-      const page = list.find((t) => t.type === "page");
-      if (page) {
-        await connect(page.webSocketDebuggerUrl);
-        return;
-      }
-    }
-  } catch {}
-  await launch();
+  console.log(
+    "chooser mode:",
+    params.mode,
+    "backendNodeId:",
+    params.backendNodeId,
+  );
+  await send("Page.handleFileChooser", { action: "accept", files: [dir] });
+  await new Promise((r) => setTimeout(r, 6000));
+  console.log("PANEL:", await evalJS(probePanelStatus()));
+  console.log(filterConsole(
+    collector.logs,
+    /panic|fsa|localdir|setupNamespace|mount local|valueof/i,
+    5000,
+  ));
+  collector.kill();
 }
 
 async function main() {
@@ -185,10 +264,7 @@ async function main() {
       console.log("runtime config set:", cfg);
       await send("Page.reload", { ignoreCache: true });
       await waitLoad();
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
+      await kernelReady();
       console.log("wanix kernel ready");
       break;
     }
@@ -220,10 +296,7 @@ async function main() {
       })()`);
       await send("Page.reload", { ignoreCache: true });
       await waitLoad();
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
+      await kernelReady();
       console.log("wanix kernel ready with local wasm");
       break;
     }
@@ -240,10 +313,7 @@ async function main() {
       })()`);
       await send("Page.reload", { ignoreCache: true });
       await waitLoad();
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
+      await kernelReady();
       console.log(
         "kernel ready, wasm:",
         await evalJS(
@@ -255,38 +325,19 @@ async function main() {
     case "stub": {
       await ensureChrome();
       await goto(APP);
-      console.log(
-        await evalJS(`(() => {
-        window.__realShowDirectoryPicker = window.showDirectoryPicker;
-        window.showDirectoryPicker = async (opts) => {
-          const root = await navigator.storage.getDirectory();
-          Object.defineProperty(root, "name", { value: "opfs-root" });
-          return root;
-        };
-        return "stubbed";
-      })()`),
-      );
+      console.log(await evalJS(stubPickerScript("opfs-root")));
       break;
     }
     case "click-mount": {
       await ensureChrome();
-      await waitFor(
-        "!!document.querySelector('button[aria-label=\"Mount local directory\"]')",
-        60000,
-      );
-      console.log(
-        await evalJS(`(() => {
-        const btn = document.querySelector('button[aria-label="Mount local directory"]');
-        if (!btn) return "no button";
-        btn.click();
-        return "clicked";
-      })()`),
-      );
+      await mountButtonReady();
+      console.log(await clickMount());
       break;
     }
     case "check": {
       await ensureChrome();
-      const out = await evalJS(`(async () => {
+      console.log(
+        await evalJS(`(async () => {
         const kernel = window.__wanix['1'];
         if (!kernel || !kernel.isReady) return "kernel not ready";
         const root = kernel.root;
@@ -296,282 +347,54 @@ async function main() {
         const write = await root.writeFile("mnt/opfs-root/cdp-test.txt", "hello-from-cdp").then(() => "written").catch(e => "ERR " + e.message);
         const read = await root.readFile("mnt/opfs-root/cdp-test.txt").then(b => new TextDecoder().decode(b)).catch(e => "ERR " + e.message);
         return JSON.stringify({ mnt, mounted, write, read });
-      })()`);
-      console.log(out);
+      })()`),
+      );
       break;
     }
     case "fulltest": {
       await ensureChrome();
       await goto(APP);
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
-      await waitFor(
-        "!!document.querySelector('button[aria-label=\"Mount local directory\"]')",
-        60000,
-      );
-      await evalJS(`(() => {
-        window.__realShowDirectoryPicker = window.showDirectoryPicker;
-        window.showDirectoryPicker = async (opts) => {
-          const root = await navigator.storage.getDirectory();
-          Object.defineProperty(root, "name", { value: "opfs-root" });
-          return root;
-        };
-        return "stubbed";
-      })()`);
-      console.log(
-        await evalJS(`(() => {
-        const btn = document.querySelector('button[aria-label="Mount local directory"]');
-        if (!btn) return "no button";
-        btn.click();
-        return "clicked";
-      })()`),
-      );
+      await kernelReady();
+      await mountButtonReady();
+      await evalJS(stubPickerScript("opfs-root"));
+      console.log(await clickMount());
       await new Promise((r) => setTimeout(r, 3000));
-      const out = await evalJS(`(async () => {
-        const root = window.__wanix['1'].root;
-        const j = (v) => JSON.stringify(v);
-        const mnt = await root.readDir("mnt").catch(e => "ERR " + e);
-        const inner = await root.readDir("mnt/opfs-root").catch(e => "ERR " + String(e));
-        const write = await root.writeFile("mnt/opfs-root/cdp-test2.txt", "roundtrip-ok").then(() => "written").catch(e => "ERR " + String(e));
-        const read = await root.readFile("mnt/opfs-root/cdp-test2.txt").then(b => new TextDecoder().decode(b)).catch(e => "ERR " + String(e));
-        const ui = [...document.querySelectorAll(".files-list button")].map(b => b.textContent.trim()).slice(0, 12);
-        const status = document.querySelector(".files-status")?.textContent || "";
-        return j({ mnt, inner, write, read, ui, status });
-      })()`);
-      console.log(out);
+      console.log(await evalJS(probeFulltest()));
       break;
     }
     case "fulltest2": {
-      await ensureChrome();
-      await goto(APP);
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
-      await waitFor(
-        "!!document.querySelector('button[aria-label=\"Mount local directory\"]')",
-        60000,
-      );
-      // mount OPFS root as a "volume"
-      await evalJS(`(() => {
-        window.__realShowDirectoryPicker = window.showDirectoryPicker;
-        window.showDirectoryPicker = async (opts) => {
-          const root = await navigator.storage.getDirectory();
-          Object.defineProperty(root, "name", { value: "opfs-root" });
-          return root;
-        };
-        return "stubbed";
-      })()`);
-      await evalJS(
-        `(() => { document.querySelector('button[aria-label="Mount local directory"]').click(); return "clicked"; })()`,
-      );
-      await new Promise((r) => setTimeout(r, 3000));
-      const afterMount = await evalJS(`(async () => {
-        const root = window.__wanix['1'].root;
-        const j = (v) => JSON.stringify(v);
-        const inner = await root.readDir("mnt/opfs-root").catch(e => "ERR " + String(e));
-        const volumes = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
-        const volsOff = document.querySelectorAll(".files-volume-off").length;
-        return j({ inner, volumes, volsOff });
-      })()`);
-      console.log("AFTER MOUNT:", afterMount);
-      // reload: auto-restore must re-bind from IDB
-      await send("Page.reload", { ignoreCache: true });
-      await waitLoad();
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
-      await waitFor("!!document.querySelector('.files-volumes')", 60000);
-      await new Promise((r) => setTimeout(r, 2500));
-      const afterReload = await evalJS(`(async () => {
-        const root = window.__wanix['1'].root;
-        const j = (v) => JSON.stringify(v);
-        const inner = await root.readDir("mnt/opfs-root").catch(e => "ERR " + String(e));
-        const read = await root.readFile("mnt/opfs-root/cdp-test2.txt").then(b => new TextDecoder().decode(b)).catch(e => "ERR " + String(e));
-        const volumes = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
-        const volsOff = document.querySelectorAll(".files-volume-off").length;
-        const tabs = [...document.querySelectorAll(".dv-tab")].map(t => t.textContent).slice(0, 6);
-        return j({ inner, read, volumes, volsOff, tabs });
-      })()`);
-      console.log("AFTER RELOAD:", afterReload);
-      // unmount via eject button
-      const eject = await evalJS(`(() => {
-        const btn = document.querySelector('.files-volume-eject');
-        if (!btn) return "no eject";
-        btn.click();
-        return "clicked-eject";
-      })()`);
-      console.log(eject);
-      await new Promise((r) => setTimeout(r, 1500));
-      const afterUnmount = await evalJS(`(async () => {
-        const root = window.__wanix['1'].root;
-        const j = (v) => JSON.stringify(v);
-        const inner = await root.readDir("mnt/opfs-root").then(() => "STILL-MOUNTED").catch(e => "unmounted: " + String(e));
-        const volumes = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
-        return j({ inner, volumes });
-      })()`);
-      console.log("AFTER UNMOUNT:", afterUnmount);
+      await runFulltest2();
       break;
     }
     case "console": {
       await ensureChrome();
-      const logs = [];
-      ws.on("message", (data) => {
-        const msg = JSON.parse(data.toString());
-        if (
-          msg.method === "Runtime.consoleAPICalled" ||
-          msg.method === "Runtime.exceptionThrown"
-        ) {
-          const text = msg.method === "Runtime.exceptionThrown"
-            ? "EXC: " +
-              JSON.stringify(
-                msg.params.exceptionDetails?.exception?.description ||
-                  msg.params.exceptionDetails?.text,
-              )
-            : msg.params.args.map((a) => a.value ?? a.description ?? a.type)
-              .join(" ");
-          logs.push(text);
-        }
-      });
+      const collector = collectConsole();
       await goto(APP);
       await new Promise((r) => setTimeout(r, 25000));
-      console.log(logs.slice(0, 40).join("\n"));
+      console.log(collector.logs.slice(0, 40).join("\n"));
+      collector.kill();
       break;
     }
     case "repro": {
       await ensureChrome();
       await goto(APP);
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
-      await waitFor(
-        "!!document.querySelector('button[aria-label=\"Mount local directory\"]')",
-        60000,
-      );
-      const logs = [];
-      ws.on("message", (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.method === "Runtime.consoleAPICalled") {
-          const text = msg.params.args.map((a) =>
-            a.value ?? a.description ?? a.type
-          ).join(" ");
-          logs.push(text);
-        }
-      });
-      await evalJS(`(() => {
-        window.__realShowDirectoryPicker = window.showDirectoryPicker;
-        window.showDirectoryPicker = async (opts) => {
-          const root = await navigator.storage.getDirectory();
-          const sub = await root.getDirectoryHandle("repro-dir", { create: true });
-          Object.defineProperty(sub, "name", { value: "repro-dir" });
-          return sub;
-        };
-        return "stubbed-with-subdir";
-      })()`);
-      await evalJS(
-        `(() => { document.querySelector('button[aria-label="Mount local directory"]').click(); return "clicked"; })()`,
-      );
+      await kernelReady();
+      await mountButtonReady();
+      const collector = collectConsole();
+      await evalJS(stubPickerScript("repro-dir"));
+      console.log(await clickMount());
       await new Promise((r) => setTimeout(r, 4000));
-      const status = await evalJS(`(() => {
-        const st = document.querySelector(".files-status");
-        const vols = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
-        return JSON.stringify({ status: st?.textContent || "", vols });
-      })()`);
-      console.log("PANEL:", status);
-      console.log(
-        "CONSOLE (filtered):\n" +
-          logs.filter((l) =>
-            /panic|fsa|localdir|setupNamespace|mount local/i.test(l)
-          ).join("\n").slice(0, 4000),
-      );
+      console.log("PANEL:", await evalJS(probePanelStatus()));
+      console.log(filterConsole(
+        collector.logs,
+        /panic|fsa|localdir|setupNamespace|mount local/i,
+        4000,
+      ));
+      collector.kill();
       break;
     }
     case "realpick": {
-      const dir = process.argv[3] || "/Users/gear/Documents/GitHub/wanix";
-      await ensureChrome();
-      await goto(APP);
-      await waitFor(
-        "!!window.__wanix && !!window.__wanix['1'] && window.__wanix['1'].isReady === true",
-        180000,
-      );
-      await waitFor(
-        "!!document.querySelector('button[aria-label=\"Mount local directory\"]')",
-        60000,
-      );
-      await send("Page.setInterceptFileChooserDialog", { enabled: true });
-      const chooser = new Promise((resolve) => {
-        ws.on("message", (data) => {
-          const msg = JSON.parse(data.toString());
-          if (msg.method === "Page.fileChooserOpened") resolve(msg.params);
-        });
-      });
-      const logs = [];
-      ws.on("message", (data) => {
-        const msg = JSON.parse(data.toString());
-        if (msg.method === "Runtime.consoleAPICalled") {
-          const text = msg.params.args.map((a) =>
-            a.value ?? a.description ?? a.type
-          ).join(" ");
-          logs.push(text);
-        }
-      });
-      await evalJS(
-        `(() => { window.__pickerInvoked = 0; const orig = window.showDirectoryPicker; window.showDirectoryPicker = async (...a) => { window.__pickerInvoked++; return orig(...a); }; return 1; })()`,
-      );
-      const rect = await evalJS(`(() => {
-        const r = document.querySelector('button[aria-label="Mount local directory"]').getBoundingClientRect();
-        return JSON.stringify({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
-      })()`);
-      const { x, y } = JSON.parse(rect);
-      await send("Input.dispatchMouseEvent", {
-        type: "mousePressed",
-        x,
-        y,
-        button: "left",
-        clickCount: 1,
-      });
-      await send("Input.dispatchMouseEvent", {
-        type: "mouseReleased",
-        x,
-        y,
-        button: "left",
-        clickCount: 1,
-      });
-      await new Promise((r) => setTimeout(r, 1500));
-      const invoked = await evalJS("window.__pickerInvoked");
-      console.log("picker invoked:", invoked);
-      const params = await Promise.race([
-        chooser,
-        new Promise((r) => setTimeout(() => r(null), 8000)),
-      ]);
-      if (!params) {
-        console.log("NO CHOOSER EVENT");
-        break;
-      }
-      console.log(
-        "chooser mode:",
-        params.mode,
-        "backendNodeId:",
-        params.backendNodeId,
-      );
-      await send("Page.handleFileChooser", { action: "accept", files: [dir] });
-      await new Promise((r) => setTimeout(r, 6000));
-      const status = await evalJS(`(() => {
-        const st = document.querySelector(".files-status");
-        const vols = [...document.querySelectorAll(".files-volume-name span")].map(s => s.textContent);
-        return JSON.stringify({ status: st?.textContent || "", vols });
-      })()`);
-      console.log("PANEL:", status);
-      console.log(
-        "CONSOLE (filtered):\n" +
-          logs.filter((l) =>
-            /panic|fsa|localdir|setupNamespace|mount local|valueof/i.test(l)
-          ).join("\n").slice(0, 5000),
-      );
+      await runRealPick(args[0] || "/Users/gear/Documents/GitHub/wanix");
       break;
     }
     case "screenshot": {
@@ -580,8 +403,7 @@ async function main() {
       break;
     }
     case "kill": {
-      chromeProc?.kill();
-      await new Promise((r) => setTimeout(r, 300));
+      await killChrome();
       process.exit(0);
     }
     default:
@@ -595,6 +417,5 @@ async function main() {
 
 main().catch((e) => {
   console.error("FAILED:", e.message);
-  chromeProc?.kill();
-  process.exit(1);
+  killChrome().then(() => process.exit(1));
 });

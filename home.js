@@ -24,7 +24,7 @@ import {
   HomeLocalFirst,
   HomeNav,
   HomeQuotes,
-} from "./home-sections.js?v=20260828.1";
+} from "./home-sections.js?v=20260828.2";
 import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.1";
 
 let __homeDeps = null;

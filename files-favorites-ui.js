@@ -24,6 +24,73 @@ export function getFavoriteIcon(favorite) {
   return FolderHeart;
 }
 
+function renderFavoritesHeader({ collapsed, onToggle }) {
+  return React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "files-sidebar-toggle files-section-header",
+      onClick: onToggle,
+      "aria-expanded": !collapsed,
+      title: collapsed ? "Expand Favorites" : "Collapse Favorites",
+    },
+    React.createElement(ChevronRight, {
+      size: 13,
+      className: collapsed ? "" : "open",
+      "aria-hidden": true,
+    }),
+    React.createElement(
+      "span",
+      { className: "files-volumes-title" },
+      "Favorites",
+    ),
+  );
+}
+
+// Favorite paths may carry a leading slash while the panel's current
+// path is canonical; compare normalized forms so the active highlight
+// works either way. File favorites are not directories, so the
+// current-folder prefix rule never marks them active.
+function isFavoriteActive(favorite, currentPath) {
+  const cur = String(currentPath).replace(/^\/+/, "");
+  const fav = String(favorite.path).replace(/^\/+/, "");
+  return favorite.isDirectory !== false && (cur === fav ||
+    (fav !== "." && cur.startsWith(`${fav}/`)));
+}
+
+function renderFavoriteRow({ favorite, currentPath, onOpen, onRemove }) {
+  const FavoriteIcon = getFavoriteIcon(favorite);
+  const active = isFavoriteActive(favorite, currentPath);
+  return React.createElement(
+    "div",
+    {
+      key: favorite.id,
+      className: `files-favorite${active ? " files-favorite-active" : ""}`,
+    },
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "files-favorite-name",
+        title: favorite.path === "." ? "Go to root" : `/${favorite.path}`,
+        onClick: () => onOpen(favorite),
+      },
+      React.createElement(FavoriteIcon, {
+        size: 14,
+        "aria-hidden": true,
+      }),
+      React.createElement("span", null, favorite.label),
+    ),
+    React.createElement("button", {
+      type: "button",
+      className: "files-favorite-remove",
+      title: `Remove ${favorite.label} from favorites`,
+      "aria-label": `Remove ${favorite.label} from favorites`,
+      onClick: () => onRemove(favorite.id),
+    }, React.createElement(X, { size: 12, "aria-hidden": true })),
+  );
+}
+
 export function FavoritesSidebar({
   favorites,
   currentPath,
@@ -35,26 +102,7 @@ export function FavoritesSidebar({
   return React.createElement(
     "div",
     { className: "files-section" },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "files-sidebar-toggle files-section-header",
-        onClick: onToggle,
-        "aria-expanded": !collapsed,
-        title: collapsed ? "Expand Favorites" : "Collapse Favorites",
-      },
-      React.createElement(ChevronRight, {
-        size: 13,
-        className: collapsed ? "" : "open",
-        "aria-hidden": true,
-      }),
-      React.createElement(
-        "span",
-        { className: "files-volumes-title" },
-        "Favorites",
-      ),
-    ),
+    renderFavoritesHeader({ collapsed, onToggle }),
     !collapsed &&
       (favorites.length === 0
         ? React.createElement(
@@ -65,50 +113,9 @@ export function FavoritesSidebar({
         : React.createElement(
           "div",
           { className: "files-favorites-list" },
-          favorites.map((favorite) => {
-            const FavoriteIcon = getFavoriteIcon(favorite);
-            // Favorite paths may carry a leading slash while the panel's
-            // current path is canonical; compare normalized forms so the
-            // active highlight works either way. File favorites are not
-            // directories, so the current-folder prefix rule never marks
-            // them active.
-            const cur = String(currentPath).replace(/^\/+/, "");
-            const fav = String(favorite.path).replace(/^\/+/, "");
-            const active = favorite.isDirectory !== false && (cur === fav ||
-              (fav !== "." && cur.startsWith(`${fav}/`)));
-            return React.createElement(
-              "div",
-              {
-                key: favorite.id,
-                className: `files-favorite${
-                  active ? " files-favorite-active" : ""
-                }`,
-              },
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  className: "files-favorite-name",
-                  title: favorite.path === "."
-                    ? "Go to root"
-                    : `/${favorite.path}`,
-                  onClick: () => onOpen(favorite),
-                },
-                React.createElement(FavoriteIcon, {
-                  size: 14,
-                  "aria-hidden": true,
-                }),
-                React.createElement("span", null, favorite.label),
-              ),
-              React.createElement("button", {
-                type: "button",
-                className: "files-favorite-remove",
-                title: `Remove ${favorite.label} from favorites`,
-                "aria-label": `Remove ${favorite.label} from favorites`,
-                onClick: () => onRemove(favorite.id),
-              }, React.createElement(X, { size: 12, "aria-hidden": true })),
-            );
-          }),
+          favorites.map((favorite) =>
+            renderFavoriteRow({ favorite, currentPath, onOpen, onRemove })
+          ),
         )),
   );
 }

@@ -12,7 +12,7 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.21";
+} from "./app-terminal-profiles.js?v=20260826.26";
 import { DEFAULT_CMD } from "./app-constants.js?v=20260828.10";
 
 export function hideTerminalLayer() {
@@ -203,11 +203,11 @@ export function focusTerminalSession(session, anchor, api, deferred = true) {
   else focus();
 }
 
-export function attachOverlayTerminalSession(session, anchor, api) {
-  const focus = (deferred) =>
-    focusTerminalSession(session, anchor, api, deferred);
-  const updater = createOverlayUpdater(session, anchor, api, focus);
-  const { scheduleUpdate } = updater;
+// Attach the overlay's DOM listeners: the ResizeObserver on the anchor,
+// scroll-parent tracking, and focus-on-interaction on the wrapper.
+function attachOverlayListeners(
+  { session, anchor, api, scheduleUpdate, focus },
+) {
   const observer = new ResizeObserver(scheduleUpdate);
   observer.observe(anchor);
   // The overlay wrapper is positioned inside the shared terminal-layer using
@@ -241,29 +241,70 @@ export function attachOverlayTerminalSession(session, anchor, api) {
     scheduleUpdate,
     focus,
   );
+  return {
+    observer,
+    scrollListeners,
+    focusFromTerminalInteraction,
+    subscriptions,
+  };
+}
+
+function disposeOverlay({
+  session,
+  anchor,
+  observer,
+  updater,
+  scheduleUpdate,
+  subscriptions,
+  scrollListeners,
+  focusFromTerminalInteraction,
+}) {
+  observer.disconnect();
+  updater.cancelUpdateFrame();
+  session.wrapper.removeEventListener(
+    "pointerdown",
+    focusFromTerminalInteraction,
+  );
+  session.wrapper.removeEventListener(
+    "touchstart",
+    focusFromTerminalInteraction,
+  );
+  for (const subscription of subscriptions) subscription.dispose();
+  for (const target of scrollListeners) {
+    target.removeEventListener("scroll", scheduleUpdate);
+  }
+  if (session.anchor === anchor) {
+    session.anchor = null;
+    layoutTerminalSession(session, null, false);
+  }
+}
+
+export function attachOverlayTerminalSession(session, anchor, api) {
+  const focus = (deferred) =>
+    focusTerminalSession(session, anchor, api, deferred);
+  const updater = createOverlayUpdater(session, anchor, api, focus);
+  const { scheduleUpdate } = updater;
+  const overlay = attachOverlayListeners({
+    session,
+    anchor,
+    api,
+    scheduleUpdate,
+    focus,
+  });
   scheduleUpdate();
   if (api.isActive) focus();
 
-  return () => {
-    observer.disconnect();
-    updater.cancelUpdateFrame();
-    session.wrapper.removeEventListener(
-      "pointerdown",
-      focusFromTerminalInteraction,
-    );
-    session.wrapper.removeEventListener(
-      "touchstart",
-      focusFromTerminalInteraction,
-    );
-    for (const subscription of subscriptions) subscription.dispose();
-    for (const target of scrollListeners) {
-      target.removeEventListener("scroll", scheduleUpdate);
-    }
-    if (session.anchor === anchor) {
-      session.anchor = null;
-      layoutTerminalSession(session, null, false);
-    }
-  };
+  return () =>
+    disposeOverlay({
+      session,
+      anchor,
+      observer: overlay.observer,
+      updater,
+      scheduleUpdate,
+      subscriptions: overlay.subscriptions,
+      scrollListeners: overlay.scrollListeners,
+      focusFromTerminalInteraction: overlay.focusFromTerminalInteraction,
+    });
 }
 
 function createOverlayUpdater(session, anchor, api, focus) {

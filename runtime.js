@@ -16,7 +16,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Activity, RefreshCw } from "lucide-react";
-import { loadStoredMounts } from "./files-mounts.js?v=20260826.42";
+import { loadStoredMounts } from "./files-mounts.js?v=20260826.43";
 
 let __runtimeDeps = null;
 export function initRuntime(dependencies) {
@@ -164,6 +164,39 @@ function RuntimeBindSections({ snapshot }) {
   );
 }
 
+function renderRuntimeGrid(items, ready) {
+  return React.createElement(
+    "dl",
+    { className: "runtime-grid" },
+    items.flatMap(([label, value]) => [
+      React.createElement("dt", { key: `${label}-label` }, label),
+      React.createElement("dd", {
+        key: `${label}-value`,
+        className: label === "System" && ready ? "ready" : "",
+      }, value),
+    ]),
+  );
+}
+
+function renderRuntimeSource({ snapshot }) {
+  return React.createElement(
+    "section",
+    { className: "runtime-source" },
+    React.createElement("span", null, "Runtime module"),
+    React.createElement(
+      "code",
+      { title: snapshot.moduleUrl },
+      snapshot.moduleUrl,
+    ),
+    React.createElement("span", null, "Wasm module"),
+    React.createElement(
+      "code",
+      { title: snapshot.wasmUrl },
+      snapshot.wasmUrl,
+    ),
+  );
+}
+
 function RuntimePanel() {
   const [snapshot, setSnapshot] = useState(null);
   const refresh = useCallback(async () => {
@@ -198,34 +231,9 @@ function RuntimePanel() {
         onClick: refresh,
       }, React.createElement(RefreshCw, { size: 15, "aria-hidden": true })),
     ),
-    React.createElement(
-      "dl",
-      { className: "runtime-grid" },
-      items.flatMap(([label, value]) => [
-        React.createElement("dt", { key: `${label}-label` }, label),
-        React.createElement("dd", {
-          key: `${label}-value`,
-          className: label === "System" && snapshot.ready ? "ready" : "",
-        }, value),
-      ]),
-    ),
+    renderRuntimeGrid(items, snapshot.ready),
     React.createElement(RuntimeBindSections, { snapshot }),
-    React.createElement(
-      "section",
-      { className: "runtime-source" },
-      React.createElement("span", null, "Runtime module"),
-      React.createElement(
-        "code",
-        { title: snapshot.moduleUrl },
-        snapshot.moduleUrl,
-      ),
-      React.createElement("span", null, "Wasm module"),
-      React.createElement(
-        "code",
-        { title: snapshot.wasmUrl },
-        snapshot.wasmUrl,
-      ),
-    ),
+    renderRuntimeSource({ snapshot }),
   );
 }
 

@@ -15,22 +15,34 @@ export const TREE_ROOT = ".";
 
 // === Tree state (lazy loading + auto-reveal) ===
 
-export function useFilesTree({ getRoot, path }) {
-  // Set of expanded directory paths (normalized, "." = root).
-  const [expanded, setExpanded] = useState(() => new Set([TREE_ROOT]));
-  // Map path -> { children } once read; keeps errors out of the UI.
-  const [childrenMap, setChildrenMap] = useState(() => new Map());
-  // Set of paths whose readDir is currently in flight (twistie spinner).
-  const [loadingPaths, setLoadingPaths] = useState(() => new Set());
+// Read a directory with a 2s timebox (namespace mirrors can hang, and
+// the kernel may still be booting when the panel mounts — getRoot throws
+// then), sorting dirs first. Returns a normalized entry list or null.
+async function readTreeDir(getRoot, key) {
+  const rawNames = await Promise.race([
+    getRoot().readDir(key === TREE_ROOT ? "." : key),
+    new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
+  ]);
+  if (rawNames == null) return null;
+  return (Array.isArray(rawNames) ? rawNames : []).map((name) => {
+    const isDirectory = name.endsWith("/");
+    return { name: name.replace(/\/$/, ""), isDirectory };
+  }).sort((a, b) =>
+    Number(b.isDirectory) - Number(a.isDirectory) ||
+    a.name.localeCompare(b.name)
+  );
+}
 
-  // Mirrors so async callbacks never see stale state.
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const childrenRef = useRef(childrenMap);
-  childrenRef.current = childrenMap;
-  const inflightRef = useRef(new Set());
-
-  const loadChildren = useCallback(async (dirPath, retryLeft = 20) => {
+// Build the tree's loadChildren callback: reads a directory, stores the
+// result, and retries with backoff when the kernel is not ready yet.
+function makeTreeLoader({
+  getRoot,
+  childrenRef,
+  inflightRef,
+  setLoadingPaths,
+  setChildrenMap,
+}) {
+  const loadChildren = async (dirPath, retryLeft = 20) => {
     const key = normalizeFilesystemPath(dirPath);
     const existing = childrenRef.current.get(key);
     if ((existing && !existing.error) || inflightRef.current.has(key)) return;
@@ -45,20 +57,8 @@ export function useFilesTree({ getRoot, path }) {
       });
     };
     try {
-      // Timebox the read: namespace mirrors can hang, and the kernel may
-      // still be booting when the panel mounts (getRoot throws then).
-      const rawNames = await Promise.race([
-        getRoot().readDir(key === TREE_ROOT ? "." : key),
-        new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
-      ]);
-      if (rawNames == null) throw new Error("timed out");
-      const list = (Array.isArray(rawNames) ? rawNames : []).map((name) => {
-        const isDirectory = name.endsWith("/");
-        return { name: name.replace(/\/$/, ""), isDirectory };
-      }).sort((a, b) =>
-        Number(b.isDirectory) - Number(a.isDirectory) ||
-        a.name.localeCompare(b.name)
-      );
+      const list = await readTreeDir(getRoot, key);
+      if (list == null) throw new Error("timed out");
       finish();
       setChildrenMap((prev) => new Map(prev).set(key, { children: list }));
     } catch {
@@ -78,7 +78,63 @@ export function useFilesTree({ getRoot, path }) {
         );
       }
     }
-  }, [getRoot]);
+  };
+  return loadChildren;
+}
+
+// Reveal the current directory: expand every ancestor (and the target
+// itself) and make sure their children are loaded, so the active node
+// is always visible somewhere in the tree.
+function revealTreePath(path, loadChildren, setExpanded) {
+  const parts = normalizeFilesystemPath(path) === TREE_ROOT
+    ? []
+    : normalizeFilesystemPath(path).split("/");
+  let acc = TREE_ROOT;
+  const chain = [];
+  for (const part of parts) {
+    acc = acc === TREE_ROOT ? part : `${acc}/${part}`;
+    chain.push(acc);
+  }
+  if (chain.length === 0) return;
+  setExpanded((prev) => {
+    const next = new Set(prev);
+    let changed = false;
+    for (const p of chain) {
+      if (!next.has(p)) {
+        next.add(p);
+        changed = true;
+      }
+    }
+    return changed ? next : prev;
+  });
+  chain.forEach((p) => loadChildren(p));
+}
+
+export function useFilesTree({ getRoot, path }) {
+  // Set of expanded directory paths (normalized, "." = root).
+  const [expanded, setExpanded] = useState(() => new Set([TREE_ROOT]));
+  // Map path -> { children } once read; keeps errors out of the UI.
+  const [childrenMap, setChildrenMap] = useState(() => new Map());
+  // Set of paths whose readDir is currently in flight (twistie spinner).
+  const [loadingPaths, setLoadingPaths] = useState(() => new Set());
+
+  // Mirrors so async callbacks never see stale state.
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const childrenRef = useRef(childrenMap);
+  childrenRef.current = childrenMap;
+  const inflightRef = useRef(new Set());
+
+  const loadChildren = useCallback(
+    makeTreeLoader({
+      getRoot,
+      childrenRef,
+      inflightRef,
+      setLoadingPaths,
+      setChildrenMap,
+    }),
+    [getRoot],
+  );
 
   const toggleDir = useCallback((dirPath) => {
     const key = normalizeFilesystemPath(dirPath);
@@ -91,40 +147,167 @@ export function useFilesTree({ getRoot, path }) {
     });
   }, [loadChildren]);
 
-  // Reveal the current directory: expand every ancestor (and the target
-  // itself) and make sure their children are loaded, so the active node
-  // is always visible somewhere in the tree.
   useEffect(() => {
     loadChildren(TREE_ROOT);
-    const parts = normalizeFilesystemPath(path) === TREE_ROOT
-      ? []
-      : normalizeFilesystemPath(path).split("/");
-    let acc = TREE_ROOT;
-    const chain = [];
-    for (const part of parts) {
-      acc = acc === TREE_ROOT ? part : `${acc}/${part}`;
-      chain.push(acc);
-    }
-    if (chain.length > 0) {
-      setExpanded((prev) => {
-        const next = new Set(prev);
-        let changed = false;
-        for (const p of chain) {
-          if (!next.has(p)) {
-            next.add(p);
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-      chain.forEach((p) => loadChildren(p));
-    }
+    revealTreePath(path, loadChildren, setExpanded);
   }, [path, loadChildren]);
 
   return { expanded, childrenMap, loadingPaths, toggleDir };
 }
 
 // === Tree rendering ===
+
+function treeNodeHandlers({
+  isDir,
+  isCurrent,
+  finePointer,
+  node,
+  onToggle,
+  onOpen,
+  onSelect,
+  onContextMenu,
+}) {
+  return {
+    onClick: () => {
+      if (isDir) {
+        // Explorer behavior: a click on an already-open (current) folder
+        // toggles it closed instead of re-navigating, so the right-pane
+        // preview never refreshes for a no-op navigation.
+        if (isCurrent) onToggle(node.path);
+        else onOpen(node);
+      } else if (finePointer) onSelect(node);
+      else onOpen(node);
+    },
+    onDoubleClick: isDir || !finePointer ? undefined : () => onOpen(node),
+    onContextMenu: onContextMenu
+      ? (event) => {
+        event.preventDefault();
+        onContextMenu(node, event.clientX, event.clientY);
+      }
+      : undefined,
+  };
+}
+
+function renderTwistie({ isDir, isLoading, isExpanded, node, onToggle }) {
+  return React.createElement(
+    "button",
+    {
+      type: "button",
+      className: "files-tree-twistie",
+      "aria-label": isDir
+        ? `${isExpanded ? "Collapse" : "Expand"} ${node.name}`
+        : undefined,
+      tabIndex: isDir ? 0 : -1,
+      onClick: (event) => {
+        if (!isDir) return;
+        event.stopPropagation();
+        onToggle(node.path);
+      },
+    },
+    isDir
+      ? isLoading
+        ? React.createElement(Loader2, {
+          size: 12,
+          className: "files-spinning",
+          "aria-hidden": true,
+        })
+        : React.createElement(ChevronRight, {
+          size: 12,
+          className: isExpanded ? "open" : "",
+          "aria-hidden": true,
+        })
+      : null,
+  );
+}
+
+function nodeRowClass(node, isCurrent, isSelected) {
+  return [
+    "files-tree-node",
+    node.isDirectory ? "dir" : "",
+    isCurrent ? "current" : "",
+    isSelected ? "selected" : "",
+  ].filter(Boolean).join(" ");
+}
+
+function renderTreeChildren(
+  {
+    children,
+    nodePath,
+    depth,
+    path,
+    selectedPath,
+    finePointer,
+    tree,
+    onToggle,
+    onOpen,
+    onSelect,
+    onContextMenu,
+  },
+) {
+  return children.map((child) =>
+    React.createElement(TreeNode, {
+      key: child.name,
+      node: {
+        ...child,
+        path: filesystemPathJoin(nodePath, child.name),
+      },
+      depth: depth + 1,
+      path,
+      selectedPath,
+      finePointer,
+      tree,
+      onToggle,
+      onOpen,
+      onSelect,
+      onContextMenu,
+    })
+  );
+}
+
+function renderTreeNodeRow({
+  node,
+  isDir,
+  isExpanded,
+  isCurrent,
+  isSelected,
+  isLoading,
+  depth,
+  Icon,
+  finePointer,
+  onToggle,
+  onOpen,
+  onSelect,
+  onContextMenu,
+}) {
+  return React.createElement(
+    "div",
+    {
+      role: "treeitem",
+      "aria-expanded": isDir ? isExpanded : undefined,
+      "aria-selected": isSelected || undefined,
+      className: nodeRowClass(node, isCurrent, isSelected),
+      style: { "--tree-depth": depth },
+      title: isDir ? `${node.name}/` : node.name,
+      ...treeNodeHandlers({
+        isDir,
+        isCurrent,
+        finePointer,
+        node,
+        onToggle,
+        onOpen,
+        onSelect,
+        onContextMenu,
+      }),
+    },
+    renderTwistie({ isDir, isLoading, isExpanded, node, onToggle }),
+    React.createElement(Icon, { size: 15, "aria-hidden": true }),
+    React.createElement(
+      "span",
+      { className: "files-tree-label" },
+      node.name,
+    ),
+  );
+}
 
 function TreeNode({
   node,
@@ -149,97 +332,37 @@ function TreeNode({
   const children = isDir && isExpanded && !isLoading
     ? (tree.childrenMap.get(nodePath)?.children || [])
     : [];
-  const rowClass = [
-    "files-tree-node",
-    isDir ? "dir" : "",
-    isCurrent ? "current" : "",
-    isSelected ? "selected" : "",
-  ].filter(Boolean).join(" ");
-
   return React.createElement(
     React.Fragment,
     null,
-    React.createElement(
-      "div",
-      {
-        role: "treeitem",
-        "aria-expanded": isDir ? isExpanded : undefined,
-        "aria-selected": isSelected || undefined,
-        className: rowClass,
-        style: { "--tree-depth": depth },
-        title: isDir ? `${node.name}/` : node.name,
-        onClick: () => {
-          if (isDir) {
-            // Explorer behavior: a click on an already-open (current)
-            // folder toggles it closed instead of re-navigating, so the
-            // right-pane preview never refreshes for a no-op navigation.
-            if (isCurrent) onToggle(node.path);
-            else onOpen(node);
-          } else if (finePointer) onSelect(node);
-          else onOpen(node);
-        },
-        onDoubleClick: isDir || !finePointer ? undefined : () => onOpen(node),
-        onContextMenu: onContextMenu
-          ? (event) => {
-            event.preventDefault();
-            onContextMenu(node, event.clientX, event.clientY);
-          }
-          : undefined,
-      },
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "files-tree-twistie",
-          "aria-label": isDir
-            ? `${isExpanded ? "Collapse" : "Expand"} ${node.name}`
-            : undefined,
-          tabIndex: isDir ? 0 : -1,
-          onClick: (event) => {
-            if (!isDir) return;
-            event.stopPropagation();
-            onToggle(node.path);
-          },
-        },
-        isDir
-          ? isLoading
-            ? React.createElement(Loader2, {
-              size: 12,
-              className: "files-spinning",
-              "aria-hidden": true,
-            })
-            : React.createElement(ChevronRight, {
-              size: 12,
-              className: isExpanded ? "open" : "",
-              "aria-hidden": true,
-            })
-          : null,
-      ),
-      React.createElement(Icon, { size: 15, "aria-hidden": true }),
-      React.createElement(
-        "span",
-        { className: "files-tree-label" },
-        node.name,
-      ),
-    ),
-    children.map((child) =>
-      React.createElement(TreeNode, {
-        key: child.name,
-        node: {
-          ...child,
-          path: filesystemPathJoin(nodePath, child.name),
-        },
-        depth: depth + 1,
-        path,
-        selectedPath,
-        finePointer,
-        tree,
-        onToggle,
-        onOpen,
-        onSelect,
-        onContextMenu,
-      })
-    ),
+    renderTreeNodeRow({
+      node,
+      isDir,
+      isExpanded,
+      isCurrent,
+      isSelected,
+      isLoading,
+      depth,
+      Icon,
+      finePointer,
+      onToggle,
+      onOpen,
+      onSelect,
+      onContextMenu,
+    }),
+    renderTreeChildren({
+      children,
+      nodePath,
+      depth,
+      path,
+      selectedPath,
+      finePointer,
+      tree,
+      onToggle,
+      onOpen,
+      onSelect,
+      onContextMenu,
+    }),
   );
 }
 

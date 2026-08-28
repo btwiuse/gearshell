@@ -14,9 +14,9 @@ import {
 import {
   sniffWasmBytes,
   useFilesActions,
-} from "./files-editor.js?v=20260826.42";
-import { useFilesContextMenu } from "./files-context-menu.js?v=20260826.42";
-import { useLocalDirMounts } from "./files-mounts.js?v=20260826.42";
+} from "./files-editor.js?v=20260826.43";
+import { useFilesContextMenu } from "./files-context-menu.js?v=20260826.43";
+import { useLocalDirMounts } from "./files-mounts.js?v=20260826.43";
 import { filesDep } from "./files-registry.js?v=20260826.15";
 
 async function sniffWasmEntries(getRoot, path, entries) {

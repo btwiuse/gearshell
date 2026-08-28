@@ -165,71 +165,52 @@ function LauncherOrderItemActions(props) {
   );
 }
 
-function LauncherOrderItem(props) {
-  const {
-    component,
-    option,
-    isCollapsed,
-    index,
-    sectionLength,
-    draggedComponent,
-    dropTarget,
-    isOpenByDefault,
-    onToggleStartup,
-    onToggleCollapsed,
-    onMove,
-    onPlace,
-    setDraggedComponent,
-    setDropTarget,
-  } = props;
-  const Icon = option.icon;
-  const isDropTarget = dropTarget?.component === component &&
-    dropTarget.collapsed === isCollapsed;
-  return React.createElement(
-    "div",
-    {
-      key: component,
-      className: [
-        "launcher-order-item",
-        draggedComponent === component && "dragging",
-        isDropTarget && (dropTarget.after ? "drop-after" : "drop-before"),
-      ].filter(Boolean).join(" "),
-      draggable: true,
-      onDragStart: (event) => {
-        setDraggedComponent(component);
-        event.dataTransfer?.setData("text/plain", component);
-        if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-      },
-      onDragEnd: () => {
-        setDraggedComponent(null);
-        setDropTarget(null);
-      },
-      onDragOver: (event) => {
-        if (!draggedComponent || draggedComponent === component) return;
-        event.preventDefault();
-        const bounds = event.currentTarget.getBoundingClientRect();
-        setDropTarget({
-          component,
-          collapsed: isCollapsed,
-          after: event.clientY > bounds.top + bounds.height / 2,
-        });
-        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-      },
-      onDrop: (event) => {
-        event.preventDefault();
-        const bounds = event.currentTarget.getBoundingClientRect();
-        onPlace(
-          component,
-          isCollapsed,
-          event.clientY > bounds.top + bounds.height / 2,
-        );
-      },
+function launcherItemDragHandlers({
+  component,
+  isCollapsed,
+  draggedComponent,
+  onPlace,
+  setDraggedComponent,
+  setDropTarget,
+}) {
+  return {
+    onDragStart: (event) => {
+      setDraggedComponent(component);
+      event.dataTransfer?.setData("text/plain", component);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
     },
-    React.createElement(GripVertical, {
-      className: "launcher-order-handle",
-      size: 16,
-      "aria-hidden": true,
-    }),
+    onDragEnd: () => {
+      setDraggedComponent(null);
+      setDropTarget(null);
+    },
+    onDragOver: (event) => {
+      if (!draggedComponent || draggedComponent === component) return;
+      event.preventDefault();
+      const bounds = event.currentTarget.getBoundingClientRect();
+      setDropTarget({
+        component,
+        collapsed: isCollapsed,
+        after: event.clientY > bounds.top + bounds.height / 2,
+      });
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    },
+    onDrop: (event) => {
+      event.preventDefault();
+      const bounds = event.currentTarget.getBoundingClientRect();
+      onPlace(
+        component,
+        isCollapsed,
+        event.clientY > bounds.top + bounds.height / 2,
+      );
+    },
+  };
+}
+
+function renderOrderItemBody({ option, isOpenByDefault, onToggleStartup }) {
+  const Icon = option.icon;
+  return React.createElement(
+    React.Fragment,
+    null,
     React.createElement(Icon, {
       className: "launcher-order-icon",
       size: 16,
@@ -250,6 +231,72 @@ function LauncherOrderItem(props) {
       }),
       React.createElement("span", null, "Open by default"),
     ),
+  );
+}
+
+function launcherOrderRowProps({
+  component,
+  isCollapsed,
+  draggedComponent,
+  dropTarget,
+  onPlace,
+  setDraggedComponent,
+  setDropTarget,
+}) {
+  const isDropTarget = dropTarget?.component === component &&
+    dropTarget.collapsed === isCollapsed;
+  return {
+    className: [
+      "launcher-order-item",
+      draggedComponent === component && "dragging",
+      isDropTarget && (dropTarget.after ? "drop-after" : "drop-before"),
+    ].filter(Boolean).join(" "),
+    draggable: true,
+    ...launcherItemDragHandlers({
+      component,
+      isCollapsed,
+      draggedComponent,
+      onPlace,
+      setDraggedComponent,
+      setDropTarget,
+    }),
+  };
+}
+
+function LauncherOrderItem(props) {
+  const {
+    component,
+    option,
+    isCollapsed,
+    index,
+    sectionLength,
+    draggedComponent,
+    dropTarget,
+    isOpenByDefault,
+    onToggleStartup,
+    onToggleCollapsed,
+    onMove,
+    onPlace,
+    setDraggedComponent,
+    setDropTarget,
+  } = props;
+  return React.createElement(
+    "div",
+    launcherOrderRowProps({
+      component,
+      isCollapsed,
+      draggedComponent,
+      dropTarget,
+      onPlace,
+      setDraggedComponent,
+      setDropTarget,
+    }),
+    React.createElement(GripVertical, {
+      className: "launcher-order-handle",
+      size: 16,
+      "aria-hidden": true,
+    }),
+    renderOrderItemBody({ option, isOpenByDefault, onToggleStartup }),
     React.createElement(LauncherOrderItemActions, {
       option,
       isCollapsed,
@@ -304,22 +351,8 @@ function LauncherOrderSection(props) {
   );
 }
 
-export function LauncherOrderEditor() {
-  const state = useLauncherState();
-  const { persist } = useLauncherPersist({
-    config: state.config,
-    setConfig: state.setConfig,
-  });
-  const actions = useLauncherActions({
-    config: state.config,
-    visible: state.visible,
-    collapsed: state.collapsed,
-    draggedComponent: state.draggedComponent,
-    persist,
-    setDraggedComponent: state.setDraggedComponent,
-    setDropTarget: state.setDropTarget,
-  });
-  const renderItem = (component, isCollapsed, index, sectionLength) => {
+function makeItemRenderer(state, actions) {
+  return (component, isCollapsed, index, sectionLength) => {
     const option = state.optionFor(component);
     if (!option) return null;
     return React.createElement(LauncherOrderItem, {
@@ -340,6 +373,24 @@ export function LauncherOrderEditor() {
       setDropTarget: state.setDropTarget,
     });
   };
+}
+
+export function LauncherOrderEditor() {
+  const state = useLauncherState();
+  const { persist } = useLauncherPersist({
+    config: state.config,
+    setConfig: state.setConfig,
+  });
+  const actions = useLauncherActions({
+    config: state.config,
+    visible: state.visible,
+    collapsed: state.collapsed,
+    draggedComponent: state.draggedComponent,
+    persist,
+    setDraggedComponent: state.setDraggedComponent,
+    setDropTarget: state.setDropTarget,
+  });
+  const renderItem = makeItemRenderer(state, actions);
 
   return React.createElement(
     React.Fragment,

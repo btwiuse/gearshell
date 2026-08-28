@@ -13,7 +13,7 @@ import {
   isBinaryData,
   sniffWasmBytes,
   toFilesystemBytes,
-} from "./files-editor.js?v=20260826.42";
+} from "./files-editor.js?v=20260826.43";
 
 // === Selection metadata (single-click info panel) ===
 
@@ -70,6 +70,57 @@ async function loadFilePreview(getRoot, nextPath, previewType) {
   return { preview, textPreview, iconKind };
 }
 
+// Collect the info-pane payload for a selected entry: stat + directory
+// listing / file preview, with preview-URL lifecycle through the ref.
+async function buildSelectedInfo({ getRoot, entry, nextPath, previewUrlRef }) {
+  const base = {
+    path: nextPath,
+    name: entry.name,
+    isDirectory: entry.isDirectory,
+  };
+  try {
+    const stat = await getRoot().stat(nextPath);
+    const dirInfo = entry.isDirectory
+      ? await loadDirectoryInfo(getRoot, nextPath)
+      : {};
+    const previewType = getFilesystemPreviewType(nextPath);
+    const previewInfo = !entry.isDirectory
+      ? await loadFilePreview(getRoot, nextPath, previewType)
+      : {};
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = previewInfo.preview
+      ? previewInfo.preview.url
+      : null;
+    return {
+      ...base,
+      // wanix stat returns Go-style field names: Size, Mode, IsDir,
+      // ModTime (unix seconds).
+      size: stat?.Size ?? null,
+      modTime: stat?.ModTime ?? null,
+      previewKind: previewType ? previewType.kind : null,
+      entries: dirInfo.entriesCount ?? null,
+      children: dirInfo.children ?? null,
+      childrenTotal: dirInfo.childrenTotal ?? null,
+      iconKind: previewInfo.iconKind ?? null,
+      preview: previewInfo.preview ?? null,
+      textPreview: previewInfo.textPreview ?? null,
+    };
+  } catch {
+    return {
+      ...base,
+      size: null,
+      modTime: null,
+      previewKind: null,
+      entries: null,
+      children: null,
+      childrenTotal: null,
+      iconKind: null,
+      preview: null,
+      textPreview: null,
+    };
+  }
+}
+
 export function useFilesSelection(
   { getRoot, path, setHighlighted, setContextMenu },
 ) {
@@ -84,76 +135,21 @@ export function useFilesSelection(
     const nextPath = filesystemPathJoin(basePath, entry.name);
     setHighlighted(nextPath);
     setContextMenu(null);
-    const base = {
-      path: nextPath,
-      name: entry.name,
-      isDirectory: entry.isDirectory,
-    };
-    try {
-      const stat = await getRoot().stat(nextPath);
-      const dirInfo = entry.isDirectory
-        ? await loadDirectoryInfo(getRoot, nextPath)
-        : {};
-      const previewType = getFilesystemPreviewType(nextPath);
-      const previewInfo = !entry.isDirectory
-        ? await loadFilePreview(getRoot, nextPath, previewType)
-        : {};
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = previewInfo.preview
-        ? previewInfo.preview.url
-        : null;
-      setSelectedInfo({
-        ...base,
-        // wanix stat returns Go-style field names: Size, Mode, IsDir,
-        // ModTime (unix seconds).
-        size: stat?.Size ?? null,
-        modTime: stat?.ModTime ?? null,
-        previewKind: previewType ? previewType.kind : null,
-        entries: dirInfo.entriesCount ?? null,
-        children: dirInfo.children ?? null,
-        childrenTotal: dirInfo.childrenTotal ?? null,
-        iconKind: previewInfo.iconKind ?? null,
-        preview: previewInfo.preview ?? null,
-        textPreview: previewInfo.textPreview ?? null,
-      });
-    } catch {
-      setSelectedInfo({
-        ...base,
-        size: null,
-        modTime: null,
-        previewKind: null,
-        entries: null,
-        children: null,
-        childrenTotal: null,
-        iconKind: null,
-        preview: null,
-        textPreview: null,
-      });
-    }
+    setSelectedInfo(
+      await buildSelectedInfo({ getRoot, entry, nextPath, previewUrlRef }),
+    );
   };
 
   return { selectedInfo, setSelectedInfo, selectEntry };
 }
-export function useFilesContextMenu({
-  getRoot,
-  setStatus,
-  openEntry,
-  navigateTo,
-  refresh,
-  clearFileSelection,
-  selectedPath,
-  beginCreateIn,
-  beginRename,
-}) {
-  const [contextMenu, setContextMenu] = useState(null);
-  const menuRef = useRef(null);
 
+// Close the context menu on outside pointerdown (kept open for clicks
+// inside it, or the menu would unmount before the click lands) and on
+// Escape.
+function useContextMenuDismissal(contextMenu, menuRef, setContextMenu) {
   useEffect(() => {
     if (!contextMenu) return;
     const onPointerDown = (event) => {
-      // Keep the menu open for clicks inside it; only close on outside
-      // clicks. Closing on the menu's own pointerdown would unmount the
-      // menu before the click lands, breaking every menu item.
       if (menuRef.current && menuRef.current.contains(event.target)) return;
       setContextMenu(null);
     };
@@ -167,65 +163,83 @@ export function useFilesContextMenu({
       window.removeEventListener("keydown", onKey);
     };
   }, [contextMenu]);
+}
 
-  const openEntryFromMenu = (entry) => {
-    setContextMenu(null);
-    if (entry.isDirectory) {
-      navigateTo(entry.path);
-      return;
-    }
-    openEntry(entry);
-  };
+function openEntryFromMenu(ctx, entry) {
+  const { setContextMenu, navigateTo, openEntry } = ctx;
+  setContextMenu(null);
+  if (entry.isDirectory) {
+    navigateTo(entry.path);
+    return;
+  }
+  openEntry(entry);
+}
 
-  const deleteEntry = async (entry) => {
-    setContextMenu(null);
-    if (!window.confirm(`Delete ${entry.name}?`)) return;
-    try {
-      await getRoot().remove(entry.path);
-      if (selectedPath === entry.path) clearFileSelection();
-      setStatus("Deleted.");
-      await refresh();
-    } catch (error) {
-      setStatus(error.message || "Unable to delete this entry.");
-    }
-  };
+async function deleteEntry(ctx, entry) {
+  const {
+    setContextMenu,
+    getRoot,
+    selectedPath,
+    clearFileSelection,
+    setStatus,
+    refresh,
+  } = ctx;
+  setContextMenu(null);
+  if (!window.confirm(`Delete ${entry.name}?`)) return;
+  try {
+    await getRoot().remove(entry.path);
+    if (selectedPath === entry.path) clearFileSelection();
+    setStatus("Deleted.");
+    await refresh();
+  } catch (error) {
+    setStatus(error.message || "Unable to delete this entry.");
+  }
+}
 
-  const createInFolder = (entry, kind) => {
-    setContextMenu(null);
-    beginCreateIn(entry, kind);
-  };
+function createInFolder(ctx, entry, kind) {
+  const { setContextMenu, beginCreateIn } = ctx;
+  setContextMenu(null);
+  beginCreateIn(entry, kind);
+}
 
-  const startRenameEntry = (entry) => {
-    setContextMenu(null);
-    beginRename(entry);
-  };
+function startRenameEntry(ctx, entry) {
+  const { setContextMenu, beginRename } = ctx;
+  setContextMenu(null);
+  beginRename(entry);
+}
 
-  const downloadEntry = async (entry) => {
-    setContextMenu(null);
-    try {
-      const data = await getRoot().readFile(entry.path);
-      const type = getFilesystemPreviewType(entry.path);
-      const blob = new Blob([toFilesystemBytes(data)], {
-        type: type ? type.mime : "application/octet-stream",
-      });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = entry.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 0);
-    } catch (error) {
-      setStatus(error.message || "Unable to download this file.");
-    }
-  };
+async function downloadEntry(ctx, entry) {
+  const { setContextMenu, getRoot, setStatus } = ctx;
+  setContextMenu(null);
+  try {
+    const data = await getRoot().readFile(entry.path);
+    const type = getFilesystemPreviewType(entry.path);
+    const blob = new Blob([toFilesystemBytes(data)], {
+      type: type ? type.mime : "application/octet-stream",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = entry.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  } catch (error) {
+    setStatus(error.message || "Unable to download this file.");
+  }
+}
 
+export function useFilesContextMenu(props) {
+  const [contextMenu, setContextMenu] = useState(null);
+  const menuRef = useRef(null);
+  useContextMenuDismissal(contextMenu, menuRef, setContextMenu);
+  const ctx = { ...props, setContextMenu };
   return {
     contextMenu,
     setContextMenu,
     menuRef,
-    openEntryFromMenu,
-    deleteEntry,
-    createInFolder,
-    startRenameEntry,
-    downloadEntry,
+    openEntryFromMenu: (entry) => openEntryFromMenu(ctx, entry),
+    deleteEntry: (entry) => deleteEntry(ctx, entry),
+    createInFolder: (entry, kind) => createInFolder(ctx, entry, kind),
+    startRenameEntry: (entry) => startRenameEntry(ctx, entry),
+    downloadEntry: (entry) => downloadEntry(ctx, entry),
   };
 }

@@ -36,18 +36,18 @@ import {
   pushEvent,
   wirePanelEvents,
 } from "./workspace-events.js?v=20260828.3";
-import { openApi } from "./workspace-open-api.js?v=20260828.6";
-import { configApi } from "./workspace-config-api.js?v=20260828.6";
+import { openApi } from "./workspace-open-api.js?v=20260828.11";
+import { configApi } from "./workspace-config-api.js?v=20260828.11";
 import {
   runHeadlessTask,
   tasksApi,
-} from "./workspace-tasks-api.js?v=20260828.6";
+} from "./workspace-tasks-api.js?v=20260828.11";
 import { agentsApi } from "./workspace-agents-api.js?v=20260828.1";
 import {
   gcWorkspaceTasks,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.6";
-import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.6";
+} from "./workspace-task-registry.js?v=20260828.11";
+import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.11";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no

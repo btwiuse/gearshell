@@ -268,12 +268,13 @@ export function addFallbackPanel(api, group) {
   return panel;
 }
 
-export { AddTerminalButton, FallbackPage, FallbackPanel, TerminalLaunchPicker };
-function AddTerminalButton({ containerApi, group }) {
+// === Plus button: tap creates a terminal, long-press opens the
+// extensions menu. Renders the panel-action-menu next to the dockview
+// tab strip, with launcher buttons for each enabled panel + a Wagi-Dog
+// toggle. Reuses TerminalLaunchPicker above for the Terminal entry.
+
+function usePanelActionMenu() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [wagiDogEnabled, setWagiDogEnabledState] = useState(() =>
-    launcherDep("loadConfig")().wagiDogEnabled
-  );
   const controlRef = useRef(null);
   const pressTimer = useRef(null);
   const longPress = useRef(false);
@@ -312,6 +313,21 @@ function AddTerminalButton({ containerApi, group }) {
     return () => document.removeEventListener("pointerdown", closeMenu, true);
   }, [menuOpen]);
 
+  return {
+    menuOpen,
+    setMenuOpen,
+    controlRef,
+    clearPressTimer,
+    openMenu,
+    startPress,
+    longPress,
+  };
+}
+
+function useWagiDogSync() {
+  const [wagiDogEnabled, setWagiDogEnabledState] = useState(() =>
+    launcherDep("loadConfig")().wagiDogEnabled
+  );
   useEffect(() => {
     const syncWagiDog = () =>
       setWagiDogEnabledState(launcherDep("loadConfig")().wagiDogEnabled);
@@ -325,6 +341,95 @@ function AddTerminalButton({ containerApi, group }) {
         syncWagiDog,
       );
   }, []);
+  return wagiDogEnabled;
+}
+
+function renderWagiDogItem({ wagiDogEnabled }) {
+  return React.createElement(
+    "button",
+    {
+      type: "button",
+      role: "menuitemcheckbox",
+      "aria-checked": wagiDogEnabled,
+      onClick: () => launcherDep("setWagiDogEnabled")(!wagiDogEnabled),
+    },
+    React.createElement(Dog, { size: 16, "aria-hidden": true }),
+    React.createElement("span", null, "Wagi Dog"),
+    wagiDogEnabled &&
+      React.createElement(Check, {
+        className: "panel-action-menu-check",
+        size: 15,
+        "aria-label": "Enabled",
+      }),
+  );
+}
+
+function renderPanelOptionItems({ containerApi, group, setMenuOpen }) {
+  return launcherDep("PANEL_CREATION_OPTIONS").filter((option) =>
+    option.component !== "terminal"
+  ).map((option) =>
+    React.createElement(
+      "button",
+      {
+        key: option.component,
+        type: "button",
+        role: "menuitem",
+        onClick: (event) => {
+          setMenuOpen(false);
+          launcherDep("addPanelByComponent")(
+            containerApi,
+            option.component,
+            group,
+            event.shiftKey ? { direction: "right" } : undefined,
+          );
+        },
+      },
+      React.createElement(option.icon, { size: 16, "aria-hidden": true }),
+      React.createElement("span", null, option.label),
+    )
+  );
+}
+
+function renderPanelActionMenu(
+  { containerApi, group, setMenuOpen, wagiDogEnabled },
+) {
+  return React.createElement(
+    "div",
+    { className: "panel-action-menu", role: "menu" },
+    React.createElement(TerminalLaunchPicker, {
+      className: "panel-action-terminal-launch",
+      iconSize: 16,
+      inMenu: true,
+      onLaunch: (profile) => {
+        setMenuOpen(false);
+        launcherDep("addTerminalPanel")(containerApi, group, profile);
+      },
+    }),
+    React.createElement("div", {
+      className: "panel-action-menu-divider",
+      role: "separator",
+    }),
+    renderWagiDogItem({ wagiDogEnabled }),
+    renderPanelOptionItems({ containerApi, group, setMenuOpen }),
+    React.createElement(
+      "div",
+      { className: "panel-action-menu-hint" },
+      React.createElement("span", null, "Shift+click: open in a new pane"),
+    ),
+  );
+}
+
+function AddTerminalButton({ containerApi, group }) {
+  const {
+    menuOpen,
+    setMenuOpen,
+    controlRef,
+    clearPressTimer,
+    openMenu,
+    startPress,
+    longPress,
+  } = usePanelActionMenu();
+  const wagiDogEnabled = useWagiDogSync();
 
   const createTerminal = (event) => {
     if (longPress.current) {
@@ -356,70 +461,16 @@ function AddTerminalButton({ containerApi, group }) {
       onClick: createTerminal,
     }, React.createElement(Plus, { size: 18, "aria-hidden": true })),
     menuOpen &&
-      React.createElement(
-        "div",
-        { className: "panel-action-menu", role: "menu" },
-        React.createElement(TerminalLaunchPicker, {
-          className: "panel-action-terminal-launch",
-          iconSize: 16,
-          inMenu: true,
-          onLaunch: (profile) => {
-            setMenuOpen(false);
-            launcherDep("addTerminalPanel")(containerApi, group, profile);
-          },
-        }),
-        React.createElement("div", {
-          className: "panel-action-menu-divider",
-          role: "separator",
-        }),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            role: "menuitemcheckbox",
-            "aria-checked": wagiDogEnabled,
-            onClick: () => launcherDep("setWagiDogEnabled")(!wagiDogEnabled),
-          },
-          React.createElement(Dog, { size: 16, "aria-hidden": true }),
-          React.createElement("span", null, "Wagi Dog"),
-          wagiDogEnabled &&
-            React.createElement(Check, {
-              className: "panel-action-menu-check",
-              size: 15,
-              "aria-label": "Enabled",
-            }),
-        ),
-        launcherDep("PANEL_CREATION_OPTIONS").filter((option) =>
-          option.component !== "terminal"
-        ).map((option) =>
-          React.createElement(
-            "button",
-            {
-              key: option.component,
-              type: "button",
-              role: "menuitem",
-              onClick: (event) => {
-                setMenuOpen(false);
-                launcherDep("addPanelByComponent")(
-                  containerApi,
-                  option.component,
-                  group,
-                  event.shiftKey ? { direction: "right" } : undefined,
-                );
-              },
-            },
-            React.createElement(option.icon, { size: 16, "aria-hidden": true }),
-            React.createElement("span", null, option.label),
-          )
-        ),
-        React.createElement(
-          "div",
-          { className: "panel-action-menu-hint" },
-          React.createElement("span", null, "Shift+click: open in a new pane"),
-        ),
-      ),
+      renderPanelActionMenu({
+        containerApi,
+        group,
+        setMenuOpen,
+        wagiDogEnabled,
+      }),
   );
 }
+
+export { AddTerminalButton, FallbackPage, FallbackPanel, TerminalLaunchPicker };
 
 // === Plus button: tap creates a terminal, long-press opens the
 // extensions menu. Renders the panel-action-menu next to the dockview

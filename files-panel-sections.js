@@ -11,14 +11,14 @@ import {
   FilesResizer,
   FilesRightPane,
   FilesSidebar,
-} from "./files-parts.js?v=20260826.45";
-import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.38";
+} from "./files-parts.js?v=20260826.48";
+import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.39";
 import {
   filesystemPathJoin,
   filesystemPathParent,
 } from "./files-path.js?v=20260826.38";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.39";
-import { FilesTree } from "./files-tree.js?v=20260826.38";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.40";
+import { FilesTree } from "./files-tree.js?v=20260826.39";
 
 function FilesPanelTopbar({ panel }) {
   const {
@@ -105,67 +105,45 @@ function FilesPanelTree({ panel }) {
   });
 }
 
+function sidebarProps(panel) {
+  return {
+    favorites: panel.favorites,
+    currentPath: panel.path,
+    onOpen: (favorite) => {
+      if (favorite.isDirectory === false) {
+        panel.openEditorEntry(
+          {
+            name: String(favorite.path).split("/").pop(),
+            isDirectory: false,
+          },
+          filesystemPathParent(favorite.path),
+        );
+      } else {
+        panel.navigateTo(favorite.path);
+      }
+    },
+    onRemove: panel.removeFavorite,
+    mounts: panel.mounts,
+    onMount: panel.handleMountLocalDir,
+    onOpenMount: panel.openMount,
+    onUnmount: panel.unmountLocalDir,
+    fileInputRef: panel.fileInputRef,
+    creating: panel.creating,
+    entryName: panel.entryName,
+    onEntryNameChange: panel.setEntryName,
+    onCreate: panel.createEntry,
+    onCancel: () => panel.setCreating(null),
+    onUpload: panel.uploadFiles,
+    collapsedSections: panel.sidebarCollapsed,
+    onToggleSection: (name) =>
+      panel.setSidebarCollapsed((prev) => ({ ...prev, [name]: !prev[name] })),
+  };
+}
+
 function FilesPanelSidebar({ panel }) {
-  const {
-    favorites,
-    path,
-    navigateTo,
-    openEditorEntry,
-    removeFavorite,
-    mounts,
-    handleMountLocalDir,
-    openMount,
-    unmountLocalDir,
-    fileInputRef,
-    creating,
-    entryName,
-    setCreating,
-    setEntryName,
-    createEntry,
-    uploadFiles,
-    sidebarCollapsed,
-    setSidebarCollapsed,
-    tree,
-    highlighted,
-    finePointer,
-    clearFileSelection,
-    selectEntry,
-    setContextMenu,
-  } = panel;
   return React.createElement(
     FilesSidebar,
-    {
-      favorites,
-      currentPath: path,
-      onOpen: (favorite) => {
-        if (favorite.isDirectory === false) {
-          openEditorEntry(
-            {
-              name: String(favorite.path).split("/").pop(),
-              isDirectory: false,
-            },
-            filesystemPathParent(favorite.path),
-          );
-        } else {
-          navigateTo(favorite.path);
-        }
-      },
-      onRemove: removeFavorite,
-      mounts,
-      onMount: handleMountLocalDir,
-      onOpenMount: openMount,
-      onUnmount: unmountLocalDir,
-      fileInputRef,
-      creating,
-      entryName,
-      onEntryNameChange: setEntryName,
-      onCreate: createEntry,
-      onCancel: () => setCreating(null),
-      onUpload: uploadFiles,
-      collapsedSections: sidebarCollapsed,
-      onToggleSection: (name) =>
-        setSidebarCollapsed((prev) => ({ ...prev, [name]: !prev[name] })),
-    },
+    sidebarProps(panel),
     React.createElement(FilesPanelTree, { panel }),
   );
 }
@@ -200,73 +178,52 @@ function FilesPanelContextMenu({ panel }) {
   });
 }
 
-function FilesPanelRightPane({ panel }) {
-  const {
-    selectedPath,
-    preview,
-    contents,
-    binary,
-    dirty,
-    selectedInfo,
-    entries,
-    loading,
-    status,
-    viewMode,
-    setViewMode,
-    sort,
-    setSort,
-    columnWidths,
-    setColumnWidths,
-    path,
-    downloadFile,
-    saveFileHandler,
-    setCreating,
-    setEntryName,
-    removeFileHandler,
-    setContents,
-    finePointer,
-    setHighlighted,
-    openEditorEntry,
-  } = panel;
-  return React.createElement(FilesRightPane, {
-    selectedPath,
-    preview,
-    contents,
-    binary,
-    dirty,
-    info: selectedInfo,
-    entries,
-    loading,
-    status,
-    viewMode,
-    onViewModeChange: setViewMode,
-    sort,
-    onSortChange: setSort,
-    columnWidths,
-    onColumnWidthChange: setColumnWidths,
-    currentPath: path,
-    onDownload: downloadFile,
-    onSave: saveFileHandler,
+function rightPaneProps(panel) {
+  return {
+    selectedPath: panel.selectedPath,
+    preview: panel.preview,
+    contents: panel.contents,
+    binary: panel.binary,
+    dirty: panel.dirty,
+    info: panel.selectedInfo,
+    entries: panel.entries,
+    loading: panel.loading,
+    status: panel.status,
+    viewMode: panel.viewMode,
+    onViewModeChange: panel.setViewMode,
+    sort: panel.sort,
+    onSortChange: panel.setSort,
+    columnWidths: panel.columnWidths,
+    onColumnWidthChange: panel.setColumnWidths,
+    currentPath: panel.path,
+    onDownload: panel.downloadFile,
+    onSave: panel.saveFileHandler,
     onRename: () => {
-      setCreating("rename-file");
-      setEntryName(selectedPath.split("/").pop() || "");
+      panel.setCreating("rename-file");
+      panel.setEntryName(panel.selectedPath.split("/").pop() || "");
     },
-    onDelete: removeFileHandler,
-    onChange: setContents,
+    onDelete: panel.removeFileHandler,
+    onChange: panel.setContents,
     // Single click selects in-place (the pane highlights the tile and shows
     // its details in the footer; the tree highlight mirrors it), double
     // click opens: directories enter, files open in the editor. On touch
     // the grid follows the tree and opens on a single tap.
-    finePointer,
+    finePointer: panel.finePointer,
     onSelectChild: (child) => {
-      const base = (selectedInfo && selectedInfo.path) || path;
-      setHighlighted(filesystemPathJoin(base, child.name));
+      const base = (panel.selectedInfo && panel.selectedInfo.path) ||
+        panel.path;
+      panel.setHighlighted(filesystemPathJoin(base, child.name));
     },
     onOpenChild: (child) => {
-      const base = (selectedInfo && selectedInfo.path) || path;
-      openEditorEntry(child, base);
+      const base = (panel.selectedInfo && panel.selectedInfo.path) ||
+        panel.path;
+      panel.openEditorEntry(child, base);
     },
-  });
+  };
+}
+
+function FilesPanelRightPane({ panel }) {
+  return React.createElement(FilesRightPane, rightPaneProps(panel));
 }
 
 export {

@@ -154,61 +154,35 @@ export function HomeFeatures({ features }) {
   );
 }
 
+const DEMO_SEGMENTS = [
+  ["$ gear init my-app\n", null],
+  ["  ✓ pulling linux userspace ", "mkt-muted"],
+  ["(47 MB)\n", "mkt-dim"],
+  ["  ✓ mounting vfs at ", "mkt-muted"],
+  ["/home/gear\n", "mkt-prompt"],
+  ["  ✓ ready in ", "mkt-muted"],
+  ["312 ms\n\n", "mkt-ok"],
+  ["$ cd my-app && git clone ", null],
+  ["github.com/me/repo", "mkt-prompt"],
+  ["\n", null],
+  ["Cloning into 'repo'...\n", "mkt-muted"],
+  ["✓ ", "mkt-ok"],
+  ["done. 142 files, 3 branches.\n\n", "mkt-muted"],
+  ["$ claude\n", null],
+  ["> Hi, I am Claude Code. Working in ", "mkt-muted"],
+  ["/home/gear/my-app/repo", "mkt-prompt"],
+  [".\n", "mkt-muted"],
+  ["> What would you like to build?\n", "mkt-muted"],
+  ["$ ▌", null],
+];
+
 function DemoTerminal() {
   return React.createElement(
     "pre",
     { className: "mkt-demo-body" },
-    "$ gear init my-app\n",
-    React.createElement(
-      "span",
-      { className: "mkt-muted" },
-      "  ✓ pulling linux userspace ",
+    DEMO_SEGMENTS.map(([text, cls], i) =>
+      cls ? React.createElement("span", { key: i, className: cls }, text) : text
     ),
-    React.createElement("span", { className: "mkt-dim" }, "(47 MB)\n"),
-    React.createElement(
-      "span",
-      { className: "mkt-muted" },
-      "  ✓ mounting vfs at ",
-    ),
-    React.createElement("span", { className: "mkt-prompt" }, "/home/gear\n"),
-    React.createElement("span", { className: "mkt-muted" }, "  ✓ ready in "),
-    React.createElement("span", { className: "mkt-ok" }, "312 ms\n\n"),
-    "$ cd my-app && git clone ",
-    React.createElement(
-      "span",
-      { className: "mkt-prompt" },
-      "github.com/me/repo",
-    ),
-    "\n",
-    React.createElement(
-      "span",
-      { className: "mkt-muted" },
-      "Cloning into 'repo'...\n",
-    ),
-    React.createElement("span", { className: "mkt-ok" }, "✓ "),
-    React.createElement(
-      "span",
-      { className: "mkt-muted" },
-      "done. 142 files, 3 branches.\n\n",
-    ),
-    "$ claude\n",
-    React.createElement(
-      "span",
-      { className: "mkt-muted" },
-      "> Hi, I am Claude Code. Working in ",
-    ),
-    React.createElement(
-      "span",
-      { className: "mkt-prompt" },
-      "/home/gear/my-app/repo",
-    ),
-    React.createElement("span", { className: "mkt-muted" }, ".\n"),
-    React.createElement(
-      "span",
-      { className: "mkt-muted" },
-      "> What would you like to build?\n",
-    ),
-    "$ ▌",
   );
 }
 
@@ -253,6 +227,50 @@ export function HomeDemo({ openPanel }) {
   );
 }
 
+function renderLocalFirstChips() {
+  return React.createElement(
+    "div",
+    { className: "mkt-chips" },
+    ...localFirstChips.map(([strong, rest], i) =>
+      React.createElement(
+        "div",
+        { className: "mkt-chip", key: i },
+        React.createElement("span", {
+          className: "mkt-chip-dot",
+          "aria-hidden": true,
+        }),
+        React.createElement("span", { className: "mkt-chip-strong" }, strong),
+        React.createElement("span", { className: "mkt-chip-sep" }, ","),
+        React.createElement("span", null, rest),
+      )
+    ),
+  );
+}
+
+function renderBonsaiLink() {
+  return React.createElement(
+    "div",
+    { className: "mkt-bonsai-link" },
+    React.createElement(
+      "div",
+      { className: "mkt-bonsai-kicker" },
+      "TRY THE LOCAL MODEL",
+    ),
+    React.createElement(
+      "div",
+      { className: "mkt-bonsai-body" },
+      React.createElement("strong", null, "Bonsai 27B"),
+      " · 3.8 GB · WebGPU · no server.",
+    ),
+    React.createElement("a", {
+      className: "mkt-bonsai-cta",
+      href: "https://huggingface.co/prism-ml/Bonsai-27B-gguf",
+      target: "_blank",
+      rel: "noopener",
+    }, "Open Bonsai 27B →"),
+  );
+}
+
 export function HomeLocalFirst() {
   return React.createElement(
     "section",
@@ -268,44 +286,8 @@ export function HomeLocalFirst() {
       { className: "lead" },
       "Every byte stays on your device. Every model runs on your GPU. Every agent answers to you. The tab is your computer — and your computer does not phone home.",
     ),
-    React.createElement(
-      "div",
-      { className: "mkt-chips" },
-      ...localFirstChips.map(([strong, rest], i) =>
-        React.createElement(
-          "div",
-          { className: "mkt-chip", key: i },
-          React.createElement("span", {
-            className: "mkt-chip-dot",
-            "aria-hidden": true,
-          }),
-          React.createElement("span", { className: "mkt-chip-strong" }, strong),
-          React.createElement("span", { className: "mkt-chip-sep" }, ","),
-          React.createElement("span", null, rest),
-        )
-      ),
-    ),
-    React.createElement(
-      "div",
-      { className: "mkt-bonsai-link" },
-      React.createElement(
-        "div",
-        { className: "mkt-bonsai-kicker" },
-        "TRY THE LOCAL MODEL",
-      ),
-      React.createElement(
-        "div",
-        { className: "mkt-bonsai-body" },
-        React.createElement("strong", null, "Bonsai 27B"),
-        " · 3.8 GB · WebGPU · no server.",
-      ),
-      React.createElement("a", {
-        className: "mkt-bonsai-cta",
-        href: "https://huggingface.co/prism-ml/Bonsai-27B-gguf",
-        target: "_blank",
-        rel: "noopener",
-      }, "Open Bonsai 27B →"),
-    ),
+    renderLocalFirstChips(),
+    renderBonsaiLink(),
   );
 }
 
