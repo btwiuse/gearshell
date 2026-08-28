@@ -31,8 +31,8 @@ import {
   ensureGearShellBinds,
   initWorkspaceApi,
   workspaceApi,
-} from "./workspace-api.js?v=20260828.22";
-import { App } from "./app-shell.js?v=20260828.3";
+} from "./workspace-api.js?v=20260828.23";
+import { App } from "./app-shell.js?v=20260828.4";
 
 import {
   getWanixRoot,

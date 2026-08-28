@@ -56,7 +56,7 @@ import { addPanelByComponent } from "./panels.js?v=20260812.38";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.22";
+} from "./workspace-api.js?v=20260828.23";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);

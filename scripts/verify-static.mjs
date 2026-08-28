@@ -81,6 +81,6 @@ if (!workbenchExtension.includes('bind #task/self/term/winch winch')) throw new 
 if (!workbenchExtension.includes('setDimensions: async (dimensions')) throw new Error('Workbench terminals must forward VS Code resize events.');
 if (!has('window.GearShell')) throw new Error('Workspace API must be exposed to agents via window.GearShell (jsfs /js bridge).');
 if (!has('initWorkspaceApi') || !has('GCTL_BIND')) throw new Error('Workspace API boot hook and gctl bind must exist for agent-side control.');
-if (!has('app.js?v=20260828.29')) throw new Error('index.html must load the current app.js build.');
+if (!has('app.js?v=20260828.30')) throw new Error('index.html must load the current app.js build.');
 
 console.log('Static verification passed.');
