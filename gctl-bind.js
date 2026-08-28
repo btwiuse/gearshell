@@ -4,7 +4,7 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.46";
+} from "./app-workspace.js?v=20260826.47";
 import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.19";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
@@ -40,7 +40,9 @@ export const GCTL_BIND = {
     "",
     "methods:",
     "  ping",
-    "  config.getShell   config.updateShell   config.getWorkspace   config.getBinds   config.addBind",
+    "  config.getShell   config.updateShell   config.getWorkspace   config.getSystem   config.getTaskBinds",
+    "  config.getBinds   config.addBind   config.updateBind   config.removeBind   config.setBinds",
+    "  config.updateRuntime   config.reload",
     "  config.audit.list  config.audit.undo  config.audit.clear",
     "  panels.list  panels.open  panels.close  panels.focus",
     "  browser.open  files.open",
@@ -55,8 +57,16 @@ export const GCTL_BIND = {
     "  gctl panels.list",
     '  gctl tasks.create \'[{"name":"x","cmd":"echo hi"}]\'',
     '  gctl config.updateShell \'[{"foo":"bar"}]\'',
+    "  gctl config.getSystem",
+    '  gctl config.updateBind \'["opfs",{"type":"ns","dst":"opfs","src":"#web/opfs","mode":"0755"}]\'',
+    "  gctl config.removeBind '[\"tmp\"]'",
+    '  gctl config.setBinds \'[{"id":"root","type":"ns","dst":".","src":"#ramfs/new"},{"id":"task","type":"ns","dst":"task","src":"#task"}]\'',
+    '  gctl config.updateRuntime \'[{"allowOrigins":"https://example.com"}]\'',
     '  gctl agents.read \'["task-1",{"rows":50}]\'',
     "  gctl open https://example.com",
+    "",
+    "note: system bind/runtime changes only apply on reload;",
+    "gctl config.reload restarts the workspace (kills all tasks).",
     "HELP",
     "  exit 0",
     "fi",

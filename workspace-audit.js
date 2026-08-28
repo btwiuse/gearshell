@@ -1,16 +1,30 @@
 // workspace-audit.js — agent config-change audit ring (A1).
 //
-// Records every agent-initiated shell-config change (config.updateShell
-// through window.GearShell / gctl) as {id, ts, agent, prev, next} in a
-// capped localStorage ring, so a human can review agent edits in the
+// Records every agent-initiated config change (config.updateShell plus the
+// system-config writes config.updateBind/removeBind/setBinds/updateRuntime
+// through window.GearShell / gctl) as {id, ts, agent, kind, prev, next} in
+// a capped localStorage ring, so a human can review agent edits in the
 // Settings panel and undo them. The Settings UI saves config through
 // saveConfig directly (never config.updateShell), so UI-driven changes
 // are never attributed to an agent.
 //
+// Entries are kind-tagged: "shell" entries snapshot the shell config and
+// undo restores it via saveConfig; "system" entries snapshot the
+// {system, runtime} slices and undo writes them straight back into the
+// active workspace. Entries saved before the kind field existed default
+// to "shell".
+//
 // jsfs gives no caller identity, so `agent` is whatever the caller
 // passes as the optional second argument; it defaults to "agent".
 
-import { saveConfig } from "./app-workspace.js?v=20260826.46";
+import {
+  loadActiveWorkspace,
+  notifyWorkspaceChange,
+  saveConfig,
+  saveWorkspace,
+  updateWorkspaceIndex,
+} from "./app-workspace.js?v=20260826.47";
+import { normalizeSystemConfig } from "./app-normalize.js?v=20260828.48";
 
 const AUDIT_KEY = "gear-shell-agent-audit";
 const AUDIT_CAP = 50;
@@ -41,13 +55,14 @@ function writeAudit(entries) {
   }
 }
 
-export function pushAuditEntry({ prev, next, agent }) {
+export function pushAuditEntry({ prev, next, agent, kind = "shell" }) {
   // No-op patches (identical snapshot) never enter the ring.
   if (JSON.stringify(prev) === JSON.stringify(next)) return null;
   const entry = {
     id: `a${Date.now().toString(36)}-${++seq}`,
     ts: Date.now(),
     agent: typeof agent === "string" && agent ? agent : "agent",
+    kind: kind === "system" ? "system" : "shell",
     prev,
     next,
     undone: false,
@@ -56,6 +71,23 @@ export function pushAuditEntry({ prev, next, agent }) {
   writeAudit(entries);
   emitAuditChanged();
   return entry;
+}
+
+// Restore a "system" entry's snapshot: writes the saved {system, runtime}
+// slices back into the active workspace. The snapshot always carries a
+// full normalized system (binds + allowOrigins), so re-normalizing is
+// idempotent and cannot resurrect stale migration artifacts.
+function restoreSystemSnapshot(snapshot) {
+  const workspace = loadActiveWorkspace();
+  if (snapshot?.system) {
+    workspace.system = normalizeSystemConfig(snapshot.system);
+  }
+  if (snapshot?.runtime) {
+    workspace.runtime = { ...snapshot.runtime };
+  }
+  saveWorkspace(workspace);
+  updateWorkspaceIndex(workspace);
+  notifyWorkspaceChange();
 }
 
 export function listAuditEntries() {
@@ -73,10 +105,14 @@ export function undoAuditEntry(id) {
   const entry = entries.find((item) => item.id === id);
   if (!entry) return { ok: false, error: "audit entry not found" };
   if (entry.undone) return { ok: false, error: "audit entry already undone" };
-  // Restore the pre-edit snapshot. Deliberately writes the whole config
-  // (not a per-key merge): the agent may have edited several keys in one
-  // call, and undo must return the shell to exactly the saved state.
-  saveConfig(entry.prev);
+  // Restore the pre-edit snapshot. Deliberately writes the whole slice
+  // (not a per-key merge): the agent may have edited several fields in
+  // one call, and undo must return the system to exactly the saved state.
+  if (entry.kind === "system") {
+    restoreSystemSnapshot(entry.prev);
+  } else {
+    saveConfig(entry.prev);
+  }
   entry.undone = true;
   writeAudit(entries);
   emitAuditChanged();
