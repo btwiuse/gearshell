@@ -269,6 +269,9 @@ export const WANIX_RUNTIME = {
 export const HUSH_BINARY_VERSION = "v0.5.9";
 export const DEFAULT_HUSH_BINARY_URL =
   "https://w9y.io/go/github.com/btwiuse/hush/cmd/hush@v0.5.9";
+export const W9Y_BINARY_VERSION = "v0.0.6";
+export const DEFAULT_W9Y_BINARY_URL =
+  "https://w9y.io/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.6";
 export function isLegacyHushBinaryUrl(url) {
   return typeof url === "string" &&
     url.includes("github.com/btwiuse/hush/cmd/hush@") &&
@@ -335,7 +338,7 @@ export const TASK_SHELL_BINDS = [
     id: "task-w9y",
     type: "fetch",
     dst: "bin/w9y",
-    src: "https://w9y.io/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.6",
+    src: DEFAULT_W9Y_BINARY_URL,
     perm: "0755",
   },
   {
