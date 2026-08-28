@@ -6,18 +6,18 @@
 
 import React, { useCallback } from "react";
 import { DockviewReact } from "dockview-react";
-import { LandingPanel } from "./home.js?v=20260812.22";
-import { DeckPanel } from "./deck.js?v=20260812.29";
-import { SettingsPanel } from "./settings.js?v=20260826.32";
-import { FilesPanel } from "./files.js?v=20260826.67";
-import { RuntimePanel } from "./runtime.js?v=20260826.43";
-import { MusicPanel } from "./music.js?v=20260829.4";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.42";
+import { LandingPanel } from "./home.js?v=20260812.23";
+import { DeckPanel } from "./deck.js?v=20260812.30";
+import { SettingsPanel } from "./settings.js?v=20260826.33";
+import { FilesPanel } from "./files.js?v=20260826.68";
+import { RuntimePanel } from "./runtime.js?v=20260826.44";
+import { MusicPanel } from "./music.js?v=20260829.5";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.43";
 import {
   addFallbackPanel,
   AddTerminalButton,
   FallbackPanel,
-} from "./launcher.js?v=20260812.36";
+} from "./launcher.js?v=20260812.37";
 import {
   GroupPanel,
   IframePanel,
@@ -27,37 +27,41 @@ import {
   WagiDogPet,
   WorkbenchPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.42";
-import { setDockviewApi } from "./app-panels-store.js?v=20260826.47";
+} from "./panels.js?v=20260812.43";
+import { setDockviewApi } from "./app-panels-store.js?v=20260826.48";
 import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.47";
+} from "./app-terminal-sessions.js?v=20260826.48";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.51";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.53";
+} from "./app-sessions.js?v=20260828.52";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.54";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.48";
+} from "./app-panels.js?v=20260826.49";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.47";
-import { forgetOpenPanel } from "./app-panels-store.js?v=20260826.47";
-import { addPanelByComponent } from "./panels.js?v=20260812.42";
+} from "./app-workspace.js?v=20260826.48";
+import { forgetOpenPanel } from "./app-panels-store.js?v=20260826.48";
+import { addPanelByComponent } from "./panels.js?v=20260812.43";
+import {
+  restoreSavedLayout,
+  wireLayoutPersistence,
+} from "./app-layout.js?v=20260828.77";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.63";
+} from "./workspace-api.js?v=20260828.64";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -98,7 +102,11 @@ function openStartupPanels(api) {
   // restore or respawn them (ephemeral agent tasks were never stored).
   gcWorkspaceTasks();
   const cfg = loadConfig();
-  const restored = cfg.restoreTabs && restoreSavedPanels(api);
+  // Prefer the full dockview layout snapshot (group tree, split sizes,
+  // pinned tabs); fall back to the legacy panel-by-panel restore for
+  // workspaces saved before layouts existed.
+  const restored = cfg.restoreTabs &&
+    (restoreSavedLayout(api) || restoreSavedPanels(api));
   if (!restored) {
     for (const component of cfg.startupPanels) {
       addPanelByComponent(api, component);
@@ -166,6 +174,9 @@ function App() {
     event.api.onDidRemovePanel((panel) => handlePanelRemoved(event.api, panel));
     // Mirror panel lifecycle into the agent event ring buffer.
     wirePanelEvents(event.api);
+    // Persist the full dockview layout (groups, sizes, pinned tabs) so a
+    // reload with Restore tabs brings the exact arrangement back.
+    wireLayoutPersistence(event.api);
     const restored = openStartupPanels(event.api);
     trackActivePanel(event.api);
     // Start configured processes only after Wanix is ready so they follow the

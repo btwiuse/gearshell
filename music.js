@@ -8,6 +8,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Music2, Pause, Play, Square } from "lucide-react";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   MUSIC_STATE_EVENT,
   musicNowPlaying,
@@ -239,10 +240,9 @@ export function MusicPanel() {
 }
 
 // === Panel registration ===
-let musicIdCounter = 0;
 
 export function addMusicPanel(api, group) {
-  const id = ++musicIdCounter;
+  const id = nextPanelIndex("music");
   const panel = api.addPanel({
     id: `music-${id}`,
     component: "music",

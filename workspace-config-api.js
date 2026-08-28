@@ -21,18 +21,18 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.47";
+} from "./app-workspace.js?v=20260826.48";
 import {
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.48";
+} from "./app-normalize.js?v=20260828.49";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
   listAuditEntries,
   pushAuditEntry,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.22";
+} from "./workspace-audit.js?v=20260829.23";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either

@@ -15,7 +15,7 @@ import {
   normalizeBind,
   normalizeShellConfig,
   normalizeTask,
-} from "./app-normalize.js?v=20260828.48";
+} from "./app-normalize.js?v=20260828.49";
 import {
   createWorkspaceId,
   readStoredJson,
@@ -25,7 +25,7 @@ import {
 import {
   createWorkspace,
   getWorkspacePreset,
-} from "./app-workspace-presets.js?v=20260826.47";
+} from "./app-workspace-presets.js?v=20260826.48";
 
 export function migrateWorkspace(workspace) {
   if (!workspace || typeof workspace !== "object") return null;

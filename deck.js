@@ -18,6 +18,7 @@
 // <script> tags, not ES modules).
 
 import React, { useEffect, useRef } from "react";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 
 let __deckDeps = null;
 export function initDeck(dependencies) {
@@ -196,15 +197,12 @@ function DeckPanel({ api }) {
 }
 
 // === Panel registration ===
-// Counter for unique Deck panel ids. The counter is module-scoped
-// so it survives React re-renders but resets on page reload.
-let deckIdCounter = 0;
 
 // Register a new Deck panel with dockview. Called from app.js's
 // `addPanelByComponent` when the user picks Deck from the panel
 // menu, and from the restore-saved-panels path on boot.
 export function addDeckPanel(api, group) {
-  const id = ++deckIdCounter;
+  const id = nextPanelIndex("deck");
   const panel = api.addPanel({
     id: `deck-${id}`,
     component: "deck",

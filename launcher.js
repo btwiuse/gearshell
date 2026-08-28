@@ -17,6 +17,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Dog, Ellipsis, Plus } from "lucide-react";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 
 let __launcherDeps = null;
 export function initLauncher(dependencies) {
@@ -245,16 +246,12 @@ function FallbackPanel({ containerApi }) {
 }
 
 // === Panel registration ===
-// Counter for unique fallback / launcher panel ids. The counter is
-// module-scoped so it survives React re-renders but resets on page
-// reload.
-let fallbackIdCounter = 0;
 
 // Register a new Fallback (Launcher) panel with dockview. Called from
 // app.js's `addPanelByComponent` when the user picks Launcher from
 // the panel menu, and from the restore-saved-panels path on boot.
 export function addFallbackPanel(api, group) {
-  const id = ++fallbackIdCounter;
+  const id = nextPanelIndex("fallback");
   const panel = api.addPanel({
     id: `fallback-${id}`,
     component: "fallback",

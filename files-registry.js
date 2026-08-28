@@ -6,6 +6,7 @@
 // body, populating a small lookup table that the panel modules read
 // lazily via `filesDep(name)`.
 import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.19";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 
 let __filesDeps = null;
 export function initFiles(dependencies) {
@@ -29,9 +30,6 @@ export function filesDep(name) {
 }
 
 // === Panel registration ===
-// Counter for unique Files panel ids. The counter is module-scoped
-// so it survives React re-renders but resets on page reload.
-let filesIdCounter = 0;
 
 // Open Files panels, kept so a config change can flip their renderer
 // mode live. Pruned when a panel reports its own removal.
@@ -65,7 +63,7 @@ export function applyFilesRenderer() {
 // `addPanelByComponent` when the user picks Files from the panel
 // menu, and from the restore-saved-panels path on boot.
 export function addFilesPanel(api, group) {
-  const id = ++filesIdCounter;
+  const id = nextPanelIndex("files");
   const panel = api.addPanel({
     id: `files-${id}`,
     component: "files",

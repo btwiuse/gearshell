@@ -4,11 +4,10 @@
 // injection table as panels.js via the exported `panelsDep`.
 
 import React, { useEffect, useRef, useState } from "react";
-import { panelsDep } from "./panels.js?v=20260812.42";
+import { panelsDep } from "./panels.js?v=20260812.43";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 
-// Per-workspace-task counter so multiple task panels can coexist.
-// Module-scoped so it survives React re-renders but resets on reload.
-let workspaceTaskPanelCounter = 0;
+// Per-workspace-task id minting so multiple task panels can coexist.
 
 function bindSessionEvents(session, setTaskStatus) {
   const updateStatus = (event) => setTaskStatus(event.detail);
@@ -154,7 +153,7 @@ export function addWorkspaceTaskPanel(
   workspace = panelsDep("loadActiveWorkspace")(),
   options = {},
 ) {
-  const sessionId = ++workspaceTaskPanelCounter;
+  const sessionId = nextPanelIndex("workspace-task");
   // background = pure headless task with no dockview panel at all. The
   // session is created and woken, status events fire as usual, and the
   // caller (e.g. the Crush install flow) subscribes and cleans up via

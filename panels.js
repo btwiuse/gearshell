@@ -16,10 +16,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Play, Terminal } from "lucide-react";
 import { DockviewDefaultTab } from "dockview-react";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.7";
+} from "./panels-task.js?v=20260828.8";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -63,15 +64,6 @@ export function panelsDep(name) {
 }
 
 // === Counters ===
-// Per-panel-type counters so multiple instances of the same panel
-// type can coexist (Terminal / Iframe / Workspace Task) while
-// Workbench / VM stay singletons. Module-scoped so they survive
-// React re-renders but reset on page reload.
-let terminalIdCounter = 0;
-let workbenchIdCounter = 0;
-let vmIdCounter = 0;
-let groupIdCounter = 0;
-let iframeIdCounter = 0;
 
 // === Panel icon catalog ===
 // `Object.fromEntries(PANEL_CREATION_OPTIONS.map(...))` builds the
@@ -244,7 +236,7 @@ function addTerminalPanel(
   group,
   profile = panelsDep("getDefaultTerminalProfile")(),
 ) {
-  const id = ++terminalIdCounter;
+  const id = nextPanelIndex("terminal");
   const panel = api.addPanel({
     id: `terminal-${id}`,
     component: "terminal",
@@ -276,7 +268,7 @@ function addWorkbenchPanel(
     existing.api.setActive();
     return existing;
   }
-  const id = ++workbenchIdCounter;
+  const id = nextPanelIndex("workbench");
   const panel = api.addPanel({
     id: `workbench-${id}`,
     component: "workbench",
@@ -298,7 +290,7 @@ function addWorkbenchPanel(
 
 // === addVmPanel ===
 function addVmPanel(api, group, config = panelsDep("getVmPanelConfig")()) {
-  const id = ++vmIdCounter;
+  const id = nextPanelIndex("vm");
   const panel = api.addPanel({
     id: `vm-${id}`,
     component: "vm",
@@ -316,7 +308,7 @@ function addVmPanel(api, group, config = panelsDep("getVmPanelConfig")()) {
 
 // === addGroupPanel ===
 function addGroupPanel(api, group) {
-  const id = ++groupIdCounter;
+  const id = nextPanelIndex("group");
   const panel = api.addPanel({
     id: `group-${id}`,
     component: "group",
@@ -331,7 +323,7 @@ function addGroupPanel(api, group) {
 
 // === addIframePanel ===
 function addIframePanel(api, config, group) {
-  const id = ++iframeIdCounter;
+  const id = nextPanelIndex("iframe");
   const panel = api.addPanel({
     id: `iframe-${id}`,
     component: "iframe",

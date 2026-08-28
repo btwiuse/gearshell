@@ -4,6 +4,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.2";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.11";
 import { setupConfigForm } from "./settings-config.js?v=20260826.11";
 import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.4";
@@ -12,7 +13,7 @@ import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.2";
 import { setupSystemForm } from "./settings-system.js?v=20260826.2";
 import { setupBindForm } from "./settings-binds.js?v=20260826.2";
 import { setupTaskForm } from "./settings-task.js?v=20260826.2";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.23";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.24";
 export function SettingsPanel({ containerApi }) {
   const wrapperRef = useRef(null);
 
@@ -52,14 +53,11 @@ export function SettingsPanel({ containerApi }) {
   });
 }
 
-// so it survives React re-renders but resets on page reload.
-export let settingsIdCounter = 0;
-
 // Register a new Settings panel with dockview. Called from app.js's
 // `addPanelByComponent` when the user picks Settings from the panel
 // menu, and from the restore-saved-panels path on boot.
 export function addSettingsPanel(api, group) {
-  const id = ++settingsIdCounter;
+  const id = nextPanelIndex("settings");
   const panel = api.addPanel({
     id: `settings-${id}`,
     component: "settings",

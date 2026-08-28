@@ -15,6 +15,7 @@
 
 import React from "react";
 import { features, GH, quotes, steps } from "./home-data.js?v=20260828.1";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   HomeDemo,
   HomeFeatures,
@@ -43,10 +44,6 @@ function homeDep(name) {
   }
   return value;
 }
-
-// Counter for unique Home panel ids. The counter is module-scoped so it
-// survives React re-renders but resets on page reload.
-let homeIdCounter = 0;
 
 export function LandingPanel({ containerApi }) {
   const openPanel = (component) => {
@@ -91,7 +88,7 @@ export function LandingPanel({ containerApi }) {
 // from the restore-saved-panels path on boot, and from the auto-start
 // of `home` panels configured in `cfg.startupPanels`.
 export function addLandingPanel(api, group) {
-  const id = ++homeIdCounter;
+  const id = nextPanelIndex("home");
   const panel = api.addPanel({
     id: `home-${id}`,
     component: "home",
