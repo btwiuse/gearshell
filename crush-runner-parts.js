@@ -19,7 +19,12 @@ import {
 import { crushRunnerDep } from "./crush-deps.js?v=20260826.2";
 import { detectCrushInstallation } from "./crush-install.js?v=20260826.2";
 
-function CrushInstallBody({ crushInstalled, detectSource }) {
+function CrushInstallBody({
+  crushInstalled,
+  detectSource,
+  installing,
+  handleInstall,
+}) {
   const via = (detectSource.split(" → ")[0]) || "which crush";
   const path = (detectSource.split(" → ")[1]) || "crush";
   return React.createElement(
@@ -55,6 +60,17 @@ function CrushInstallBody({ crushInstalled, detectSource }) {
           " to download and bind the Crush binary, then come back to launch it.",
         ),
     ),
+    // The action row sits inside the body column (not the icon's 36px
+    // grid track) so the chip and the Install button read as the
+    // explanation-and-action pair under the copy. Code chip first in
+    // source order so the column media query at narrow widths can stack
+    // chip-over-button without DOM order and Tab key order diverging.
+    crushInstalled !== true &&
+      React.createElement(CrushInstallActions, {
+        crushInstalled,
+        installing,
+        handleInstall,
+      }),
   );
 }
 
@@ -182,13 +198,12 @@ export function CrushInstallBanner(props) {
       recheckCtx,
     }),
     React.createElement(CrushInstallIcon, { crushInstalled }),
-    React.createElement(CrushInstallBody, { crushInstalled, detectSource }),
-    crushInstalled !== true &&
-      React.createElement(CrushInstallActions, {
-        crushInstalled,
-        installing,
-        handleInstall,
-      }),
+    React.createElement(CrushInstallBody, {
+      crushInstalled,
+      detectSource,
+      installing,
+      handleInstall,
+    }),
   );
 }
 

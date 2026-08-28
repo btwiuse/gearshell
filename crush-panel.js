@@ -18,9 +18,9 @@ import {
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "./crush-runner-parts.js?v=20260828.1";
+} from "./crush-runner-parts.js?v=20260828.2";
 
-function CrushHero() {
+function CrushHero({ children }) {
   return React.createElement(
     "header",
     { className: "crush-runner-hero" },
@@ -30,6 +30,7 @@ function CrushHero() {
       { className: "crush-runner-lede" },
       "Edit any field below, then Launch to open a Crush session in a new tab. Switch presets to compare configurations, or save the current form as a new preset.",
     ),
+    children,
   );
 }
 
@@ -120,14 +121,19 @@ export function CrushRunnerPanel({ api, params, containerApi }) {
       "div",
       { className: "crush-runner-shell" },
       // Hero mirrors the landing page so launching Crush feels like pressing
-      // the Open Terminal CTA: kicker, headline, lede, primary CTA, ghost CTA.
-      React.createElement(CrushHero),
-      // Per-session dismiss: hide the whole banner when the user
-      // clicks the close glyph. The state lives in a useState hook
-      // so a page reload restores the banner without any
-      // persistent storage side effects.
-      !ctl.installBannerDismissed &&
-        React.createElement(CrushInstallBanner, installBannerProps(ctl)),
+      // the Open Terminal CTA: kicker, headline, lede, then the install
+      // banner. The banner lives inside the hero so its bottom border
+      // closes the section below the diagnostic, as before the split.
+      React.createElement(
+        CrushHero,
+        null,
+        // Per-session dismiss: hide the whole banner when the user
+        // clicks the close glyph. The state lives in a useState hook
+        // so a page reload restores the banner without any
+        // persistent storage side effects.
+        !ctl.installBannerDismissed &&
+          React.createElement(CrushInstallBanner, installBannerProps(ctl)),
+      ),
       // Below the install banner we only show configuration controls when
       // Crush is actually installed. While the install probe is in flight
       // (null) or the binary is missing (false) we hide the rest of the

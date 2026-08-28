@@ -12,7 +12,11 @@ import { SettingsPanel } from "./settings.js?v=20260826.10";
 import { FilesPanel } from "./files.js?v=20260826.48";
 import { RuntimePanel } from "./runtime.js?v=20260826.42";
 import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.2";
-import { AddTerminalButton, FallbackPanel } from "./launcher.js?v=20260812.34";
+import {
+  addFallbackPanel,
+  AddTerminalButton,
+  FallbackPanel,
+} from "./launcher.js?v=20260812.34";
 import {
   GroupPanel,
   IframePanel,
