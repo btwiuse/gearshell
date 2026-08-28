@@ -11,7 +11,7 @@ import {
   FilesResizer,
   FilesRightPane,
   FilesSidebar,
-} from "./files-parts.js?v=20260826.40";
+} from "./files-parts.js?v=20260826.43";
 import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.38";
 import {
   filesystemPathJoin,

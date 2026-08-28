@@ -15,10 +15,10 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.7";
+} from "./app-terminal-profiles.js?v=20260826.16";
 import { DEFAULT_CMD } from "./app-constants.js?v=20260828.9";
 import { wanixSystem } from "./app-state.js?v=20260826.2";
-import { createWanixBindElement } from "./app-wanix.js?v=20260826.7";
+import { createWanixBindElement } from "./app-wanix.js?v=20260826.16";
 
 export const DEFAULT_IFRAME_ALLOW = "clipboard-read; clipboard-write";
 
@@ -37,6 +37,24 @@ export function createIframeSession(
   iframe.allowFullscreen = allowFullscreen;
 
   wrapper.appendChild(iframe);
+
+  const popout = document.createElement("button");
+  popout.type = "button";
+  popout.className = "iframe-session-popout";
+  popout.title = "Open in a new browser tab";
+  popout.setAttribute("aria-label", "Open in a new browser tab");
+  popout.addEventListener("click", () => {
+    window.open(src, "_blank", "noopener");
+  });
+  popout.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" ' +
+    'viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M15 3h6v6"/><path d="M10 14 21 3"/>' +
+    '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
+    "</svg>";
+  wrapper.appendChild(popout);
+
   terminalLayer?.appendChild(wrapper);
 
   const session = { id, wrapper, iframe, anchor: null, layout: null };

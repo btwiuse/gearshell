@@ -17,7 +17,7 @@
 // system element (so the panel can subscribe to its `ready` event)
 // and the wanix filesystem root accessor.
 
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 
 import { useFilesEditor } from "./files-editor.js?v=20260826.42";
 import { useFilesSelection } from "./files-context-menu.js?v=20260826.42";
@@ -40,9 +40,31 @@ import {
   FilesPanelRightPane,
   FilesPanelSidebar,
   FilesPanelTopbar,
-} from "./files-panel-sections.js?v=20260826.41";
-import { FilesResizer } from "./files-parts.js?v=20260826.40";
+} from "./files-panel-sections.js?v=20260826.44";
+import { FilesResizer } from "./files-parts.js?v=20260826.43";
+import {
+  filesystemPathParent,
+  normalizeFilesystemPath,
+} from "./files-path.js?v=20260826.38";
 import { filesDep } from "./files-registry.js?v=20260826.14";
+
+// === External open bridge ===
+// `GearShell.files.open(path)` (gctl open) lands here: while the panel is
+// mounted, the handler routes straight to the open flow; a request that
+// arrives before mount is queued and drained by the panel's first effect.
+let filesOpenHandler = null;
+let filesOpenRequest = null;
+
+export function requestFilesOpen(path) {
+  const target = normalizeFilesystemPath(path);
+  if (filesOpenHandler) {
+    filesOpenHandler(target);
+    return { queued: false };
+  }
+  filesOpenRequest = target;
+  return { queued: true };
+}
+
 function FilesPanel() {
   const fileInputRef = useRef(null);
   const filesPanelRef = useRef(null);
@@ -161,6 +183,26 @@ function FilesPanel() {
     setPathDraft: panel.setPathDraft,
     setHighlighted: panel.setHighlighted,
     setContextMenu: panel.setContextMenu,
+  });
+  // Drain the external-open bridge (gctl open). No dep array: re-runs each
+  // render so the closure always sees the freshest panel actions, and the
+  // cleanup unregisters the handler when the panel unmounts.
+  useEffect(() => {
+    filesOpenHandler = (target) => {
+      const dir = filesystemPathParent(target);
+      if (panel.path !== dir) panel.navigateTo(dir);
+      panel.openEditorEntry({
+        name: target.split("/").filter(Boolean).pop() || target,
+        isDirectory: false,
+      }, dir);
+    };
+    if (filesOpenRequest) {
+      filesOpenHandler(filesOpenRequest);
+      filesOpenRequest = null;
+    }
+    return () => {
+      filesOpenHandler = null;
+    };
   });
   panel.displayPath = panel.selectedPath || panel.selectedInfo?.path ||
     panel.path;

@@ -21,7 +21,7 @@
 // bytes cannot be returned (kernel 9P calls are async) — agents read and
 // write the shared VFS natively with cat/echo instead.
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.7";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.16";
 import {
   getWanixRoot,
   terminalSessions,
@@ -34,17 +34,19 @@ import {
   saveConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.7";
+} from "./app-workspace.js?v=20260826.16";
 import {
+  addIframePanel,
   addPanelByComponent,
   addWorkspaceTaskPanel,
-} from "./panels.js?v=20260812.38";
+} from "./panels.js?v=20260812.39";
 import {
   destroyWorkspaceTaskSession,
   getTaskOutput,
   taskLogKernelPath,
-} from "./app-workspace-task-sessions.js?v=20260828.13";
+} from "./app-workspace-task-sessions.js?v=20260828.22";
 import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.9";
+import { requestFilesOpen } from "./files.js?v=20260826.52";
 import {
   normalizeTask,
   validateTask,
@@ -69,6 +71,24 @@ function wrapNamespace(obj) {
     out[key] = typeof value === "function" ? safe(value) : value;
   }
   return out;
+}
+
+// Resolve { group, referencePanel, direction } into the group id a new
+// panel lands in. direction alone docks to the container edge; group /
+// referencePanel split next to that group or panel (dockview addGroup
+// options, verified against the v8.2.0 source); neither keeps the
+// caller's default (active group).
+function groupFor(dockview, options) {
+  if (!options?.direction) return options?.group;
+  const reference = options.referencePanel
+    ? { referencePanel: options.referencePanel }
+    : options.group
+    ? { referenceGroup: options.group }
+    : {};
+  return dockview.addGroup({
+    ...reference,
+    direction: options.direction,
+  }).id;
 }
 
 // --- Event pub/sub (in-memory + window CustomEvent mirror) ---
@@ -154,11 +174,12 @@ const api = {
           : panel.id.replace(/-\d+$/, ""),
         title: panel.title,
         isActive: panel.api.isActive,
+        groupId: panel.api.group?.id ?? null,
       })),
     open: (component, options) => {
       const dockview = getDockviewApi();
       if (!dockview) return { ok: false, error: "dockview not ready" };
-      addPanelByComponent(dockview, component, undefined, options);
+      addPanelByComponent(dockview, component, options?.group, options);
       return { ok: true };
     },
     close: (id) => {
@@ -168,6 +189,46 @@ const api = {
     focus: (id) => {
       getDockviewApi()?.getPanel(id)?.api.setActive();
       return { ok: true };
+    },
+  }),
+
+  browser: wrapNamespace({
+    open: (url, options = {}) => {
+      if (typeof url !== "string" || !/^https?:\/\//i.test(url.trim())) {
+        return { ok: false, error: "a http(s):// URL is required" };
+      }
+      const dockview = getDockviewApi();
+      if (!dockview) return { ok: false, error: "dockview not ready" };
+      const target = url.trim();
+      addIframePanel(dockview, {
+        title: target,
+        src: target,
+        panelType: "browser",
+        allow: "clipboard-read; clipboard-write; fullscreen",
+        allowFullscreen: true,
+      }, groupFor(dockview, options));
+      // No window.open here: agent calls carry no user gesture, so popups
+      // are always blocked. The wrapper's popout button (user click) is
+      // the way to a real browser tab.
+      return { ok: true, url: target };
+    },
+  }),
+
+  files: wrapNamespace({
+    open: (path, options = {}) => {
+      if (typeof path !== "string" || !path.trim()) {
+        return { ok: false, error: "path required" };
+      }
+      const dockview = getDockviewApi();
+      if (!dockview) return { ok: false, error: "dockview not ready" };
+      const target = path.trim();
+      const existing = dockview.panels.find(
+        (panel) => panel.params?.panelType === "files",
+      );
+      if (existing) existing.api.setActive();
+      else addPanelByComponent(dockview, "files", groupFor(dockview, options));
+      const { queued } = requestFilesOpen(target);
+      return { ok: true, path: target, queued };
     },
   }),
 
@@ -219,7 +280,7 @@ const api = {
           workspace,
           {
             silent: options.silent === true,
-            group: options.group,
+            group: groupFor(getDockviewApi(), options),
             persist: false,
           },
         );
@@ -244,7 +305,10 @@ const api = {
         getDockviewApi(),
         normalized,
         workspace,
-        { silent: options.silent === true, group: options.group },
+        {
+          silent: options.silent === true,
+          group: groupFor(getDockviewApi(), options),
+        },
       );
       // autoClose: when the task reaches the terminal status event, close
       // its own panel. Implemented by the caller (not here) so the install
@@ -365,7 +429,13 @@ const api = {
         const line = buffer.getLine(y);
         lines.push(line ? line.translateToString(true) : "");
       }
-      return { ok: true, id, rows: lines.length, lines, text: lines.join("\n") };
+      return {
+        ok: true,
+        id,
+        rows: lines.length,
+        lines,
+        text: lines.join("\n"),
+      };
     },
     interrupt: (id) => {
       const session = resolveSession(id);
@@ -459,8 +529,9 @@ function enqueuePrompt(session, textWithReturn) {
 // gctl helper below wraps the protocol for shells. ---
 
 // The gctl CLI (Route A). Requires hush >= v0.5.8 for fd>2 + `<>`
-// redirections; uses only POSIX constructs plus read/printf builtins, so it
-// also runs under any POSIX-ish shell. Args are a JSON array of parameters.
+// redirections. Uses modern bash syntax ([[ ]], parameter expansion) —
+// hush runs scripts with a #!/bin/bash shebang in bash language mode.
+// Args are a JSON array of parameters.
 export const GCTL_BIND = {
   id: "gctl",
   type: "file",
@@ -470,13 +541,37 @@ export const GCTL_BIND = {
     "#!/bin/bash",
     "# gctl: GearShell workspace control (jsfs fd bridge).",
     "# usage: gctl <method.dotted.path> [json-args-array]",
+    "# Bashisms ([[ ]], parameter expansion) are fine: hush runs scripts",
+    "# with a #!/bin/bash shebang in bash language mode.",
     "set -u",
-    'if [ "$#" -lt 1 ]; then',
+    "if [[ $# -lt 1 ]]; then",
     '  echo "usage: gctl <method.dotted.path> [json-args-array]" >&2',
     "  exit 2",
     "fi",
     'method="$1"',
     'args="${2:-[]}"',
+    "# `gctl open <file|url>`: http(s) URLs open a browser iframe panel;",
+    "# anything else is resolved against $PWD (the task ns) and opened as",
+    "# a file in the file browser with a preview.",
+    "if [[ $method == open ]]; then",
+    '  _target="$args"',
+    '  [[ -n $_target ]] || { echo "usage: gctl open <file|url>" >&2; exit 2; }',
+    "  if [[ $_target == http://* || $_target == https://* ]]; then",
+    "    method=browser.open",
+    '    args="[\\"$_target\\"]"',
+    "  else",
+    "    if [[ $_target == /* ]]; then",
+    "      :",
+    "    else",
+    '      _dir="${_target%/*}"; _name="${_target##*/}"',
+    '      [[ $_dir == "$_target" ]] && _dir=.',
+    '      _dir="$(cd "$_dir" 2>/dev/null && pwd -P)" || _dir=""',
+    '      _target="${_dir:+$_dir/}$_name"',
+    "    fi",
+    "    method=files.open",
+    '    args="[\\"$_target\\"]"',
+    "  fi",
+    "fi",
     '# dotted method -> jsfs path segments. mvdan.cc/sh joins "$*" with',
     "# IFS only when it is the sole content of a quoted string (assignment",
     '# and embedded contexts space-join), so build the path with a "$@" loop.',
@@ -498,7 +593,7 @@ export const GCTL_BIND = {
     "# newline (the jsfs funcfile result is newline-less), so gate on the",
     "# variable instead of the exit status. A failed invoke (e.g. args not",
     "# a JSON array) surfaces here as an empty read.",
-    'read -r out <&3 || [ -n "${out:-}" ] || { echo "gctl: no response (args must be a JSON array)" >&2; exit 1; }',
+    'read -r out <&3 || [[ -n ${out:-} ]] || { echo "gctl: no response (args must be a JSON array)" >&2; exit 1; }',
     "exec 3<&-",
     'printf "%s\\n" "$out"',
     "",

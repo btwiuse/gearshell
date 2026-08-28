@@ -18,6 +18,9 @@ wanix-bind { display: none; }
 .terminal-session { position: absolute; display: flex; overflow: hidden; visibility: hidden; pointer-events: none; }
 .terminal-session.visible { visibility: visible; pointer-events: auto; }
 .iframe-session { position: absolute; display: flex; overflow: hidden; visibility: hidden; pointer-events: none; }
+.iframe-session-popout { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 1px solid #30363d; border-radius: 6px; background: rgba(13,17,23,0.85); color: #c9d1d9; cursor: pointer; opacity: 0; transition: opacity 0.15s ease; }
+.iframe-session:hover .iframe-session-popout { opacity: 1; }
+.iframe-session-popout:hover { background: #21262d; color: #ffffff; }
 .iframe-session.visible { visibility: visible; pointer-events: auto; }
 .vm-session, .workbench-session { position: absolute; display: flex; overflow: hidden; visibility: hidden; pointer-events: none; background: #0d1117; }
 .vm-session.visible, .workbench-session.visible { visibility: visible; pointer-events: auto; }
@@ -47,6 +50,7 @@ wanix-term { flex: 1; min-width: 0; }
 .panel-action-menu button svg { flex: 0 0 auto; color: #8b949e; }
 .panel-action-menu-divider { height: 1px; margin: 4px 0; background: #30363d; }
 .panel-action-menu-check { margin-left: auto; color: #3fb950 !important; }
+.panel-action-menu-hint { padding: 4px 8px 2px; color: #484f58; font-size: 11px; }
 
 .panel-action-terminal-launch { margin-bottom: 4px; }
 .panel-action-menu .terminal-launch-primary { width: auto; }

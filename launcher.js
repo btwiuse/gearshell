@@ -398,18 +398,24 @@ function AddTerminalButton({ containerApi, group }) {
               key: option.component,
               type: "button",
               role: "menuitem",
-              onClick: () => {
+              onClick: (event) => {
                 setMenuOpen(false);
                 launcherDep("addPanelByComponent")(
                   containerApi,
                   option.component,
                   group,
+                  event.shiftKey ? { direction: "right" } : undefined,
                 );
               },
             },
             React.createElement(option.icon, { size: 16, "aria-hidden": true }),
             React.createElement("span", null, option.label),
           )
+        ),
+        React.createElement(
+          "div",
+          { className: "panel-action-menu-hint" },
+          React.createElement("span", null, "Shift+click: open in a new pane"),
         ),
       ),
   );

@@ -12,9 +12,9 @@ import {
   normalizeTerminalProfileOrder,
   normalizeVmNetworkMode,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.8";
+} from "./app-normalize.js?v=20260828.17";
 import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260828.9";
-import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.7";
+import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.16";
 
 export function getTerminalProfiles(config = loadConfig()) {
   const shell = {

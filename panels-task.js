@@ -4,7 +4,7 @@
 // injection table as panels.js via the exported `panelsDep`.
 
 import React, { useEffect, useRef, useState } from "react";
-import { panelsDep } from "./panels.js?v=20260812.38";
+import { panelsDep } from "./panels.js?v=20260812.39";
 
 // Per-workspace-task counter so multiple task panels can coexist.
 // Module-scoped so it survives React re-renders but resets on reload.

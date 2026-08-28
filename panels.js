@@ -19,7 +19,7 @@ import { DockviewDefaultTab } from "dockview-react";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.3";
+} from "./panels-task.js?v=20260828.4";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -369,11 +369,21 @@ const PANEL_ADDERS = {
 };
 
 function addPanelByComponent(api, component, group, options) {
+  const direction = options?.direction;
+  let targetGroup = group;
+  if (direction) {
+    targetGroup = api.addGroup({
+      ...(group && { referenceGroup: group }),
+      direction,
+    }).id;
+  }
   const adder = PANEL_ADDERS[component];
-  if (adder) return adder(api, group, options);
+  if (adder) return adder(api, targetGroup, options);
   const iframeConfig = panelsDep("IFRAME_PANEL_OPTIONS")[component];
-  if (iframeConfig) return addIframePanel(api, iframeConfig, group, options);
-  return panelsDep("addLandingPanel")(api, group, options);
+  if (iframeConfig) {
+    return addIframePanel(api, iframeConfig, targetGroup, options);
+  }
+  return panelsDep("addLandingPanel")(api, targetGroup, options);
 }
 
 // Backwards-compatible name: external readers (e.g. the test harness,

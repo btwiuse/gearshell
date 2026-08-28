@@ -2,13 +2,16 @@
 // the sidebar toolbar, the entry list, and the editor pane. Split out of
 // files.js (500-line rule); files.js owns the panel state and handlers,
 // this module renders them without touching the filesystem itself.
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Check,
   ChevronRight,
   Download,
+  Eye,
+  EyeOff,
   FileCode2,
   Pencil,
+  PictureInPicture2,
   Save,
   Trash2,
   X,
@@ -183,6 +186,12 @@ export function FilesSidebar({
 
 // === Editor pane ===
 
+function buildMarkdownHtml(source) {
+  if (typeof window.marked?.parse !== "function") return null;
+  if (typeof window.DOMPurify?.sanitize !== "function") return null;
+  return window.DOMPurify.sanitize(window.marked.parse(source || ""));
+}
+
 export function FilesEditorPane({
   selectedPath,
   preview,
@@ -206,6 +215,11 @@ export function FilesEditorPane({
   columnWidths,
   onColumnWidthChange,
 }) {
+  const isMarkdown = !!selectedPath && /\.(md|markdown)$/i.test(selectedPath);
+  const [mdPreview, setMdPreview] = useState(false);
+  useEffect(() => setMdPreview(false), [selectedPath]);
+  const markdownHtml = mdPreview ? buildMarkdownHtml(contents) : null;
+  const videoRef = useRef(null);
   return React.createElement(
     "section",
     { className: "files-editor" },
@@ -267,14 +281,36 @@ export function FilesEditorPane({
               ? React.createElement("audio", {
                 src: preview.url,
                 controls: true,
+                autoPlay: true,
                 preload: "metadata",
               })
               : preview.kind === "video"
-              ? React.createElement("video", {
-                src: preview.url,
-                controls: true,
-                preload: "metadata",
-              })
+              ? React.createElement(
+                React.Fragment,
+                null,
+                React.createElement("video", {
+                  ref: videoRef,
+                  src: preview.url,
+                  controls: true,
+                  preload: "metadata",
+                }),
+                document.pictureInPictureEnabled &&
+                  React.createElement(
+                    "button",
+                    {
+                      type: "button",
+                      className: "files-pip-button",
+                      title: "Picture-in-picture",
+                      "aria-label": "Picture-in-picture",
+                      onClick: () =>
+                        videoRef.current?.requestPictureInPicture?.(),
+                    },
+                    React.createElement(PictureInPicture2, {
+                      size: 15,
+                      "aria-hidden": true,
+                    }),
+                  ),
+              )
               : preview.kind === "pdf"
               ? React.createElement("iframe", {
                 src: preview.url,
@@ -296,6 +332,21 @@ export function FilesEditorPane({
             React.createElement(
               "div",
               { className: "files-toolbar-actions" },
+              !binary && isMarkdown &&
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    title: mdPreview ? "Show source" : "Render preview",
+                    "aria-label": mdPreview ? "Show source" : "Render preview",
+                    "aria-pressed": mdPreview,
+                    onClick: () => setMdPreview((value) => !value),
+                  },
+                  React.createElement(
+                    mdPreview ? EyeOff : Eye,
+                    { size: 15, "aria-hidden": true },
+                  ),
+                ),
               React.createElement("button", {
                 type: "button",
                 title: "Save file",
@@ -348,6 +399,14 @@ export function FilesEditorPane({
                 { className: "files-binary-hint" },
                 "Binary file — preview is not available. Use Download to open it.",
               ),
+            )
+            : mdPreview && markdownHtml !== null
+            ? React.createElement(
+              "div",
+              {
+                className: "files-md-preview",
+                dangerouslySetInnerHTML: { __html: markdownHtml },
+              },
             )
             : React.createElement("textarea", {
               value: contents,
