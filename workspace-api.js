@@ -38,18 +38,19 @@ import {
   seedEventBuffer,
   wirePanelEvents,
 } from "./workspace-events.js?v=20260828.4";
-import { openApi } from "./workspace-open-api.js?v=20260828.16";
-import { configApi } from "./workspace-config-api.js?v=20260828.16";
+import { openApi } from "./workspace-open-api.js?v=20260828.18";
+import { configApi } from "./workspace-config-api.js?v=20260828.18";
 import {
   runHeadlessTask,
   tasksApi,
-} from "./workspace-tasks-api.js?v=20260828.16";
+} from "./workspace-tasks-api.js?v=20260828.18";
 import { agentsApi } from "./workspace-agents-api.js?v=20260828.1";
+import { musicApi } from "./music-engine.js?v=20260829.3";
 import {
   gcWorkspaceTasks,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.16";
-import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.16";
+} from "./workspace-task-registry.js?v=20260828.18";
+import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.18";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
@@ -83,6 +84,7 @@ const api = {
   files: wrapNamespace(openApi.files),
   tasks: wrapNamespace(tasksApi),
   agents: wrapNamespace(agentsApi),
+  music: wrapNamespace(musicApi),
 
   events: {
     on: safe(on),

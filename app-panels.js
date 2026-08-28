@@ -4,24 +4,24 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.31";
+} from "./app-workspace.js?v=20260826.33";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.31";
+} from "./app-terminal-profiles.js?v=20260826.33";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.31";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.26";
+} from "./app-panels-store.js?v=20260826.33";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.28";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.41";
+} from "./panels.js?v=20260812.42";
 import {
   Activity,
   Bot,
@@ -111,6 +111,7 @@ export const PANEL_CREATION_OPTIONS = [
   { component: "settings", label: "Settings", icon: Settings },
   { component: "files", label: "Files", icon: FolderOpen },
   { component: "runtime", label: "Runtime", icon: Activity },
+  { component: "music", label: "Music", icon: Music2 },
   { component: "group", label: "Group", icon: UsersRound },
   { component: "browser", label: "Browser", icon: Globe2 },
   { component: "bonsai", label: "Bonsai 27B", icon: TreePine },

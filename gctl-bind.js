@@ -4,7 +4,7 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.31";
+} from "./app-workspace.js?v=20260826.33";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
 // jsfs roots at globalThis; window.GearShell = api makes the methods
@@ -45,6 +45,7 @@ export const GCTL_BIND = {
     "  browser.open  files.open",
     "  tasks.list  tasks.create  tasks.cancel  tasks.output",
     "  agents.list  agents.prompt  agents.read  agents.interrupt",
+    "  music.play  music.pause  music.resume  music.stop  music.nowPlaying",
     "  events.on  events.off  events.emit  events.drain  events.pending",
     "  open <file|url>",
     "",

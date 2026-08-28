@@ -9,16 +9,17 @@ import { LicenseManager } from "dockview-enterprise";
 import {
   addCrushRunnerPanel,
   initCrushRunner,
-} from "./crush-runner.js?v=20260826.26";
+} from "./crush-runner.js?v=20260826.28";
 import { addLandingPanel, initHome } from "./home.js?v=20260812.22";
 import {
   addSettingsPanel,
   initSettings,
   TerminalPresetIconPicker,
-} from "./settings.js?v=20260826.16";
+} from "./settings.js?v=20260826.18";
 
 import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.15";
 import { addRuntimePanel, initRuntime } from "./runtime.js?v=20260826.43";
+import { addMusicPanel, initMusic } from "./music.js?v=20260829.4";
 import { addDeckPanel, initDeck } from "./deck.js?v=20260812.29";
 import { addFallbackPanel, initLauncher } from "./launcher.js?v=20260812.36";
 import {
@@ -26,18 +27,18 @@ import {
   addTerminalPanel as addTerminalPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
   initPanels,
-} from "./panels.js?v=20260812.41";
+} from "./panels.js?v=20260812.42";
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
   workspaceApi,
-} from "./workspace-api.js?v=20260828.47";
+} from "./workspace-api.js?v=20260828.49";
 import {
   clearAuditEntries,
   listAuditEntries,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.6";
-import { App } from "./app-shell.js?v=20260828.32";
+} from "./workspace-audit.js?v=20260829.8";
+import { App } from "./app-shell.js?v=20260828.34";
 
 import {
   getWanixRoot,
@@ -48,7 +49,7 @@ import {
   terminalSessions,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { createWanixSystem } from "./app-wanix.js?v=20260826.31";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.33";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -82,14 +83,14 @@ import {
   updateWorkspaceBind,
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
-} from "./app-workspace.js?v=20260826.31";
+} from "./app-workspace.js?v=20260826.33";
 import {
   listWorkspacePresets,
   loadCustomWorkspacePreset,
   removeCustomWorkspacePreset,
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
-} from "./app-workspace-presets.js?v=20260826.31";
+} from "./app-workspace-presets.js?v=20260826.33";
 import {
   blankCrushRunnerPresetDraft,
   clone,
@@ -99,7 +100,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.32";
+} from "./app-normalize.js?v=20260828.34";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -108,35 +109,35 @@ import {
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.31";
+} from "./app-terminal-profiles.js?v=20260826.33";
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
   createTerminalSession,
   destroyTerminalSession,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.31";
+} from "./app-terminal-sessions.js?v=20260826.33";
 import {
   attachIframeSession,
   attachVmSession,
   attachWorkbenchSession,
   waitForWanixSystem,
-} from "./app-sessions.js?v=20260828.35";
+} from "./app-sessions.js?v=20260828.37";
 import {
   attachWorkspaceTaskSession,
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.37";
+} from "./app-workspace-task-sessions.js?v=20260828.39";
 import {
   getDockviewApi,
   rememberOpenPanel,
-} from "./app-panels-store.js?v=20260826.31";
+} from "./app-panels-store.js?v=20260826.33";
 import {
   blankTerminalPresetDraft,
   IFRAME_PANEL_OPTIONS,
   PANEL_CREATION_OPTIONS,
-} from "./app-panels.js?v=20260826.32";
+} from "./app-panels.js?v=20260826.34";
 import {
   dismissHomeDebugErrors,
   DOCKVIEW_LICENSE_KEY,
@@ -243,6 +244,7 @@ initPanels({
   addSettingsPanel,
   addFilesPanel,
   addRuntimePanel,
+  addMusicPanel,
   addFallbackPanel,
   addCrushRunnerPanel,
 });
@@ -272,6 +274,13 @@ initRuntime({
   systemReady,
   terminalSessions,
   workspaceTaskSessions,
+  rememberOpenPanel,
+});
+
+// Initialise the Music submodule with the helpers it needs at
+// runtime. The panel is a thin UI over the music-engine singleton
+// (shared with gctl music.*); it only needs panel registration.
+initMusic({
   rememberOpenPanel,
 });
 

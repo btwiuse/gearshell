@@ -17,7 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import { crushRunnerDep } from "./crush-deps.js?v=20260828.3";
-import { detectCrushInstallation } from "./crush-install.js?v=20260828.35";
+import { detectCrushInstallation } from "./crush-install.js?v=20260828.37";
 
 function CrushInstallBody({
   crushInstalled,

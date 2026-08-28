@@ -2,7 +2,7 @@
 // wanix-namespace system root (500-line rule split).
 
 import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.10";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.31";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.33";
 
 export function createWanixBindElement(bind) {
   const element = document.createElement("wanix-bind");
