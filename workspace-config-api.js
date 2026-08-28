@@ -7,7 +7,7 @@ import {
   saveConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.20";
+} from "./app-workspace.js?v=20260826.21";
 import { pushEvent } from "./workspace-events.js?v=20260828.3";
 
 export const configApi = {

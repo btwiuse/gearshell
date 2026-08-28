@@ -4,7 +4,7 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.20";
+} from "./app-workspace.js?v=20260826.21";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
 // jsfs roots at globalThis; window.GearShell = api makes the methods
