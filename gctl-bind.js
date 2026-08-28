@@ -4,7 +4,8 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.35";
+} from "./app-workspace.js?v=20260826.46";
+import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.19";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
 // jsfs roots at globalThis; window.GearShell = api makes the methods
@@ -19,7 +20,7 @@ export const GCTL_BIND = {
   id: "gctl",
   type: "file",
   dst: "bin/gctl",
-  mode: "0755",
+  perm: "0755",
   content: [
     "#!/bin/bash",
     "# gctl: GearShell workspace control (jsfs fd bridge).",
@@ -148,13 +149,67 @@ export const GCTL_BIND = {
 };
 
 // --- Boot hooks ---
-// Ensure the active workspace carries the /js projection bind (needed for
-// the gctl protocol; normally part of DEFAULT_SYSTEM_CONFIG) and the gctl
-// CLI. Must run BEFORE the wanix namespace is built (app.js calls this
-// right after loadActiveWorkspace()), because binds are baked into the
-// namespace at construction. Idempotent by bind dst; the gctl CLI content
-// is REFRESHED when the protocol changes (e.g. the jsfs `:json` suffix),
-// so saved workspaces pick up fixes without manual edits.
+// Ensure the active workspace carries (1) the /js projection bind (needed
+// for the gctl protocol; normally part of DEFAULT_SYSTEM_CONFIG) in the
+// system namespace, and (2) the per-task shell toolset (writable /bin +
+// bash + w9y + the gctl CLI) in workspace.binds. The shell tools must NOT
+// live in the system namespace: the VM guest mounts the root at / via 9p,
+// and host-side wasm tools would leak into the x86 guest where they cannot
+// run. workspace.binds are bound into each task's own namespace (the
+// crushrc per-task pattern), so terminal/workspace tasks keep bash/w9y/gctl
+// while the guest root stays clean. Must run BEFORE the wanix namespace is
+// built (app.js calls this right after loadActiveWorkspace()), because
+// binds are baked into the namespace at construction. Idempotent by bind
+// dst; the gctl CLI content is REFRESHED when the protocol changes (e.g.
+// the jsfs `:json` suffix), so saved workspaces pick up fixes without
+// manual edits. Also migrates legacy workspaces that still carry the shell
+// binds at system level.
+// Ensure the per-task shell toolset lives in workspace.binds (not the
+// system namespace), refreshing perm/src/content so binds saved with the
+// legacy `mode` field or an older profile location/URL get upgraded.
+// Returns true when anything changed.
+function ensureTaskShellBinds(workspace) {
+  workspace.binds = workspace.binds || [];
+  let changed = false;
+  // Drop the old per-task /profile location; the rc file now rides the
+  // per-task /preset ramfs at preset/profile.
+  const withoutOldProfile = workspace.binds.filter((item) =>
+    item.dst !== "profile"
+  );
+  if (withoutOldProfile.length !== workspace.binds.length) {
+    workspace.binds = withoutOldProfile;
+    changed = true;
+  }
+  for (const bind of TASK_SHELL_BINDS) {
+    const index = workspace.binds.findIndex((item) => item.dst === bind.dst);
+    if (index === -1) {
+      workspace.binds.push({ ...bind });
+      changed = true;
+    } else if (
+      workspace.binds[index].perm !== bind.perm ||
+      workspace.binds[index].src !== bind.src ||
+      workspace.binds[index].content !== bind.content
+    ) {
+      workspace.binds[index] = { ...bind };
+      changed = true;
+    }
+  }
+  const gctlIndex = workspace.binds.findIndex((item) =>
+    item.dst === "bin/gctl"
+  );
+  if (gctlIndex === -1) {
+    workspace.binds.push({ ...GCTL_BIND });
+    changed = true;
+  } else if (
+    workspace.binds[gctlIndex].content !== GCTL_BIND.content ||
+    workspace.binds[gctlIndex].perm !== GCTL_BIND.perm
+  ) {
+    workspace.binds[gctlIndex] = { ...GCTL_BIND };
+    changed = true;
+  }
+  return changed;
+}
+
 export function ensureGearShellBinds(workspace) {
   if (!workspace?.system) return;
   let changed = false;
@@ -167,16 +222,22 @@ export function ensureGearShellBinds(workspace) {
     });
     changed = true;
   }
-  const gctlIndex = workspace.system.binds.findIndex(
-    (item) => item.dst === "bin/gctl",
+  // Migrate away from the old root-level shell binds (incl. /profile).
+  const rootLevelDsts = new Set([
+    "bin",
+    "bin/bash",
+    "bin/w9y",
+    "bin/gctl",
+    "profile",
+  ]);
+  const nextSystem = workspace.system.binds.filter(
+    (item) => !rootLevelDsts.has(item.dst),
   );
-  if (gctlIndex === -1) {
-    workspace.system.binds.push({ ...GCTL_BIND });
-    changed = true;
-  } else if (workspace.system.binds[gctlIndex].content !== GCTL_BIND.content) {
-    workspace.system.binds[gctlIndex] = { ...GCTL_BIND };
+  if (nextSystem.length !== workspace.system.binds.length) {
+    workspace.system.binds = nextSystem;
     changed = true;
   }
+  if (ensureTaskShellBinds(workspace)) changed = true;
   if (!changed) return;
   try {
     saveWorkspace(workspace);

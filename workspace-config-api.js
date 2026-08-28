@@ -7,14 +7,14 @@ import {
   saveConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.35";
+} from "./app-workspace.js?v=20260826.46";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
   listAuditEntries,
   pushAuditEntry,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.10";
+} from "./workspace-audit.js?v=20260829.21";
 
 export const configApi = {
   getShell: () => loadConfig(),

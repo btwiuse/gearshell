@@ -4,17 +4,17 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.35";
+} from "./app-workspace.js?v=20260826.46";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.35";
+} from "./app-terminal-profiles.js?v=20260826.46";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.35";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.30";
+} from "./app-panels-store.js?v=20260826.46";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.41";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,

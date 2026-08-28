@@ -29,16 +29,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.11";
+} from "./app-constants.js?v=20260828.19";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.30";
+} from "./crush-runner.js?v=20260826.41";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.35";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.9";
+} from "./app-workspace.js?v=20260826.46";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.17";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -50,7 +50,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.3";
+} from "./app-normalize-system.js?v=20260828.11";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -62,7 +62,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.3";
+} from "./app-normalize-system.js?v=20260828.11";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -246,12 +246,14 @@ export function normalizeShellConfig(config) {
       ? config.crushRunnerActiveId
       : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   };
-  // The shell used to be mounted as `hush`; remap any persisted hush
-  // command (both the current and the older legacy default) to the bash
-  // mount so saved configs keep working unchanged.
+  // The shell used to be mounted as `hush`, and the rc file used to live
+  // at /profile; remap persisted commands (legacy hush + older /profile)
+  // to the current bash default (rc file at /preset/profile) so saved
+  // configs keep working unchanged.
   if (
     normalized.cmd === LEGACY_DEFAULT_CMD ||
-    normalized.cmd === "hush -rcfile /profile"
+    normalized.cmd === "hush -rcfile /profile" ||
+    normalized.cmd === "bash -rcfile /profile"
   ) normalized.cmd = DEFAULT_CMD;
   return normalized;
 }
@@ -404,8 +406,11 @@ export function migrateLegacyHushTerminalProfile(profile) {
     ? "Bash"
     : profile.name;
   const program = profile.program === "hush" ? "bash" : profile.program;
-  const args = profile.args === "-rcfile /tmp/profile"
-    ? "-rcfile /profile"
+  // The rc file moved to the per-task /preset mount (preset/profile);
+  // rewrite both the legacy hush path and the older /profile location.
+  const args = profile.args === "-rcfile /tmp/profile" ||
+      profile.args === "-rcfile /profile"
+    ? "-rcfile /preset/profile"
     : profile.args;
   if (
     id === profile.id && name === profile.name &&

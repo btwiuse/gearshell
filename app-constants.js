@@ -81,7 +81,7 @@ export const BASH_ENV = {
   GOGC: "70",
 };
 export const LEGACY_DEFAULT_CMD = "hush -rcfile /tmp/profile";
-export const DEFAULT_CMD = "bash -rcfile /profile";
+export const DEFAULT_CMD = "bash -rcfile /preset/profile";
 export const DEFAULT_WORKBENCH_ASSETS_URL = "/wanix-workbench";
 export const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL =
   "https://wanix.dev/workbench";
@@ -276,42 +276,19 @@ export function isLegacyHushBinaryUrl(url) {
       url.includes("w9y.up.railway.app"));
 }
 
-export const DEFAULT_SYSTEM_CONFIG = {
-  binds: [
-    { id: "root", type: "ns", dst: ".", src: "#ramfs/new" },
-    {
-      id: "5de5acb7-783d-488c-8d9d-5fbf383e0ee6",
-      type: "ns",
-      dst: "bin",
-      src: "#ramfs/new",
-      mode: "0755",
-    },
-    {
-      id: "hush",
-      type: "fetch",
-      dst: "bin/bash",
-      src: DEFAULT_HUSH_BINARY_URL,
-      mode: "0755",
-    },
-    {
-      id: "w9y",
-      type: "fetch",
-      dst: "bin/w9y",
-      src: "https://w9y.io/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.6",
-      mode: "0755",
-    },
-    { id: "task", type: "ns", dst: "task", src: "#task" },
-    { id: "term", type: "ns", dst: "term", src: "#term" },
-    { id: "web", type: "ns", dst: "web", src: "#web" },
-    { id: "js", type: "ns", dst: "js", src: "#js" },
-    { id: "opfs", type: "ns", dst: "opfs", src: "#web/opfs", mode: "0755" },
-    { id: "tmp", type: "ns", dst: "tmp", src: "#ramfs/new" },
-    {
-      id: "boot-profile",
-      type: "file",
-      dst: "profile",
-      mode: "0666",
-      content: `function w9y_detect() {
+// The shell toolset is bound PER TASK (workspace.binds), not into the
+// system root: every task that needs bash/w9y declares its own private
+// /bin (fresh ramfs) plus the wasm binaries and the shell rc file, the
+// way crushrc is mounted per task. Keeping them out of
+// DEFAULT_SYSTEM_CONFIG means the root namespace stays clean, so the VM
+// guest (which mounts the root at / via 9p) never sees host-side wasm
+// tools it cannot run. ensureGearShellBinds migrates existing workspaces
+// into this layout. The profile ships as a file bind at preset/profile,
+// riding on a per-task fresh ramfs at /preset (the crushrc mount point,
+// CRUSH_RUN_DIR): a type "file" bind resolves through whatever fs owns
+// the parent path, so it is only safe when that parent is a task-private
+// fresh fs — preset is, the shared root ramfs is not.
+export const SHELL_PROFILE_CONTENT = `function w9y_detect() {
   path="$LOCATION"
   OLDIFS=$IFS
   IFS='/'
@@ -322,7 +299,7 @@ export const DEFAULT_SYSTEM_CONFIG = {
 
   for x; do
     [[ -d $HOME/.w9y/$x ]] && continue
-    /w9y mod apply -v "$x" && mkdir -p $HOME/.w9y/$x
+    w9y mod apply -v "$x" && mkdir -p $HOME/.w9y/$x
     [[ $? -eq 0 ]] || continue
     if [[ $x = picoclaw ]]; then
       echo "[INFO] picoclaw successfully installed, type 'picoclaw' to get started"
@@ -338,8 +315,53 @@ function ensure_home() {
 ensure_home
 cd $HOME
 w9y_detect
-`,
-    },
+`;
+export const TASK_SHELL_BINDS = [
+  {
+    id: "task-bin",
+    type: "ns",
+    dst: "bin",
+    src: "#ramfs/new",
+    perm: "0755",
+  },
+  {
+    id: "task-bash",
+    type: "fetch",
+    dst: "bin/bash",
+    src: DEFAULT_HUSH_BINARY_URL,
+    perm: "0755",
+  },
+  {
+    id: "task-w9y",
+    type: "fetch",
+    dst: "bin/w9y",
+    src: "https://w9y.io/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.6",
+    perm: "0755",
+  },
+  {
+    id: "task-preset",
+    type: "ns",
+    dst: "preset",
+    src: "#ramfs/new",
+  },
+  {
+    id: "task-profile",
+    type: "file",
+    dst: "preset/profile",
+    perm: "0666",
+    content: SHELL_PROFILE_CONTENT,
+  },
+];
+
+export const DEFAULT_SYSTEM_CONFIG = {
+  binds: [
+    { id: "root", type: "ns", dst: ".", src: "#ramfs/new" },
+    { id: "task", type: "ns", dst: "task", src: "#task" },
+    { id: "term", type: "ns", dst: "term", src: "#term" },
+    { id: "web", type: "ns", dst: "web", src: "#web" },
+    { id: "js", type: "ns", dst: "js", src: "#js" },
+    { id: "opfs", type: "ns", dst: "opfs", src: "#web/opfs", mode: "0755" },
+    { id: "tmp", type: "ns", dst: "tmp", src: "#ramfs/new" },
   ],
 };
 

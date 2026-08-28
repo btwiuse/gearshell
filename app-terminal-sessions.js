@@ -12,8 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.35";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.11";
+} from "./app-terminal-profiles.js?v=20260826.46";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.19";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.46";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -96,6 +97,20 @@ function createTaskElement(id, profile) {
   winchBind.setAttribute("dst", "winch");
   winchBind.setAttribute("src", "#task/self/term/winch");
   task.appendChild(winchBind);
+
+  // The per-task shell toolset (writable /bin + bash + w9y + gctl, see
+  // ensureGearShellBinds): each terminal task declares its own private
+  // namespace view, the same way workspace-task panels and crushrc do.
+  for (const bind of loadActiveWorkspace().binds || []) {
+    const element = document.createElement("wanix-bind");
+    element.setAttribute("dst", bind.dst);
+    if (bind.type) element.setAttribute("type", bind.type);
+    if (bind.src) element.setAttribute("src", bind.src);
+    if (bind.perm) element.setAttribute("perm", bind.perm);
+    if (bind.union) element.setAttribute("union", bind.union);
+    if (typeof bind.content === "string") element.textContent = bind.content;
+    task.appendChild(element);
+  }
 
   // Per-task extra binds (any mix of ns/file/fetch/archive). Profiles use
   // this to attach a private file into the task namespace without having
