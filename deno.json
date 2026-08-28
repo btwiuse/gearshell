@@ -1,5 +1,17 @@
 {
   "fmt": {
-    "exclude": ["wanix-dist", "memory"]
+    "exclude": ["wanix-dist", "memory", "node_modules"]
+  },
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "dockview": "https://esm.sh/dockview@8.2.0",
+    "dockview-react": "https://esm.sh/dockview-react@8.2.0?external=dockview&deps=react@18.2.0,react-dom@18.2.0",
+    "dockview-enterprise": "https://esm.sh/dockview-enterprise@8.2.0?external=dockview",
+    "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
+  },
+  "lint": {
+    "exclude": ["wanix-dist", "memory", "node_modules"]
   }
 }

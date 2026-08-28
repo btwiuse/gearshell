@@ -1,0 +1,24 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@types/react-dom@~18.2.25/client.d.ts": "https://esm.sh/@types/react-dom@18.2.25/client.d.ts",
+    "https://esm.sh/@types/react@~18.2.79/index.d.ts": "https://esm.sh/@types/react@18.2.79/index.d.ts"
+  },
+  "remote": {
+    "https://esm.sh/dockview-enterprise@8.2.0?external=dockview": "9214895f4d5502fafeeae0d5663bbcf78c8a0da81d992556669eb14dc45fbe20",
+    "https://esm.sh/dockview-react@8.2.0?external=dockview&deps=react@18.2.0,react-dom@18.2.0": "ecf5209c57cdd2847bf189c5f37226c1b2136d9a01e7a05e7facbe98aeb0c2f7",
+    "https://esm.sh/dockview@8.2.0": "92995d088baddb67baee2ca8a6659341a137f3c976c4cb92e68d8a8863ecffb8",
+    "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0": "701c1ba6645c4f456bb53e55c7d297965704284abf018edd2bdfa9ee159b4045",
+    "https://esm.sh/react-dom@18.2.0/client": "f43f7bb47905958ce487302ca818ba5a845a6029daa7ea22ef097a575b72045b",
+    "https://esm.sh/react@18.2.0": "fed8aeb7d240bb42a2167c9c7c6e842e128c7630cbcb08c4d61c9c1926f89c75"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@eslint/js@^9.39.5",
+        "npm:eslint@^9.39.4",
+        "npm:globals@^15.15.0"
+      ]
+    }
+  }
+}

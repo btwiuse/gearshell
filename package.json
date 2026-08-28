@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "scripts": {
+    "lint": "node --max-old-space-size=8192 scripts/lint.mjs",
+    "lint:fix": "node --max-old-space-size=8192 scripts/lint.mjs --fix",
+    "check": "deno check *.js",
+    "format": "deno fmt",
+    "format:check": "deno fmt --check",
+    "verify": "node scripts/verify-static.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.4",
+    "globals": "^15.15.0"
+  }
+}
