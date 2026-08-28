@@ -2,21 +2,9 @@
 // the sidebar toolbar, the entry list, and the editor pane. Split out of
 // files.js (500-line rule); files.js owns the panel state and handlers,
 // this module renders them without touching the filesystem itself.
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Check,
-  ChevronRight,
-  Download,
-  Eye,
-  EyeOff,
-  FileCode2,
-  Pencil,
-  PictureInPicture2,
-  Save,
-  Trash2,
-  X,
-} from "lucide-react";
-import { FilesInfoPane } from "./files-info.js?v=20260826.39";
+import React from "react";
+import { Check, ChevronRight, X } from "lucide-react";
+import { FilesEditorPane } from "./files-editor-pane.js?v=20260828.2";
 import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.42";
 import { VolumesSidebar } from "./files-mounts.js?v=20260826.42";
 
@@ -96,6 +84,38 @@ export function FilesRightPane({
 
 // === Sidebar (favorites + volumes + creation form) ===
 
+function ExplorerSection({ collapsed, onToggle, children }) {
+  return React.createElement(
+    "div",
+    {
+      className: collapsed
+        ? "files-section"
+        : "files-section files-section-expanded",
+    },
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "files-sidebar-toggle files-section-header",
+        onClick: onToggle,
+        "aria-expanded": !collapsed,
+        title: collapsed ? "Expand Explorer" : "Collapse Explorer",
+      },
+      React.createElement(ChevronRight, {
+        size: 13,
+        className: collapsed ? "" : "open",
+        "aria-hidden": true,
+      }),
+      React.createElement(
+        "span",
+        { className: "files-volumes-title" },
+        "Explorer",
+      ),
+    ),
+    !collapsed && children,
+  );
+}
+
 export function FilesSidebar({
   favorites,
   currentPath,
@@ -119,37 +139,11 @@ export function FilesSidebar({
   return React.createElement(
     "section",
     { className: "files-sidebar" },
-    React.createElement(
-      "div",
-      {
-        className: collapsedSections.explorer
-          ? "files-section"
-          : "files-section files-section-expanded",
-      },
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "files-sidebar-toggle files-section-header",
-          onClick: () => onToggleSection("explorer"),
-          "aria-expanded": !collapsedSections.explorer,
-          title: collapsedSections.explorer
-            ? "Expand Explorer"
-            : "Collapse Explorer",
-        },
-        React.createElement(ChevronRight, {
-          size: 13,
-          className: collapsedSections.explorer ? "" : "open",
-          "aria-hidden": true,
-        }),
-        React.createElement(
-          "span",
-          { className: "files-volumes-title" },
-          "Explorer",
-        ),
-      ),
-      !collapsedSections.explorer && children,
-    ),
+    ExplorerSection({
+      collapsed: collapsedSections.explorer,
+      onToggle: () => onToggleSection("explorer"),
+      children,
+    }),
     React.createElement(FavoritesSidebar, {
       favorites,
       currentPath,
@@ -181,264 +175,6 @@ export function FilesSidebar({
         onCreate,
         onCancel,
       }),
-  );
-}
-
-// === Editor pane ===
-
-function buildMarkdownHtml(source) {
-  if (typeof window.marked?.parse !== "function") return null;
-  if (typeof window.DOMPurify?.sanitize !== "function") return null;
-  return window.DOMPurify.sanitize(window.marked.parse(source || ""));
-}
-
-export function FilesEditorPane({
-  selectedPath,
-  preview,
-  contents,
-  dirty,
-  binary,
-  info,
-  status,
-  viewMode,
-  onViewModeChange,
-  sort,
-  onSortChange,
-  onDownload,
-  onSave,
-  onRename,
-  onDelete,
-  onChange,
-  finePointer,
-  onSelectChild,
-  onOpenChild,
-  columnWidths,
-  onColumnWidthChange,
-}) {
-  const isMarkdown = !!selectedPath && /\.(md|markdown)$/i.test(selectedPath);
-  const [mdPreview, setMdPreview] = useState(false);
-  useEffect(() => setMdPreview(false), [selectedPath]);
-  const markdownHtml = mdPreview ? buildMarkdownHtml(contents) : null;
-  const videoRef = useRef(null);
-  return React.createElement(
-    "section",
-    { className: "files-editor" },
-    selectedPath
-      ? preview
-        ? React.createElement(
-          React.Fragment,
-          null,
-          React.createElement(
-            "div",
-            { className: "files-editor-toolbar" },
-            React.createElement(
-              "div",
-              { className: "files-toolbar-actions" },
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  title: "Download file",
-                  "aria-label": "Download file",
-                  onClick: onDownload,
-                },
-                React.createElement(Download, {
-                  size: 15,
-                  "aria-hidden": true,
-                }),
-              ),
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  title: "Rename file",
-                  "aria-label": "Rename file",
-                  onClick: onRename,
-                },
-                React.createElement(Pencil, { size: 15, "aria-hidden": true }),
-              ),
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  title: "Delete file",
-                  "aria-label": "Delete file",
-                  onClick: onDelete,
-                },
-                React.createElement(Trash2, { size: 15, "aria-hidden": true }),
-              ),
-            ),
-          ),
-          React.createElement(
-            "div",
-            { className: `files-media-preview ${preview.kind}` },
-            preview.kind === "image"
-              ? React.createElement("img", {
-                src: preview.url,
-                alt: selectedPath.split("/").pop() || "Image preview",
-              })
-              : preview.kind === "audio"
-              ? React.createElement("audio", {
-                src: preview.url,
-                controls: true,
-                autoPlay: true,
-                preload: "metadata",
-              })
-              : preview.kind === "video"
-              ? React.createElement(
-                React.Fragment,
-                null,
-                React.createElement("video", {
-                  ref: videoRef,
-                  src: preview.url,
-                  controls: true,
-                  preload: "metadata",
-                }),
-                document.pictureInPictureEnabled &&
-                  React.createElement(
-                    "button",
-                    {
-                      type: "button",
-                      className: "files-pip-button",
-                      title: "Picture-in-picture",
-                      "aria-label": "Picture-in-picture",
-                      onClick: () =>
-                        videoRef.current?.requestPictureInPicture?.(),
-                    },
-                    React.createElement(PictureInPicture2, {
-                      size: 15,
-                      "aria-hidden": true,
-                    }),
-                  ),
-              )
-              : preview.kind === "pdf"
-              ? React.createElement("iframe", {
-                src: preview.url,
-                title: "PDF preview",
-              })
-              : React.createElement(
-                "p",
-                { className: "files-media-unsupported" },
-                "Preview is not available for this file type. Use Download to open it.",
-              ),
-          ),
-        )
-        : React.createElement(
-          React.Fragment,
-          null,
-          React.createElement(
-            "div",
-            { className: "files-editor-toolbar" },
-            React.createElement(
-              "div",
-              { className: "files-toolbar-actions" },
-              !binary && isMarkdown &&
-                React.createElement(
-                  "button",
-                  {
-                    type: "button",
-                    title: mdPreview ? "Show source" : "Render preview",
-                    "aria-label": mdPreview ? "Show source" : "Render preview",
-                    "aria-pressed": mdPreview,
-                    onClick: () => setMdPreview((value) => !value),
-                  },
-                  React.createElement(
-                    mdPreview ? EyeOff : Eye,
-                    { size: 15, "aria-hidden": true },
-                  ),
-                ),
-              React.createElement("button", {
-                type: "button",
-                title: "Save file",
-                "aria-label": "Save file",
-                disabled: !dirty,
-                onClick: onSave,
-              }, React.createElement(Save, { size: 15, "aria-hidden": true })),
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  title: "Download file",
-                  "aria-label": "Download file",
-                  onClick: onDownload,
-                },
-                React.createElement(Download, {
-                  size: 15,
-                  "aria-hidden": true,
-                }),
-              ),
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  title: "Rename file",
-                  "aria-label": "Rename file",
-                  onClick: onRename,
-                },
-                React.createElement(Pencil, { size: 15, "aria-hidden": true }),
-              ),
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  title: "Delete file",
-                  "aria-label": "Delete file",
-                  onClick: onDelete,
-                },
-                React.createElement(Trash2, { size: 15, "aria-hidden": true }),
-              ),
-            ),
-          ),
-          binary
-            ? React.createElement(
-              "div",
-              { className: "files-editor-empty" },
-              React.createElement(FileCode2, { size: 28, "aria-hidden": true }),
-              React.createElement(
-                "p",
-                { className: "files-binary-hint" },
-                "Binary file — preview is not available. Use Download to open it.",
-              ),
-            )
-            : mdPreview && markdownHtml !== null
-            ? React.createElement(
-              "div",
-              {
-                className: "files-md-preview",
-                dangerouslySetInnerHTML: { __html: markdownHtml },
-              },
-            )
-            : React.createElement("textarea", {
-              value: contents,
-              spellCheck: false,
-              "aria-label": `Contents of ${selectedPath}`,
-              onChange: (event) => onChange(event.target.value),
-            }),
-        )
-      : info
-      ? React.createElement(FilesInfoPane, {
-        info,
-        onOpenChild,
-        onSelectChild,
-        finePointer,
-        viewMode,
-        onViewModeChange,
-        sort,
-        onSortChange,
-        columnWidths,
-        onColumnWidthChange,
-      })
-      : React.createElement(
-        "div",
-        { className: "files-editor-empty" },
-        React.createElement(FileCode2, { size: 28, "aria-hidden": true }),
-      ),
-    status &&
-      React.createElement(
-        "div",
-        { className: "files-status", role: "status" },
-        status,
-      ),
   );
 }
 

@@ -8,9 +8,21 @@ import path from "node:path";
 
 const cwd = "/Users/gear/GitHub/gearshell";
 const SKIP_DIRS = new Set([
-  "node_modules", "memory", "dist", "docs", "architecture-viz", ".git",
-  "wanix-dist", "browser", "bonsai", "isolation", "wanix-workbench",
-  "web-pet", "proxy-test-collectsub", ".workbuddy", "神奇海螺队-第一轮评审",
+  "node_modules",
+  "memory",
+  "dist",
+  "docs",
+  "architecture-viz",
+  ".git",
+  "wanix-dist",
+  "browser",
+  "bonsai",
+  "isolation",
+  "wanix-workbench",
+  "web-pet",
+  "proxy-test-collectsub",
+  ".workbuddy",
+  "神奇海螺队-第一轮评审",
   "PP评估",
 ]);
 const DRY = process.argv.includes("--dry");
@@ -83,5 +95,7 @@ if (DRY) {
 }
 
 for (const [f, src] of cache) fs.writeFileSync(f, src);
-console.log(`${changes.length} reference bumps applied across ${cache.size} files.`);
+console.log(
+  `${changes.length} reference bumps applied across ${cache.size} files.`,
+);
 for (const c of changes) console.log(c);

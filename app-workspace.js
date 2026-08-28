@@ -9,19 +9,19 @@ import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   getBuiltinCrushRunnerPresets,
-} from "./crush-runner.js?v=20260826.11";
+} from "./crush-runner.js?v=20260826.15";
 import {
   normalizeShellConfig,
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
-} from "./app-normalize.js?v=20260828.17";
+} from "./app-normalize.js?v=20260828.21";
 import { writeStoredJson } from "./app-storage.js?v=20260826.7";
 import {
   loadActiveWorkspace,
   notifyWorkspaceChange,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace-store.js?v=20260826.16";
+} from "./app-workspace-store.js?v=20260826.20";
 
 export function normalizeCrushRunnerPreset(preset = {}) {
   const base = normalizeTerminalProfile(preset);
@@ -139,7 +139,7 @@ export {
   updateWorkspaceIndex,
   workspaceIndexEntry,
   workspaceNameExists,
-} from "./app-workspace-store.js?v=20260826.16";
+} from "./app-workspace-store.js?v=20260826.20";
 export {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -156,4 +156,4 @@ export {
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
   validateSystemBind,
-} from "./app-workspace-binds.js?v=20260826.16";
+} from "./app-workspace-binds.js?v=20260826.20";

@@ -12,7 +12,18 @@ import { ESLint } from "eslint";
 const eslint = new ESLint({
   overrideConfigFile: true,
   overrideConfig: [
-    { ignores: ["wanix-dist/**", "memory/**", "node_modules/**", "**/*.sw.js", "architecture-viz/**", "**/*.test.js", "browser/**", "scripts/**"] },
+    {
+      ignores: [
+        "wanix-dist/**",
+        "memory/**",
+        "node_modules/**",
+        "**/*.sw.js",
+        "architecture-viz/**",
+        "**/*.test.js",
+        "browser/**",
+        "scripts/**",
+      ],
+    },
   ],
   cache: true,
   cacheLocation: ".eslintcache",
@@ -29,9 +40,13 @@ for (const r of results) {
   if (r.messages.length > 0) {
     process.stdout.write(`\n${r.filePath}\n`);
     for (const m of r.messages) {
-      process.stdout.write(`  ${m.line}:${m.column}  ${m.ruleId || "syntax"}  ${m.message}\n`);
+      process.stdout.write(
+        `  ${m.line}:${m.column}  ${m.ruleId || "syntax"}  ${m.message}\n`,
+      );
     }
   }
 }
-process.stdout.write(`\n${results.length} files, ${totalProblems} problems, ${totalErrors} errors\n`);
+process.stdout.write(
+  `\n${results.length} files, ${totalProblems} problems, ${totalErrors} errors\n`,
+);
 process.exit(totalErrors > 0 ? 1 : 0);

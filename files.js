@@ -40,8 +40,8 @@ import {
   FilesPanelRightPane,
   FilesPanelSidebar,
   FilesPanelTopbar,
-} from "./files-panel-sections.js?v=20260826.44";
-import { FilesResizer } from "./files-parts.js?v=20260826.43";
+} from "./files-panel-sections.js?v=20260826.46";
+import { FilesResizer } from "./files-parts.js?v=20260826.45";
 import {
   filesystemPathParent,
   normalizeFilesystemPath,
