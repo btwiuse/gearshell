@@ -50,6 +50,17 @@ export const SETTINGS_TEMPLATE_HTML =
               <div class="hint" data-workspace="status" role="status" aria-live="polite"></div>
             </div>
           </details>
+          <details class="agent-activity">
+            <summary><span>Agent activity</span></summary>
+            <div class="body">
+              <p class="hint">Changes made through the workspace API (gctl config.updateShell) are recorded here and can be undone.</p>
+              <div class="agent-activity-list" data-agent-activity-list></div>
+              <div class="workspace-actions">
+                <button type="button" data-agent-activity-action="clear">Clear history</button>
+              </div>
+              <div class="hint" data-agent-activity="status" role="status" aria-live="polite"></div>
+            </div>
+          </details>
           <details class="preset-library">
             <summary><span>Preset library</span></summary>
             <div class="body">

@@ -29,25 +29,27 @@
 import { workspaceTaskSessions } from "./app-state.js?v=20260826.2";
 import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.10";
 import {
+  drainEvents,
   emit,
   eventBuffer,
   off,
   on,
   pushEvent,
+  seedEventBuffer,
   wirePanelEvents,
-} from "./workspace-events.js?v=20260828.3";
-import { openApi } from "./workspace-open-api.js?v=20260828.11";
-import { configApi } from "./workspace-config-api.js?v=20260828.11";
+} from "./workspace-events.js?v=20260828.4";
+import { openApi } from "./workspace-open-api.js?v=20260828.16";
+import { configApi } from "./workspace-config-api.js?v=20260828.16";
 import {
   runHeadlessTask,
   tasksApi,
-} from "./workspace-tasks-api.js?v=20260828.11";
+} from "./workspace-tasks-api.js?v=20260828.16";
 import { agentsApi } from "./workspace-agents-api.js?v=20260828.1";
 import {
   gcWorkspaceTasks,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.11";
-import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.11";
+} from "./workspace-task-registry.js?v=20260828.16";
+import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.16";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
@@ -87,8 +89,11 @@ const api = {
     off: safe(off),
     emit: safe(emit),
     // Agent-side read of the event ring buffer (see pushEvent above).
+    // drainEvents splices the in-memory buffer and advances the
+    // persisted drained high-water mark, so events survive reloads
+    // without being delivered twice (A2).
     drain: safe(() => {
-      const events = eventBuffer.splice(0, eventBuffer.length);
+      const events = drainEvents();
       return { ok: true, events };
     }),
     pending: safe(() => ({ ok: true, count: eventBuffer.length })),
@@ -98,6 +103,9 @@ const api = {
 // Expose window.GearShell — the jsfs projection target for agents and the
 // same-page JS surface. Called from app.js's wiring section.
 export function initWorkspaceApi() {
+  // Restore persisted events before the api is exposed to agents so a
+  // reloaded page starts with any events the agent missed (A2).
+  seedEventBuffer();
   try {
     window.GearShell = api;
   } catch {
