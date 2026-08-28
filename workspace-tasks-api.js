@@ -3,7 +3,7 @@
 // Split out of workspace-api.js for the 500-line rule; create() and
 // runHeadlessTask() were refactored into sub-50-line helpers.
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.33";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.34";
 import {
   getWanixRoot,
   workspaceTaskSessions,
@@ -12,7 +12,7 @@ import { addWorkspaceTaskPanel } from "./panels.js?v=20260812.42";
 import {
   addWorkspaceTask,
   loadActiveWorkspace,
-} from "./app-workspace.js?v=20260826.33";
+} from "./app-workspace.js?v=20260826.34";
 import {
   normalizeTask,
   validateTask,
@@ -20,13 +20,13 @@ import {
 import {
   markAgentTask,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.18";
+} from "./workspace-task-registry.js?v=20260828.19";
 import {
   destroyWorkspaceTaskSession,
   getTaskOutput,
   taskLogKernelPath,
-} from "./app-workspace-task-sessions.js?v=20260828.39";
-import { groupFor } from "./workspace-open-api.js?v=20260828.18";
+} from "./app-workspace-task-sessions.js?v=20260828.40";
+import { groupFor } from "./workspace-open-api.js?v=20260828.19";
 import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.10";
 
 function listTasks() {

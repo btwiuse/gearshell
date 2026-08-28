@@ -41,6 +41,26 @@ bool_field() { # $1=json $2=key
   esac
 }
 
+# Extract the workspace "tasks" array with balanced-bracket counting
+# (the object also carries volatile fields like updatedAt that change on
+# unrelated saves; only the persisted task list is the #4 assertion).
+extract_tasks() { # $1=workspace json
+  local json="$1" rest depth i c
+  rest="${json#*\"tasks\":}"
+  [ "$rest" = "$json" ] && { echo ""; return; }
+  depth=0
+  for ((i = 0; i < ${#rest}; i++)); do
+    c="${rest:i:1}"
+    case "$c" in
+      '[') depth=$((depth + 1)) ;;
+      ']') depth=$((depth - 1))
+        if [ "$depth" -eq 0 ]; then echo "${rest:0:$((i + 1))}"; return; fi
+        ;;
+    esac
+  done
+  echo ""
+}
+
 # --- preflight: channel alive + A3 help ---
 ping=$(gctl ping)
 case "$ping" in
@@ -91,17 +111,20 @@ esac
 
 # --- #4 ephemeral task lifecycle (no workspace persistence) ---
 ws_before=$(gctl config.getWorkspace)
-tasks_tail_before="${ws_before#*\"tasks\":}"
+tasks_before=$(extract_tasks "$ws_before")
 created=$(gctl tasks.create '[{"name":"eval-ephemeral","cmd":"echo eval-done","term":false}]')
 echo "[eval]      tasks.create -> $created"
-task_id=$(str_field "$created" taskId)
+# tasks.create returns a UUID taskDefinition id; the API / gctl numeric
+# session id comes from the panelId (workspace-task-N).
+panel_id=$(str_field "$created" panelId)
+task_id="${panel_id#workspace-task-}"
 if [ -n "$task_id" ]; then
   ws_after=$(gctl config.getWorkspace)
-  tasks_tail_after="${ws_after#*\"tasks\":}"
-  if [ "$tasks_tail_after" = "$tasks_tail_before" ]; then
+  tasks_after=$(extract_tasks "$ws_after")
+  if [ "$tasks_after" = "$tasks_before" ]; then
     pass "#4 ephemeral task not persisted to workspace"
   else
-    fail "#4 ephemeral" "workspace tasks grew after create"
+    fail "#4 ephemeral" "workspace tasks grew after create ($tasks_before -> $tasks_after)"
   fi
   # tasks.output should surface the headless result (poller, 800ms)
   got_output=""
@@ -133,18 +156,40 @@ created=$(gctl tasks.create '[{"name":"eval-term","cmd":"bash","term":true}]')
 term_panel=$(str_field "$created" panelId)
 tid="${term_panel#workspace-task-}"
 echo "[eval]      term task panelId -> $term_panel"
-delivered=""
-for ((attempt = 1; attempt <= 4; attempt++)); do
-  pr=$(gctl agents.prompt-wait "task-$tid" "echo EVAL_TERM_OK > $RESULT" 30)
-  case "$pr" in
-    *'"ok":true'*) delivered="yes"; break ;;
-    *) echo "[eval]      prompt-wait attempt $attempt -> $pr" ;;
+# A cold gojs worker takes 30-60s to compile bash before it can consume
+# input; a prompt injected into that window is swallowed (the idle gate
+# passes because nothing has been written yet). Wait for the visible
+# prompt before prompting.
+ready=""
+last_read=""
+for ((i = 0; i < 30; i++)); do
+  rd=$(gctl agents.read "[\"task-$tid\",{\"rows\":10}]")
+  last_read="$rd"
+  case "$rd" in
+    *"➜"*) ready="yes"; break ;;
   esac
-  sleep 5
+  sleep 6
 done
+if [ -z "$ready" ]; then
+  echo "[eval]      last read: ${last_read:0:200}"
+fi
+delivered=""
+if [ -n "$ready" ]; then
+  for ((attempt = 1; attempt <= 4; attempt++)); do
+    pr=$(gctl agents.prompt-wait "task-$tid" "echo EVAL_TERM_OK > $RESULT" 30)
+    case "$pr" in
+      *'"ok":true'*) delivered="yes"; break ;;
+      *) echo "[eval]      prompt-wait attempt $attempt -> $pr" ;;
+    esac
+    sleep 5
+  done
+else
+  echo "[eval]      no bash prompt in 80s, skipping prompt"
+fi
 if [ -n "$delivered" ]; then
   found=""
   for ((i = 0; i < 40; i++)); do
+    line=""
     read -r line < "$RESULT" 2>/dev/null || true
     if [ "$line" = "EVAL_TERM_OK" ]; then found="yes"; break; fi
     sleep 2

@@ -9,13 +9,13 @@ import { LicenseManager } from "dockview-enterprise";
 import {
   addCrushRunnerPanel,
   initCrushRunner,
-} from "./crush-runner.js?v=20260826.28";
+} from "./crush-runner.js?v=20260826.29";
 import { addLandingPanel, initHome } from "./home.js?v=20260812.22";
 import {
   addSettingsPanel,
   initSettings,
   TerminalPresetIconPicker,
-} from "./settings.js?v=20260826.18";
+} from "./settings.js?v=20260826.19";
 
 import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.15";
 import { addRuntimePanel, initRuntime } from "./runtime.js?v=20260826.43";
@@ -32,13 +32,13 @@ import {
   ensureGearShellBinds,
   initWorkspaceApi,
   workspaceApi,
-} from "./workspace-api.js?v=20260828.49";
+} from "./workspace-api.js?v=20260828.50";
 import {
   clearAuditEntries,
   listAuditEntries,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.8";
-import { App } from "./app-shell.js?v=20260828.34";
+} from "./workspace-audit.js?v=20260829.9";
+import { App } from "./app-shell.js?v=20260828.35";
 
 import {
   getWanixRoot,
@@ -49,7 +49,7 @@ import {
   terminalSessions,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { createWanixSystem } from "./app-wanix.js?v=20260826.33";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.34";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -83,14 +83,14 @@ import {
   updateWorkspaceBind,
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
-} from "./app-workspace.js?v=20260826.33";
+} from "./app-workspace.js?v=20260826.34";
 import {
   listWorkspacePresets,
   loadCustomWorkspacePreset,
   removeCustomWorkspacePreset,
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
-} from "./app-workspace-presets.js?v=20260826.33";
+} from "./app-workspace-presets.js?v=20260826.34";
 import {
   blankCrushRunnerPresetDraft,
   clone,
@@ -100,7 +100,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.34";
+} from "./app-normalize.js?v=20260828.35";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -109,35 +109,35 @@ import {
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.33";
+} from "./app-terminal-profiles.js?v=20260826.34";
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
   createTerminalSession,
   destroyTerminalSession,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.33";
+} from "./app-terminal-sessions.js?v=20260826.34";
 import {
   attachIframeSession,
   attachVmSession,
   attachWorkbenchSession,
   waitForWanixSystem,
-} from "./app-sessions.js?v=20260828.37";
+} from "./app-sessions.js?v=20260828.38";
 import {
   attachWorkspaceTaskSession,
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.39";
+} from "./app-workspace-task-sessions.js?v=20260828.40";
 import {
   getDockviewApi,
   rememberOpenPanel,
-} from "./app-panels-store.js?v=20260826.33";
+} from "./app-panels-store.js?v=20260826.34";
 import {
   blankTerminalPresetDraft,
   IFRAME_PANEL_OPTIONS,
   PANEL_CREATION_OPTIONS,
-} from "./app-panels.js?v=20260826.34";
+} from "./app-panels.js?v=20260826.35";
 import {
   dismissHomeDebugErrors,
   DOCKVIEW_LICENSE_KEY,

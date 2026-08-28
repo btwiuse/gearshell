@@ -10,7 +10,7 @@
 // jsfs gives no caller identity, so `agent` is whatever the caller
 // passes as the optional second argument; it defaults to "agent".
 
-import { saveConfig } from "./app-workspace.js?v=20260826.33";
+import { saveConfig } from "./app-workspace.js?v=20260826.34";
 
 const AUDIT_KEY = "gear-shell-agent-audit";
 const AUDIT_CAP = 50;

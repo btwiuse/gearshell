@@ -12,7 +12,7 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.33";
+} from "./app-terminal-profiles.js?v=20260826.34";
 import { DEFAULT_CMD } from "./app-constants.js?v=20260828.10";
 
 export function hideTerminalLayer() {
