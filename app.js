@@ -53,7 +53,7 @@ import {
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
-} from "./workspace-api.js?v=20260828.17";
+} from "./workspace-api.js?v=20260828.18";
 import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 
 import {
@@ -152,7 +152,7 @@ import {
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.10";
+} from "./app-workspace-task-sessions.js?v=20260828.11";
 import {
   forgetOpenPanel,
   getDockviewApi,

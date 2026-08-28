@@ -96,10 +96,22 @@ function wrapHeadlessCmd(def) {
   return `bash -c '{ ${escaped}; } > ${taskLogPath(def)} 2>&1'`;
 }
 
+// Wrap a term cmd the same way: the kernel execs the first token of cmd
+// directly (gojs driver readFile(args[0])), so a cmd like "echo hi; sleep
+// 2" would look for /bin/echo (the image only ships bash/gctl/w9y) and
+// never start. Running the whole cmd under `bash -c` makes the full shell
+// grammar available. The outer bash is non-interactive, so the BASH_ENV
+// base env from the task env still applies; a wrapped interactive "bash"
+// keeps the terminal as its tty.
+function wrapTermCmd(def) {
+  const escaped = def.cmd.replace(/'/g, `'\\''`);
+  return `bash -c '${escaped}'`;
+}
+
 function createWorkspaceTaskElement(id, def, workspace) {
   const task = document.createElement("wanix-task");
   task.id = `workspace-task-${id}`;
-  task.setAttribute("cmd", def.term ? def.cmd : wrapHeadlessCmd(def));
+  task.setAttribute("cmd", def.term ? wrapTermCmd(def) : wrapHeadlessCmd(def));
   task.setAttribute("type", def.type);
   task.setAttribute("start", "");
   task.setAttribute("for", "wanix-system");
