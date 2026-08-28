@@ -257,9 +257,9 @@ export const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 export const WANIX_RUNTIME = {
-  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.22",
+  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.23",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.22/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.23/dist/wanix.min.js",
 };
 
 // The bundled shell binary (hush, mounted as /bin/bash). Pinned to a
@@ -272,7 +272,8 @@ export const DEFAULT_HUSH_BINARY_URL =
 export function isLegacyHushBinaryUrl(url) {
   return typeof url === "string" &&
     url.includes("github.com/btwiuse/hush/cmd/hush@") &&
-    !url.includes(`hush@${HUSH_BINARY_VERSION}`);
+    (!url.includes(`hush@${HUSH_BINARY_VERSION}`) ||
+      url.includes("w9y.up.railway.app"));
 }
 
 export const DEFAULT_SYSTEM_CONFIG = {
