@@ -21,7 +21,7 @@
 // bytes cannot be returned (kernel 9P calls are async) — agents read and
 // write the shared VFS natively with cat/echo instead.
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.5";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.7";
 import {
   terminalSessions,
   workspaceTaskSessions,
@@ -33,7 +33,7 @@ import {
   saveConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.5";
+} from "./app-workspace.js?v=20260826.7";
 import {
   addPanelByComponent,
   addWorkspaceTaskPanel,
@@ -42,7 +42,7 @@ import {
   destroyWorkspaceTaskSession,
   getTaskOutput,
   taskLogKernelPath,
-} from "./app-workspace-task-sessions.js?v=20260828.8";
+} from "./app-workspace-task-sessions.js?v=20260828.10";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
