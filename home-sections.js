@@ -4,7 +4,7 @@
 // callbacks. Each component stays under 50 lines.
 
 import React from "react";
-import { ArrowRight, BookOpen, Github, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, Github, LayoutGrid, Zap } from "lucide-react";
 import { localFirstChips } from "./home-data.js?v=20260828.1";
 
 export function HomeNav({ scrollToId, GH }) {
@@ -60,6 +60,16 @@ function HeroButtons({ openPanel, openExternal, scrollToId, GH }) {
       React.createElement(Zap, { size: 16, "aria-hidden": true }),
       React.createElement("span", null, "Open Terminal"),
       React.createElement(ArrowRight, { size: 14, "aria-hidden": true }),
+    ),
+    React.createElement(
+      "button",
+      {
+        className: "mkt-btn mkt-btn-ghost",
+        type: "button",
+        onClick: () => openPanel("fallback"),
+      },
+      React.createElement(LayoutGrid, { size: 16, "aria-hidden": true }),
+      React.createElement("span", null, "Browse apps"),
     ),
     React.createElement(
       "button",
@@ -429,6 +439,16 @@ export function HomeFooter({ openPanel, scrollToId, GH }) {
         React.createElement(Zap, { size: 16, "aria-hidden": true }),
         React.createElement("span", null, "Open Terminal"),
         React.createElement(ArrowRight, { size: 14, "aria-hidden": true }),
+      ),
+      React.createElement(
+        "button",
+        {
+          className: "mkt-btn mkt-btn-ghost",
+          type: "button",
+          onClick: () => openPanel("fallback"),
+        },
+        React.createElement(LayoutGrid, { size: 16, "aria-hidden": true }),
+        React.createElement("span", null, "Browse apps"),
       ),
     ),
     React.createElement(FooterLinks, { scrollToId, GH }),

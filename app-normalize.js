@@ -29,16 +29,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.19";
+} from "./app-constants.js?v=20260828.20";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.43";
+} from "./crush-runner.js?v=20260826.45";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.48";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.17";
+} from "./app-workspace.js?v=20260826.50";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.18";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -50,7 +50,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.11";
+} from "./app-normalize-system.js?v=20260828.12";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -62,7 +62,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.11";
+} from "./app-normalize-system.js?v=20260828.12";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -231,6 +231,9 @@ export function normalizeShellConfig(config) {
     favorites: normalizeFavorites(config),
     collapsedLauncherItems: normalizeCollapsedLauncherItems(config),
     launcherOrder: normalizeLauncherOrder(config?.launcherOrder),
+    pinnedLauncherItems: normalizePinnedLauncherItems(
+      config?.pinnedLauncherItems,
+    ),
     terminalProfiles,
     terminalProfileOrder: normalizeTerminalProfileOrder(
       config?.terminalProfileOrder,
@@ -246,10 +249,14 @@ export function normalizeShellConfig(config) {
       ? config.crushRunnerActiveId
       : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   };
-  // The shell used to be mounted as `hush`, and the rc file used to live
-  // at /profile; remap persisted commands (legacy hush + older /profile)
-  // to the current bash default (rc file at /preset/profile) so saved
-  // configs keep working unchanged.
+  return remapLegacyShellCommand(normalized);
+}
+
+// The shell used to be mounted as `hush`, and the rc file used to live at
+// /profile; remap persisted commands (legacy hush + older /profile) to the
+// current bash default (rc file at /preset/profile) so saved configs keep
+// working unchanged.
+function remapLegacyShellCommand(normalized) {
   if (
     normalized.cmd === LEGACY_DEFAULT_CMD ||
     normalized.cmd === "hush -rcfile /profile" ||
@@ -318,6 +325,20 @@ export function normalizeLauncherOrder(order) {
     ...unique,
     ...DEFAULT_LAUNCHER_ITEM_ORDER.filter((component) =>
       !unique.includes(component)
+    ),
+  ];
+}
+
+// Launcher favorites: component names pinned to the top of the launcher
+// grid (launcher.js renders them first and never collapses them). Unknown
+// components are dropped so stale config cannot break the ordering.
+export function normalizePinnedLauncherItems(items) {
+  const known = new Set(DEFAULT_LAUNCHER_ITEM_ORDER);
+  return [
+    ...new Set(
+      Array.isArray(items)
+        ? items.filter((component) => known.has(component))
+        : [],
     ),
   ];
 }

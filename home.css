@@ -104,6 +104,15 @@
 .mkt-foot-links { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin-top: 36px; font-size: 14px; color: #8b949e; }
 .mkt-foot-links a { color: #8b949e; }
 .mkt-foot-links a:hover { color: #58a6ff; text-decoration: none; }
+/* Keyboard affordance: visible focus ring for keyboard users (the page
+   previously only styled :hover states). */
+.mkt-btn:focus-visible,
+.mkt-demo-frame:focus-visible,
+.mkt-chip:focus-visible,
+.mkt-bonsai-cta:focus-visible,
+.mkt-nav-links a:focus-visible,
+.mkt-x-link:focus-visible,
+.mkt-foot-links a:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
 
 @media (max-width: 720px) {
   .mkt-nav-links { display: none; }

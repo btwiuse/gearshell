@@ -1,8 +1,8 @@
 // Wanix system bootstrap elements: wanix-bind element builder and the
 // wanix-namespace system root (500-line rule split).
 
-import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.19";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.48";
+import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.20";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.50";
 
 export function createWanixBindElement(bind) {
   const element = document.createElement("wanix-bind");

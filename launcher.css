@@ -23,6 +23,30 @@
 .empty-workspace-actions button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 7px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; text-align: left; }
 .empty-workspace-actions button:hover { background: #30363d; }
 .empty-workspace-actions button svg { flex: 0 0 auto; color: #8b949e; }
+/* Keyboard affordance + search + pin rows (P1/P4/P6). */
+.empty-workspace-actions button:focus-visible,
+.terminal-launch-primary:focus-visible,
+.terminal-launch-toggle:focus-visible,
+.terminal-launch-options button:focus-visible,
+.launcher-search:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
+.launcher-search {
+  width: 100%; min-height: 32px; margin-bottom: 8px; padding: 6px 10px;
+  border: 1px solid #30363d; border-radius: 4px; background: #0d1117;
+  color: #c9d1d9; font: inherit;
+}
+.launcher-search::placeholder { color: #6e7681; }
+.launcher-empty-match { margin: 8px 0 0; color: #6e7681; font-size: 12px; text-align: center; }
+.launcher-row { display: flex; align-items: center; gap: 6px; }
+.launcher-row-control { flex: 1; min-width: 0; }
+.launcher-row-control .empty-terminal-launch { border-radius: 4px; }
+.launcher-pin {
+  flex: 0 0 auto !important; width: 30px !important; min-height: 36px !important;
+  padding: 0 !important; justify-content: center !important; text-align: center !important;
+  border-style: solid !important; background: transparent !important; color: #8b949e !important;
+}
+.launcher-pin:hover { background: #21262d !important; }
+.launcher-pin-star { color: #8b949e; }
+.launcher-pin[aria-pressed="true"] .launcher-pin-star { color: #e3b341; fill: #e3b341; }
 .empty-terminal-launch { overflow: hidden; border: 1px solid #30363d; border-radius: 4px; background: #161b22; }
 .empty-terminal-launch .terminal-launch-toggle { border: 0; border-radius: 0; background: transparent; }
 .empty-terminal-launch .terminal-launch-primary { width: auto; border-right: 1px solid #30363d; }

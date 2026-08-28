@@ -129,6 +129,7 @@ export const DEFAULT_CONFIG = {
   widgetbot: false,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   launcherOrder: DEFAULT_LAUNCHER_ITEM_ORDER,
+  pinnedLauncherItems: [],
 };
 export const WORKSPACE_INDEX_KEY = "gear-shell-workspace-index";
 export const WORKSPACE_ACTIVE_KEY = "gear-shell-active-workspace";

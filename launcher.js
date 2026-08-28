@@ -15,15 +15,15 @@
 // Mirrors the same pattern used by home.js / settings.js /
 // crush-runner.js / files.js / runtime.js / deck.js.
 
-import React, { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Dog, Ellipsis, Plus } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ChevronDown, Ellipsis, Star } from "lucide-react";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 
 let __launcherDeps = null;
 export function initLauncher(dependencies) {
   __launcherDeps = dependencies;
 }
-function launcherDep(name) {
+export function launcherDep(name) {
   if (__launcherDeps == null) {
     throw new Error(
       "launcher: initLauncher() has not been called; ensure app.js wires it in.",
@@ -151,8 +151,12 @@ function useLauncherCollapsedState() {
   return { showMore, setShowMore, collapsedItems };
 }
 
-function renderLauncherOption(option, containerApi, addPanel) {
-  return option.component === "terminal"
+// One launcher row: the launch control (terminal picker or app button)
+// plus a pin toggle that keeps the app at the top of the grid (P6).
+function renderLauncherRow(
+  { option, containerApi, addPanel, pinned, onTogglePin },
+) {
+  const control = option.component === "terminal"
     ? React.createElement(TerminalLaunchPicker, {
       key: option.component,
       className: "empty-terminal-launch",
@@ -171,6 +175,31 @@ function renderLauncherOption(option, containerApi, addPanel) {
       React.createElement(option.icon, { size: 18, "aria-hidden": true }),
       React.createElement("span", null, option.label),
     );
+  return React.createElement(
+    "div",
+    { key: option.component, className: "launcher-row" },
+    React.createElement("div", { className: "launcher-row-control" }, control),
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "launcher-pin",
+        "aria-pressed": pinned,
+        title: pinned
+          ? `Unpin ${option.label}`
+          : `Pin ${option.label} to the top`,
+        "aria-label": pinned
+          ? `Unpin ${option.label}`
+          : `Pin ${option.label} to the top`,
+        onClick: () => onTogglePin(option.component),
+      },
+      React.createElement(Star, {
+        size: 15,
+        className: "launcher-pin-star",
+        "aria-hidden": true,
+      }),
+    ),
+  );
 }
 
 function LauncherMoreToggle({ showMore, setShowMore }) {
@@ -187,14 +216,63 @@ function LauncherMoreToggle({ showMore, setShowMore }) {
   );
 }
 
-function FallbackPage({ containerApi, className }) {
-  const { showMore, setShowMore, collapsedItems } = useLauncherCollapsedState();
-  const addPanel = (component) => {
-    if (!containerApi) return;
-    launcherDep("addPanelByComponent")(containerApi, component);
+// Pinned apps: the launcherOrder override list (pinnedLauncherItems in the
+// shell config, normalized + synced with Settings). Pinned apps render first
+// and are never folded into the More section.
+function useLauncherPins() {
+  const [pinnedItems, setPinnedItems] = useState(() =>
+    launcherDep("loadConfig")().pinnedLauncherItems
+  );
+  useEffect(() => {
+    const updatePinned = () =>
+      setPinnedItems(launcherDep("loadConfig")().pinnedLauncherItems);
+    window.addEventListener(
+      launcherDep("WORKSPACE_CHANGED_EVENT"),
+      updatePinned,
+    );
+    return () =>
+      window.removeEventListener(
+        launcherDep("WORKSPACE_CHANGED_EVENT"),
+        updatePinned,
+      );
+  }, []);
+  const togglePin = (component) => {
+    const cfg = launcherDep("loadConfig")();
+    const current = cfg.pinnedLauncherItems || [];
+    const next = current.includes(component)
+      ? current.filter((item) => item !== component)
+      : [...current, component];
+    launcherDep("saveConfig")({ ...cfg, pinnedLauncherItems: next });
   };
-  const collapsed = new Set(collapsedItems);
-  const options = launcherDep("normalizeLauncherOrder")(
+  return { pinnedItems, togglePin };
+}
+
+function useLauncherSearch() {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  return { query, setQuery, q };
+}
+
+// Pinned-first + collapsed split of the ordered catalog.
+function launcherSections(options, collapsed, pinned) {
+  return {
+    primaryOptions: [
+      ...options.filter((option) => pinned.has(option.component)),
+      ...options.filter(
+        (option) =>
+          !pinned.has(option.component) && !collapsed.has(option.component),
+      ),
+    ],
+    moreOptions: options.filter(
+      (option) =>
+        !pinned.has(option.component) && collapsed.has(option.component),
+    ),
+  };
+}
+
+// The app catalog in launcher order (user order, default order appended).
+function useLauncherCatalog() {
+  return launcherDep("normalizeLauncherOrder")(
     launcherDep("loadConfig")().launcherOrder,
   )
     .map((component) =>
@@ -203,12 +281,118 @@ function FallbackPage({ containerApi, className }) {
       )
     )
     .filter(Boolean);
-  const primaryOptions = options.filter((option) =>
-    !collapsed.has(option.component)
+}
+
+// Row renderer bound to the current container/pin state (kept in a hook so
+// FallbackPage stays under the 50-line budget).
+function useLauncherRowRenderer({ containerApi, addPanel, pinned, togglePin }) {
+  return (option) =>
+    renderLauncherRow({
+      option,
+      containerApi,
+      addPanel,
+      pinned: pinned.has(option.component),
+      onTogglePin: togglePin,
+    });
+}
+
+// The action list inside the launcher card: search results when a query is
+// active, otherwise the primary rows + the More fold.
+function LauncherActions(
+  {
+    matches,
+    primaryOptions,
+    moreOptions,
+    rowFor,
+    showMore,
+    setShowMore,
+    query,
+  },
+) {
+  if (matches) {
+    if (matches.length === 0) {
+      return React.createElement(
+        "p",
+        { className: "launcher-empty-match" },
+        `No apps match "${query}"`,
+      );
+    }
+    return matches.map(rowFor);
+  }
+  return [
+    ...primaryOptions.map(rowFor),
+    moreOptions.length > 0 &&
+    React.createElement(LauncherMoreToggle, {
+      key: "more",
+      showMore,
+      setShowMore,
+    }),
+    showMore &&
+    React.createElement(
+      "div",
+      { key: "more-options", className: "launcher-more-options" },
+      moreOptions.map(renderRow),
+    ),
+  ];
+}
+
+function FallbackPage({ containerApi, className }) {
+  const { showMore, setShowMore, collapsedItems } = useLauncherCollapsedState();
+  const { pinnedItems, togglePin } = useLauncherPins();
+  const { query, setQuery, q } = useLauncherSearch();
+  const options = useLauncherCatalog();
+  const addPanel = (component) => {
+    if (!containerApi) return;
+    launcherDep("addPanelByComponent")(containerApi, component);
+  };
+  const collapsed = new Set(collapsedItems);
+  const pinned = new Set(pinnedItems);
+  const { primaryOptions, moreOptions } = launcherSections(
+    options,
+    collapsed,
+    pinned,
   );
-  const moreOptions = options.filter((option) =>
-    collapsed.has(option.component)
-  );
+  const rowFor = useLauncherRowRenderer({
+    containerApi,
+    addPanel,
+    pinned,
+    togglePin,
+  });
+  const matches = q
+    ? options.filter((option) =>
+      option.label.toLowerCase().includes(q) ||
+      option.component.includes(q)
+    )
+    : null;
+  return React.createElement(LauncherCard, {
+    className,
+    query,
+    setQuery,
+    rowFor,
+    matches,
+    primaryOptions,
+    moreOptions,
+    showMore,
+    setShowMore,
+    q,
+  });
+}
+
+// The launcher card shell: title, search box and the action list.
+function LauncherCard(
+  {
+    className,
+    query,
+    setQuery,
+    rowFor,
+    matches,
+    primaryOptions,
+    moreOptions,
+    showMore,
+    setShowMore,
+    q,
+  },
+) {
   return React.createElement(
     "div",
     { className },
@@ -216,22 +400,26 @@ function FallbackPage({ containerApi, className }) {
       "div",
       { className: "empty-workspace-card" },
       React.createElement("p", null, "Task Launcher"),
+      React.createElement("input", {
+        className: "launcher-search",
+        type: "search",
+        placeholder: "Search apps…",
+        "aria-label": "Search apps",
+        value: query,
+        onChange: (event) => setQuery(event.target.value),
+      }),
       React.createElement(
         "div",
         { className: "empty-workspace-actions" },
-        primaryOptions.map((option) =>
-          renderLauncherOption(option, containerApi, addPanel)
-        ),
-        moreOptions.length > 0 &&
-          React.createElement(LauncherMoreToggle, { showMore, setShowMore }),
-        showMore &&
-          React.createElement(
-            "div",
-            { className: "launcher-more-options" },
-            moreOptions.map((option) =>
-              renderLauncherOption(option, containerApi, addPanel)
-            ),
-          ),
+        React.createElement(LauncherActions, {
+          matches,
+          primaryOptions,
+          moreOptions,
+          rowFor,
+          showMore,
+          setShowMore,
+          query: q,
+        }),
       ),
     ),
   );
@@ -265,211 +453,9 @@ export function addFallbackPanel(api, group) {
   return panel;
 }
 
-// === Plus button: tap creates a terminal, long-press opens the
-// extensions menu. Renders the panel-action-menu next to the dockview
-// tab strip, with launcher buttons for each enabled panel + a Wagi-Dog
-// toggle. Reuses TerminalLaunchPicker above for the Terminal entry.
+// The "+" Add control + all-apps menu live in launcher-menu.js (500-line
+// split); re-export so existing importers (app.js, app-shell.js) keep
+// importing AddTerminalButton from this module.
+export { AddTerminalButton } from "./launcher-menu.js?v=20260829.2";
 
-function usePanelActionMenu() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const controlRef = useRef(null);
-  const pressTimer = useRef(null);
-  const longPress = useRef(false);
-
-  useEffect(() => {
-    const groupView = controlRef.current?.closest(".dv-groupview");
-    groupView?.classList.add("panel-action-host");
-    return () => groupView?.classList.remove("panel-action-host");
-  }, []);
-
-  const clearPressTimer = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  };
-
-  const openMenu = () => {
-    clearPressTimer();
-    longPress.current = true;
-    setMenuOpen(true);
-  };
-
-  const startPress = (event) => {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    longPress.current = false;
-    pressTimer.current = setTimeout(openMenu, 450);
-  };
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const closeMenu = (event) => {
-      if (!controlRef.current?.contains(event.target)) setMenuOpen(false);
-    };
-    document.addEventListener("pointerdown", closeMenu, true);
-    return () => document.removeEventListener("pointerdown", closeMenu, true);
-  }, [menuOpen]);
-
-  return {
-    menuOpen,
-    setMenuOpen,
-    controlRef,
-    clearPressTimer,
-    openMenu,
-    startPress,
-    longPress,
-  };
-}
-
-function useWagiDogSync() {
-  const [wagiDogEnabled, setWagiDogEnabledState] = useState(() =>
-    launcherDep("loadConfig")().wagiDogEnabled
-  );
-  useEffect(() => {
-    const syncWagiDog = () =>
-      setWagiDogEnabledState(launcherDep("loadConfig")().wagiDogEnabled);
-    window.addEventListener(
-      launcherDep("WORKSPACE_CHANGED_EVENT"),
-      syncWagiDog,
-    );
-    return () =>
-      window.removeEventListener(
-        launcherDep("WORKSPACE_CHANGED_EVENT"),
-        syncWagiDog,
-      );
-  }, []);
-  return wagiDogEnabled;
-}
-
-function renderWagiDogItem({ wagiDogEnabled }) {
-  return React.createElement(
-    "button",
-    {
-      type: "button",
-      role: "menuitemcheckbox",
-      "aria-checked": wagiDogEnabled,
-      onClick: () => launcherDep("setWagiDogEnabled")(!wagiDogEnabled),
-    },
-    React.createElement(Dog, { size: 16, "aria-hidden": true }),
-    React.createElement("span", null, "Wagi Dog"),
-    wagiDogEnabled &&
-      React.createElement(Check, {
-        className: "panel-action-menu-check",
-        size: 15,
-        "aria-label": "Enabled",
-      }),
-  );
-}
-
-function renderPanelOptionItems({ containerApi, group, setMenuOpen }) {
-  return launcherDep("PANEL_CREATION_OPTIONS").filter((option) =>
-    option.component !== "terminal"
-  ).map((option) =>
-    React.createElement(
-      "button",
-      {
-        key: option.component,
-        type: "button",
-        role: "menuitem",
-        onClick: (event) => {
-          setMenuOpen(false);
-          launcherDep("addPanelByComponent")(
-            containerApi,
-            option.component,
-            group,
-            event.shiftKey ? { direction: "right" } : undefined,
-          );
-        },
-      },
-      React.createElement(option.icon, { size: 16, "aria-hidden": true }),
-      React.createElement("span", null, option.label),
-    )
-  );
-}
-
-function renderPanelActionMenu(
-  { containerApi, group, setMenuOpen, wagiDogEnabled },
-) {
-  return React.createElement(
-    "div",
-    { className: "panel-action-menu", role: "menu" },
-    React.createElement(TerminalLaunchPicker, {
-      className: "panel-action-terminal-launch",
-      iconSize: 16,
-      inMenu: true,
-      onLaunch: (profile) => {
-        setMenuOpen(false);
-        launcherDep("addTerminalPanel")(containerApi, group, profile);
-      },
-    }),
-    React.createElement("div", {
-      className: "panel-action-menu-divider",
-      role: "separator",
-    }),
-    renderWagiDogItem({ wagiDogEnabled }),
-    renderPanelOptionItems({ containerApi, group, setMenuOpen }),
-    React.createElement(
-      "div",
-      { className: "panel-action-menu-hint" },
-      React.createElement("span", null, "Shift+click: open in a new pane"),
-    ),
-  );
-}
-
-function AddTerminalButton({ containerApi, group }) {
-  const {
-    menuOpen,
-    setMenuOpen,
-    controlRef,
-    clearPressTimer,
-    openMenu,
-    startPress,
-    longPress,
-  } = usePanelActionMenu();
-  const wagiDogEnabled = useWagiDogSync();
-
-  const createTerminal = (event) => {
-    if (longPress.current) {
-      event.preventDefault();
-      longPress.current = false;
-      return;
-    }
-    launcherDep("addTerminalPanel")(containerApi, group);
-  };
-
-  return React.createElement(
-    "div",
-    { ref: controlRef, className: "panel-actions" },
-    React.createElement("button", {
-      className: "panel-action-button",
-      type: "button",
-      title: "Add",
-      "aria-label": "Add panel",
-      "aria-haspopup": "menu",
-      "aria-expanded": menuOpen,
-      onPointerDown: startPress,
-      onPointerUp: clearPressTimer,
-      onPointerCancel: clearPressTimer,
-      onPointerLeave: clearPressTimer,
-      onContextMenu: (event) => {
-        event.preventDefault();
-        openMenu();
-      },
-      onClick: createTerminal,
-    }, React.createElement(Plus, { size: 18, "aria-hidden": true })),
-    menuOpen &&
-      renderPanelActionMenu({
-        containerApi,
-        group,
-        setMenuOpen,
-        wagiDogEnabled,
-      }),
-  );
-}
-
-export { AddTerminalButton, FallbackPage, FallbackPanel, TerminalLaunchPicker };
-
-// === Plus button: tap creates a terminal, long-press opens the
-// extensions menu. Renders the panel-action-menu next to the dockview
-// tab strip, with launcher buttons for each enabled panel + a Wagi-Dog
-// toggle. Reuses TerminalLaunchPicker above for the Terminal entry.
+export { FallbackPage, FallbackPanel, TerminalLaunchPicker };
