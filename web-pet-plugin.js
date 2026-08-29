@@ -5,7 +5,7 @@
 // shell config `wagiDogEnabled` flag still gates visibility so the
 // launcher menu / Settings toggles keep working.
 
-import { WagiDogPet } from "./panels.js?v=20260812.61";
+import { WagiDogPet } from "./panels.js?v=20260812.62";
 
 export const plugin = {
   register(ctx) {

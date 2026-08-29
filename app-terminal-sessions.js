@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.73";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.32";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.73";
+} from "./app-terminal-profiles.js?v=20260826.74";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.33";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.74";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");

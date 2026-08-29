@@ -536,3 +536,14 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   disable/enable 全生命周期无崩、console 零报错。
 - 待办:task 需先加 registerPanel `launcher:false` 开关(否则错误进入 launcher)
   或维持内核;terminal 高难度待评估。
+
+## 二十二、settings + crush-runner 插件化(round 36,commit `<本轮 commit>`)
+
+- settings-plugin.js(通用 opener)+ crush-runner-plugin.js(custom opener
+  addCrushRunnerPanel)。initSettings/initCrushRunner/addX 全留内核。
+- 澄清:launcher 的 agent = 独立 iframe 插件 "crush",与 crush-runner 面板
+  无关;禁用 crush-runner 插件不影响 agent(实测确认)。
+- 实测:18 插件 loaded;settings 内插件 section 正常;crush-runner
+  disable/enable 生命周期无崩;console 零报错。
+- 剩余内置:terminal(高)、plugins/fallback/iframe(内核身份)、task
+  (需 launcher:false 开关,收益薄,建议维持内核)。

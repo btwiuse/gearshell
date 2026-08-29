@@ -6,9 +6,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { DockviewReact } from "dockview-react";
-import { SettingsPanel } from "./settings.js?v=20260826.66";
-import { PluginsPanel } from "./plugins-panel.js?v=20260829.10";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.68";
+import { PluginsPanel } from "./plugins-panel.js?v=20260829.11";
 import {
   addFallbackPanel,
   AddTerminalButton,
@@ -19,49 +17,49 @@ import {
   PanelTab,
   TerminalPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.61";
+} from "./panels.js?v=20260812.62";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.73";
+} from "./app-panels-store.js?v=20260826.74";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   getPluginBootPromise,
   listOverlays,
   PLUGIN_CHANGED_EVENT,
-} from "./plugins.js?v=20260829.37";
+} from "./plugins.js?v=20260829.38";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.73";
+} from "./app-terminal-sessions.js?v=20260826.74";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.77";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.79";
+} from "./app-sessions.js?v=20260828.78";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.80";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.74";
+} from "./app-panels.js?v=20260826.75";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.73";
-import { addPanelByComponent } from "./panels.js?v=20260812.61";
+} from "./app-workspace.js?v=20260826.74";
+import { addPanelByComponent } from "./panels.js?v=20260812.62";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.102";
+} from "./app-layout.js?v=20260828.103";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.89";
+} from "./workspace-api.js?v=20260828.90";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -223,13 +221,11 @@ function dockviewOptions(onReady) {
 // component names against (dockview reads components[name] at addPanel
 // time — no snapshot — so in-place registration works).
 export const PANEL_COMPONENTS = {
-  settings: SettingsPanel,
   plugins: PluginsPanel,
   fallback: FallbackPanel,
   task: WorkspaceTaskPanel,
   terminal: TerminalPanel,
   iframe: IframePanel,
-  "crush-runner": CrushRunnerPanel, // from ./crush-runner.js
 };
 
 function App() {

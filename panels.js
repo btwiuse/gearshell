@@ -20,11 +20,11 @@ import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.26";
+} from "./panels-task.js?v=20260828.27";
 import {
   getPluginIframeConfig,
   openPluginPanel,
-} from "./plugins.js?v=20260829.37";
+} from "./plugins.js?v=20260829.38";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -340,10 +340,8 @@ function addIframePanel(api, config, group) {
 const PANEL_ADDERS = {
   terminal: addTerminalPanel,
   "workspace-task": addWorkspaceTaskPanel,
-  settings: (api, group) => panelsDep("addSettingsPanel")(api, group),
   plugins: (api, group) => panelsDep("addPluginsPanel")(api, group),
   fallback: (api, group) => panelsDep("addFallbackPanel")(api, group),
-  "crush-runner": (api, group) => panelsDep("addCrushRunnerPanel")(api, group),
 };
 
 function addPanelByComponent(api, component, group, options) {
