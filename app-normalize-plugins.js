@@ -84,6 +84,20 @@ export function normalizePlugin(plugin = {}) {
       : {}),
     ...(wasm.length ? { wasm } : {}),
     ...(preset.length ? { preset } : {}),
+    // Dual-mode w9y dependency: { mod, version? } declares that the
+    // package comes from a `w9y mod apply` install (read via the /opfs
+    // projection) instead of per-task fetch binds. Preserved so the
+    // dependency sync can re-apply on version bumps.
+    ...(plugin.w9y && typeof plugin.w9y.mod === "string" && plugin.w9y.mod
+      ? {
+        w9y: {
+          mod: plugin.w9y.mod,
+          ...(plugin.w9y.version
+            ? { version: String(plugin.w9y.version).trim() }
+            : {}),
+        },
+      }
+      : {}),
   };
 }
 
@@ -93,6 +107,9 @@ export function normalizePlugin(plugin = {}) {
 // version bumps) and their wasm/preset declarations (package content,
 // e.g. the bbtex manifest) are refreshed to the current default, so
 // saved workspaces pick up plugin updates without a manual reinstall.
+// wasm is REPLACED even when the default no longer declares any (the
+// dual-mode switch moved bbtex's 63 binaries to a w9y mod dependency),
+// so stale per-task fetch binds from older saves are pruned here.
 export function normalizePlugins(list, defaults) {
   const defaultsById = new Map(
     (Array.isArray(defaults) ? defaults : [])
@@ -110,8 +127,9 @@ export function normalizePlugins(list, defaults) {
         ...item,
         entry: def.entry || item.entry,
         ...(def.iframe ? { iframe: def.iframe } : {}),
-        ...(def.wasm ? { wasm: def.wasm } : {}),
+        wasm: def.wasm || [],
         ...(def.preset ? { preset: def.preset } : {}),
+        ...(def.w9y ? { w9y: def.w9y } : {}),
       };
     });
   const userIds = new Set(user.map((item) => item.id));

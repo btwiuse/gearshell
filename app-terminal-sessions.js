@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.117";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.76";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.117";
+} from "./app-terminal-profiles.js?v=20260826.120";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.79";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.120";
 import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
 
 export function hideTerminalLayer() {
@@ -80,7 +80,54 @@ export function createTerminalSession(
     autoActivates: "_connectStarted" in task,
   };
   terminalSessions.set(id, session);
+  // The process may exit on its own (a one-shot cmd, a bbtex example
+  // quitting on q): surface the exit in the buffer instead of leaving a
+  // blank/alt-screen terminal. For interactive shells the exit file
+  // stays empty and the poll is a no-op until the session is destroyed.
+  startReplExitPolling(session);
   return session;
+}
+
+// Poll the kernel exit file (task/repl-<id>/exit) for a repl/embed
+// terminal session and write a VS Code-style notice once the process is
+// gone. The poll is cheap (small ramfs file) and stops on the first
+// non-empty exit value. Leaving the alternate screen first matters: an
+// alt-screen app killed without cleanup leaves its last frame on
+// screen, and the notice would otherwise be written into that frozen
+// buffer.
+function startReplExitPolling(session) {
+  const path = `task/repl-${session.id}/exit`;
+  const poll = async () => {
+    if (!terminalSessions.has(session.id)) return;
+    let text;
+    try {
+      const root = getWanixRoot();
+      if (!root) return;
+      text = await root.readText(path);
+    } catch {
+      return;
+    }
+    if (text == null) return;
+    const trimmed = text.trim();
+    if (trimmed === "") return;
+    stopReplExitPolling(session);
+    const term = session.term?._term;
+    if (term && typeof term.writeln === "function") {
+      term.write("\x1b[?1049l");
+      term.writeln(
+        trimmed === "0"
+          ? `[Process completed (exit code ${trimmed})]`
+          : `[Process exited with code ${trimmed}]`,
+      );
+    }
+  };
+  poll();
+  session._exitTimer = setInterval(poll, 500);
+}
+
+function stopReplExitPolling(session) {
+  if (session._exitTimer) clearInterval(session._exitTimer);
+  session._exitTimer = null;
 }
 
 function createTaskElement(id, profile) {
@@ -163,6 +210,7 @@ export function destroyTerminalSession(id) {
   const session = terminalSessions.get(id);
   if (!session) return;
   terminalSessions.delete(id);
+  stopReplExitPolling(session);
   session.anchor = null;
   session.wrapper.remove();
 }

@@ -178,3 +178,13 @@
   border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 6px;
 }
+
+.bbtex-w9y-hint {
+  grid-column: 1 / -1;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+}

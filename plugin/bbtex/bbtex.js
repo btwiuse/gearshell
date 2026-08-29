@@ -2,21 +2,22 @@
 //
 // Left: every example from the bbtex manifest (63, grouped by theme).
 // Right: one embedded terminal per open example (terminal.embed with
-// profile.cmd = example id, so the terminal task runs the example binary
-// as its command). The examples are declared as wasm deps in the plugin
-// manifest and mounted at bin/<id> in every task namespace; each
-// terminal's task is the wanix-side worker that execs it. q quits a
+// profile.cmd = /opfs/wanix/examples/<id>, so the terminal task runs the
+// w9y-installed example binary straight from the lazy /opfs projection —
+// no fetch binds, no per-task copies). The plugin manifest declares the
+// examples as a w9y mod dependency (w9y: { mod: "bbtex", version:
+// "v2.0.12" }); the shell auto-applies it on boot/install. q quits a
 // Bubble Tea program; the close button detaches and destroys the session.
 // pager reads artichoke.md from its CWD, so its profile starts with
 // wd=/preset (the file ships as a plugin preset at preset/artichoke.md).
 
 import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.117";
+import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.120";
 
 // Every example in the w9y bbtex@v2.0.12 manifest, grouped by theme. Each
-// id must match a `wasm` declaration in the plugin manifest (same dst
-// bin/<id>). The optional `profile` merges over the terminal defaults
+// id maps to /opfs/wanix/examples/<id> (where `w9y mod apply bbtex` puts
+// the binaries). The optional `profile` merges over the terminal defaults
 // before the task starts (pager needs its CWD on /preset where the
 // artichoke.md preset lands).
 export const BTEX_EXAMPLES = [
@@ -179,36 +180,31 @@ main =
 _Alcachofa_, if you were wondering, is artichoke in Spanish.
 `;
 
-// The w9y on-demand build URL for one example binary (pinned to the same
-// v2.0.12 as the plugin manifest's wasm declarations).
-const W9Y_EXAMPLE = (id) =>
-  `https://w9y.io/go/github.com/bubbletui/bubbletea/v2/examples/${id}@v2.0.12`;
+// The w9y install root: `w9y mod apply bbtex@v2.0.12` installs every
+// example binary under /opfs/wanix/examples/<id> (see the bbtex.mod
+// layout). The lazy /opfs projection makes them readable inside every
+// task without any bind.
+const W9Y_EXAMPLE_PATH = (id) => `/opfs/wanix/examples/${id}`;
 
-// Default profile with cmd = example id, then per-example overrides. Each
-// terminal mounts ONLY its own binary (plus the pager preset) through
-// extraBinds and skips the system-wide plugin binds, so the namespace
-// stays a few MB instead of pulling every wasm dep - many examples can
-// be open at once without exhausting memory.
+// Default profile with cmd = the w9y-installed example path, then
+// per-example overrides. Each terminal skips the system-wide plugin
+// binds so the namespace stays tiny (no bash/w9y/gear mount, no other
+// plugin wasm) and many examples can be open at once; the example
+// binary itself needs no bind thanks to the /opfs projection. Only the
+// pager's data file (artichoke.md, read from CWD) still rides
+// extraBinds as a preset.
 function embedProfileFor(example) {
   return {
     ...getDefaultTerminalProfile(),
-    cmd: example.id,
+    cmd: W9Y_EXAMPLE_PATH(example.id),
     skipPluginBinds: true,
-    extraBinds: [
-      { type: "ns", dst: "bin", src: "#ramfs/new", mode: "0755" },
-      {
-        type: "fetch",
-        dst: `bin/${example.id}`,
-        src: W9Y_EXAMPLE(example.id),
-        mode: "0755",
-      },
-      ...(example.id === "pager"
+    extraBinds:
+      example.id === "pager"
         ? [
             { type: "ns", dst: "preset", src: "#ramfs/new" },
             { type: "file", dst: "preset/artichoke.md", content: ARTICHOKE_MD },
           ]
-        : []),
-    ],
+        : [],
     ...(example.profile || {}),
   };
 }
@@ -358,6 +354,24 @@ function PlaygroundStage({ open, onClose }) {
 export function BbtexPlayground() {
   const [open, setOpen] = useState([]);
   const [atCap, setAtCap] = useState(false);
+  const [w9yMissing, setW9yMissing] = useState(null);
+  useEffect(() => {
+    let mounted = true;
+    const check = () => {
+      const status = window.GearShell?.w9y?.status?.("bbtex");
+      if (mounted && status && !status.installed) {
+        setW9yMissing(status);
+      } else if (mounted && status && status.installed) {
+        setW9yMissing(null);
+      }
+    };
+    check();
+    const unsubscribe = window.GearShell?.events?.on?.("w9y.changed", check);
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
+  }, []);
   const toggle = (example) => {
     const isOpen = open.some((item) => item.id === example.id);
     if (!isOpen && open.length >= MAX_OPEN_EXAMPLES) {
@@ -374,6 +388,13 @@ export function BbtexPlayground() {
   return React.createElement(
     "div",
     { className: "bbtex-playground" },
+    w9yMissing
+      ? React.createElement(
+          "div",
+          { className: "bbtex-w9y-hint" },
+          "bbtex is not installed — examples will fail until `w9y mod apply bbtex@v2.0.12` runs (the shell installs it automatically on boot/plugin install).",
+        )
+      : null,
     React.createElement(ExampleList, { open, onToggle: toggle, atCap }),
     React.createElement(PlaygroundStage, { open, onClose: toggle }),
   );

@@ -6,7 +6,7 @@ import {
   WORKSPACE_PRESET_KEY_PREFIX,
   WORKSPACE_PRESETS,
   WORKSPACE_SCHEMA_VERSION,
-} from "./app-constants.js?v=20260828.76";
+} from "./app-constants.js?v=20260828.79";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -17,17 +17,17 @@ import {
   normalizeShellConfig,
   normalizeSystemConfig,
   normalizeTask,
-} from "./app-normalize.js?v=20260828.118";
+} from "./app-normalize.js?v=20260828.121";
 import {
   createWorkspaceId,
   readStoredJson,
   workspacePresetStorageKey,
   writeStoredJson,
-} from "./app-storage.js?v=20260826.74";
+} from "./app-storage.js?v=20260826.77";
 import {
   normalizeWorkspaceName,
   notifyWorkspaceChange,
-} from "./app-workspace.js?v=20260826.117";
+} from "./app-workspace.js?v=20260826.120";
 
 export function loadWorkspacePresetIndex() {
   const index = readStoredJson(WORKSPACE_PRESET_INDEX_KEY, []);

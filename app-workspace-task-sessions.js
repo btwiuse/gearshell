@@ -8,10 +8,10 @@ import {
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.76";
-import { normalizeTask } from "./app-normalize.js?v=20260828.118";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.117";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.117";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.79";
+import { normalizeTask } from "./app-normalize.js?v=20260828.121";
+import { buildEnv } from "./app-terminal-profiles.js?v=20260826.120";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.120";
 
 export function createBindElement(bind) {
   const element = document.createElement("wanix-bind");
@@ -223,15 +223,14 @@ export function setWorkspaceTaskStatus(session, status, error = null) {
   );
 }
 
-// Terminal task status: poll the kernel's exit file for the task. Wanix
-// writes the process exit code (or "" while alive) to
-// task/<taskId>/exit; a non-empty value means the process is gone. We
-// surface exit=0 as "succeeded" and anything else as "failed" so the
-// existing WORKSPACE_TASK_STATUS_EVENT listener gets a real terminal
-// state. The poll is cheap (small file, ramfs-backed) and stops as soon
-// as it sees an exit value.
+// Task status: poll the kernel's exit file for the task. Wanix writes
+// the process exit code (or "" while alive) to task/<taskId>/exit; a
+// non-empty value means the process is gone. We surface exit=0 as
+// "succeeded" and anything else as "failed" so the existing
+// WORKSPACE_TASK_STATUS_EVENT listeners (panels, agents, runHeadlessTask)
+// get a real terminal state. The poll is cheap (small file, ramfs-backed)
+// and stops as soon as it sees an exit value.
 function startTaskExitPolling(session) {
-  if (session.term) return;
   const path = `task/workspace-task-${session.id}/exit`;
   const poll = async () => {
     if (!workspaceTaskSessions.has(session.id)) return;
@@ -251,6 +250,22 @@ function startTaskExitPolling(session) {
       setWorkspaceTaskStatus(session, "succeeded");
     } else {
       setWorkspaceTaskStatus(session, "failed", `exit ${trimmed}`);
+    }
+    // Interactive terminals: surface the exit in the buffer (VS Code
+    // style) so a process that quits cleanly (a bbtex example on "q",
+    // bash running a one-shot script) does not leave a blank terminal
+    // with no explanation. The term element is connected by the time a
+    // process has run and exited, so _term is available. Leave the
+    // alternate screen first: an alt-screen app killed without cleanup
+    // freezes its last frame and would swallow the notice.
+    const term = session.term?._term;
+    if (term && typeof term.writeln === "function") {
+      term.write("\x1b[?1049l");
+      term.writeln(
+        trimmed === "0"
+          ? `[Process completed (exit code ${trimmed})]`
+          : `[Process exited with code ${trimmed}]`,
+      );
     }
   };
   poll();

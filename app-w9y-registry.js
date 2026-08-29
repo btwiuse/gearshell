@@ -10,7 +10,7 @@
 // after each orchestrated operation, and on demand via w9y.refresh.
 
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
-import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.102";
+import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.105";
 
 const REGISTRY_OPFS = ["wanix", "w9y-registry.json"];
 const INSTALL_PREFIX = "/opfs/wanix";
@@ -70,6 +70,34 @@ export function installedModStatus(id) {
     installedAt: mod.installedAt,
     entryCount: Object.keys(mod.entries || {}).length,
   };
+}
+
+// Dual-mode dependency sync: a plugin manifest may declare
+// `w9y: { mod, version? }` instead of re-declaring wasm mounts (the
+// binaries then come from the w9y install at /opfs/wanix/<layout>, not
+// from per-task fetch binds). Called after boot and after every plugin
+// install/enable: refresh the mirror, then fire `w9y mod apply` for each
+// declared dep that is missing or pinned to a different version. Applies
+// are fire-and-forget; completion + errors surface via w9y.changed
+// events. Disable/remove deliberately does NOT uninstall the mod - the
+// install is shared globally, other workspaces may use it, and
+// reinstalling costs time.
+export async function ensureW9yDependencies(plugins) {
+  await refreshW9yRegistry();
+  const applied = [];
+  for (const plugin of plugins || []) {
+    const dep = plugin?.w9y;
+    if (!dep || typeof dep.mod !== "string" || !dep.mod) continue;
+    const status = installedModStatus(dep.mod);
+    const needsApply = dep.version
+      ? status.installed !== dep.version
+      : !status.installed;
+    if (needsApply) {
+      applied.push({ mod: dep.mod, version: dep.version || "latest" });
+      applyW9yMod(dep.mod, dep.version || null);
+    }
+  }
+  return applied;
 }
 
 // --- orchestration (the w9y CLI does the install + bookkeeping) ---

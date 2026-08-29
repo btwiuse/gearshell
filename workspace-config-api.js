@@ -21,16 +21,17 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.117";
+} from "./app-workspace.js?v=20260826.120";
 import {
   normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.118";
-import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.39";
+} from "./app-normalize.js?v=20260828.121";
+import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.42";
 import { primePluginContentCache } from "./app-plugin-cache.js?v=20260830.2";
-import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.76";
+import { ensureW9yDependencies } from "./app-w9y-registry.js?v=20260830.11";
+import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.79";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
@@ -38,12 +39,12 @@ import {
   pushAuditEntry,
   redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.92";
+} from "./workspace-audit.js?v=20260829.95";
 import {
   mergePluginStatus,
   registerPlugin,
   unregisterPlugin,
-} from "./plugins.js?v=20260829.81";
+} from "./plugins.js?v=20260829.84";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
@@ -212,6 +213,11 @@ function installPlugin(manifest, agentOrOptions = {}) {
   primePluginContentCache(next.plugins).catch((error) => {
     console.error("plugin cache priming failed", error);
   });
+  // Dual-mode: plugins declaring a w9y mod dependency get it installed
+  // (w9y mod apply) on install, matching the manifest pin.
+  ensureW9yDependencies(next.plugins).catch((error) => {
+    console.error("w9y dependency sync failed", error);
+  });
   pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
   return {
     ok: true,
@@ -244,6 +250,14 @@ function setPluginEnabled(id, enabled, agentOrOptions = {}) {
   primePluginContentCache(next.plugins).catch((error) => {
     console.error("plugin cache priming failed", error);
   });
+  // Dual-mode: an enabled plugin may declare w9y mod deps that are not
+  // installed yet (e.g. a workspace that enabled bbtex before the mod
+  // ever ran); sync them here so the panels resolve.
+  if (enabled === true) {
+    ensureW9yDependencies(next.plugins).catch((error) => {
+      console.error("w9y dependency sync failed", error);
+    });
+  }
   pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, id, enabled: enabled === true };
 }

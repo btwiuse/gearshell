@@ -647,45 +647,34 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 ## 二十七、下一步计划(2026-08-30 compact 前拍板,双模已批准)
 
 > 优先级:P0 = 先做;P1 = 接着做;P2 = 之后。每个条目带必要上下文,可直接开工。
+> **round 46 已完成:P0-1 + P0-2 全落地并浏览器实测(见 memory/plugins.md round 46)。**
 
-### P0-1:任务退出检测 + 终端 [Process completed](先修检测,再显示)
+### P0-1:任务退出检测 + 终端 [Process completed] ✅ round 46 完成
 
-**事实**:
-- wanix 内核在进程退出时写 `task/<id>/exit`(实测 `"0"` / `"127"`),这就是
-  ground truth。
-- `startTaskExitPolling`(app-workspace-task-sessions.js:233)开头
-  `if (session.term) return;` —— **终端会话不轮询**,只有 headless 会话有
-  退出检测。
-- 重负载下 headless 会话的终态事件也不派发(runHeadlessTask 只能靠 8min
-  超时 resolve;本轮用 registry 文件轮询绕开)。根因未查,怀疑 systemReady /
-  事件派发时序。排查时注意:事件 shape 是 `{id, topic, payload, ts}`。
+- workspace-task 会话去掉 `if (session.term) return;`(app-workspace-task-sessions.js),
+  终端会话现在也轮询 `task/<id>/exit`;退出写 `[Process completed (exit code N)]` /
+  `[Process exited with code N]` + 派发 task.status 终态(agents/runHeadlessTask 共用,
+  已实测 events.drain 可见 succeeded/failed)。
+- repl/embed 会话(普通终端、bbtex embed)原本无轮询,新加 `startReplExitPolling`
+  (app-terminal-sessions.js)轮询 `task/repl-<id>/exit`;destroy 清定时器。
+- 注意:提示前先 `term.write("\x1b[?1049l")` 离开 alt screen,否则全屏 TUI 冻结帧
+  会吞掉提示。
 
-**方案**:
-1. 去掉 `session.term` 守卫,终端会话也轮询 `task/<id>/exit`;修终态事件
-   派发可靠性。
-2. 退出时往 xterm 写 `[Process completed (exit code N)]`(VS Code 风格,直接
-   write 进终端 buffer);或按配置自动关闭终端。bbtex 示例按 q 退出后正好需要
-   (现在退完变空屏)。
-3. 事件链同步发 `task.status` 终态(agents / runHeadlessTask 共用)。
-- 辅助信号(未验证):进程退出 → task 的 term fd 关闭 → wanix-term 连接关闭,
-   可作为即时信号。
+### P0-2:bbtex 切换到已安装路径(双模落地) ✅ round 46 完成
 
-### P0-2:bbtex 切换到已安装路径(双模落地,收益最大)
-
-- plugin manifest 新增 `w9y: { mod, version? }` 字段 = 声明包依赖(取代
-  wasm 挂载声明,避免重复劳动)。
-- boot/install 时查 `/opfs/wanix/w9y-registry.json`:未装/版本不符 → headless
-  任务 `w9y mod apply <mod>[@ver]`(app-w9y-registry.js 的 apply 编排直接复用);
-  已装 → 直接可用。
-- 挂载路径由 **mod 布局约定**:bbtex → `/opfs/wanix/examples/<id>`;
-  gear.mod → `/opfs/wanix/bin/gear`(需 PATH 加 `/opfs/wanix/bin`)。
-- **双模**:mounts 机制保留给"每个任务注入固定路径工具集"场景(shell-tools 的
-  /bin/bash 深度接在 PATH/DEFAULT_CMD);w9y 依赖模式给可安装的包。不互斥。
-- bbtex 落地:embedProfileFor 的 cmd 改成 `/opfs/wanix/examples/<id>`(删
-  extraBinds fetch + skipPluginBinds 可简化);`app-plugin-cache.js` blob 缓存
-  退役(或留给非 w9y 插件)。
+- plugin manifest 新增 `w9y: { mod: "bbtex", version: "v2.0.12" }`,63 条 wasm 数组删除。
+- `ensureW9yDependencies(plugins)`(app-w9y-registry.js):boot + install/enable 后比对
+  registry 镜像,缺失/版本不符 → `w9y mod apply`(fire-and-forget,结果走 w9y.changed)。
+  disable/remove **不**卸 mod(全局共享)。
+- normalizePlugin 保留 w9y 字段;builtin 刷新时 wasm 强制替换为默认(空即空)→
+  老工作区的 63 条旧 bind 自动清除(迁移关键)。
+- bbtex:`embedProfileFor` cmd → `/opfs/wanix/examples/<id>`(懒投影零副本),
+  去 extraBinds fetch + bin ns;保留 skipPluginBinds(命名空间极小,12 上限);
+  pager 的 artichoke.md 仍走 preset extraBinds。playground 加 w9y 缺失提示条。
+- `app-plugin-cache.js` **保留不退役**:仍为 shell-tools 的 bash/w9y/gear
+  fetch-bind 内容做 OPFS 缓存;blob 交换只服务非 w9y fetch bind。
 - 涉及文件:app-plugin-manifests.js / app-normalize-plugins.js /
-  workspace-config-api.js(install 时触发 apply)/ plugin/bbtex/bbtex.js。
+  workspace-config-api.js / app.js / app-w9y-registry.js / plugin/bbtex/*。
 
 ### P1
 
