@@ -10,7 +10,7 @@
 // after each orchestrated operation, and on demand via w9y.refresh.
 
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
-import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.105";
+import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.109";
 
 const REGISTRY_OPFS = ["wanix", "w9y-registry.json"];
 const INSTALL_PREFIX = "/opfs/wanix";
@@ -82,7 +82,14 @@ export function installedModStatus(id) {
 // events. Disable/remove deliberately does NOT uninstall the mod - the
 // install is shared globally, other workspaces may use it, and
 // reinstalling costs time.
-export async function ensureW9yDependencies(plugins) {
+//
+// cliVersion (optional) is the current w9y CLI pin (W9Y_BINARY_VERSION):
+// the w9y CLI can itself be installed as a mod (w9y.mod), and its binary
+// at /opfs/wanix/w9y shadows /bin/w9y in task PATH (PATH order is
+// /opfs/wanix before /bin). A stale mod there would silently regress
+// headless applies to an older CLI that does not write the registry -
+// keep it at the pin whenever the mod is present.
+export async function ensureW9yDependencies(plugins, cliVersion) {
   await refreshW9yRegistry();
   const applied = [];
   for (const plugin of plugins || []) {
@@ -95,6 +102,15 @@ export async function ensureW9yDependencies(plugins) {
     if (needsApply) {
       applied.push({ mod: dep.mod, version: dep.version || "latest" });
       applyW9yMod(dep.mod, dep.version || null);
+    }
+  }
+  // w9y self-version guard: only when the mod is already installed (the
+  // shell-tools /bin/w9y is the system copy; do not force-install).
+  if (cliVersion) {
+    const w9yStatus = installedModStatus("w9y");
+    if (w9yStatus.installed && w9yStatus.installed !== cliVersion) {
+      applied.push({ mod: "w9y", version: cliVersion });
+      applyW9yMod("w9y", cliVersion);
     }
   }
   return applied;

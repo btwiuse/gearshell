@@ -7,7 +7,7 @@
 
 import React from "react";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { PluginsPage } from "./plugins-page.js?v=20260829.57";
+import { PluginsPage } from "./plugins-page.js?v=20260829.61";
 
 let __pluginsPanelDeps = null;
 export function initPluginsPanel(dependencies) {

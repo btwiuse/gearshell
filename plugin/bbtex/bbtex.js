@@ -13,7 +13,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.120";
+import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.124";
 
 // Every example in the w9y bbtex@v2.0.12 manifest, grouped by theme. Each
 // id maps to /opfs/wanix/examples/<id> (where `w9y mod apply bbtex` puts

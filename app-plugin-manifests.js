@@ -19,9 +19,9 @@
 export const HUSH_BINARY_VERSION = "v0.5.9";
 export const DEFAULT_HUSH_BINARY_URL =
   "https://w9y.io/go/github.com/btwiuse/hush/cmd/hush@v0.5.9";
-export const W9Y_BINARY_VERSION = "v0.0.7";
+export const W9Y_BINARY_VERSION = "v0.0.8";
 export const DEFAULT_W9Y_BINARY_URL =
-  "https://w9y.io/go/github.com/justwasm/w9y/cmd/w9y@v0.0.7";
+  "https://w9y.io/go/github.com/justwasm/w9y/cmd/w9y@v0.0.8";
 export function isLegacyHushBinaryUrl(url) {
   return typeof url === "string" &&
     url.includes("github.com/btwiuse/hush/cmd/hush@") &&
@@ -77,6 +77,21 @@ export const DEFAULT_PLUGINS = [
       api: ["music.*", "panels.open", "panels.list"],
     },
   },
+  // The system package manager: shows the w9y install registry (owned by
+  // the w9y CLI at wanix/w9y-registry.json) with install/remove/re-apply
+  // and a declared-version comparison against plugin w9y deps. Required
+  // like shell-tools: package management must not be disableable.
+  {
+    id: "w9y",
+    name: "Packages",
+    version: "1.0.0",
+    icon: "Boxes",
+    entry: "/plugin/w9y/w9y-plugin.js?v=20260830.3",
+    required: true,
+    permissions: {
+      api: ["w9y.*", "events.on", "events.off", "events.drain", "config.getShell"],
+    },
+  },
   {
     id: "deck",
     name: "Deck",
@@ -89,7 +104,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js?v=20260829.56",
+    entry: "/plugin/group/group-plugin.js?v=20260829.60",
   },
   {
     id: "runtime",
@@ -103,7 +118,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.104",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.108",
   },
   {
     id: "home",
@@ -120,28 +135,28 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.112",
+    entry: "/plugin/files/files-plugin.js?v=20260829.116",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.113",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.117",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.114",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.118",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.118",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.122",
   },
   {
     id: "launcher",
@@ -155,7 +170,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.119",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.123",
   },
   {
     id: "browser",
@@ -241,7 +256,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.21",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.25",
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
     preset: [

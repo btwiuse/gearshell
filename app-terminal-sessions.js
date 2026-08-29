@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.120";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.79";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.120";
+} from "./app-terminal-profiles.js?v=20260826.124";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.83";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.124";
 import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
 
 export function hideTerminalLayer() {
@@ -91,10 +91,9 @@ export function createTerminalSession(
 // Poll the kernel exit file (task/repl-<id>/exit) for a repl/embed
 // terminal session and write a VS Code-style notice once the process is
 // gone. The poll is cheap (small ramfs file) and stops on the first
-// non-empty exit value. Leaving the alternate screen first matters: an
-// alt-screen app killed without cleanup leaves its last frame on
-// screen, and the notice would otherwise be written into that frozen
-// buffer.
+// non-empty exit value. The notice lands after the last output line
+// (writeAtContentEnd); the kernel homes the cursor on process exit, so a
+// bare writeln would overwrite the first line.
 function startReplExitPolling(session) {
   const path = `task/repl-${session.id}/exit`;
   const poll = async () => {
@@ -113,16 +112,37 @@ function startReplExitPolling(session) {
     stopReplExitPolling(session);
     const term = session.term?._term;
     if (term && typeof term.writeln === "function") {
-      term.write("\x1b[?1049l");
-      term.writeln(
-        trimmed === "0"
-          ? `[Process completed (exit code ${trimmed})]`
-          : `[Process exited with code ${trimmed}]`,
-      );
+      const notice = trimmed === "0"
+        ? `[Process completed (exit code ${trimmed})]`
+        : `[Process exited with code ${trimmed}]`;
+      writeAtContentEnd(term, notice);
     }
   };
   poll();
   session._exitTimer = setInterval(poll, 500);
+}
+
+// Write a line at the end of the terminal's existing content. The kernel
+// homes the cursor when a task process exits (and apps that used the
+// alternate screen leave it frozen), so the current cursor position is
+// unreliable - find the last non-empty buffer row and write there.
+function writeAtContentEnd(term, text) {
+  const buffer = term.buffer?.active || term._buffer?.active || term._core?.buffer?.active;
+  let row = null;
+  if (buffer && typeof buffer.getLine === "function") {
+    const viewportRows = buffer.rows || 24;
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      // row tracks the 1-based line AFTER the last content line
+      if (line && line.translateToString(true).trim() !== "") row = i + 2;
+    }
+    // The visible screen is at most the viewport tall; content that
+    // scrolled away is already above it, so clamp to the bottom row.
+    if (row === null) row = 1;
+    if (row > viewportRows) row = viewportRows;
+  }
+  if (row !== null) term.write(`\x1b[${row};1H`);
+  term.writeln(text);
 }
 
 function stopReplExitPolling(session) {

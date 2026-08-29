@@ -1,0 +1,227 @@
+/* Packages (w9y) management panel styles. */
+
+.w9y-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+  color: var(--text, #e2e8f0);
+}
+
+.w9y-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.w9y-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.w9y-header-title h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.w9y-header-note {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.w9y-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.w9y-notice.ok {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.w9y-notice.error {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.w9y-install {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.w9y-install-form {
+  display: flex;
+  gap: 8px;
+}
+
+.w9y-install-input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+}
+
+.w9y-install-input::placeholder {
+  opacity: 0.5;
+}
+
+.w9y-known {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.w9y-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+  cursor: pointer;
+}
+
+.w9y-btn:hover:not(:disabled) {
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.w9y-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.w9y-btn.primary {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.w9y-btn.danger:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.6);
+  color: #f87171;
+}
+
+.w9y-chip {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.w9y-chip:hover:not(:disabled) {
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.w9y-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.w9y-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.w9y-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.w9y-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.w9y-row-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.w9y-row-name strong {
+  font-size: 14px;
+}
+
+.w9y-version {
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  opacity: 0.85;
+}
+
+.w9y-row-meta {
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.w9y-declared {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.w9y-declared.ok {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.w9y-declared.stale {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.w9y-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.w9y-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.w9y-empty p {
+  margin: 0;
+  font-size: 13px;
+  max-width: 420px;
+}

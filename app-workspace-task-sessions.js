@@ -8,10 +8,10 @@ import {
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.79";
-import { normalizeTask } from "./app-normalize.js?v=20260828.121";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.120";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.120";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.83";
+import { normalizeTask } from "./app-normalize.js?v=20260828.125";
+import { buildEnv } from "./app-terminal-profiles.js?v=20260826.124";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.124";
 
 export function createBindElement(bind) {
   const element = document.createElement("wanix-bind");
@@ -255,21 +255,43 @@ function startTaskExitPolling(session) {
     // style) so a process that quits cleanly (a bbtex example on "q",
     // bash running a one-shot script) does not leave a blank terminal
     // with no explanation. The term element is connected by the time a
-    // process has run and exited, so _term is available. Leave the
-    // alternate screen first: an alt-screen app killed without cleanup
-    // freezes its last frame and would swallow the notice.
+    // process has run and exited, so _term is available. The kernel
+    // homes the cursor when the process exits, so the notice must be
+    // repositioned after the last output line - a bare writeln would
+    // land at the top and overwrite the first output line.
     const term = session.term?._term;
     if (term && typeof term.writeln === "function") {
-      term.write("\x1b[?1049l");
-      term.writeln(
-        trimmed === "0"
-          ? `[Process completed (exit code ${trimmed})]`
-          : `[Process exited with code ${trimmed}]`,
-      );
+      const text = trimmed === "0"
+        ? `[Process completed (exit code ${trimmed})]`
+        : `[Process exited with code ${trimmed}]`;
+      writeAtContentEnd(term, text);
     }
   };
   poll();
   session._exitTimer = setInterval(poll, 500);
+}
+
+// Write a line at the end of the terminal's existing content. The kernel
+// homes the cursor when a task process exits (and apps that used the
+// alternate screen leave it frozen), so the current cursor position is
+// unreliable - find the last non-empty buffer row and write there.
+function writeAtContentEnd(term, text) {
+  const buffer = term.buffer?.active || term._buffer?.active || term._core?.buffer?.active;
+  let row = null;
+  if (buffer && typeof buffer.getLine === "function") {
+    const viewportRows = buffer.rows || 24;
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      // row tracks the 1-based line AFTER the last content line
+      if (line && line.translateToString(true).trim() !== "") row = i + 2;
+    }
+    // The visible screen is at most the viewport tall; content that
+    // scrolled away is already above it, so clamp to the bottom row.
+    if (row === null) row = 1;
+    if (row > viewportRows) row = viewportRows;
+  }
+  if (row !== null) term.write(`\x1b[${row};1H`);
+  term.writeln(text);
 }
 
 function stopTaskExitPolling(session) {

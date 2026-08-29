@@ -681,7 +681,11 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 - **内核 wasm OPFS 缓存引导**(TODO §26C-1):wasm 走 blob URL 无副作用;内核
   JS 模块含 `new URL("workbench/", import.meta.url)` 相对解析,不能 blob
   import,JS 走同源打包(wanix-dist)/SW。
-- **包管理 UI**(WISHLIST #9):registry 为数据源,装/卸/列表/更新/版本对比。
+- **包管理 UI** ✅ round 47:builtin "Packages" 面板(plugin/w9y/*),registry 为
+  数据源,装/卸/Re-apply/列表/版本对比(declared 徽标)+ w9y.changed 实时刷新。
+- **w9y mod apply TUI** ✅ round 47(上游 v0.0.8):bubbletui package-manager/
+  progress-bar 动画照搬(spinner + 进度条 + 字节计数 + ✓/✗ 列表);仅 tty 启用,
+  headless 输出不变。
 
 ### P2
 
