@@ -21,15 +21,15 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.94";
+} from "./app-workspace.js?v=20260826.95";
 import {
   normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.95";
-import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.16";
-import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.53";
+} from "./app-normalize.js?v=20260828.96";
+import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.17";
+import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.54";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
@@ -37,12 +37,12 @@ import {
   pushAuditEntry,
   redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.69";
+} from "./workspace-audit.js?v=20260829.70";
 import {
   mergePluginStatus,
   registerPlugin,
   unregisterPlugin,
-} from "./plugins.js?v=20260829.58";
+} from "./plugins.js?v=20260829.59";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
@@ -220,6 +220,9 @@ function setPluginEnabled(id, enabled, agentOrOptions = {}) {
   const prev = loadConfig();
   const exists = prev.plugins.find((item) => item.id === id);
   if (!exists) throw new Error(`plugin "${id}" not found`);
+  if (exists.required && enabled !== true) {
+    throw new Error(`"${id}" is required and cannot be disabled`);
+  }
   const next = {
     ...prev,
     plugins: prev.plugins.map((item) =>
@@ -242,6 +245,12 @@ function removePlugin(id, agentOrOptions = {}) {
   const builtin = (DEFAULT_PLUGINS || []).some((item) => item.id === id);
   if (builtin) {
     throw new Error(`"${id}" is a built-in plugin; disable it instead`);
+  }
+  const required = (loadConfig().plugins || []).some(
+    (item) => item.id === id && item.required,
+  );
+  if (required) {
+    throw new Error(`"${id}" is required and cannot be removed`);
   }
   const prev = loadConfig();
   const next = {

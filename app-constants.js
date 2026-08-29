@@ -3,12 +3,34 @@
 // built-in workspace presets. Pure data (500-line rule split).
 
 import { icons as LucideIcons } from "lucide-react";
-import { DEFAULT_PLUGINS } from "./app-plugin-manifests.js?v=20260829.108";
+import {
+  DEFAULT_GEAR_BINARY_URL,
+  DEFAULT_HUSH_BINARY_URL,
+  DEFAULT_PLUGINS,
+  DEFAULT_W9Y_BINARY_URL,
+  GEAR_BINARY_VERSION,
+  HUSH_BINARY_VERSION,
+  isLegacyHushBinaryUrl,
+  SHELL_PROFILE_CONTENT,
+  W9Y_BINARY_VERSION,
+} from "./app-plugin-manifests.js?v=20260829.109";
 
-// Built-in plugin manifests live in app-plugin-manifests.js; re-exported
-// so every existing importer (app.js, plugins.js, workspace-config-api,
-// music-plugin) keeps reading DEFAULT_PLUGINS from here.
-export { DEFAULT_PLUGINS };
+// Built-in plugin manifests + the shell toolset constants live in
+// app-plugin-manifests.js; re-exported so every existing importer
+// (app.js, plugins.js, workspace-config-api, app-normalize,
+// app-normalize-system, gear-bind, music-plugin) keeps reading them from
+// here.
+export {
+  DEFAULT_GEAR_BINARY_URL,
+  DEFAULT_HUSH_BINARY_URL,
+  DEFAULT_PLUGINS,
+  DEFAULT_W9Y_BINARY_URL,
+  GEAR_BINARY_VERSION,
+  HUSH_BINARY_VERSION,
+  isLegacyHushBinaryUrl,
+  SHELL_PROFILE_CONTENT,
+  W9Y_BINARY_VERSION,
+};
 
 export const debugMode = window.location.search.includes("debug");
 export let debugErrorsDismissed = false;
@@ -285,63 +307,20 @@ export const WANIX_RUNTIME = {
     "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.25/dist/wanix.min.js",
 };
 
-// The bundled shell binary (hush, mounted as /bin/bash). Pinned to a
-// semver tag; isLegacyHushBinaryUrl auto-upgrades older pins on load so
-// kernel-interpreter fixes (e.g. fd>2 redirects, script args) reach
-// existing workspaces without a manual reset.
-export const HUSH_BINARY_VERSION = "v0.5.9";
-export const DEFAULT_HUSH_BINARY_URL =
-  "https://w9y.io/go/github.com/btwiuse/hush/cmd/hush@v0.5.9";
-export const W9Y_BINARY_VERSION = "v0.0.6";
-export const DEFAULT_W9Y_BINARY_URL =
-  "https://w9y.io/go/github.com/btwiuse/w9y/cmd/w9y@v0.0.6";
-export function isLegacyHushBinaryUrl(url) {
-  return typeof url === "string" &&
-    url.includes("github.com/btwiuse/hush/cmd/hush@") &&
-    (!url.includes(`hush@${HUSH_BINARY_VERSION}`) ||
-      url.includes("w9y.up.railway.app"));
-}
-
-// The shell toolset is bound PER TASK (workspace.binds), not into the
-// system root: every task that needs bash/w9y declares its own private
-// /bin (fresh ramfs) plus the wasm binaries and the shell rc file, the
-// way crushrc is mounted per task. Keeping them out of
+// The shell toolset (bash/w9y/gear binaries + the rc file) now ships as
+// the `shell-tools` plugin (app-plugin-manifests.js): the plugin-declared
+// bind path reconciles them into workspace.binds, so the kernel only
+// keeps the two structural per-task parents here. Binds stay PER TASK
+// (workspace.binds), not in the system root: keeping them out of
 // DEFAULT_SYSTEM_CONFIG means the root namespace stays clean, so the VM
 // guest (which mounts the root at / via 9p) never sees host-side wasm
 // tools it cannot run. ensureGearShellBinds migrates existing workspaces
-// into this layout. The profile ships as a file bind at preset/profile,
-// riding on a per-task fresh ramfs at /preset (the crushrc mount point,
-// CRUSH_RUN_DIR): a type "file" bind resolves through whatever fs owns
-// the parent path, so it is only safe when that parent is a task-private
-// fresh fs — preset is, the shared root ramfs is not.
-export const SHELL_PROFILE_CONTENT = `function w9y_detect() {
-  path="$LOCATION"
-  OLDIFS=$IFS
-  IFS='/'
-
-  set -- $path
-
-  IFS=$OLDIFS
-
-  for x; do
-    [[ -d $HOME/.w9y/$x ]] && continue
-    w9y mod apply -v "$x" && mkdir -p $HOME/.w9y/$x
-    [[ $? -eq 0 ]] || continue
-    if [[ $x = picoclaw ]]; then
-      echo "[INFO] picoclaw successfully installed, type 'picoclaw' to get started"
-    fi
-    if [[ $x = crush ]]; then
-      echo "[INFO] crush successfully installed, type 'crush' to get started"
-    fi
-  done
-}
-function ensure_home() {
-  [[ -d $HOME ]] || mkdir -p $HOME
-}
-ensure_home
-cd $HOME
-w9y_detect
-`;
+// into this layout (pruning the legacy kernel tool binds). The profile
+// ships as a file bind at preset/profile, riding on a per-task fresh
+// ramfs at /preset (the crushrc mount point, CRUSH_RUN_DIR): a type
+// "file" bind resolves through whatever fs owns the parent path, so it
+// is only safe when that parent is a task-private fresh fs — preset is,
+// the shared root ramfs is not.
 export const TASK_SHELL_BINDS = [
   {
     id: "task-bin",
@@ -351,31 +330,10 @@ export const TASK_SHELL_BINDS = [
     perm: "0755",
   },
   {
-    id: "task-bash",
-    type: "fetch",
-    dst: "bin/bash",
-    src: DEFAULT_HUSH_BINARY_URL,
-    perm: "0755",
-  },
-  {
-    id: "task-w9y",
-    type: "fetch",
-    dst: "bin/w9y",
-    src: DEFAULT_W9Y_BINARY_URL,
-    perm: "0755",
-  },
-  {
     id: "task-preset",
     type: "ns",
     dst: "preset",
     src: "#ramfs/new",
-  },
-  {
-    id: "task-profile",
-    type: "file",
-    dst: "preset/profile",
-    perm: "0666",
-    content: SHELL_PROFILE_CONTENT,
   },
 ];
 

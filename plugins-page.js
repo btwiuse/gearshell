@@ -20,10 +20,10 @@ import {
   PackageOpen,
   Plus,
 } from "lucide-react";
-import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.58";
-import { configApi } from "./workspace-config-api.js?v=20260828.79";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.53";
-import { PluginCard } from "./plugins-cards.js?v=20260829.2";
+import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.59";
+import { configApi } from "./workspace-config-api.js?v=20260828.80";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.54";
+import { PluginCard } from "./plugins-cards.js?v=20260829.3";
 import { PluginModal } from "./plugins-modal.js?v=20260829.2";
 
 // Manifest assembly from the modal form (module vs iframe kind).
@@ -81,10 +81,11 @@ function makePluginActions(flash, setModal, setNotice) {
       setNotice({ kind: "error", text: "Id is required." });
       return;
     }
-    if (!manifest.entry && !manifest.iframe?.src) {
+    if (!manifest.entry && !manifest.iframe?.src &&
+        !manifest.wasm?.length && !manifest.preset?.length) {
       setNotice({
         kind: "error",
-        text: "Provide an entry URL / VFS path or an iframe src.",
+        text: "Provide an entry URL / VFS path, an iframe src, or wasm/preset tools.",
       });
       return;
     }

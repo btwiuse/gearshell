@@ -4,11 +4,11 @@
 import {
   isLegacyWanixRuntimeUrl,
   normalizeRuntimeConfig,
-} from "./app-normalize-runtime.js?v=20260829.109";
+} from "./app-normalize-runtime.js?v=20260829.110";
 import {
   normalizePlugin,
   normalizePlugins,
-} from "./app-normalize-plugins.js?v=20260829.106";
+} from "./app-normalize-plugins.js?v=20260829.107";
 
 // Runtime + plugin normalizers live in app-normalize-runtime.js /
 // app-normalize-plugins.js; re-exported so existing importers (app.js,
@@ -44,16 +44,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.53";
+} from "./app-constants.js?v=20260828.54";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.89";
+} from "./crush-runner.js?v=20260826.90";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.94";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.51";
+} from "./app-workspace.js?v=20260826.95";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.52";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -65,7 +65,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.45";
+} from "./app-normalize-system.js?v=20260828.46";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -77,7 +77,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.45";
+} from "./app-normalize-system.js?v=20260828.46";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";

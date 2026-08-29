@@ -66,6 +66,9 @@ export function normalizePlugin(plugin = {}) {
     icon: String(plugin.icon || "Wrench").trim(),
     entry: String(plugin.entry || "").trim(),
     enabled: plugin.enabled !== false,
+    // Required plugins (e.g. the shell-tools toolset) cannot be disabled
+    // or removed: the config API refuses those writes.
+    required: plugin.required === true,
     permissions: {
       api: normalizeStringList(plugin.permissions?.api),
       origins: normalizeStringList(plugin.permissions?.origins),

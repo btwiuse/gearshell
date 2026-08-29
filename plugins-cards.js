@@ -13,6 +13,7 @@ export function iconOf(name) {
 function badgeTags(plugin) {
   const tags = [];
   if (plugin.builtin) tags.push("built-in");
+  if (plugin.required) tags.push("required");
   tags.push(plugin.enabled ? "enabled" : "disabled");
   if (plugin.loaded) tags.push("loaded");
   if (plugin.loadError) tags.push("load-error");
@@ -70,6 +71,7 @@ function CardTop({ plugin, onToggle }) {
       React.createElement("input", {
         type: "checkbox",
         checked: plugin.enabled,
+        disabled: plugin.required,
         onChange: () => onToggle(plugin),
       }),
       React.createElement("span", { className: "plugin-switch-slider" }),
@@ -106,6 +108,10 @@ function CardActions({ plugin, onEdit, onRemove }) {
       {
         type: "button",
         className: "plugin-action-btn",
+        disabled: plugin.required,
+        title: plugin.required
+          ? "Required plugins are managed by the kernel"
+          : "",
         onClick: () => onEdit(plugin),
       },
       React.createElement(Pencil, { size: 13, "aria-hidden": true }),

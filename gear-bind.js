@@ -4,8 +4,8 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.94";
-import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.53";
+} from "./app-workspace.js?v=20260826.95";
+import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.54";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
 // jsfs roots at globalThis; window.GearShell = api makes the methods
@@ -165,23 +165,24 @@ export const GEAR_BIND = {
 // --- Boot hooks ---
 // Ensure the active workspace carries (1) the /js projection bind (needed
 // for the gear protocol; normally part of DEFAULT_SYSTEM_CONFIG) in the
-// system namespace, and (2) the per-task shell toolset (writable /bin +
-// bash + w9y + the gear CLI) in workspace.binds. The shell tools must NOT
+// system namespace, and (2) the per-task structural parents (/bin + /preset
+// ramfs) in workspace.binds. The tool binaries themselves (bash/w9y/gear)
+// and the rc file now come from the `shell-tools` plugin via
+// app-plugin-binds.js; this function only prunes the legacy kernel-managed
+// tool binds so old workspaces migrate cleanly. The shell tools must NOT
 // live in the system namespace: the VM guest mounts the root at / via 9p,
 // and host-side wasm tools would leak into the x86 guest where they cannot
 // run. workspace.binds are bound into each task's own namespace (the
-// crushrc per-task pattern), so terminal/workspace tasks keep bash/w9y/gctl
+// crushrc per-task pattern), so terminal/workspace tasks keep bash/w9y/gear
 // while the guest root stays clean. Must run BEFORE the wanix namespace is
 // built (app.js calls this right after loadActiveWorkspace()), because
 // binds are baked into the namespace at construction. Idempotent by bind
-// dst; the gear CLI content is REFRESHED when the protocol changes (e.g.
-// the jsfs `:json` suffix), so saved workspaces pick up fixes without
-// manual edits. Also migrates legacy workspaces that still carry the shell
-// binds at system level.
-// Ensure the per-task shell toolset lives in workspace.binds (not the
-// system namespace), refreshing perm/src/content so binds saved with the
-// legacy `mode` field or an older profile location/URL get upgraded.
-// Returns true when anything changed.
+// dst; also migrates legacy workspaces that still carry the shell binds at
+// system level.
+// Ensure the per-task shell parents live in workspace.binds (not the
+// system namespace), refreshing perm/src so binds saved with the legacy
+// `mode` field get upgraded, and pruning the kernel tool binds the
+// shell-tools plugin now provides. Returns true when anything changed.
 function ensureTaskShellBinds(workspace) {
   workspace.binds = workspace.binds || [];
   let changed = false;
@@ -211,24 +212,24 @@ function ensureTaskShellBinds(workspace) {
   // Legacy name for the CLI bind: drop any saved `bin/gctl` so old
   // workspaces migrate to the renamed bin/gear (its content is refreshed
   // below regardless).
-  const legacyGctl = workspace.binds.findIndex((item) =>
-    item.dst === "bin/gctl"
+  // The tool binaries + rc file moved out of the kernel into the
+  // `shell-tools` plugin (app-plugin-manifests.js): prune the kernel-
+  // managed tool binds (old task-bash/task-w9y/task-profile, the bash
+  // `gear` script, and the renamed legacy bin/gctl) so they do not fight
+  // the plugin's declarations for the same dst. Prune by id only — a
+  // plugin-provided bind has its own plugin-* id and must survive.
+  const legacyToolBindIds = new Set([
+    "task-bash",
+    "task-w9y",
+    "task-profile",
+    "gear",
+    "bin/gctl",
+  ]);
+  const withoutLegacyTools = workspace.binds.filter(
+    (item) => !legacyToolBindIds.has(item.id) && item.dst !== "bin/gctl",
   );
-  if (legacyGctl !== -1) {
-    workspace.binds.splice(legacyGctl, 1);
-    changed = true;
-  }
-  const gearIndex = workspace.binds.findIndex((item) =>
-    item.dst === "bin/gear"
-  );
-  if (gearIndex === -1) {
-    workspace.binds.push({ ...GEAR_BIND });
-    changed = true;
-  } else if (
-    workspace.binds[gearIndex].content !== GEAR_BIND.content ||
-    workspace.binds[gearIndex].perm !== GEAR_BIND.perm
-  ) {
-    workspace.binds[gearIndex] = { ...GEAR_BIND };
+  if (withoutLegacyTools.length !== workspace.binds.length) {
+    workspace.binds = withoutLegacyTools;
     changed = true;
   }
   return changed;

@@ -11,7 +11,7 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.94";
+} from "./app-workspace.js?v=20260826.95";
 
 // Plugin-owned binds carry this prefix; ensurePluginToolBinds prunes any
 // bind with it that no enabled plugin declares (disable / remove / config
@@ -22,10 +22,15 @@ function bindIdFor(pluginId, kind, toolId) {
   return `${PLUGIN_BIND_PREFIX}${pluginId}-${kind}-${toolId}`;
 }
 
-// One wasm declaration -> managed fetch bind (+ /bin parent need).
+// One wasm declaration -> managed fetch bind (+ /bin parent need). The
+// map is keyed by DST so two plugins claiming the same mount point do not
+// produce duplicate binds: the first declaration (config order is
+// user-first, then defaults) wins, so a user install overrides a
+// default's same dst.
 function collectPluginWasm(managed, need, plugin) {
   for (const wasm of plugin.wasm || []) {
-    managed.set(bindIdFor(plugin.id, "wasm", wasm.id), {
+    if (managed.has(wasm.dst)) continue;
+    managed.set(wasm.dst, {
       id: bindIdFor(plugin.id, "wasm", wasm.id),
       type: "fetch",
       dst: wasm.dst,
@@ -39,7 +44,8 @@ function collectPluginWasm(managed, need, plugin) {
 // One preset declaration -> managed file bind (+ /preset parent need).
 function collectPluginPreset(managed, need, plugin) {
   for (const preset of plugin.preset || []) {
-    managed.set(bindIdFor(plugin.id, "preset", preset.id), {
+    if (managed.has(preset.dst)) continue;
+    managed.set(preset.dst, {
       id: bindIdFor(plugin.id, "preset", preset.id),
       type: "file",
       dst: preset.dst,
@@ -52,9 +58,7 @@ function collectPluginPreset(managed, need, plugin) {
   }
 }
 
-// Collect the managed bind map for the enabled plugins: id -> bind.
-// Later plugins win over earlier ones (config order is user-first, so a
-// user install overrides a default's same dst).
+// Collect the managed bind map for the enabled plugins: dst -> bind.
 export function collectPluginBinds(plugins) {
   const managed = new Map();
   const ns = [];
@@ -120,12 +124,14 @@ export function ensurePluginToolBinds(workspace, plugins) {
   workspace.binds = workspace.binds || [];
   const { managed, ns } = collectPluginBinds(plugins);
   const nsIds = new Set(ns.map((bind) => bind.id));
+  // managed is keyed by dst; prune against the ids it currently owns.
+  const managedIds = new Set([...managed.values()].map((bind) => bind.id));
   let changed = false;
   // Prune plugin-owned binds that no enabled plugin declares.
   const kept = [];
   for (const bind of workspace.binds) {
     const owned = String(bind?.id || "").startsWith(PLUGIN_BIND_PREFIX);
-    if (owned && !managed.has(bind.id) && !nsIds.has(bind.id)) {
+    if (owned && !managedIds.has(bind.id) && !nsIds.has(bind.id)) {
       changed = true;
       continue;
     }
