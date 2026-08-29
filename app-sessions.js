@@ -15,10 +15,10 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.51";
+} from "./app-terminal-profiles.js?v=20260826.52";
 import { DEFAULT_CMD } from "./app-constants.js?v=20260828.21";
 import { wanixSystem } from "./app-state.js?v=20260826.2";
-import { createWanixBindElement } from "./app-wanix.js?v=20260826.51";
+import { createWanixBindElement } from "./app-wanix.js?v=20260826.52";
 
 export const DEFAULT_IFRAME_ALLOW = "clipboard-read; clipboard-write";
 

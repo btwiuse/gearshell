@@ -13,8 +13,11 @@
 .terminal-launch-chevron.open { transform: rotate(180deg); }
 .empty-workspace, .fallback-panel { display: grid; place-items: center; background: #0d1117; }
 .empty-workspace { position: absolute; inset: 0; z-index: 2; }
-.fallback-panel { height: 100%; min-height: 0; }
-.empty-workspace-card { width: min(280px, calc(100% - 32px)); padding: 20px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; text-align: center; }
+/* Launcher card container: flex + margin:auto keeps the card centered
+   when it fits, and scrollable (top reachable) when a short viewport
+   would overflow it — grid's place-items:center clips both ends. */
+.fallback-panel { height: 100%; min-height: 0; display: flex; overflow-y: auto; }
+.empty-workspace-card { margin: auto; width: min(280px, calc(100% - 32px)); padding: 20px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; text-align: center; }
 .empty-workspace-card p { margin: 0 0 16px; color: #8b949e; }
 .empty-workspace-actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 .launcher-more-options { display: flex; flex-direction: column; gap: 8px; }

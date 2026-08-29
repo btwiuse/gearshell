@@ -3,17 +3,42 @@
 .music-header h2 { margin: 0; font-size: 15px; }
 .music-now { min-height: 44px; margin-bottom: 10px; }
 .music-now-title { font-size: 14px; color: #f0f6fc; word-break: break-all; }
+.music-now-meta { margin: 2px 0 0; font-size: 12px; color: #8b949e; }
 .music-progress, .music-empty { margin: 4px 0 0; color: #8b949e; font-size: 12px; }
 .music-error { margin: 4px 0 0; color: #f85149; font-size: 12px; word-break: break-all; }
-.music-controls { display: flex; gap: 8px; margin-bottom: 12px; }
+.music-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
 .music-transport { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid #30363d; border-radius: 50%; background: #21262d; color: #c9d1d9; cursor: pointer; }
 .music-transport:hover:not(:disabled) { background: #30363d; }
 .music-transport:disabled { opacity: 0.4; cursor: default; }
+.music-transport:focus-visible, .music-play-btn:focus-visible, .music-history-row:focus-visible, .music-queue-row:focus-visible, .music-clear-btn:focus-visible, .music-queue-remove:focus-visible { outline: 2px solid #58a6ff; outline-offset: 1px; }
+.music-loop { border-radius: 8px; width: 34px; }
+.music-loop-off { color: #6e7681; }
+.music-loop[aria-pressed="true"] { color: #58a6ff; border-color: #58a6ff; }
 .music-url-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .music-url { flex: 1; min-height: 32px; padding: 6px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: inherit; }
-.music-play-btn { min-height: 32px; padding: 6px 14px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
+.music-url:focus-visible { outline: 2px solid #58a6ff; outline-offset: 1px; }
+.music-play-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 6px 14px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; font: inherit; }
 .music-play-btn:hover { background: #30363d; }
-.music-history h3 { margin: 0 0 8px; font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.music-section-head { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+.music-section-head h3 { margin: 0; font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.music-section-head svg { color: #8b949e; }
+.music-clear-btn { margin-left: auto; background: none; border: 1px solid #30363d; border-radius: 4px; color: #8b949e; font-size: 11px; padding: 2px 8px; cursor: pointer; }
+.music-clear-btn:hover { color: #f0f6fc; background: #21262d; }
+.music-queue { margin-bottom: 14px; }
+.music-queue-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; margin-bottom: 4px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; cursor: pointer; }
+.music-queue-row:hover { background: #21262d; }
+.music-queue-row-active { border-color: #58a6ff; }
+.music-queue-index { flex: 0 0 18px; text-align: center; color: #8b949e; font-size: 12px; }
+.music-queue-row-active .music-queue-index { color: #58a6ff; }
+.music-queue-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f0f6fc; font-size: 12px; }
+.music-queue-src { flex: 0 1 40%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b949e; font-size: 11px; text-align: right; }
+.music-queue-remove { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: none; border-radius: 4px; background: none; color: #8b949e; cursor: pointer; }
+.music-queue-remove:hover { color: #f85149; background: rgba(248, 81, 73, 0.15); }
+.music-lyrics-section { margin-bottom: 14px; }
+.music-lyrics { max-height: 220px; overflow-y: auto; padding: 4px 8px; border: 1px solid #30363d; border-radius: 6px; background: #161b22; }
+.music-lyric { margin: 0; padding: 3px 6px; color: #8b949e; font-size: 13px; line-height: 1.5; transition: color 120ms ease; }
+.music-lyric-active { color: #f0f6fc; }
+.music-history h3 { margin: 0; font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
 .music-history-row { display: block; width: 100%; padding: 6px 8px; margin-bottom: 4px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; text-align: left; cursor: pointer; font: inherit; }
 .music-history-row:hover { background: #21262d; }
 .music-history-title { display: block; font-size: 12px; color: #f0f6fc; }

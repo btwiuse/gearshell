@@ -8,16 +8,16 @@ import React, { useCallback } from "react";
 import { DockviewReact } from "dockview-react";
 import { LandingPanel } from "./home.js?v=20260812.23";
 import { DeckPanel } from "./deck.js?v=20260812.30";
-import { SettingsPanel } from "./settings.js?v=20260826.36";
+import { SettingsPanel } from "./settings.js?v=20260826.37";
 import { FilesPanel } from "./files.js?v=20260826.70";
 import { RuntimePanel } from "./runtime.js?v=20260826.44";
-import { MusicPanel } from "./music.js?v=20260829.5";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.46";
+import { MusicPanel } from "./music.js?v=20260829.7";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.47";
 import {
   addFallbackPanel,
   AddTerminalButton,
   FallbackPanel,
-} from "./launcher.js?v=20260812.38";
+} from "./launcher.js?v=20260812.39";
 import {
   GroupPanel,
   IframePanel,
@@ -28,40 +28,44 @@ import {
   WorkbenchPanel,
   WorkspaceTaskPanel,
 } from "./panels.js?v=20260812.43";
-import { setDockviewApi } from "./app-panels-store.js?v=20260826.51";
+import {
+  forgetOpenPanel,
+  rememberOpenPanel,
+  setDockviewApi,
+} from "./app-panels-store.js?v=20260826.52";
+import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.51";
+} from "./app-terminal-sessions.js?v=20260826.52";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.55";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.57";
+} from "./app-sessions.js?v=20260828.56";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.58";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.52";
+} from "./app-panels.js?v=20260826.53";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.51";
-import { forgetOpenPanel } from "./app-panels-store.js?v=20260826.51";
+} from "./app-workspace.js?v=20260826.52";
 import { addPanelByComponent } from "./panels.js?v=20260812.43";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.80";
+} from "./app-layout.js?v=20260828.81";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.67";
+} from "./workspace-api.js?v=20260828.68";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -116,6 +120,67 @@ function openStartupPanels(api) {
   return restored;
 }
 
+// Panels that hold no session state are safe to duplicate from the tab
+// context menu (the copy lands right after the source tab, in the same
+// group). Session-bearing panels (terminal / vm / workbench / task /
+// crush-runner / iframe) bind to ids that must stay unique, so they
+// stay single-instance.
+const DUPLICATABLE_PANEL_TYPES = new Set([
+  "home",
+  "deck",
+  "settings",
+  "files",
+  "runtime",
+  "music",
+  "fallback",
+]);
+
+function panelTypeOf(panel) {
+  return panel.params?.panelType || panel.id.replace(/-\d+$/, "");
+}
+
+// Duplicate a content panel right next to its source tab and remember it
+// so layout persistence keeps the copy across reloads.
+export function duplicatePanel(api, panel) {
+  const type = panelTypeOf(panel);
+  if (!DUPLICATABLE_PANEL_TYPES.has(type)) return null;
+  const n = nextPanelIndex(type);
+  const id = `${type}-${n}`;
+  const params = { ...(panel.params || {}) };
+  for (const key of Object.keys(params)) {
+    if (key.endsWith("Id")) params[key] = n;
+  }
+  params.panelType = type;
+  const sourceIndex = panel.group?.panels?.indexOf(panel) ?? -1;
+  const dup = api.addPanel({
+    id,
+    component: type,
+    params,
+    ...(panel.title ? { title: `${panel.title}` } : {}),
+    position: {
+      referencePanel: panel.id,
+      direction: "within",
+      ...(sourceIndex >= 0 ? { index: sourceIndex + 1 } : {}),
+    },
+  });
+  rememberOpenPanel(dup, { component: type });
+  dup.api.setActive();
+  return dup;
+}
+
+function tabContextMenuItems({ panel, api }) {
+  const items = [];
+  if (DUPLICATABLE_PANEL_TYPES.has(panelTypeOf(panel))) {
+    items.push({
+      label: "Duplicate",
+      action: () => duplicatePanel(api, panel),
+    });
+    items.push("separator");
+  }
+  items.push("close", "closeOthers", "closeAll");
+  return items;
+}
+
 // dockview-enterprise features are opt-in options (the module is
 // registered by the `import { LicenseManager } from
 // "dockview-enterprise"` side-effect import in app.js).
@@ -123,6 +188,10 @@ function dockviewOptions(onReady) {
   return {
     className: "dockview-theme-github-dark",
     onReady,
+    // Tab right-click menu: the built-in Pin item is auto-prepended by
+    // the ContextMenu module; this supplies Duplicate (content panels
+    // only) plus the close family.
+    getTabContextMenuItems: tabContextMenuItems,
     // 固定标签: 独立第二行 + VS Code 式跨边界拖拽翻转
     pinnedTabs: {
       enabled: true,

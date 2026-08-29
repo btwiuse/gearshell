@@ -1,0 +1,41 @@
+/* vfs-picker.css — modal "pick a file from the Wanix FS" browser
+   (vfs-picker.js). Rendered above the dockview overlay stack. */
+.vfs-picker-backdrop { position: fixed; inset: 0; z-index: 1100; background: rgba(1, 4, 9, 0.62); display: flex; align-items: center; justify-content: center; }
+.vfs-picker { width: min(560px, 92vw); max-height: 74vh; display: flex; flex-direction: column; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5); color: #c9d1d9; font-size: 13px; }
+.vfs-picker-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #21262d; }
+.vfs-picker-header h3 { margin: 0; font-size: 13px; color: #f0f6fc; font-weight: 600; }
+.vfs-picker-close { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: none; border-radius: 4px; background: none; color: #8b949e; cursor: pointer; }
+.vfs-picker-close:hover { background: #21262d; color: #f0f6fc; }
+.vfs-picker-toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid #21262d; }
+.vfs-picker-up { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 26px; height: 26px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer; }
+.vfs-picker-up:hover:not(:disabled) { background: #30363d; }
+.vfs-picker-up:disabled { opacity: 0.4; cursor: default; }
+.vfs-picker-crumbs { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.vfs-picker-crumbs::-webkit-scrollbar { display: none; }
+.vfs-picker-crumb-wrap { display: inline-flex; align-items: center; gap: 2px; }
+.vfs-picker-crumb { background: none; border: none; color: #79c0ff; font: inherit; padding: 2px 3px; white-space: nowrap; cursor: pointer; border-radius: 3px; }
+.vfs-picker-crumb:hover { background: #21262d; text-decoration: underline; }
+.vfs-picker-crumb-sep { color: #484f58; flex: 0 0 auto; }
+.vfs-picker-path { flex: 0 1 200px; min-width: 110px; padding: 4px 8px; border: 1px solid #30363d; border-radius: 4px; background: #161b22; color: #c9d1d9; font: inherit; }
+.vfs-picker-path:focus-visible, .vfs-picker-up:focus-visible, .vfs-picker-close:focus-visible, .vfs-picker-crumb:focus-visible, .vfs-picker-btn:focus-visible, .vfs-picker-row:focus-visible { outline: 2px solid #58a6ff; outline-offset: 1px; }
+.vfs-picker-body { overflow-y: auto; min-height: 180px; max-height: 44vh; }
+.vfs-picker-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; cursor: pointer; }
+.vfs-picker-row:hover { background: #161b22; }
+.vfs-picker-row-selected { background: #1c2128; outline: 1px solid #58a6ff; }
+.vfs-picker-row-icon { flex: 0 0 auto; color: #8b949e; }
+.vfs-picker-row-dir .vfs-picker-row-icon { color: #79c0ff; }
+.vfs-picker-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vfs-picker-row-dir { color: #e6edf3; }
+.vfs-picker-row-play { flex: 0 0 auto; color: #8b949e; cursor: pointer; border-radius: 4px; padding: 2px; }
+.vfs-picker-row-play:hover { color: #58a6ff; background: #21262d; }
+.vfs-picker-row-check { flex: 0 0 auto; color: #3fb950; font-size: 12px; }
+.vfs-picker-status { padding: 18px 12px; margin: 0; color: #8b949e; text-align: center; }
+.vfs-picker-error { padding: 18px 12px; margin: 0; color: #f85149; text-align: center; word-break: break-all; }
+.vfs-picker-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-top: 1px solid #21262d; }
+.vfs-picker-count { color: #8b949e; font-size: 12px; }
+.vfs-picker-actions { display: flex; gap: 8px; }
+.vfs-picker-btn { min-height: 28px; padding: 4px 12px; border: 1px solid #30363d; border-radius: 4px; background: #21262d; color: #c9d1d9; font: inherit; cursor: pointer; }
+.vfs-picker-btn:hover:not(:disabled) { background: #30363d; }
+.vfs-picker-btn:disabled { opacity: 0.45; cursor: default; }
+.vfs-picker-btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+.vfs-picker-btn-primary:hover:not(:disabled) { background: #2ea043; }

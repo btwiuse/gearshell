@@ -12,11 +12,11 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize.js?v=20260828.52";
+} from "./app-normalize.js?v=20260828.53";
 import {
   loadActiveWorkspace,
   updateActiveWorkspace,
-} from "./app-workspace-store.js?v=20260826.51";
+} from "./app-workspace-store.js?v=20260826.52";
 
 export function addWorkspaceBind(bind) {
   const nextBind = normalizeBind(bind);

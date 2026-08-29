@@ -5,8 +5,8 @@ import {
   loadActiveWorkspace,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.51";
-import { clone } from "./app-normalize.js?v=20260828.52";
+} from "./app-workspace.js?v=20260826.52";
+import { clone } from "./app-normalize.js?v=20260828.53";
 import { STARTUP_PANEL_TYPES } from "./app-constants.js?v=20260828.21";
 
 export const openPanelSnapshots = new Map();
