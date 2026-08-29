@@ -20,11 +20,11 @@ import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.56";
+} from "./panels-task.js?v=20260828.59";
 import {
   getPluginIframeConfig,
   openPluginPanel,
-} from "./plugins.js?v=20260829.67";
+} from "./plugins.js?v=20260829.70";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production

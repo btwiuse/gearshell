@@ -6,7 +6,7 @@
 // duplicating). The restore path (app-panels addRestoredPanel) still
 // calls addWorkbenchPanel directly for saved workbench tabs.
 
-import { addWorkbenchPanel, WorkbenchPanel } from "../../panels.js?v=20260812.91";
+import { addWorkbenchPanel, WorkbenchPanel } from "../../panels.js?v=20260812.94";
 
 export const plugin = {
   register(ctx) {

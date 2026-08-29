@@ -1,7 +1,7 @@
 // app-normalize-runtime.js — wanix runtime config normalization
 // (500-line split out of app-normalize.js).
 
-import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.62";
+import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.65";
 
 const WANIX_RUNTIME_SEMVER = /^v\d+\.\d+\.\d+/;
 const LEGACY_WANIX_KERNEL_WASM = "v0.4.0";

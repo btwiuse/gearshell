@@ -89,9 +89,10 @@ export function normalizePlugin(plugin = {}) {
 
 // User config wins by id; built-in defaults fill in the rest, so a
 // saved workspace that predates the plugin kernel still boots Music.
-// Builtin plugins are kernel-owned: their entry/iframe is refreshed to
-// the current default, so file moves (e.g. the plugin/ reorganization)
-// and version bumps reach saved workspaces without a manual reinstall.
+// Builtin plugins are kernel-owned: their entry/iframe (file moves and
+// version bumps) and their wasm/preset declarations (package content,
+// e.g. the bbtex manifest) are refreshed to the current default, so
+// saved workspaces pick up plugin updates without a manual reinstall.
 export function normalizePlugins(list, defaults) {
   const defaultsById = new Map(
     (Array.isArray(defaults) ? defaults : [])
@@ -109,6 +110,8 @@ export function normalizePlugins(list, defaults) {
         ...item,
         entry: def.entry || item.entry,
         ...(def.iframe ? { iframe: def.iframe } : {}),
+        ...(def.wasm ? { wasm: def.wasm } : {}),
+        ...(def.preset ? { preset: def.preset } : {}),
       };
     });
   const userIds = new Set(user.map((item) => item.id));

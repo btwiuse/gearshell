@@ -61,6 +61,30 @@
   border-color: rgba(59, 130, 246, 0.4);
 }
 
+.bbtex-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.bbtex-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, #64748b);
+}
+
+.bbtex-group-count {
+  font-weight: 600;
+  color: var(--text-tertiary, #64748b);
+}
+
 .bbtex-example-name {
   font-size: 13px;
   font-weight: 500;

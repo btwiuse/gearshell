@@ -16,10 +16,26 @@ const workbenchExtension = readFileSync(
 // instead of a hand-maintained module list that drifts on every split.
 // Matching is quote-insensitive (checks both ' and ") so markers survive
 // refactors that switch string styles.
-const corpusFiles = readdirSync(root)
+const rootFiles = readdirSync(root)
   .filter((f) => /\.(js|css)$/.test(f))
-  .map((f) => readFileSync(new URL(f, root), "utf8"))
-  .join("\n");
+  .map((f) => readFileSync(new URL(f, root), "utf8"));
+const pluginFiles = [];
+for (const entry of readdirSync(new URL("plugin/", root), { withFileTypes: true })) {
+  if (entry.isDirectory()) {
+    for (const f of readdirSync(new URL(`plugin/${entry.name}/`, root))) {
+      if (/\.(js|css)$/.test(f)) {
+        pluginFiles.push(
+          readFileSync(new URL(`plugin/${entry.name}/${f}`, root), "utf8"),
+        );
+      }
+    }
+  } else if (/\.(js|css)$/.test(entry.name)) {
+    pluginFiles.push(
+      readFileSync(new URL(`plugin/${entry.name}`, root), "utf8"),
+    );
+  }
+}
+const corpusFiles = [...rootFiles, ...pluginFiles].join("\n");
 const corpus = `${html}\n${corpusFiles}`;
 
 function has(marker) {
@@ -251,7 +267,7 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.152")) {
+if (!has("app.js?v=20260828.155")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

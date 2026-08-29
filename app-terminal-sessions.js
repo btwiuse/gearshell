@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.103";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.62";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.103";
+} from "./app-terminal-profiles.js?v=20260826.106";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.65";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.106";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -239,7 +239,10 @@ function attachOverlayListeners(
   );
   const focusFromTerminalInteraction = () => {
     if (!api.isActive) {
-      api.setActive();
+      // Panel terminals carry a dockview panel api (setActive exists);
+      // embedded terminals carry the dockview instance api, where there
+      // is no panel to activate - focus the terminal either way.
+      if (typeof api.setActive === "function") api.setActive();
       focus();
       return;
     }
