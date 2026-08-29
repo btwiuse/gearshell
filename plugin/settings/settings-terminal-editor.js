@@ -6,17 +6,17 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { settingsDep } from "./settings-deps.js?v=20260826.2";
+import { settingsDep } from "./settings-deps.js?v=20260826.3";
 import {
   useTerminalPresetOrder,
   useTerminalPresetSave,
   useTerminalPresetState,
-} from "./settings-terminal-presets.js?v=20260828.2";
+} from "./settings-terminal-presets.js?v=20260828.3";
 import {
   TerminalProfileBasicFields,
   TerminalProfileItem,
   TerminalProfileRuntimeFields,
-} from "./settings-terminal-fields.js?v=20260828.1";
+} from "./settings-terminal-fields.js?v=20260828.2";
 
 function renderProfileItem(profile, index, ctx) {
   return React.createElement(TerminalProfileItem, {

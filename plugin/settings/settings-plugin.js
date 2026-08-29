@@ -7,7 +7,7 @@
 // type from the launcher (plugin settings sections still register,
 // they just have no panel to mount in until it is re-enabled).
 
-import { SettingsPanel } from "./settings.js?v=20260826.96";
+import { SettingsPanel } from "./settings.js?v=20260826.97";
 
 export const plugin = {
   register(ctx) {

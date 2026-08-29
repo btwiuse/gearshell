@@ -4,8 +4,8 @@
 // reads the ring fresh; the AGENT_AUDIT_CHANGED_EVENT listener keeps it
 // live while the panel stays open.
 
-import { settingsDep } from "./settings-deps.js?v=20260826.2";
-import { AGENT_AUDIT_CHANGED_EVENT } from "./workspace-audit.js?v=20260829.77";
+import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { AGENT_AUDIT_CHANGED_EVENT } from "../../workspace-audit.js?v=20260829.78";
 
 function queryElements(settingsContent) {
   return {

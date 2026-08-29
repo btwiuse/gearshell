@@ -1,8 +1,8 @@
 // Settings panel module facade (500-line rule split). Re-exports the
 // public surface app.js imports.
-export { initSettings, settingsDep } from "../../settings-deps.js?v=20260826.2";
+export { initSettings, settingsDep } from "./settings-deps.js?v=20260826.3";
 export {
   addSettingsPanel,
   SettingsPanel,
-} from "./settings-panel.js?v=20260826.95";
-export { TerminalPresetIconPicker } from "./settings-icons.js?v=20260826.4";
+} from "./settings-panel.js?v=20260826.96";
+export { TerminalPresetIconPicker } from "./settings-icons.js?v=20260826.5";

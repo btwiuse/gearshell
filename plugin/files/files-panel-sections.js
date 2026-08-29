@@ -11,14 +11,14 @@ import {
   FilesResizer,
   FilesRightPane,
   FilesSidebar,
-} from "../../files-parts.js?v=20260826.48";
-import { FilesContextMenu } from "../../files-context-menu-ui.js?v=20260826.39";
+} from "./files-parts.js?v=20260826.49";
+import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.40";
 import {
   filesystemPathJoin,
   filesystemPathParent,
-} from "../../files-path.js?v=20260826.70";
-import { FilesTopbar } from "../../files-topbar.js?v=20260826.40";
-import { FilesTree } from "../../files-tree.js?v=20260826.39";
+} from "../files-path.js?v=20260826.71";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.41";
+import { FilesTree } from "./files-tree.js?v=20260826.40";
 
 function FilesPanelTopbar({ panel }) {
   const {

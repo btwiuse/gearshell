@@ -12,7 +12,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { settingsDep } from "./settings-deps.js?v=20260826.2";
+import { settingsDep } from "./settings-deps.js?v=20260826.3";
 
 function profileActionButtons(props) {
   const { profile, index, count, isDefault } = props;

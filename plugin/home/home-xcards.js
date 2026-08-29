@@ -3,7 +3,7 @@
 // big cards stay under 50 lines each.
 
 import React from "react";
-import { fieldPoll } from "../../home-data.js?v=20260828.1";
+import { fieldPoll } from "./home-data.js?v=20260828.2";
 
 function XCardHeader({ initials, name, check, handle, href, ariaLabel }) {
   return React.createElement(

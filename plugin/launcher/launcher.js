@@ -459,6 +459,6 @@ export function addFallbackPanel(api, group) {
 // The "+" Add control + all-apps menu live in launcher-menu.js (500-line
 // split); re-export so existing importers (app.js, app-shell.js) keep
 // importing AddTerminalButton from this module.
-export { AddTerminalButton } from "./launcher-menu.js?v=20260829.9";
+export { AddTerminalButton } from "./launcher-menu.js?v=20260829.10";
 
 export { FallbackPage, FallbackPanel, TerminalLaunchPicker };

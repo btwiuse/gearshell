@@ -1,6 +1,6 @@
 // Tasks section wiring.
 
-import { settingsDep } from "./settings-deps.js?v=20260826.2";
+import { settingsDep } from "./settings-deps.js?v=20260826.3";
 
 function queryTaskElements(settingsContent) {
   return {

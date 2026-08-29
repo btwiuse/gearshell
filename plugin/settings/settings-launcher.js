@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
-import { settingsDep } from "./settings-deps.js?v=20260826.2";
+import { settingsDep } from "./settings-deps.js?v=20260826.3";
 
 function useLauncherState() {
   const [config, setConfig] = useState(() => settingsDep("loadConfig")());

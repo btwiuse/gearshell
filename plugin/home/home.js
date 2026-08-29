@@ -14,7 +14,7 @@
 // other's internals.
 
 import React from "react";
-import { features, GH, quotes, steps } from "../../home-data.js?v=20260828.1";
+import { features, GH, quotes, steps } from "./home-data.js?v=20260828.2";
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
 import {
   HomeDemo,
@@ -25,8 +25,8 @@ import {
   HomeLocalFirst,
   HomeNav,
   HomeQuotes,
-} from "./home-sections.js?v=20260828.5";
-import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.2";
+} from "./home-sections.js?v=20260828.6";
+import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.3";
 
 let __homeDeps = null;
 export function initHome(dependencies) {

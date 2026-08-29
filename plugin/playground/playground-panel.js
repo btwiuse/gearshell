@@ -15,10 +15,10 @@
 
 import React, { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
-import { ExplorerView } from "./playground-explorer.js?v=20260829.21";
-import { ProvidersView } from "./playground-providers.js?v=20260829.61";
-import { EventsView } from "./playground-events-view.js?v=20260829.15";
-import { TabBar } from "../../playground-parts.js?v=20260829.14";
+import { ExplorerView } from "./playground-explorer.js?v=20260829.22";
+import { ProvidersView } from "./playground-providers.js?v=20260829.62";
+import { EventsView } from "./playground-events-view.js?v=20260829.16";
+import { TabBar } from "./playground-parts.js?v=20260829.15";
 
 const TABS = [
   { id: "explorer", label: "Explorer" },

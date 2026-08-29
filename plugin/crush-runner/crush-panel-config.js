@@ -11,7 +11,7 @@ import {
   CrushEnvTab,
   CrushJsonTab,
   CrushProfileTab,
-} from "./crush-panel-tabs.js?v=20260828.1";
+} from "./crush-panel-tabs.js?v=20260828.2";
 
 function tabArrowKeyNav(event, tabs, activeTab, setActiveTab) {
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;

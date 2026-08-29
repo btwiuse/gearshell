@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Check, Dog, Keyboard, Plus } from "lucide-react";
-import { launcherDep, TerminalLaunchPicker } from "./launcher.js?v=20260812.46";
+import { launcherDep, TerminalLaunchPicker } from "./launcher.js?v=20260812.47";
 
 // === Plus button: tap creates a terminal, long-press opens the
 // extensions menu. Renders the panel-action-menu next to the dockview

@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, BookOpen, Github, LayoutGrid, Zap } from "lucide-react";
-import { localFirstChips } from "../../home-data.js?v=20260828.1";
+import { localFirstChips } from "./home-data.js?v=20260828.2";
 
 export function HomeNav({ scrollToId, GH }) {
   return React.createElement(

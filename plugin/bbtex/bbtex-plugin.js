@@ -8,7 +8,7 @@
 // a playground panel: click an example, and an embedded terminal starts
 // it as its own task (profile.cmd = example id).
 
-import { BbtexPlayground } from "./bbtex.js?v=20260830.2";
+import { BbtexPlayground } from "./bbtex.js?v=20260830.3";
 
 export const plugin = {
   register(ctx) {

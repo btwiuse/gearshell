@@ -9,16 +9,16 @@ import {
   adoptCrushRunnerId,
   crushRunnerDep,
   nextCrushRunnerId,
-} from "../../crush-deps.js?v=20260828.3";
-import { useCrushRunnerPanelController } from "../../crush-panel-controller.js?v=20260828.102";
-import { CrushConfigSection } from "../../crush-panel-config.js?v=20260826.3";
+} from "./crush-deps.js?v=20260828.4";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.103";
+import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.4";
 import {
   CrushCtaRow,
   CrushEditorToggle,
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "../../crush-runner-parts.js?v=20260828.102";
+} from "./crush-runner-parts.js?v=20260828.103";
 
 function CrushHero({ children }) {
   return React.createElement(

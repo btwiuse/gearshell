@@ -6,7 +6,7 @@
 // Group. Disabling the runtime plugin in the Plugins page hides the
 // panel type from the launcher.
 
-import { RuntimePanel } from "./runtime.js?v=20260826.49";
+import { RuntimePanel } from "./runtime.js?v=20260826.50";
 
 export const plugin = {
   register(ctx) {

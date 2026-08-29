@@ -12,7 +12,7 @@
 // (bumped manually alongside music.js edits — the version cascade only
 // rewrites import statements, not config data).
 
-import { MusicPanel } from "./music.js?v=20260829.16";
+import { MusicPanel } from "./music.js?v=20260829.17";
 
 export const plugin = {
   register(ctx) {

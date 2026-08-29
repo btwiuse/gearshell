@@ -8,7 +8,7 @@
 // the panel type from the launcher and restores without touching a line
 // of deck.js.
 
-import { DeckPanel } from "./deck.js?v=20260812.34";
+import { DeckPanel } from "./deck.js?v=20260812.35";
 
 export const plugin = {
   register(ctx) {

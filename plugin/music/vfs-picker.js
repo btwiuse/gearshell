@@ -21,17 +21,17 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { getWanixRoot } from "../app-state.js?v=20260826.2";
+import { getWanixRoot } from "../../app-state.js?v=20260826.2";
 import {
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "../files-path.js?v=20260826.70";
+} from "../files-path.js?v=20260826.71";
 import {
   PickerBody,
   PickerFooter,
   PickerToolbar,
-} from "./vfs-picker-parts.js?v=20260829.97";
+} from "./vfs-picker-parts.js?v=20260829.98";
 
 export const AUDIO_EXTENSION_RE =
   /\.(mp3|m4a|aac|ogg|oga|opus|flac|wav|webm)$/i;

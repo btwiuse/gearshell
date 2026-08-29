@@ -6,7 +6,7 @@
 // plugin that registers component "launcher" (registerPanel throws on
 // a duplicate, so only one launcher can be active at a time).
 
-import { addFallbackPanel, FallbackPanel } from "./launcher.js?v=20260812.46";
+import { addFallbackPanel, FallbackPanel } from "./launcher.js?v=20260812.47";
 
 export const plugin = {
   register(ctx) {
