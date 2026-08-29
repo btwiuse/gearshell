@@ -647,7 +647,9 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 ## 二十七、下一步计划(2026-08-30 compact 前拍板,双模已批准)
 
 > 优先级:P0 = 先做;P1 = 接着做;P2 = 之后。每个条目带必要上下文,可直接开工。
-> **round 46 已完成:P0-1 + P0-2 全落地并浏览器实测(见 memory/plugins.md round 46)。**
+> **round 46-47c 已完成**:P0-1/P0-2(46)、w9y TUI + Packages 面板 + 退出提示定位
+> 修复 + w9y 自版本守卫(47)、Plugin Template 参考插件(47b)、插件依赖符号级归位 +
+> headless 日志演示(47c)。全部已浏览器实测,memory/plugins.md 有逐轮记录。
 
 ### P0-1:任务退出检测 + 终端 [Process completed] ✅ round 46 完成
 
@@ -683,7 +685,13 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   import,JS 走同源打包(wanix-dist)/SW。
 - **包管理 UI** ✅ round 47:builtin "Packages" 面板(plugin/w9y/*),registry 为
   数据源,装/卸/Re-apply/列表/版本对比(declared 徽标)+ w9y.changed 实时刷新。
-- **w9y mod apply TUI** ✅ round 47(上游 v0.0.8):bubbletui package-manager/
+- **Plugin Template** ✅ round 47b:plugin/template/*,enabled:false 默认禁用(零
+  网络请求),演示 registerPanel/registerSettingsSection/registerOverlay + 权限 API
+  + headless 任务日志/JSON 元数据输出。写插件从这里拷。
+- **插件符号级归位** ✅ round 47c:单插件使用的面板组件从根 panels.js 移入插件
+  目录;files 面板专属链移入 plugin/files/;add*Panel 恢复路径等核心定义保留根。
+  新插件一律遵守:从 ../../ 导入的必须是核心/共享定义。
+- **w9y mod apply TUI** ✅ round 47(上游 v0.0.9,shell-tools pin 已同步):bubbletui package-manager/
   progress-bar 动画照搬(spinner + 进度条 + 字节计数 + ✓/✗ 列表);仅 tty 启用,
   headless 输出不变。
 
@@ -696,6 +704,12 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 - w9y mod apply 的 manifest 变更后旧 entry 文件不清理(stale file,registry 记录
   正确替换;可给 mod remove/apply 加清理)。
 
+### 代码风格决策(待定,compact 后再议)
+
+- **React.createElement vs htm**(用户提出,想更紧凑;raw API 样板太多)。
+  选项:htm(无构建步,贴合 buildless 规则)vs 接受 JSX+构建步(架构级改动)。
+  用户会单独问看法;决定前不迁移。
+
 ### compact 备忘(下一会话必读)
 
 - 事件 shape:`{id, topic, payload, ts}`,字段是 **topic** 不是 name。
@@ -706,3 +720,23 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 - cascade 后 leaf+importer 恒差一档 → split-audit + sed 低→高(既有规则)。
 - /opfs 是懒投影:页面写的浏览器 OPFS == 任务里的 /opfs(已验证
   probe.txt/wanix/examples 互通),安装/缓存直接写 OPFS 即可,任务零副本读取。
+- **cascade 每轮都会把 panels.js 再推一档 → 每次 cascade 后必须全量 split-audit,
+  再 sed web-pet 的 panels 引用**(web-pet 滞后 = 双实例 = boot 时 overlay 抛
+  "initPanels() has not been called" = **整个 dockview 不挂载**,最隐蔽的 wedge)。
+- **boot 顺序陷阱**:需要 initPanels/GearShell 的调用(如 ensureW9yDependencies)
+  必须放在 initWorkspaceApi 之后;失败只有 w9y.changed {ok:false} 事件,console 无报错。
+- **退出提示定位**:内核退出时把 xterm 光标归位 → 写 [Process completed] 前用
+  `writeAtContentEnd`(找最后一个非空行,行号 = lastIndex+2,buffer 用
+  term.buffer?.active)。repl 会话轮询 `task/repl-<id>/exit`,workspace-task 轮询
+  `task/workspace-task-<id>/exit`,都要轮询。
+- **tasks.create API**:`background` 必须放 options 第二参
+  `tasks.create(spec, {background:true})`(放 spec 里被忽略 → UUID id 对不上数字
+  session id);headless 捕获输出必须 `term: false`(默认 term:true),输出走
+  tasks.output(id)。
+- **w9y PATH 影子**:任务 PATH 是 /opfs/home/go/bin:/opfs/wanix:/bin,mod 安装的
+  /opfs/wanix/w9y 会影子 /bin/w9y;boot 守卫(ensureW9yDependencies 的 cliVersion
+  参数)把已装的 w9y mod 保持在新 pin(v0.0.9);旧 CLI 不写 registry(静默成功 bug)。
+- 浏览器验证:机器上 boot 慢,等 60-90s;dockview 选择器是 `.dv-shell`(不是
+  .dockview);wedge 恢复 = 关 tab → 新 tab → 新 ?v=。
+- verify-static.mjs 的 web-pet 路径检查绑定的是 `import("../../web-pet/index.js")`,
+  改 web-pet 结构时要同步。
