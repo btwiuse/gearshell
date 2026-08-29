@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.106";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.65";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.106";
+} from "./app-terminal-profiles.js?v=20260826.107";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.66";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.107";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -383,20 +383,28 @@ function trackScrollParents(anchor, wrapper, scheduleUpdate) {
   return scrollListeners;
 }
 
+// Panel terminals carry the dockview panel api, which exposes the six
+// onDid* subscriptions below. Embedded terminals (terminal.embed) carry
+// the dockview instance api instead, where those panel-level events do
+// not exist - their layout is tracked by the anchor ResizeObserver and
+// scroll-parent listeners, so absent subscriptions are simply skipped.
 function subscribeOverlayEvents(session, anchor, api, scheduleUpdate, focus) {
-  return [
-    api.onDidDimensionsChange(scheduleUpdate),
-    api.onDidActiveChange((event) => {
-      scheduleUpdate();
-      if (event.isActive) focus();
-    }),
-    api.onDidFocusChange((event) => {
-      if (event.isFocused) focus();
-    }),
-    api.onDidVisibilityChange(scheduleUpdate),
-    api.onDidLocationChange(scheduleUpdate),
-    api.onDidGroupChange(scheduleUpdate),
-  ];
+  const subscriptions = [];
+  const subscribe = (name, handler) => {
+    if (typeof api[name] === "function") subscriptions.push(api[name](handler));
+  };
+  subscribe("onDidDimensionsChange", scheduleUpdate);
+  subscribe("onDidActiveChange", (event) => {
+    scheduleUpdate();
+    if (event.isActive) focus();
+  });
+  subscribe("onDidFocusChange", (event) => {
+    if (event.isFocused) focus();
+  });
+  subscribe("onDidVisibilityChange", scheduleUpdate);
+  subscribe("onDidLocationChange", scheduleUpdate);
+  subscribe("onDidGroupChange", scheduleUpdate);
+  return subscriptions;
 }
 
 export function attachTerminalSession(id, profile, anchor, api) {

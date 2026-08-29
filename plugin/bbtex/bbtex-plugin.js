@@ -9,7 +9,7 @@
 // panel: click an example, and an embedded terminal starts it as its own
 // task (profile.cmd = example id; pager starts with wd=/preset).
 
-import { BbtexPlayground } from "./bbtex.js?v=20260830.7";
+import { BbtexPlayground } from "./bbtex.js?v=20260830.8";
 
 export const plugin = {
   register(ctx) {

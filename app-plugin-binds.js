@@ -11,7 +11,7 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.106";
+} from "./app-workspace.js?v=20260826.107";
 
 // Plugin-owned binds carry this prefix; ensurePluginToolBinds prunes any
 // bind with it that no enabled plugin declares (disable / remove / config

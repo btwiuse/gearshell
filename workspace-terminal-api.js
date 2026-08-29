@@ -14,11 +14,11 @@
 // fine, because embedding only makes sense for in-page (T1) callers; an
 // agent driving this through /js would just get the sessionId.
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.106";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.107";
 import {
   attachTerminalSession,
   destroyTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.106";
+} from "./app-terminal-sessions.js?v=20260826.107";
 
 let embedCounter = 0;
 
@@ -33,7 +33,16 @@ export function embedTerminal(anchor, profile) {
   const sessionId = `embed-${++embedCounter}`;
   // attachTerminalSession returns the overlay detach; the caller's
   // cleanup also destroys the underlying session (kills the wanix task).
-  const detachOverlay = attachTerminalSession(sessionId, profile, anchor, api);
+  let detachOverlay;
+  try {
+    detachOverlay = attachTerminalSession(sessionId, profile, anchor, api);
+  } catch (error) {
+    // The session (wrapper + wanix-task + gojs worker) is created before
+    // the overlay attach finishes; if that throws, destroy the session so
+    // the task and its worker do not leak and accumulate memory.
+    destroyTerminalSession(sessionId);
+    throw error;
+  }
   return {
     sessionId,
     detach: () => {
