@@ -251,7 +251,7 @@ if (!has("initWorkspaceApi") || !has("GCTL_BIND")) {
     "Workspace API boot hook and gctl bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.120")) {
+if (!has("app.js?v=20260828.121")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

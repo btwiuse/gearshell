@@ -148,7 +148,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/group-plugin.js?v=20260829.7",
+    entry: "/group-plugin.js?v=20260829.8",
   },
   {
     id: "runtime",
@@ -162,7 +162,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/playground-plugin.js?v=20260829.55",
+    entry: "/playground-plugin.js?v=20260829.56",
   },
   {
     id: "home",
@@ -176,14 +176,21 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/files-plugin.js?v=20260829.63",
+    entry: "/files-plugin.js?v=20260829.64",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/workbench-plugin.js?v=20260829.64",
+    entry: "/workbench-plugin.js?v=20260829.65",
+  },
+  {
+    id: "vm",
+    name: "VM",
+    version: "1.0.0",
+    icon: "Cpu",
+    entry: "/vm-plugin.js?v=20260829.66",
   },
   {
     id: "browser",
@@ -246,7 +253,7 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/web-pet-plugin.js?v=20260829.6",
+    entry: "/web-pet-plugin.js?v=20260829.7",
   },
   {
     id: "widgetbot",

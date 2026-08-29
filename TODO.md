@@ -527,3 +527,12 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   单实例;disable/enable 全生命周期无崩;console 零报错。
 - 剩内置:terminal/vm/task(高风险低价值)+ settings/plugins/fallback/
   iframe/crush-runner(内核身份)。
+
+## 二十一、vm 插件化(round 35,commit `<本轮 commit>`)
+
+- vm-plugin.js(render VmPanel + open addVmPanel);三处内核登记移除;addVmPanel
+  导出保留(restore 直调)。DEFAULT_PLUGINS 加 vm(16 插件)。
+- 实测:boot 正常、open 渲染 VM 会话、标题带序号(自定义 opener)、
+  disable/enable 全生命周期无崩、console 零报错。
+- 待办:task 需先加 registerPanel `launcher:false` 开关(否则错误进入 launcher)
+  或维持内核;terminal 高难度待评估。

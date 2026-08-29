@@ -4,26 +4,25 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.72";
+} from "./app-workspace.js?v=20260826.73";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.72";
+} from "./app-terminal-profiles.js?v=20260826.73";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.72";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.67";
+} from "./app-panels-store.js?v=20260826.73";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.68";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.60";
+} from "./panels.js?v=20260812.61";
 import {
-  Cpu,
   Puzzle,
   Rocket,
   Settings,
@@ -63,7 +62,6 @@ export function autoStartWorkspaceTasks(api) {
 export const PANEL_CREATION_OPTIONS = [
   { component: "terminal", label: "Terminal", icon: Terminal },
   { component: "fallback", label: "Launcher", icon: Rocket },
-  { component: "vm", label: "VM", icon: Cpu },
   { component: "settings", label: "Settings", icon: Settings },
   { component: "plugins", label: "Plugins", icon: Puzzle },
   { component: "crush-runner", label: "Crush Runner", icon: Rocket },

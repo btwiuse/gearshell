@@ -15,9 +15,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { loadConfig } from "./app-workspace.js?v=20260826.72";
-import { configApi } from "./workspace-config-api.js?v=20260828.57";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.31";
+import { loadConfig } from "./app-workspace.js?v=20260826.73";
+import { configApi } from "./workspace-config-api.js?v=20260828.58";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.32";
 
 function blankDraft() {
   return {
