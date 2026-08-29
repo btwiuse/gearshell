@@ -4,8 +4,8 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.54";
-import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.21";
+} from "./app-workspace.js?v=20260826.55";
+import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.22";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
 // jsfs roots at globalThis; window.GearShell = api makes the methods
@@ -43,6 +43,7 @@ export const GCTL_BIND = {
     "  config.getShell   config.updateShell   config.getWorkspace   config.getSystem   config.getTaskBinds",
     "  config.getBinds   config.addBind   config.updateBind   config.removeBind   config.setBinds",
     "  config.updateRuntime   config.reload",
+    "  config.providers.list  config.providers.save  config.providers.remove",
     "  config.audit.list  config.audit.undo  config.audit.clear",
     "  panels.list  panels.open  panels.close  panels.focus",
     "  browser.open  files.open",
@@ -67,6 +68,8 @@ export const GCTL_BIND = {
     "",
     "note: system bind/runtime changes only apply on reload;",
     "gctl config.reload restarts the workspace (kills all tasks).",
+    "provider apiKeys are redacted from every gctl response;",
+    "config.providers.save with an empty apiKey keeps the stored key.",
     "HELP",
     "  exit 0",
     "fi",

@@ -4,24 +4,24 @@
 // the shell config load/save here. app.js keeps importing everything from
 // this facade so its import line stays stable.
 
-import { CONFIG_KEY, DEFAULT_CONFIG } from "./app-constants.js?v=20260828.21";
+import { CONFIG_KEY, DEFAULT_CONFIG } from "./app-constants.js?v=20260828.22";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   getBuiltinCrushRunnerPresets,
-} from "./crush-runner.js?v=20260826.49";
+} from "./crush-runner.js?v=20260826.50";
 import {
   normalizeShellConfig,
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
-} from "./app-normalize.js?v=20260828.55";
-import { writeStoredJson } from "./app-storage.js?v=20260826.19";
+} from "./app-normalize.js?v=20260828.56";
+import { writeStoredJson } from "./app-storage.js?v=20260826.20";
 import {
   loadActiveWorkspace,
   notifyWorkspaceChange,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace-store.js?v=20260826.54";
+} from "./app-workspace-store.js?v=20260826.55";
 
 export function normalizeCrushRunnerPreset(preset = {}) {
   const base = normalizeTerminalProfile(preset);
@@ -139,7 +139,7 @@ export {
   updateWorkspaceIndex,
   workspaceIndexEntry,
   workspaceNameExists,
-} from "./app-workspace-store.js?v=20260826.54";
+} from "./app-workspace-store.js?v=20260826.55";
 export {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -156,4 +156,4 @@ export {
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
   validateSystemBind,
-} from "./app-workspace-binds.js?v=20260826.54";
+} from "./app-workspace-binds.js?v=20260826.55";

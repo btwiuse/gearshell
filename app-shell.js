@@ -8,11 +8,12 @@ import React, { useCallback } from "react";
 import { DockviewReact } from "dockview-react";
 import { LandingPanel } from "./home.js?v=20260812.24";
 import { DeckPanel } from "./deck.js?v=20260812.30";
-import { SettingsPanel } from "./settings.js?v=20260826.39";
-import { FilesPanel } from "./files.js?v=20260826.70";
+import { SettingsPanel } from "./settings.js?v=20260826.40";
+import { FilesPanel } from "./files.js?v=20260826.71";
 import { RuntimePanel } from "./runtime.js?v=20260826.44";
 import { MusicPanel } from "./music.js?v=20260829.11";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.49";
+import { PlaygroundPanel } from "./playground-panel.js?v=20260829.16";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.50";
 import {
   addFallbackPanel,
   AddTerminalButton,
@@ -27,45 +28,45 @@ import {
   WagiDogPet,
   WorkbenchPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.43";
+} from "./panels.js?v=20260812.44";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.54";
+} from "./app-panels-store.js?v=20260826.55";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.54";
+} from "./app-terminal-sessions.js?v=20260826.55";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.58";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.60";
+} from "./app-sessions.js?v=20260828.59";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.61";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.55";
+} from "./app-panels.js?v=20260826.56";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.54";
-import { addPanelByComponent } from "./panels.js?v=20260812.43";
+} from "./app-workspace.js?v=20260826.55";
+import { addPanelByComponent } from "./panels.js?v=20260812.44";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.83";
+} from "./app-layout.js?v=20260828.84";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.70";
+} from "./workspace-api.js?v=20260828.71";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -132,6 +133,7 @@ const DUPLICATABLE_PANEL_TYPES = new Set([
   "files",
   "runtime",
   "music",
+  "playground",
   "fallback",
 ]);
 
@@ -223,6 +225,7 @@ const PANEL_COMPONENTS = {
   files: FilesPanel,
   runtime: RuntimePanel,
   music: MusicPanel,
+  playground: PlaygroundPanel,
   workbench: WorkbenchPanel,
   vm: VmPanel,
   fallback: FallbackPanel,

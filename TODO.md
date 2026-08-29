@@ -282,6 +282,10 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
      launcher-order/terminal-presets 同款模式可抄);gctl 暴露 `config.providers.*`。
    - 锚点:settings-panel.js 分区模式、workspace-config-api.js(getSystem 等)、
      gctl-bind.js help 扩展。⚠️ apiKey 属敏感字段,审计环(workspace-audit)要脱敏。
+   - ✅ 配置层 + gctl + 脱敏已实现(2026-08-29,round 26):`config.providers`
+     存 shell config,`config.providers.list/save/remove` 经 gctl 暴露,审计/读取
+     全链路 `redactSecrets` 脱敏,空 apiKey 保存保留存量 key。UI 在 Playground
+     Providers tab(playground-providers.js);如需 Settings 出入口,复用该组件。
 
 2. ✅ **Home 直接用 GearShell API 实现面板操作**(2026-08-29 已实现,见「十二、
    轮次 25」):`window.GearShell.panels.open(component, options)` 就是 gctl 的
@@ -347,3 +351,27 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   workspace-audit 事件覆盖 Home 操作;按钮调用点(home-sections 三处)零改动。
 - 实测:Home「Open Terminal」→ terminal-1 面板 + xterm 入 DOM;「Browse apps」→
   fallback launcher 打开;console 无新报错。
+
+## 十三、轮次 26:GearShell API Playground + Provider 配置(2026-08-29,已提交)
+
+- commit:`<本轮 commit>`。新面板 `playground`(launcher 可见,可 Duplicate),
+  三个 tab:Explorer / Providers / Events。
+- **Explorer**:`playground-api-catalog.js` 手写全量 API 目录(59 个方法,9 个
+  分组:Root/config/panels/browser/files/tasks/agents/music/events),每方法
+  带参数 schema(string/number/boolean/json/handler)、hint、gctl 等价命令;
+  运行走 `window.GearShell`(与 gctl 同桥),JSON 结果 + 请求历史;点状方法名
+  (`config.providers.save`)按段解析。
+- **Providers**(WISHLIST #1 的配置层):provider 存 shell config
+  `config.providers`,app-normalize 归一化,DEFAULT_CONFIG 加空数组;gctl 暴露
+  `config.providers.list/save/remove`;UI 增删改(编辑时空 apiKey 保留存量 key)。
+- **Events**:live `gear-shell:*` feed(patch window.dispatchEvent 观察,不动
+  agent 的 ring;drain 需手动点)+ pending 计数 + emit 表单。
+- **密钥脱敏**:`workspace-audit.js` 新增 `redactSecrets`(递归把 apiKey 置 "")
+  ——getShell/getSystem/getWorkspace/providers.list/audit.list 全部脱敏;
+  `updateShell` 对 providers 按 id 回填存量 key(脱敏 getShell 往返不丢 key);
+  审计环存原始快照、读取时脱敏,undo 仍还原真实数据。
+- 实测(浏览器):59 方法全渲染;panels.list/tasks.create(music.nowPlaying/
+  config.getShell 等经 UI 运行成功;providers 增删改 + 空 key 保 key + 换 key;
+  getShell 渲染 apiKey:"" 无泄漏;Events emit/drain 正常;console 零报错。
+- ⚠️ WISHLIST #1 的 UI 放在 Playground 而非 Settings(用户本轮的指示优先);
+  如需 Settings 也出入口,复用 playground-providers.js 组件即可。

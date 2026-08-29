@@ -23,8 +23,8 @@ import {
   saveConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.54";
-import { normalizeSystemConfig } from "./app-normalize.js?v=20260828.55";
+} from "./app-workspace.js?v=20260826.55";
+import { normalizeSystemConfig } from "./app-normalize.js?v=20260828.56";
 
 const AUDIT_KEY = "gear-shell-agent-audit";
 const AUDIT_CAP = 50;
@@ -90,8 +90,26 @@ function restoreSystemSnapshot(snapshot) {
   notifyWorkspaceChange();
 }
 
+// Deep-copy a value with every `apiKey` field blanked (kept as "" so the
+// shape survives round-trips; never deleted). Agents read the audit ring
+// and the config views, so provider secrets must not leave through them.
+export function redactSecrets(value) {
+  if (Array.isArray(value)) return value.map(redactSecrets);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [key, val] of Object.entries(value)) {
+      out[key] = key === "apiKey" ? "" : redactSecrets(val);
+    }
+    return out;
+  }
+  return value;
+}
+
+// The ring is stored raw so undo can restore real snapshots; every read
+// path (Settings "Agent activity", gctl config.audit.list) gets scrubbed
+// copies instead.
 export function listAuditEntries() {
-  return readAudit();
+  return readAudit().map(redactSecrets);
 }
 
 export function clearAuditEntries() {

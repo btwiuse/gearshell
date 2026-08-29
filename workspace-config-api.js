@@ -21,18 +21,20 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.54";
+} from "./app-workspace.js?v=20260826.55";
 import {
+  normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.55";
+} from "./app-normalize.js?v=20260828.56";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
   listAuditEntries,
   pushAuditEntry,
+  redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.29";
+} from "./workspace-audit.js?v=20260829.30";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
@@ -66,7 +68,7 @@ function recordSystemChange(prev, agentOrOptions) {
     agent: auditOptions(agentOrOptions).agent,
     kind: "system",
   });
-  pushEvent("config.changed", { result: loadConfig() });
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
 }
 
 // The root (.) bind is the namespace anchor: without it nothing resolves,
@@ -78,15 +80,98 @@ function requireRootBind(binds) {
   }
 }
 
+// --- Provider config (WISHLIST #1) ---
+// Model providers live in the shell config (config.providers), the same
+// store config.getShell / updateShell expose to gctl. Writes record audit
+// entries like any other shell change; every agent-facing read redacts
+// apiKey (providers.list shows hasApiKey instead). The save path keeps
+// the stored key whenever the caller sends an empty one, so an agent can
+// edit a provider's other fields without ever learning its secret.
+function upsertProviderList(current, provider) {
+  const existing = current.find((item) => item.id === provider.id);
+  const merged = {
+    ...provider,
+    apiKey: provider.apiKey || existing?.apiKey || "",
+  };
+  if (!existing) return [...current, merged];
+  return current.map((item) => (item.id === provider.id ? merged : item));
+}
+
+// Re-attach the stored apiKey to providers whose incoming key is empty.
+// Applied on updateShell so a redacted getShell round-trip (apiKey:"")
+// cannot wipe keys when an agent patches an unrelated field.
+function restoreProviderKeys(prevProviders, nextProviders) {
+  const keys = new Map(
+    normalizeProviders(prevProviders).map((item) => [item.id, item.apiKey]),
+  );
+  return normalizeProviders(nextProviders).map((provider) => ({
+    ...provider,
+    apiKey: provider.apiKey || keys.get(provider.id) || "",
+  }));
+}
+
+function listProviders() {
+  return normalizeProviders(loadConfig().providers).map((provider) => ({
+    ...provider,
+    apiKey: "",
+    hasApiKey: Boolean(provider.apiKey),
+  }));
+}
+
+function saveProvider(provider, agentOrOptions = {}) {
+  const normalized = normalizeProviders([provider])[0];
+  if (!normalized) {
+    throw new Error("provider requires a name or id");
+  }
+  const prev = loadConfig();
+  const providers = upsertProviderList(
+    normalizeProviders(prev.providers),
+    normalized,
+  );
+  const next = { ...prev, providers };
+  saveConfig(next);
+  pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  const saved = normalizeProviders(providers).find(
+    (item) => item.id === normalized.id,
+  );
+  return {
+    ok: true,
+    provider: {
+      ...saved,
+      apiKey: "",
+      hasApiKey: Boolean(saved?.apiKey),
+    },
+  };
+}
+
+function removeProvider(id, agentOrOptions = {}) {
+  const prev = loadConfig();
+  const current = normalizeProviders(prev.providers);
+  const providers = current.filter((item) => item.id !== id);
+  if (providers.length === current.length) {
+    throw new Error(`provider "${id}" not found`);
+  }
+  const next = { ...prev, providers };
+  saveConfig(next);
+  pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  return { ok: true, removed: id };
+}
+
 export const configApi = {
-  getShell: () => loadConfig(),
+  getShell: () => redactSecrets(loadConfig()),
   updateShell: (patch, agentOrOptions = {}) => {
     const prev = loadConfig();
-    const next = { ...prev, ...patch };
+    const merged = { ...prev, ...(patch || {}) };
+    const next = {
+      ...merged,
+      providers: restoreProviderKeys(prev.providers, merged.providers),
+    };
     saveConfig(next);
     // Audit the agent-facing write path (not UI saveConfig).
     pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
-    const result = loadConfig();
+    const result = redactSecrets(loadConfig());
     pushEvent("config.changed", { result });
     return result;
   },
@@ -96,12 +181,17 @@ export const configApi = {
     undo: (id) => {
       const result = undoAuditEntry(id);
       if (result.ok) {
-        pushEvent("config.changed", { result: loadConfig() });
+        pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
       }
       return result;
     },
   },
-  getWorkspace: () => loadActiveWorkspace(),
+  providers: {
+    list: listProviders,
+    save: saveProvider,
+    remove: removeProvider,
+  },
+  getWorkspace: () => redactSecrets(loadActiveWorkspace()),
   getBinds: () => loadActiveWorkspace().system.binds,
   addBind: (bind) => {
     const workspace = loadActiveWorkspace();
@@ -119,7 +209,7 @@ export const configApi = {
     return {
       system: normalizeSystemConfig(workspace.system),
       runtime: { ...(workspace.runtime || {}) },
-      shell: loadConfig(),
+      shell: redactSecrets(loadConfig()),
     };
   },
   // Per-task binds (workspace.binds): the per-task toolset (bash/w9y/

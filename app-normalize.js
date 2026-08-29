@@ -29,16 +29,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.21";
+} from "./app-constants.js?v=20260828.22";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.49";
+} from "./crush-runner.js?v=20260826.50";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.54";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.19";
+} from "./app-workspace.js?v=20260826.55";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.20";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -50,7 +50,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.13";
+} from "./app-normalize-system.js?v=20260828.14";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -62,7 +62,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.13";
+} from "./app-normalize-system.js?v=20260828.14";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -205,6 +205,40 @@ function normalizeProfileLists(config) {
   };
 }
 
+// Model providers for the AI features (WISHLIST #1): a de-duplicated
+// list of {id, name, baseURL, apiKey, models, enabled}. The raw apiKey
+// stays in the shell config; every agent-facing read path redacts it.
+export function normalizeProviders(providers) {
+  if (!Array.isArray(providers)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of providers) {
+    const provider = raw && typeof raw === "object" ? raw : {};
+    const id = String(provider.id || provider.name || "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      name: String(provider.name || id).trim(),
+      baseURL: String(provider.baseURL || "").trim(),
+      apiKey: typeof provider.apiKey === "string" ? provider.apiKey : "",
+      models: normalizeProviderModels(provider.models),
+      enabled: provider.enabled !== false,
+    });
+  }
+  return out;
+}
+
+function normalizeProviderModels(models) {
+  if (Array.isArray(models)) {
+    return models.map((model) => String(model)).filter(Boolean);
+  }
+  if (typeof models === "string" && models.trim()) {
+    return models.split(/[\n,]+/).map((model) => model.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 export function normalizeShellConfig(config) {
   const { terminalProfiles, crushRunnerPresets } = normalizeProfileLists(
     config,
@@ -228,6 +262,7 @@ export function normalizeShellConfig(config) {
     vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
     wagiDogEnabled: config?.wagiDogEnabled === true,
     widgetbot: config?.widgetbot === true,
+    providers: normalizeProviders(config?.providers),
     favorites: normalizeFavorites(config),
     collapsedLauncherItems: normalizeCollapsedLauncherItems(config),
     launcherOrder: normalizeLauncherOrder(config?.launcherOrder),
