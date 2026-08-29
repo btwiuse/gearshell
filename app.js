@@ -10,7 +10,7 @@ import {
   addCrushRunnerPanel,
   initCrushRunner,
 } from "./crush-runner.js?v=20260826.49";
-import { addLandingPanel, initHome } from "./home.js?v=20260812.23";
+import { addLandingPanel, initHome } from "./home.js?v=20260812.24";
 import {
   addSettingsPanel,
   initSettings,
@@ -38,7 +38,7 @@ import {
   listAuditEntries,
   undoAuditEntry,
 } from "./workspace-audit.js?v=20260829.29";
-import { App } from "./app-shell.js?v=20260828.62";
+import { App } from "./app-shell.js?v=20260828.63";
 
 import {
   getWanixRoot,

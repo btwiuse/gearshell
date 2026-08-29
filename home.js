@@ -46,7 +46,17 @@ function homeDep(name) {
 }
 
 export function LandingPanel({ containerApi }) {
-  const openPanel = (component) => {
+  // Route panel opens through the GearShell API — the same surface gctl
+  // agents call — so Home shares the agent channel (split-pane options,
+  // audit events) instead of reaching into the panel adder directly.
+  // Falls back to the direct adder if the API is not up yet.
+  const openPanel = (component, options) => {
+    try {
+      const result = window.GearShell?.panels?.open?.(component, options);
+      if (result?.ok) return;
+    } catch {
+      // fall through to the direct adder
+    }
     const api = containerApi || homeDep("getDockviewApi")();
     if (api) homeDep("addPanelByComponent")(api, component);
   };

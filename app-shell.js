@@ -6,7 +6,7 @@
 
 import React, { useCallback } from "react";
 import { DockviewReact } from "dockview-react";
-import { LandingPanel } from "./home.js?v=20260812.23";
+import { LandingPanel } from "./home.js?v=20260812.24";
 import { DeckPanel } from "./deck.js?v=20260812.30";
 import { SettingsPanel } from "./settings.js?v=20260826.39";
 import { FilesPanel } from "./files.js?v=20260826.70";

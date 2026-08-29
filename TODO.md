@@ -283,16 +283,11 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
    - 锚点:settings-panel.js 分区模式、workspace-config-api.js(getSystem 等)、
      gctl-bind.js help 扩展。⚠️ apiKey 属敏感字段,审计环(workspace-audit)要脱敏。
 
-2. **Home 直接用 GearShell API 实现面板操作(简化版,取代"gctl 驱动 Home")**
-   - 结论(2026-08-29 用户拍板):不必让 Home 走 bash 里的 gctl——`window.GearShell`
-     就是 gctl 的 JS 本体(workspace-api.js:112),Home 的按钮(open Terminal /
-     Browse apps)改调 `window.GearShell.panels.open(component, {direction?})` 即可,
-     与 agent 通道同一 API、白拿分屏参数 + workspace-audit 审计。
-   - 现状:home.js openPanel 走 DI 注入的 addPanelByComponent(panels.js PANEL_ADDERS),
-     等价但不在审计内、无 direction 参数。
-   - 顺带:`gctl`→`gear` 重命名(bind/help/文档)与 #2 解耦,单独成项或砍掉。
-   - 锚点:workspace-open-api.js(panels.open)、home-sections.js 三处 openPanel 调用、
-     home.js:49 openPanel。
+2. ✅ **Home 直接用 GearShell API 实现面板操作**(2026-08-29 已实现,见「十二、
+   轮次 25」):`window.GearShell.panels.open(component, options)` 就是 gctl 的
+   JS 本体(workspace-api.js:112),Home 按钮改调它,与 agent 通道同一 API、白拿
+   分屏参数 + 审计。home.js openPanel 保留 addPanelByComponent 作 fallback
+   (API 未就绪时)。`gctl`→`gear` 重命名已解耦,单独成项或砍掉。
 
 3. **iframe 本地网页支持**
    - 内容:browser.open 现在只收 http(s)://(非 http(s) 返回 error),本地页面=
@@ -342,3 +337,13 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
      (dockview 本就支持运行时注册组件,lucide 图标目录已中心化);②远程加载
      (importmap 扩展 / 动态 import 插件 URL);③市场目录(JSON 清单 + 安装/更新
      按钮,进 launcher + Settings 插件页)。
+
+## 十二、轮次 25:Home 接入 GearShell API(2026-08-29,已提交)
+
+- commit:`<本轮 commit>`,home.js openPanel 从 DI 注入的 addPanelByComponent
+  改为 `window.GearShell.panels.open(component, options)`(API 未就绪时 fallback
+  回直连 adder)。
+- 收益:Home 与 agent 走同一 API 通道(分屏 direction/group 参数可直接传)、
+  workspace-audit 事件覆盖 Home 操作;按钮调用点(home-sections 三处)零改动。
+- 实测:Home「Open Terminal」→ terminal-1 面板 + xterm 入 DOM;「Browse apps」→
+  fallback launcher 打开;console 无新报错。
