@@ -8,11 +8,11 @@ import React, { useCallback } from "react";
 import { DockviewReact } from "dockview-react";
 import { LandingPanel } from "./home.js?v=20260812.23";
 import { DeckPanel } from "./deck.js?v=20260812.30";
-import { SettingsPanel } from "./settings.js?v=20260826.37";
+import { SettingsPanel } from "./settings.js?v=20260826.39";
 import { FilesPanel } from "./files.js?v=20260826.70";
 import { RuntimePanel } from "./runtime.js?v=20260826.44";
-import { MusicPanel } from "./music.js?v=20260829.7";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.47";
+import { MusicPanel } from "./music.js?v=20260829.11";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.49";
 import {
   addFallbackPanel,
   AddTerminalButton,
@@ -32,40 +32,40 @@ import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.52";
+} from "./app-panels-store.js?v=20260826.54";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.52";
+} from "./app-terminal-sessions.js?v=20260826.54";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.56";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.58";
+} from "./app-sessions.js?v=20260828.58";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.60";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.53";
+} from "./app-panels.js?v=20260826.55";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.52";
+} from "./app-workspace.js?v=20260826.54";
 import { addPanelByComponent } from "./panels.js?v=20260812.43";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.81";
+} from "./app-layout.js?v=20260828.83";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.68";
+} from "./workspace-api.js?v=20260828.70";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);

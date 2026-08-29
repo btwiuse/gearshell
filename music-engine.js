@@ -7,13 +7,22 @@
 // the panel catches up through MUSIC_STATE_EVENT.
 //
 // The engine also owns the playlist: a queue of tracks with three loop
-// modes (off / all / one), auto-advance on 'ended', and best-effort
-// metadata + lyrics for VFS files (ID3v2 frames and .lrc sidecars via
-// audio-tags.js). MUSIC_TIME_EVENT carries just { time } at ~4 Hz for
-// lyric sync, so the panel does not need to re-render whole state.
+// modes (off / all / one) plus shuffle, auto-advance on 'ended', seek,
+// drag reordering, and named playlists persisted to localStorage (so
+// reloads keep them). History de-duplicates by source and counts plays.
+// Metadata + lyrics for VFS files come from audio-tags.js (ID3v2 frames
+// and .lrc sidecars). MUSIC_TIME_EVENT carries just { time } at ~4 Hz
+// for lyric sync, so the panel does not need to re-render whole state.
 
 import { getWanixRoot } from "./app-state.js?v=20260826.2";
 import { parseAudioTags, parseLrc } from "./audio-tags.js?v=20260829.7";
+import {
+  deletePlaylist,
+  getPlaylist,
+  listPlaylists,
+  renamePlaylist,
+  savePlaylist,
+} from "./music-playlists.js?v=20260829.9";
 
 export const MUSIC_STATE_EVENT = "GearShellMusicStateChanged";
 export const MUSIC_TIME_EVENT = "GearShellMusicTime";
@@ -26,7 +35,8 @@ let current = null; // { src, title, artist?, album?, track?, lyrics?, lyricsKin
 let queue = []; // [{ src, title }]
 let queueIndex = -1;
 let loopMode = "off";
-const history = []; // newest first: { src, title, ts }
+let shuffle = false;
+const history = []; // newest first: { src, title, ts, count }
 
 function emitState() {
   window.dispatchEvent(new CustomEvent(MUSIC_STATE_EVENT));
@@ -45,7 +55,18 @@ function emitTime() {
 function ensureAudio() {
   if (audio) return audio;
   audio = new Audio();
-  for (const event of ["play", "pause", "ended", "error"]) {
+  // duration only becomes finite once the metadata is parsed; without
+  // these events the panel would never learn it for a paused track.
+  for (
+    const event of [
+      "play",
+      "pause",
+      "ended",
+      "error",
+      "loadedmetadata",
+      "durationchange",
+    ]
+  ) {
     audio.addEventListener(event, emitState);
   }
   audio.addEventListener("timeupdate", emitTime);
@@ -60,6 +81,10 @@ function handleEnded() {
     audio.play().catch(() => {});
     return;
   }
+  if (shuffle && queue.length > 1) {
+    playQueueAt(randomQueueIndex(queueIndex));
+    return;
+  }
   const next = queueIndex + 1;
   if (next < queue.length) {
     playQueueAt(next);
@@ -70,12 +95,32 @@ function handleEnded() {
   }
 }
 
+// A random queue index that differs from `except` (used by shuffle).
+function randomQueueIndex(except) {
+  let index = except;
+  while (index === except) {
+    index = Math.floor(Math.random() * queue.length);
+  }
+  return index;
+}
+
 function isRemote(src) {
   return /^https?:\/\//i.test(src);
 }
 
+// Replays of the same source merge into one entry, moved to the front
+// with an incremented play count — looped sessions do not flood the list.
 function recordHistory(src, title) {
-  history.unshift({ src, title, ts: Date.now() });
+  const existing = history.find((entry) => entry.src === src);
+  if (existing) {
+    existing.title = title;
+    existing.count = (existing.count || 1) + 1;
+    existing.ts = Date.now();
+    history.splice(history.indexOf(existing), 1);
+    history.unshift(existing);
+  } else {
+    history.unshift({ src, title, ts: Date.now(), count: 1 });
+  }
   if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
 }
 
@@ -227,6 +272,9 @@ export function musicNext() {
     audio.play().catch(() => {});
     return { ok: true };
   }
+  if (shuffle && queue.length > 1) {
+    return playQueueAt(randomQueueIndex(queueIndex));
+  }
   if (queueIndex + 1 < queue.length) return playQueueAt(queueIndex + 1);
   if (loopMode === "all") return playQueueAt(0);
   return musicStop();
@@ -281,6 +329,78 @@ export function musicRemoveFromQueue(index) {
   }
   emitState();
   return { ok: true };
+}
+
+export function musicSeek(seconds) {
+  const el = ensureAudio();
+  if (!el.src || !Number.isFinite(el.duration)) {
+    return { ok: false, error: "nothing loaded" };
+  }
+  const target = Math.max(
+    0,
+    Math.min(Number(seconds) || 0, el.duration - 0.05),
+  );
+  el.currentTime = target;
+  emitState();
+  return { ok: true, time: target };
+}
+
+export function musicSetShuffle(on) {
+  shuffle = !!on;
+  emitState();
+  return { ok: true, shuffle };
+}
+
+// Move the track at `from` so it sits at `to`, keeping the playing
+// position pinned to the same track (drag-to-reorder).
+export function musicReorderQueue(from, to) {
+  if (
+    !Number.isInteger(from) || !Number.isInteger(to) ||
+    from < 0 || from >= queue.length || to < 0 || to >= queue.length ||
+    from === to
+  ) {
+    return { ok: false };
+  }
+  const [moved] = queue.splice(from, 1);
+  queue.splice(to, 0, moved);
+  if (queueIndex === from) {
+    queueIndex = to;
+  } else if (from < queueIndex && to >= queueIndex) {
+    queueIndex -= 1;
+  } else if (from > queueIndex && to <= queueIndex) {
+    queueIndex += 1;
+  }
+  emitState();
+  return { ok: true };
+}
+
+// === Named playlists (delegated to music-playlists.js storage) ===
+
+export function musicListPlaylists() {
+  return listPlaylists();
+}
+
+export function musicSavePlaylist(name, tracks) {
+  const source = tracks == null ? queue : tracksFrom(tracks);
+  const result = savePlaylist(name, source);
+  return result.ok ? { ok: true, id: result.id, count: result.count } : result;
+}
+
+export function musicRenamePlaylist(id, name) {
+  return renamePlaylist(id, name);
+}
+
+export function musicDeletePlaylist(id) {
+  return deletePlaylist(id);
+}
+
+export function musicLoadPlaylist(id) {
+  const playlist = getPlaylist(id);
+  if (!playlist) return { ok: false, error: "playlist not found" };
+  queue = tracksFrom(playlist.tracks);
+  queueIndex = -1;
+  emitState();
+  return { ok: true, tracks: queue.length };
 }
 
 export function musicClearQueue() {
@@ -338,6 +458,8 @@ export function musicNowPlaying() {
     queue: queue.map((track) => ({ ...track })),
     queueIndex,
     loopMode,
+    shuffle,
+    playlists: musicListPlaylists(),
     history: history.map((entry) => ({ ...entry })),
   };
 }
@@ -349,8 +471,16 @@ export const musicApi = {
   next: musicNext,
   prev: musicPrev,
   setLoop: musicSetLoop,
+  setShuffle: musicSetShuffle,
+  seek: musicSeek,
+  reorderQueue: musicReorderQueue,
   removeFromQueue: musicRemoveFromQueue,
   clearQueue: musicClearQueue,
+  listPlaylists: musicListPlaylists,
+  savePlaylist: musicSavePlaylist,
+  renamePlaylist: musicRenamePlaylist,
+  deletePlaylist: musicDeletePlaylist,
+  loadPlaylist: musicLoadPlaylist,
   pause: musicPause,
   resume: musicResume,
   stop: musicStop,
