@@ -22,26 +22,24 @@ func bridgeRoot() string {
 // callFn is the jsfs invocation; swapped in tests.
 var callFn = bridgeCall
 
-// bridgeCall performs one synchronous jsfs funcfile round-trip.
+// bridgeCall performs one synchronous jsfs funcfile round-trip. The
+// protocol matches the bash CLI exactly: open O_RDWR, write the args, read
+// the response — no seek (the :json funcfile is a synthetic view; the
+// write triggers the call and the read returns the result regardless of
+// file offset).
 func bridgeCall(method, args string) (string, error) {
 	path := bridgeRoot() + "/" + dottedPath(method) + ":json"
 	f, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
-		return "", fmt.Errorf("gear: cannot open %s", path)
+		return "", fmt.Errorf("gear: cannot open %s: %w", path, err)
 	}
 	defer f.Close()
 	if _, err := io.WriteString(f, args); err != nil {
-		return "", fmt.Errorf("gear: call failed")
-	}
-	// The :json funcfile is a synthetic view: the write triggers the call
-	// and the read returns the result regardless of offset, but seek to 0
-	// as insurance for pipe-like implementations.
-	if _, err := f.Seek(0, io.SeekStart); err != nil {
-		return "", fmt.Errorf("gear: call failed")
+		return "", fmt.Errorf("gear: call failed (write): %w", err)
 	}
 	out, err := io.ReadAll(io.LimitReader(f, 1<<20))
 	if err != nil {
-		return "", fmt.Errorf("gear: call failed")
+		return "", fmt.Errorf("gear: call failed (read): %w", err)
 	}
 	res := string(out)
 	if strings.TrimSpace(res) == "" {
