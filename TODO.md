@@ -271,3 +271,70 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 ### 环境备忘(round-24 更新)
 - 全部新 API 经 gctl `music.*` 暴露(jsfs 同步);面板/API 同一 engine 单例。
 - 可复用参考:`memory/music-player.md`(模块结构 + API 表 + vfs-picker 复用手册)。
+
+## 十一、用户 WISHLIST(2026-08-29,全部未开始)
+
+> 用户明确提出的长期愿景,按原话整理;每条附实现锚点(现有代码/机制),未做任何一条。
+
+1. **设置中加模型 provider 配置能力,并暴露给 gctl**
+   - 内容:Settings 新增 provider 管理(name/baseURL/apiKey/model 列表,可增删改),
+     存入 workspace config(`config.*` 已可被 gctl 读写,settings 已有
+     launcher-order/terminal-presets 同款模式可抄);gctl 暴露 `config.providers.*`。
+   - 锚点:settings-panel.js 分区模式、workspace-config-api.js(getSystem 等)、
+     gctl-bind.js help 扩展。⚠️ apiKey 属敏感字段,审计环(workspace-audit)要脱敏。
+
+2. **Home 页面改用调用 gctl 的方式实现(并把 gctl 重命名为 gear)**
+   - 内容:①`gctl` 二进制/帮助/文档改名 `gear`(bind 名 bin/gctl、
+     GCTL_BIND help、memory/gctl-*.md 文档同步);②Home 内容不再纯静态 React,
+     改由 shell 内 agent(gear)驱动渲染——即"页面 = agent 的产物"。
+   - 锚点:ensureGearShellBinds(app-constants)、home.js/home-sections.js/home-data.js、
+     agentic-workspace 通道(jsfs /js/GearShell + fd>2 协议)。
+
+3. **iframe 本地网页支持**
+   - 内容:browser.open 现在只收 http(s)://(非 http(s) 返回 error),本地页面=
+     打开 Wanix VFS 里的 html/资源。可行路线:Service Worker 拦截一个虚拟
+     origin(如 `https://vfs.local/<path>`),从 `getWanixRoot().readFile` 供资源,
+     iframe 指过去即得"本地网站"体验(子资源相对路径天然可用)。
+   - 锚点:browser.open(workspace-open-api.js)、app-sessions.js iframe 会话、
+     vfs-picker.js 路径语义可复用。
+
+4. **AI 聊天、生成视频、生成图片等功能**
+   - 内容:依赖 #1(provider 配置)。聊天面板(流式输出)、图片/视频生成工具。
+     生成结果落 VFS(`/opfs`),Files 面板直接可见;gctl 暴露 `ai.*` 供 agent 调用。
+   - 锚点:依赖 #1;面板注册走 addPanelByComponent 目录;流式可借鉴
+     tasks.output 800ms 轮询 / term 通道。
+
+5. **账户登录 + 云同步**
+   - 内容:登录后把 workspace 配置/面板布局同步到云端,换设备恢复。
+   - 锚点:memory 子模块已走 git wiki 同步(scripts/sync-wiki.sh)——云同步
+     可复用同一 git 通道(workspace JSON 入 wiki 仓库私有分支)或接后端;
+     序列化已就绪(workspace.ui.dockviewLayout 布局持久化,round-21)。
+
+6. **远程资源挂载**
+   - 内容:Files 侧栏现在只能挂本地目录(File System Access API);远程
+     WebDAV/S3/git/ssh 挂成 `/mnt/<name>`。
+   - 锚点:files-mounts.js(bindLocalDir 模式)、wanix RouteFS
+     (设备命名空间下钻,见 wanix-routfs-device-namespaces.md)。
+
+7. **自我修改、发布**
+   - 内容:shell 内的 agent 能改 GearShell 自身(源码/配置)并发布新版本。
+   - 锚点:自我修改 = agent 编辑 OPFS 工作副本 + reload 生效(静态无构建,
+     利于此);发布 = 现有 deploy 链路(scripts/sync-wiki.sh、deploy-site)扩展到
+     主站产物。
+
+8. **save as mhtml 后仍能正常工作**
+   - 内容:浏览器"另存为 MHTML"单文件快照后,打开快照仍能跑起来。
+   - 现状障碍:buildless 多模块 + `?v=` 版本化 + importmap(esm.sh CDN)+
+     Worker → MHTML 快照只有内联的静态资源,ES module 相对导入在 file:// 快照
+     下全断。可行路线:新增一条打包产物链路(esbuild/rollup 把全部分子内联成
+     单 HTML,或 `shell.mhtml` 发布件),与"无构建"开发态并存(发布件生成属
+     scripts/ 工具,不改开发工作流)。
+
+9. **tab/app 系统可扩展(future-proof architecture)+ 插件市场**
+   - 内容:任何开发者能发布自己的 tab/app 给别人用,shell 里有插件市场。
+   - 现状:组件目录集中硬编码(app-shell.js PANEL_COMPONENTS)、launcher 目录
+     静态(app-constants PANEL_CREATION_OPTIONS + 图标映射)。
+   - 可行路线:①运行时插件 API——`registerPlugin({id, component, params, icon})`
+     (dockview 本就支持运行时注册组件,lucide 图标目录已中心化);②远程加载
+     (importmap 扩展 / 动态 import 插件 URL);③市场目录(JSON 清单 + 安装/更新
+     按钮,进 launcher + Settings 插件页)。
