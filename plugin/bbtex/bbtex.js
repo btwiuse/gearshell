@@ -79,6 +79,68 @@ function ExampleTerminal({ example, onClose }) {
   );
 }
 
+// The left sidebar: every curated example as a toggle button.
+function ExampleList({ open, onToggle }) {
+  return React.createElement(
+    "div",
+    { className: "bbtex-sidebar" },
+    React.createElement("h3", { className: "bbtex-title" }, "Examples"),
+    React.createElement(
+      "div",
+      { className: "bbtex-examples" },
+      BTEX_EXAMPLES.map((example) =>
+        React.createElement(
+          "button",
+          {
+            key: example.id,
+            type: "button",
+            className:
+              "bbtex-example" +
+              (open.some((item) => item.id === example.id) ? " is-open" : ""),
+            onClick: () => onToggle(example),
+          },
+          React.createElement(
+            "span",
+            { className: "bbtex-example-name" },
+            example.label,
+          ),
+          React.createElement(
+            "span",
+            { className: "bbtex-example-blurb" },
+            example.blurb,
+          ),
+        )
+      ),
+    ),
+  );
+}
+
+// The right stage: one embedded terminal per open example, or a hint.
+function PlaygroundStage({ open, onClose }) {
+  if (open.length === 0) {
+    return React.createElement(
+      "div",
+      { className: "bbtex-stage" },
+      React.createElement(
+        "div",
+        { className: "bbtex-empty" },
+        "Pick an example to run it in a live terminal",
+      ),
+    );
+  }
+  return React.createElement(
+    "div",
+    { className: "bbtex-stage" },
+    open.map((example) =>
+      React.createElement(ExampleTerminal, {
+        key: example.id,
+        example,
+        onClose: () => onClose(example),
+      })
+    ),
+  );
+}
+
 export function BbtexPlayground() {
   const [open, setOpen] = useState([]);
   const toggle = (example) => {
@@ -88,57 +150,10 @@ export function BbtexPlayground() {
         : [...prev, example]
     );
   };
-  const isOpen = (id) => open.some((item) => item.id === id);
   return React.createElement(
     "div",
     { className: "bbtex-playground" },
-    React.createElement(
-      "div",
-      { className: "bbtex-sidebar" },
-      React.createElement("h3", { className: "bbtex-title" }, "Examples"),
-      React.createElement(
-        "div",
-        { className: "bbtex-examples" },
-        BTEX_EXAMPLES.map((example) =>
-          React.createElement(
-            "button",
-            {
-              key: example.id,
-              type: "button",
-              className:
-                "bbtex-example" + (isOpen(example.id) ? " is-open" : ""),
-              onClick: () => toggle(example),
-            },
-            React.createElement(
-              "span",
-              { className: "bbtex-example-name" },
-              example.label,
-            ),
-            React.createElement(
-              "span",
-              { className: "bbtex-example-blurb" },
-              example.blurb,
-            ),
-          )
-        ),
-      ),
-    ),
-    React.createElement(
-      "div",
-      { className: "bbtex-stage" },
-      open.length === 0
-        ? React.createElement(
-            "div",
-            { className: "bbtex-empty" },
-            "Pick an example to run it in a live terminal",
-          )
-        : open.map((example) =>
-            React.createElement(ExampleTerminal, {
-              key: example.id,
-              example,
-              onClose: () => toggle(example),
-            })
-          ),
-    ),
+    React.createElement(ExampleList, { open, onToggle: toggle }),
+    React.createElement(PlaygroundStage, { open, onClose: toggle }),
   );
 }

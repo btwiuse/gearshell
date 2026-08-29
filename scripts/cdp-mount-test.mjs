@@ -188,34 +188,8 @@ async function runRealPick(dir) {
   await goto(APP);
   await kernelReady();
   await mountButtonReady();
-  await send("Page.setInterceptFileChooserDialog", { enabled: true });
-  const chooser = waitForFileChooser();
-  const collector = collectConsole();
-  await evalJS(`(() => {
-      window.__pickerInvoked = 0;
-      const orig = window.showDirectoryPicker;
-      window.showDirectoryPicker = async (...a) => { window.__pickerInvoked++; return orig(...a); };
-      return 1;
-    })()`);
-  const rect = await evalJS(`(() => {
-    const r = document.querySelector('${MOUNT_BTN}').getBoundingClientRect();
-    return JSON.stringify({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
-  })()`);
-  const { x, y } = JSON.parse(rect);
-  await send("Input.dispatchMouseEvent", {
-    type: "mousePressed",
-    x,
-    y,
-    button: "left",
-    clickCount: 1,
-  });
-  await send("Input.dispatchMouseEvent", {
-    type: "mouseReleased",
-    x,
-    y,
-    button: "left",
-    clickCount: 1,
-  });
+  const { chooser, collector } = await interceptFileChooser();
+  await clickButtonCenter(MOUNT_BTN);
   await new Promise((r) => setTimeout(r, 1500));
   console.log("picker invoked:", await evalJS("window.__pickerInvoked"));
   const params = await chooser;
@@ -241,175 +215,235 @@ async function runRealPick(dir) {
   collector.kill();
 }
 
+// Intercept the native directory picker and stub showDirectoryPicker so
+// the mount flow can be driven headlessly. Returns the chooser promise +
+// a console collector for the mount probes.
+async function interceptFileChooser() {
+  await send("Page.setInterceptFileChooserDialog", { enabled: true });
+  const chooser = waitForFileChooser();
+  const collector = collectConsole();
+  await evalJS(`(() => {
+      window.__pickerInvoked = 0;
+      const orig = window.showDirectoryPicker;
+      window.showDirectoryPicker = async (...a) => { window.__pickerInvoked++; return orig(...a); };
+      return 1;
+    })()`);
+  return { chooser, collector };
+}
+
+// Dispatch a left click at the center of a page element (CDP input
+// events, so no real cursor movement is needed).
+async function clickButtonCenter(selector) {
+  const rect = await evalJS(`(() => {
+    const r = document.querySelector('${selector}').getBoundingClientRect();
+    return JSON.stringify({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+  })()`);
+  const { x, y } = JSON.parse(rect);
+  await send("Input.dispatchMouseEvent", {
+    type: "mousePressed",
+    x,
+    y,
+    button: "left",
+    clickCount: 1,
+  });
+  await send("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    x,
+    y,
+    button: "left",
+    clickCount: 1,
+  });
+}
+
+// One command per top-level case, so the dispatcher stays a thin table.
+async function cmdBoot() {
+  await ensureChrome();
+  await goto(APP);
+  // point runtime at the locally-built debug wasm
+  const cfg = await evalJS(`(() => {
+    const raw = localStorage.getItem("gear-shell-config");
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c.workspace) return c;
+    const ws = Array.isArray(c.workspace) ? c.workspace : [c.workspace];
+    const target = ws.find(w => w && (w.runtime || !Array.isArray(c.workspace)));
+    (target || (c.workspace)).runtime = (target || c.workspace).runtime || {};
+    const t = target || c.workspace;
+    t.runtime.wasmUrl = "/wanix-dist/wanix.debug.wasm";
+    localStorage.setItem("gear-shell-config", JSON.stringify(c));
+    return JSON.stringify(t.runtime);
+  })()`);
+  console.log("runtime config set:", cfg);
+  await send("Page.reload", { ignoreCache: true });
+  await waitLoad();
+  await kernelReady();
+  console.log("wanix kernel ready");
+}
+
+async function cmdEval(args) {
+  await ensureChrome();
+  await goto(APP);
+  console.log(await evalJS(args.join(" ")));
+}
+
+async function cmdSetRuntime() {
+  await ensureChrome();
+  await goto(APP);
+  await evalJS(`(() => {
+    const id = localStorage.getItem("gear-shell-active-workspace");
+    const key = "gear-shell-workspace:" + id;
+    const ws = JSON.parse(localStorage.getItem(key));
+    ws.runtime = ws.runtime || {};
+    ws.runtime.wasmUrl = "/wanix-dist/wanix.debug.wasm";
+    ws.ui = ws.ui || {};
+    ws.ui.openPanels = [{ component: "files", panelId: "files-1" }];
+    ws.shell = ws.shell || {};
+    ws.shell.restoreTabs = true;
+    localStorage.setItem(key, JSON.stringify(ws));
+    const raw = localStorage.getItem("gear-shell-config");
+    const c = raw ? JSON.parse(raw) : {};
+    c.restoreTabs = true;
+    localStorage.setItem("gear-shell-config", JSON.stringify(c));
+    return JSON.stringify({ id, runtime: ws.runtime, restoreTabs: ws.shell.restoreTabs, openPanels: ws.ui.openPanels });
+  })()`);
+  await send("Page.reload", { ignoreCache: true });
+  await waitLoad();
+  await kernelReady();
+  console.log("wanix kernel ready with local wasm");
+}
+
+async function cmdClearRuntime() {
+  await ensureChrome();
+  await goto(APP);
+  await evalJS(`(() => {
+    const id = localStorage.getItem("gear-shell-active-workspace");
+    const key = "gear-shell-workspace:" + id;
+    const ws = JSON.parse(localStorage.getItem(key));
+    ws.runtime = {};
+    localStorage.setItem(key, JSON.stringify(ws));
+    return "cleared, falling back to WANIX_RUNTIME default";
+  })()`);
+  await send("Page.reload", { ignoreCache: true });
+  await waitLoad();
+  await kernelReady();
+  console.log(
+    "kernel ready, wasm:",
+    await evalJS(
+      "document.querySelector('#wanix-system').getAttribute('wasm')",
+    ),
+  );
+}
+
+async function cmdStub() {
+  await ensureChrome();
+  await goto(APP);
+  console.log(await evalJS(stubPickerScript("opfs-root")));
+}
+
+async function cmdClickMount() {
+  await ensureChrome();
+  await mountButtonReady();
+  console.log(await clickMount());
+}
+
+async function cmdCheck() {
+  await ensureChrome();
+  console.log(
+    await evalJS(`(async () => {
+    const kernel = window.__wanix['1'];
+    if (!kernel || !kernel.isReady) return "kernel not ready";
+    const root = kernel.root;
+    const ls = (p) => root.readDir(p);
+    const mnt = await ls("mnt").then(es => es.map(e => e.name)).catch(e => "ERR " + e.message);
+    const mounted = await ls("mnt/opfs-root").then(es => es.map(e => e.name)).catch(e => "ERR " + e.message);
+    const write = await root.writeFile("mnt/opfs-root/cdp-test.txt", "hello-from-cdp").then(() => "written").catch(e => "ERR " + e.message);
+    const read = await root.readFile("mnt/opfs-root/cdp-test.txt").then(b => new TextDecoder().decode(b)).catch(e => "ERR " + e.message);
+    return JSON.stringify({ mnt, mounted, write, read });
+  })()`),
+  );
+}
+
+async function cmdFulltest() {
+  await ensureChrome();
+  await goto(APP);
+  await kernelReady();
+  await mountButtonReady();
+  await evalJS(stubPickerScript("opfs-root"));
+  console.log(await clickMount());
+  await new Promise((r) => setTimeout(r, 3000));
+  console.log(await evalJS(probeFulltest()));
+}
+
+async function cmdFulltest2() {
+  await runFulltest2();
+}
+
+async function cmdConsole() {
+  await ensureChrome();
+  const collector = collectConsole();
+  await goto(APP);
+  await new Promise((r) => setTimeout(r, 25000));
+  console.log(collector.logs.slice(0, 40).join("\n"));
+  collector.kill();
+}
+
+async function cmdRepro() {
+  await ensureChrome();
+  await goto(APP);
+  await kernelReady();
+  await mountButtonReady();
+  const collector = collectConsole();
+  await evalJS(stubPickerScript("repro-dir"));
+  console.log(await clickMount());
+  await new Promise((r) => setTimeout(r, 4000));
+  console.log("PANEL:", await evalJS(probePanelStatus()));
+  console.log(filterConsole(
+    collector.logs,
+    /panic|fsa|localdir|setupNamespace|mount local/i,
+    4000,
+  ));
+  collector.kill();
+}
+
+async function cmdRealpick(args) {
+  await runRealPick(args[0] || "/Users/gear/Documents/GitHub/wanix");
+}
+
+async function cmdScreenshot(args) {
+  await ensureChrome();
+  await screenshot(args[0] || "/tmp/gearshell.png");
+}
+
+async function cmdKill() {
+  await killChrome();
+  process.exit(0);
+}
+
+const COMMANDS = {
+  boot: cmdBoot,
+  eval: cmdEval,
+  "set-runtime": cmdSetRuntime,
+  "clear-runtime": cmdClearRuntime,
+  stub: cmdStub,
+  "click-mount": cmdClickMount,
+  check: cmdCheck,
+  fulltest: cmdFulltest,
+  fulltest2: cmdFulltest2,
+  console: cmdConsole,
+  repro: cmdRepro,
+  realpick: cmdRealpick,
+  screenshot: cmdScreenshot,
+  kill: cmdKill,
+};
+
 async function main() {
   const [cmd, ...args] = process.argv.slice(2);
-  switch (cmd) {
-    case "boot": {
-      await ensureChrome();
-      await goto(APP);
-      // point runtime at the locally-built debug wasm
-      const cfg = await evalJS(`(() => {
-        const raw = localStorage.getItem("gear-shell-config");
-        if (!raw) return null;
-        const c = JSON.parse(raw);
-        if (!c.workspace) return c;
-        const ws = Array.isArray(c.workspace) ? c.workspace : [c.workspace];
-        const target = ws.find(w => w && (w.runtime || !Array.isArray(c.workspace)));
-        (target || (c.workspace)).runtime = (target || c.workspace).runtime || {};
-        const t = target || c.workspace;
-        t.runtime.wasmUrl = "/wanix-dist/wanix.debug.wasm";
-        localStorage.setItem("gear-shell-config", JSON.stringify(c));
-        return JSON.stringify(t.runtime);
-      })()`);
-      console.log("runtime config set:", cfg);
-      await send("Page.reload", { ignoreCache: true });
-      await waitLoad();
-      await kernelReady();
-      console.log("wanix kernel ready");
-      break;
-    }
-    case "eval": {
-      await ensureChrome();
-      await goto(APP);
-      console.log(await evalJS(args.join(" ")));
-      break;
-    }
-    case "set-runtime": {
-      await ensureChrome();
-      await goto(APP);
-      await evalJS(`(() => {
-        const id = localStorage.getItem("gear-shell-active-workspace");
-        const key = "gear-shell-workspace:" + id;
-        const ws = JSON.parse(localStorage.getItem(key));
-        ws.runtime = ws.runtime || {};
-        ws.runtime.wasmUrl = "/wanix-dist/wanix.debug.wasm";
-        ws.ui = ws.ui || {};
-        ws.ui.openPanels = [{ component: "files", panelId: "files-1" }];
-        ws.shell = ws.shell || {};
-        ws.shell.restoreTabs = true;
-        localStorage.setItem(key, JSON.stringify(ws));
-        const raw = localStorage.getItem("gear-shell-config");
-        const c = raw ? JSON.parse(raw) : {};
-        c.restoreTabs = true;
-        localStorage.setItem("gear-shell-config", JSON.stringify(c));
-        return JSON.stringify({ id, runtime: ws.runtime, restoreTabs: ws.shell.restoreTabs, openPanels: ws.ui.openPanels });
-      })()`);
-      await send("Page.reload", { ignoreCache: true });
-      await waitLoad();
-      await kernelReady();
-      console.log("wanix kernel ready with local wasm");
-      break;
-    }
-    case "clear-runtime": {
-      await ensureChrome();
-      await goto(APP);
-      await evalJS(`(() => {
-        const id = localStorage.getItem("gear-shell-active-workspace");
-        const key = "gear-shell-workspace:" + id;
-        const ws = JSON.parse(localStorage.getItem(key));
-        ws.runtime = {};
-        localStorage.setItem(key, JSON.stringify(ws));
-        return "cleared, falling back to WANIX_RUNTIME default";
-      })()`);
-      await send("Page.reload", { ignoreCache: true });
-      await waitLoad();
-      await kernelReady();
-      console.log(
-        "kernel ready, wasm:",
-        await evalJS(
-          "document.querySelector('#wanix-system').getAttribute('wasm')",
-        ),
-      );
-      break;
-    }
-    case "stub": {
-      await ensureChrome();
-      await goto(APP);
-      console.log(await evalJS(stubPickerScript("opfs-root")));
-      break;
-    }
-    case "click-mount": {
-      await ensureChrome();
-      await mountButtonReady();
-      console.log(await clickMount());
-      break;
-    }
-    case "check": {
-      await ensureChrome();
-      console.log(
-        await evalJS(`(async () => {
-        const kernel = window.__wanix['1'];
-        if (!kernel || !kernel.isReady) return "kernel not ready";
-        const root = kernel.root;
-        const ls = (p) => root.readDir(p);
-        const mnt = await ls("mnt").then(es => es.map(e => e.name)).catch(e => "ERR " + e.message);
-        const mounted = await ls("mnt/opfs-root").then(es => es.map(e => e.name)).catch(e => "ERR " + e.message);
-        const write = await root.writeFile("mnt/opfs-root/cdp-test.txt", "hello-from-cdp").then(() => "written").catch(e => "ERR " + e.message);
-        const read = await root.readFile("mnt/opfs-root/cdp-test.txt").then(b => new TextDecoder().decode(b)).catch(e => "ERR " + e.message);
-        return JSON.stringify({ mnt, mounted, write, read });
-      })()`),
-      );
-      break;
-    }
-    case "fulltest": {
-      await ensureChrome();
-      await goto(APP);
-      await kernelReady();
-      await mountButtonReady();
-      await evalJS(stubPickerScript("opfs-root"));
-      console.log(await clickMount());
-      await new Promise((r) => setTimeout(r, 3000));
-      console.log(await evalJS(probeFulltest()));
-      break;
-    }
-    case "fulltest2": {
-      await runFulltest2();
-      break;
-    }
-    case "console": {
-      await ensureChrome();
-      const collector = collectConsole();
-      await goto(APP);
-      await new Promise((r) => setTimeout(r, 25000));
-      console.log(collector.logs.slice(0, 40).join("\n"));
-      collector.kill();
-      break;
-    }
-    case "repro": {
-      await ensureChrome();
-      await goto(APP);
-      await kernelReady();
-      await mountButtonReady();
-      const collector = collectConsole();
-      await evalJS(stubPickerScript("repro-dir"));
-      console.log(await clickMount());
-      await new Promise((r) => setTimeout(r, 4000));
-      console.log("PANEL:", await evalJS(probePanelStatus()));
-      console.log(filterConsole(
-        collector.logs,
-        /panic|fsa|localdir|setupNamespace|mount local/i,
-        4000,
-      ));
-      collector.kill();
-      break;
-    }
-    case "realpick": {
-      await runRealPick(args[0] || "/Users/gear/Documents/GitHub/wanix");
-      break;
-    }
-    case "screenshot": {
-      await ensureChrome();
-      await screenshot(args[0] || "/tmp/gearshell.png");
-      break;
-    }
-    case "kill": {
-      await killChrome();
-      process.exit(0);
-    }
-    default:
-      console.log("unknown command", cmd);
-      process.exit(1);
+  const run = COMMANDS[cmd];
+  if (!run) {
+    console.log("unknown command", cmd);
+    process.exit(1);
   }
+  await run(args);
   // keep the browser alive across commands; exit only this driver process
   await new Promise((r) => setTimeout(r, 800));
   process.exit(0);
