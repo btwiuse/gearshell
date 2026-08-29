@@ -20,11 +20,11 @@ import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.27";
+} from "./panels-task.js?v=20260828.28";
 import {
   getPluginIframeConfig,
   openPluginPanel,
-} from "./plugins.js?v=20260829.38";
+} from "./plugins.js?v=20260829.39";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -341,10 +341,12 @@ const PANEL_ADDERS = {
   terminal: addTerminalPanel,
   "workspace-task": addWorkspaceTaskPanel,
   plugins: (api, group) => panelsDep("addPluginsPanel")(api, group),
-  fallback: (api, group) => panelsDep("addFallbackPanel")(api, group),
 };
 
 function addPanelByComponent(api, component, group, options) {
+  // Legacy name for the launcher panel (pre-plugin snapshots saved
+  // component "fallback"); route it to the pluginized "launcher".
+  if (component === "fallback") component = "launcher";
   const direction = options?.direction;
   let targetGroup = group;
   if (direction) {

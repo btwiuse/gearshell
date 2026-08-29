@@ -66,7 +66,7 @@ function HeroButtons({ openPanel, openExternal, scrollToId, GH }) {
       {
         className: "mkt-btn mkt-btn-ghost",
         type: "button",
-        onClick: () => openPanel("fallback"),
+        onClick: () => openPanel("launcher"),
       },
       React.createElement(LayoutGrid, { size: 16, "aria-hidden": true }),
       React.createElement("span", null, "Browse apps"),
@@ -445,7 +445,7 @@ export function HomeFooter({ openPanel, scrollToId, GH }) {
         {
           className: "mkt-btn mkt-btn-ghost",
           type: "button",
-          onClick: () => openPanel("fallback"),
+          onClick: () => openPanel("launcher"),
         },
         React.createElement(LayoutGrid, { size: 16, "aria-hidden": true }),
         React.createElement("span", null, "Browse apps"),

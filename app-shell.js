@@ -6,60 +6,56 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { DockviewReact } from "dockview-react";
-import { PluginsPanel } from "./plugins-panel.js?v=20260829.11";
-import {
-  addFallbackPanel,
-  AddTerminalButton,
-  FallbackPanel,
-} from "./launcher.js?v=20260812.39";
+import { PluginsPanel } from "./plugins-panel.js?v=20260829.12";
+import { AddTerminalButton } from "./launcher.js?v=20260812.40";
 import {
   IframePanel,
   PanelTab,
   TerminalPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.62";
+} from "./panels.js?v=20260812.63";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.74";
+} from "./app-panels-store.js?v=20260826.75";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   getPluginBootPromise,
   listOverlays,
   PLUGIN_CHANGED_EVENT,
-} from "./plugins.js?v=20260829.38";
+} from "./plugins.js?v=20260829.39";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.74";
+} from "./app-terminal-sessions.js?v=20260826.75";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.78";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.80";
+} from "./app-sessions.js?v=20260828.79";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.81";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.75";
+} from "./app-panels.js?v=20260826.76";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.74";
-import { addPanelByComponent } from "./panels.js?v=20260812.62";
+} from "./app-workspace.js?v=20260826.75";
+import { addPanelByComponent } from "./panels.js?v=20260812.63";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.103";
+} from "./app-layout.js?v=20260828.104";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.90";
+} from "./workspace-api.js?v=20260828.91";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -76,7 +72,9 @@ function handlePanelRemoved(api, panel) {
   }
   forgetOpenPanel(panel.id);
   requestAnimationFrame(() => {
-    if (api.panels.length === 0) addFallbackPanel(api);
+    // Keep the grid from staying empty: reopen the launcher component
+    // through the plugin path (swappable launcher implementations).
+    if (api.panels.length === 0) addPanelByComponent(api, "launcher");
   });
 }
 
@@ -114,7 +112,7 @@ async function openStartupPanels(api) {
       addPanelByComponent(api, component);
     }
   }
-  if (api.panels.length === 0) addFallbackPanel(api);
+  if (api.panels.length === 0) addPanelByComponent(api, "launcher");
   return restored;
 }
 
@@ -132,7 +130,7 @@ const DUPLICATABLE_PANEL_TYPES = new Set([
   "music",
   "playground",
   "plugins",
-  "fallback",
+  "launcher",
 ]);
 
 function panelTypeOf(panel) {
@@ -222,7 +220,6 @@ function dockviewOptions(onReady) {
 // time — no snapshot — so in-place registration works).
 export const PANEL_COMPONENTS = {
   plugins: PluginsPanel,
-  fallback: FallbackPanel,
   task: WorkspaceTaskPanel,
   terminal: TerminalPanel,
   iframe: IframePanel,

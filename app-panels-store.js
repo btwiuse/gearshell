@@ -5,9 +5,9 @@ import {
   loadActiveWorkspace,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.74";
-import { clone } from "./app-normalize.js?v=20260828.75";
-import { STARTUP_PANEL_TYPES } from "./app-constants.js?v=20260828.33";
+} from "./app-workspace.js?v=20260826.75";
+import { clone } from "./app-normalize.js?v=20260828.76";
+import { STARTUP_PANEL_TYPES } from "./app-constants.js?v=20260828.34";
 
 export const openPanelSnapshots = new Map();
 export let dockviewApi = null;
@@ -43,7 +43,7 @@ export function getSavedOpenPanels() {
   return panels.filter((panel) =>
     panel && typeof panel === "object" &&
     (STARTUP_PANEL_TYPES.includes(panel.component) ||
-      panel.component === "fallback" || panel.component === "task")
+      panel.component === "launcher" || panel.component === "task")
   );
 }
 

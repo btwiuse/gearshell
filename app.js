@@ -8,44 +8,44 @@ import { LicenseManager } from "dockview-enterprise";
 
 import {
   initCrushRunner,
-} from "./crush-runner.js?v=20260826.69";
-import { addLandingPanel, initHome } from "./home.js?v=20260812.24";
+} from "./crush-runner.js?v=20260826.70";
+import { addLandingPanel, initHome } from "./home.js?v=20260812.25";
 import {
   initSettings,
   TerminalPresetIconPicker,
-} from "./settings.js?v=20260826.67";
+} from "./settings.js?v=20260826.68";
 
-import { initFiles } from "./files-registry.js?v=20260826.39";
+import { initFiles } from "./files-registry.js?v=20260826.40";
 import { initRuntime } from "./runtime.js?v=20260826.45";
 import {
   getPluginBootPromise,
   initPlugins,
   registerSyncPlugins,
-} from "./plugins.js?v=20260829.38";
-import { registerPluginsSettingsSection } from "./settings-plugins.js?v=20260829.48";
+} from "./plugins.js?v=20260829.39";
+import { registerPluginsSettingsSection } from "./settings-plugins.js?v=20260829.49";
 import {
   addPluginsPanel,
   initPluginsPanel,
-} from "./plugins-panel.js?v=20260829.11";
+} from "./plugins-panel.js?v=20260829.12";
 import { initDeck } from "./deck.js?v=20260812.30";
-import { addFallbackPanel, initLauncher } from "./launcher.js?v=20260812.39";
+import { initLauncher } from "./launcher.js?v=20260812.40";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
   initPanels,
-} from "./panels.js?v=20260812.62";
+} from "./panels.js?v=20260812.63";
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
   workspaceApi,
-} from "./workspace-api.js?v=20260828.90";
+} from "./workspace-api.js?v=20260828.91";
 import {
   clearAuditEntries,
   listAuditEntries,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.49";
-import { App, PANEL_COMPONENTS } from "./app-shell.js?v=20260828.95";
+} from "./workspace-audit.js?v=20260829.50";
+import { App, PANEL_COMPONENTS } from "./app-shell.js?v=20260828.96";
 
 import {
   getWanixRoot,
@@ -56,7 +56,7 @@ import {
   terminalSessions,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { createWanixSystem } from "./app-wanix.js?v=20260826.74";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.75";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -90,14 +90,14 @@ import {
   updateWorkspaceBind,
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
-} from "./app-workspace.js?v=20260826.74";
+} from "./app-workspace.js?v=20260826.75";
 import {
   listWorkspacePresets,
   loadCustomWorkspacePreset,
   removeCustomWorkspacePreset,
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
-} from "./app-workspace-presets.js?v=20260826.74";
+} from "./app-workspace-presets.js?v=20260826.75";
 import {
   blankCrushRunnerPresetDraft,
   clone,
@@ -108,7 +108,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.75";
+} from "./app-normalize.js?v=20260828.76";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -117,34 +117,34 @@ import {
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.74";
+} from "./app-terminal-profiles.js?v=20260826.75";
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
   createTerminalSession,
   destroyTerminalSession,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.74";
+} from "./app-terminal-sessions.js?v=20260826.75";
 import {
   attachIframeSession,
   attachVmSession,
   attachWorkbenchSession,
   waitForWanixSystem,
-} from "./app-sessions.js?v=20260828.78";
+} from "./app-sessions.js?v=20260828.79";
 import {
   attachWorkspaceTaskSession,
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.80";
+} from "./app-workspace-task-sessions.js?v=20260828.81";
 import {
   getDockviewApi,
   rememberOpenPanel,
-} from "./app-panels-store.js?v=20260826.74";
+} from "./app-panels-store.js?v=20260826.75";
 import {
   blankTerminalPresetDraft,
   PANEL_CREATION_OPTIONS,
-} from "./app-panels.js?v=20260826.75";
+} from "./app-panels.js?v=20260826.76";
 import {
   dismissHomeDebugErrors,
   DOCKVIEW_LICENSE_KEY,
@@ -157,7 +157,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.33";
+} from "./app-constants.js?v=20260828.34";
 
 // Set the license key before any DockviewComponent is created so the
 // watermark never renders; a late setLicenseKey also works (LicenseModule
@@ -243,13 +243,12 @@ initPanels({
   getWorkbenchPanelConfig,
   getDefaultTerminalProfile,
   // Cross-module add*Panel dispatchers so panels.js can route every
-  // component name (home / settings / files / fallback / crush-runner)
-  // through a single PANEL_ADDERS table. Pluginized components (music,
-  // runtime, playground, files, workbench, settings, ...) fall through
-  // to openPluginPanel instead.
+  // Cross-module add*Panel dispatchers: panels.js's PANEL_ADDERS routes
+  // every kernel panel through this table; pluginized components (home,
+  // settings, files, runtime, playground, workbench, vm, music, deck,
+  // group, launcher, crush-runner, ...) fall through to openPluginPanel.
   addLandingPanel,
   addPluginsPanel,
-  addFallbackPanel,
 });
 
 // Initialise the Deck submodule with the helpers it needs at

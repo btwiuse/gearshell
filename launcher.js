@@ -438,17 +438,20 @@ function FallbackPanel({ containerApi }) {
 // Register a new Fallback (Launcher) panel with dockview. Called from
 // app.js's `addPanelByComponent` when the user picks Launcher from
 // the panel menu, and from the restore-saved-panels path on boot.
+// Registered by the launcher plugin (launcher-plugin.js); the kernel's
+// empty-grid guards open the "launcher" component through the plugin
+// path so the launcher implementation is swappable.
 export function addFallbackPanel(api, group) {
-  const id = nextPanelIndex("fallback");
+  const id = nextPanelIndex("launcher");
   const panel = api.addPanel({
-    id: `fallback-${id}`,
-    component: "fallback",
-    params: { fallbackId: id, panelType: "fallback" },
+    id: `launcher-${id}`,
+    component: "launcher",
+    params: { launcherId: id, panelType: "launcher" },
     title: "Launcher",
     ...(group && { position: { referenceGroup: group } }),
   });
   const rememberOpenPanel = launcherDep("rememberOpenPanel");
-  rememberOpenPanel(panel, { component: "fallback" });
+  rememberOpenPanel(panel, { component: "launcher" });
   panel.api.setActive();
   return panel;
 }
@@ -456,6 +459,6 @@ export function addFallbackPanel(api, group) {
 // The "+" Add control + all-apps menu live in launcher-menu.js (500-line
 // split); re-export so existing importers (app.js, app-shell.js) keep
 // importing AddTerminalButton from this module.
-export { AddTerminalButton } from "./launcher-menu.js?v=20260829.3";
+export { AddTerminalButton } from "./launcher-menu.js?v=20260829.4";
 
 export { FallbackPage, FallbackPanel, TerminalLaunchPicker };

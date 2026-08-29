@@ -10,7 +10,7 @@
 import {
   addCrushRunnerPanel,
   CrushRunnerPanel,
-} from "./crush-runner.js?v=20260826.69";
+} from "./crush-runner.js?v=20260826.70";
 
 export const plugin = {
   register(ctx) {

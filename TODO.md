@@ -547,3 +547,14 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   disable/enable 生命周期无崩;console 零报错。
 - 剩余内置:terminal(高)、plugins/fallback/iframe(内核身份)、task
   (需 launcher:false 开关,收益薄,建议维持内核)。
+
+## 二十三、Launcher 插件化 + swappable(round 37,commit `<本轮 commit>`)
+
+- 组件 fallback → launcher;内核空壳守卫改走插件路径(addPanelByComponent
+  ("launcher")),launcher 实现可替换(禁用内置 → 启用注册同名 component 的
+  第三方插件)。launcher-plugin.js 默认启用;兼容 shim 兜住旧 "fallback"
+  保存布局;Home "Browse apps" CTA、DUPLICATABLE、panels-store 过滤全量改名。
+- 实测:19 插件 loaded;空壳守卫重开 launcher;旧名路由;disable/enable
+  生命周期无崩;console 零报错。
+- 至此内核面板仅剩:terminal(核心)、task(双模任务面板)、plugins(管理器
+  自指)、iframe(插件基座)。

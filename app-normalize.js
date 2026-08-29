@@ -30,16 +30,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.33";
+} from "./app-constants.js?v=20260828.34";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.69";
+} from "./crush-runner.js?v=20260826.70";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.74";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.31";
+} from "./app-workspace.js?v=20260826.75";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.32";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -51,7 +51,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.25";
+} from "./app-normalize-system.js?v=20260828.26";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -63,7 +63,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.25";
+} from "./app-normalize-system.js?v=20260828.26";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
