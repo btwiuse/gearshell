@@ -15,9 +15,8 @@
 
 import React, { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
-import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import { ExplorerView } from "./playground-explorer.js?v=20260829.19";
-import { ProvidersView } from "./playground-providers.js?v=20260829.27";
+import { ProvidersView } from "./playground-providers.js?v=20260829.28";
 import { EventsView } from "./playground-events-view.js?v=20260829.14";
 import { TabBar } from "./playground-parts.js?v=20260829.14";
 
@@ -26,23 +25,6 @@ const TABS = [
   { id: "providers", label: "Providers" },
   { id: "events", label: "Events" },
 ];
-
-let __playgroundDeps = null;
-export function initPlayground(dependencies) {
-  __playgroundDeps = dependencies;
-}
-function playgroundDep(name) {
-  if (__playgroundDeps == null) {
-    throw new Error(
-      "playground: initPlayground() has not been called; ensure app.js wires it in.",
-    );
-  }
-  const value = __playgroundDeps[name];
-  if (value === undefined) {
-    throw new Error(`playground: missing dependency ${name}`);
-  }
-  return value;
-}
 
 export function PlaygroundPanel() {
   const [tab, setTab] = useState("explorer");
@@ -69,20 +51,4 @@ export function PlaygroundPanel() {
       tab === "events" && React.createElement(EventsView, null),
     ),
   );
-}
-
-// === Panel registration ===
-
-export function addPlaygroundPanel(api, group) {
-  const id = nextPanelIndex("playground");
-  const panel = api.addPanel({
-    id: `playground-${id}`,
-    component: "playground",
-    params: { playgroundId: id, panelType: "playground" },
-    title: `Playground ${id}`,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  playgroundDep("rememberOpenPanel")(panel, { component: "playground" });
-  panel.api.setActive();
-  return panel;
 }

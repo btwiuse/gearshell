@@ -148,7 +148,21 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/group-plugin.js?v=20260829.3",
+    entry: "/group-plugin.js?v=20260829.4",
+  },
+  {
+    id: "runtime",
+    name: "Runtime",
+    version: "1.0.0",
+    icon: "Activity",
+    entry: "/runtime-plugin.js?v=20260829.51",
+  },
+  {
+    id: "playground",
+    name: "Playground",
+    version: "1.0.0",
+    icon: "SlidersHorizontal",
+    entry: "/playground-plugin.js?v=20260829.52",
   },
   {
     id: "browser",
@@ -211,7 +225,7 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/web-pet-plugin.js?v=20260829.2",
+    entry: "/web-pet-plugin.js?v=20260829.3",
   },
   {
     id: "widgetbot",

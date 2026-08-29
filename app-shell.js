@@ -7,12 +7,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { DockviewReact } from "dockview-react";
 import { LandingPanel } from "./home.js?v=20260812.24";
-import { SettingsPanel } from "./settings.js?v=20260826.61";
-import { FilesPanel } from "./files.js?v=20260826.76";
-import { RuntimePanel } from "./runtime.js?v=20260826.44";
-import { PlaygroundPanel } from "./playground-panel.js?v=20260829.30";
-import { PluginsPanel } from "./plugins-panel.js?v=20260829.5";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.63";
+import { SettingsPanel } from "./settings.js?v=20260826.62";
+import { FilesPanel } from "./files.js?v=20260826.77";
+import { PluginsPanel } from "./plugins-panel.js?v=20260829.6";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.64";
 import {
   addFallbackPanel,
   AddTerminalButton,
@@ -25,45 +23,45 @@ import {
   VmPanel,
   WorkbenchPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.56";
+} from "./panels.js?v=20260812.57";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.68";
+} from "./app-panels-store.js?v=20260826.69";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { listOverlays, PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.32";
+import { listOverlays, PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.33";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.68";
+} from "./app-terminal-sessions.js?v=20260826.69";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.72";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.74";
+} from "./app-sessions.js?v=20260828.73";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.75";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.69";
+} from "./app-panels.js?v=20260826.70";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.68";
-import { addPanelByComponent } from "./panels.js?v=20260812.56";
+} from "./app-workspace.js?v=20260826.69";
+import { addPanelByComponent } from "./panels.js?v=20260812.57";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.97";
+} from "./app-layout.js?v=20260828.98";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.84";
+} from "./workspace-api.js?v=20260828.85";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -224,8 +222,6 @@ export const PANEL_COMPONENTS = {
   home: LandingPanel,
   settings: SettingsPanel,
   files: FilesPanel,
-  runtime: RuntimePanel,
-  playground: PlaygroundPanel,
   plugins: PluginsPanel,
   workbench: WorkbenchPanel,
   vm: VmPanel,

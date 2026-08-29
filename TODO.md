@@ -493,3 +493,18 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   widgetbot.js 改 React 组件,注入逻辑不变)。
 - 实测:10 插件 loaded;pet/crate 在标志持久后启动即出现;disable/enable 全
   生命周期无崩;console 零报错。
+
+## 十九、runtime + playground 插件化(round 32,commit `<本轮 commit>`)
+
+- 迁移评估:13 内置面板中 settings/plugins/fallback/iframe 为内核身份不迁,
+  terminal/vm/task 高风险低价值,低难度叶子面板(runtime/playground/home/
+  files/workbench)可迁。
+- runtime-plugin.js + playground-plugin.js:ctx.registerPanel 注册;
+  addRuntimePanel/addPlaygroundPanel + PANEL_ADDERS 条目删除(通用 opener
+  等价);playground 的 initPlayground DI shim 整体移除(app.js 联动)。
+- DEFAULT_PLUGINS 加 runtime/playground;PANEL_COMPONENTS /
+  PANEL_CREATION_OPTIONS 移除对应项;cascade → app.js?v=20260828.117。
+- 实测:12 插件 loaded;两面板 open 渲染正常;launcher 可见;disable/enable
+  生命周期无崩;console 零报错。
+- 下一轮候选:home(需处理 addPanelByComponent 默认 fallback 分支)→ files
+  → workbench。crush-runner 按信任定位留内核。

@@ -27,7 +27,7 @@
 // split.
 
 import { workspaceTaskSessions } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.27";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.28";
 import {
   drainEvents,
   emit,
@@ -38,19 +38,19 @@ import {
   seedEventBuffer,
   wirePanelEvents,
 } from "./workspace-events.js?v=20260828.4";
-import { openApi } from "./workspace-open-api.js?v=20260828.53";
-import { configApi } from "./workspace-config-api.js?v=20260828.53";
+import { openApi } from "./workspace-open-api.js?v=20260828.54";
+import { configApi } from "./workspace-config-api.js?v=20260828.54";
 import {
   runHeadlessTask,
   tasksApi,
-} from "./workspace-tasks-api.js?v=20260828.53";
+} from "./workspace-tasks-api.js?v=20260828.54";
 import { agentsApi } from "./workspace-agents-api.js?v=20260828.1";
 import { musicApi } from "./music-engine.js?v=20260829.10";
 import {
   gcWorkspaceTasks,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.53";
-import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.53";
+} from "./workspace-task-registry.js?v=20260828.54";
+import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.54";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no

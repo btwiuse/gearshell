@@ -4,26 +4,25 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.68";
+} from "./app-workspace.js?v=20260826.69";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.68";
+} from "./app-terminal-profiles.js?v=20260826.69";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.68";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.63";
+} from "./app-panels-store.js?v=20260826.69";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.64";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.56";
+} from "./panels.js?v=20260812.57";
 import {
-  Activity,
   Cpu,
   FolderOpen,
   House,
@@ -31,7 +30,6 @@ import {
   Puzzle,
   Rocket,
   Settings,
-  SlidersHorizontal,
   Terminal,
 } from "lucide-react";
 
@@ -73,8 +71,6 @@ export const PANEL_CREATION_OPTIONS = [
   { component: "vm", label: "VM", icon: Cpu },
   { component: "settings", label: "Settings", icon: Settings },
   { component: "files", label: "Files", icon: FolderOpen },
-  { component: "runtime", label: "Runtime", icon: Activity },
-  { component: "playground", label: "Playground", icon: SlidersHorizontal },
   { component: "plugins", label: "Plugins", icon: Puzzle },
   { component: "crush-runner", label: "Crush Runner", icon: Rocket },
 ];

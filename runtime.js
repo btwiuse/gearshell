@@ -17,7 +17,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Activity, RefreshCw } from "lucide-react";
 import { loadStoredMounts } from "./files-mounts.js?v=20260826.43";
-import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 
 let __runtimeDeps = null;
 export function initRuntime(dependencies) {
@@ -238,24 +237,6 @@ function RuntimePanel() {
   );
 }
 
-// === Panel registration ===
-
-// Register a new Runtime panel with dockview. Called from app.js's
-// `addPanelByComponent` when the user picks Runtime from the panel
-// menu, and from the restore-saved-panels path on boot.
-export function addRuntimePanel(api, group) {
-  const id = nextPanelIndex("runtime");
-  const panel = api.addPanel({
-    id: `runtime-${id}`,
-    component: "runtime",
-    params: { runtimeId: id, panelType: "runtime" },
-    title: `Runtime ${id}`,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  const rememberOpenPanel = runtimeDep("rememberOpenPanel");
-  rememberOpenPanel(panel, { component: "runtime" });
-  panel.api.setActive();
-  return panel;
-}
-
+// Registered as a plugin panel (see runtime-plugin.js); panel opener
+// and id counter live in the generic plugin path (openPluginPanel).
 export { RuntimePanel };
