@@ -1,2 +1,4 @@
 node_modules/
 .eslintcache
+cmd/gear/gear
+cmd/gear/gear.wasm
