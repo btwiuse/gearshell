@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -24,9 +25,12 @@ var callFn = bridgeCall
 
 // bridgeCall performs one synchronous jsfs funcfile round-trip. The
 // protocol matches the bash CLI exactly: open O_RDWR, write the args, read
-// the response — no seek (the :json funcfile is a synthetic view; the
-// write triggers the call and the read returns the result regardless of
-// file offset).
+// the response. The :json funcfile is a synthetic view — the write
+// triggers the call and the result is returned by the first read with no
+// EOF (the bash script reads a single line the same way), so a single
+// bounded Read is the exact equivalent: ReadAll would block forever
+// waiting for an EOF that never arrives. Content wins over the read
+// status, mirroring the bash `read ... || [[ -n ${out:-} ]]` gate.
 func bridgeCall(method, args string) (string, error) {
 	path := bridgeRoot() + "/" + dottedPath(method) + ":json"
 	f, err := os.OpenFile(path, os.O_RDWR, 0)
@@ -34,18 +38,23 @@ func bridgeCall(method, args string) (string, error) {
 		return "", fmt.Errorf("gear: cannot open %s: %w", path, err)
 	}
 	defer f.Close()
-	if _, err := io.WriteString(f, args); err != nil {
+	// The write is the bash `echo "$args" >&3` equivalent: it must carry
+	// the trailing newline, or the funcfile handler waits for a line
+	// terminator before triggering the call and the read below blocks.
+	if _, err := io.WriteString(f, args+"\n"); err != nil {
 		return "", fmt.Errorf("gear: call failed (write): %w", err)
 	}
-	out, err := io.ReadAll(io.LimitReader(f, 1<<20))
-	if err != nil {
-		return "", fmt.Errorf("gear: call failed (read): %w", err)
+	buf := make([]byte, 1<<20)
+	n, readErr := f.Read(buf)
+	if n > 0 {
+		if res := strings.TrimSpace(string(buf[:n])); res != "" {
+			return res, nil
+		}
 	}
-	res := string(out)
-	if strings.TrimSpace(res) == "" {
-		return "", fmt.Errorf("gear: no response (args must be a JSON array)")
+	if readErr != nil && !errors.Is(readErr, io.EOF) {
+		return "", fmt.Errorf("gear: call failed (read): %w", readErr)
 	}
-	return res, nil
+	return "", fmt.Errorf("gear: no response (args must be a JSON array)")
 }
 
 // callAndPrint runs one method and prints the raw response to w (the
