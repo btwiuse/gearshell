@@ -13,10 +13,11 @@
 //                    `export const plugin = { register(ctx) }`; ctx is:
 //                      registerPanel({ component, label, icon, title, render })
 //                      registerSettingsSection({ id, label, render })
+//                      registerOverlay({ id, render })
 //                      api — a permission-scoped view of window.GearShell
 //   Settings sections are DOM render functions `(root, ctx) => dispose`
-//   mounted by the Settings panel; plugins get their own preferences UI
-//   the same way the shell's built-in Plugins card does.
+//   mounted by the Settings panel; overlays are null-rendering React
+//   components mounted beside the dockview grid (ambient shell chrome).
 //
 //   Iframe plugins are the entry-less form: `{ ..., iframe: { src,
 //   allow?, allowFullscreen? } }` registers a panel that hosts the src in
@@ -38,13 +39,13 @@
 // enforcement for untrusted pages (T2, iframe bridge) is a later slice.
 
 import { icons as LucideIcons } from "lucide-react";
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.67";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.68";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.26";
+} from "./app-constants.js?v=20260828.27";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 
 // Fired whenever a plugin finishes loading (ok or failed) or is
@@ -359,6 +360,39 @@ export function listSettingsSections() {
   }));
 }
 
+// --- Shell overlays ---
+// Ambient shell chrome (a desktop pet, a chat widget, a status pill) is
+// a third registration kind: `registerOverlay` mounts a null-rendering
+// React component at the top of the shell, beside the dockview grid.
+// The built-in Wagi Dog pet and Discord widget load this way (their
+// config flags still decide visibility; the plugin manifest decides
+// availability), and any third party can contribute the same.
+const pluginOverlays = new Map(); // id -> { manifest, render }
+
+export function registerOverlay(manifest, { id, render }) {
+  if (typeof id !== "string" || !id) {
+    throw new Error("overlay requires an id");
+  }
+  if (typeof render !== "function") {
+    throw new Error(`overlay "${id}" requires a render component`);
+  }
+  if (pluginOverlays.has(id)) {
+    throw new Error(`overlay "${id}" already registered`);
+  }
+  const entry = { manifest, render };
+  pluginOverlays.set(id, entry);
+  return entry;
+}
+
+// Overlays for the shell chrome (rendered by app-shell's PluginOverlays,
+// which re-renders on PLUGIN_CHANGED_EVENT so async plugin loads show up).
+export function listOverlays() {
+  return [...pluginOverlays.entries()].map(([id, entry]) => ({
+    id,
+    render: entry.render,
+  }));
+}
+
 function registerPluginPanel(
   manifest,
   { component, label, icon, title, render },
@@ -424,6 +458,7 @@ async function loadComponentPlugin(manifest) {
     manifest,
     registerPanel: (opts) => registerPluginPanel(manifest, opts),
     registerSettingsSection: (opts) => registerSettingsSection(manifest, opts),
+    registerOverlay: (opts) => registerOverlay(manifest, opts),
     api: createScopedApi(
       pluginsDep("workspaceApi"),
       manifest.permissions?.api,
@@ -513,6 +548,10 @@ export function unregisterPlugin(id) {
   for (const [sectionId, entry] of [...pluginSettingsSections]) {
     if (entry.manifest?.id !== id) continue;
     pluginSettingsSections.delete(sectionId);
+  }
+  for (const [overlayId, entry] of [...pluginOverlays]) {
+    if (entry.manifest?.id !== id) continue;
+    pluginOverlays.delete(overlayId);
   }
   pluginManifests.delete(id);
   pluginLoadResults.delete(id);

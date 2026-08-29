@@ -4,15 +4,15 @@
 // the App; this module only knows how to render the dock and react
 // to panel events.
 
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { DockviewReact } from "dockview-react";
 import { LandingPanel } from "./home.js?v=20260812.24";
-import { SettingsPanel } from "./settings.js?v=20260826.60";
-import { FilesPanel } from "./files.js?v=20260826.75";
+import { SettingsPanel } from "./settings.js?v=20260826.61";
+import { FilesPanel } from "./files.js?v=20260826.76";
 import { RuntimePanel } from "./runtime.js?v=20260826.44";
-import { PlaygroundPanel } from "./playground-panel.js?v=20260829.29";
-import { PluginsPanel } from "./plugins-panel.js?v=20260829.4";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.62";
+import { PlaygroundPanel } from "./playground-panel.js?v=20260829.30";
+import { PluginsPanel } from "./plugins-panel.js?v=20260829.5";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.63";
 import {
   addFallbackPanel,
   AddTerminalButton,
@@ -23,48 +23,47 @@ import {
   PanelTab,
   TerminalPanel,
   VmPanel,
-  WagiDogPet,
   WorkbenchPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.55";
+} from "./panels.js?v=20260812.56";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.67";
+} from "./app-panels-store.js?v=20260826.68";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
+import { listOverlays, PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.32";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.67";
+} from "./app-terminal-sessions.js?v=20260826.68";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.71";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.73";
+} from "./app-sessions.js?v=20260828.72";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.74";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.68";
+} from "./app-panels.js?v=20260826.69";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.67";
-import { addPanelByComponent } from "./panels.js?v=20260812.55";
+} from "./app-workspace.js?v=20260826.68";
+import { addPanelByComponent } from "./panels.js?v=20260812.56";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.96";
+} from "./app-layout.js?v=20260828.97";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.83";
+} from "./workspace-api.js?v=20260828.84";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -240,7 +239,6 @@ export const PANEL_COMPONENTS = {
 function App() {
   const onReady = useCallback((event) => {
     setDockviewApi(event.api);
-    initWidgetBot(loadConfig().widgetbot);
     // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
     event.api.onWillShowOverlay(hideTerminalLayer);
     event.api.onDidDrop(restoreTerminalLayer);
@@ -264,7 +262,29 @@ function App() {
     React.Fragment,
     null,
     React.createElement(DockviewReact, dockviewOptions(onReady)),
-    React.createElement(WagiDogPet),
+    React.createElement(PluginOverlays),
+  );
+}
+
+// Ambient shell chrome from plugins (Wagi Dog pet, Discord widget, or
+// anything a third party registers via ctx.registerOverlay). Renders
+// nothing itself; re-renders when the kernel changes so async plugin
+// loads mount their overlays.
+function PluginOverlays() {
+  const [, bump] = useState(0);
+  useEffect(() => {
+    const onPluginsChanged = () => bump((value) => value + 1);
+    window.addEventListener(PLUGIN_CHANGED_EVENT, onPluginsChanged);
+    return () => {
+      window.removeEventListener(PLUGIN_CHANGED_EVENT, onPluginsChanged);
+    };
+  }, []);
+  return React.createElement(
+    React.Fragment,
+    null,
+    listOverlays().map(({ id, render }) =>
+      React.createElement(render, { key: id })
+    ),
   );
 }
 

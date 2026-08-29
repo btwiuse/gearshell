@@ -483,3 +483,13 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   PANEL_ADDERS 条目删除,app-shell / app-panels 移除注册;DEFAULT_PLUGINS 加
   group。可 plugin 化的面板至此全部迁完(music 27、deck+iframe 29、group 30b)。
 - 实测:8 插件 loaded、open 渲染、launcher 有 Group、disable/enable 正常。
+
+## 十八、web-pet + widgetbot 插件化(round 31,commit `<本轮 commit>`)
+
+- 内核第三种注册 `registerOverlay`(shell chrome):PluginOverlays(app-shell)
+  订阅 PLUGIN_CHANGED_EVENT 渲染;manifest enabled 管可用性,config 标志
+  (wagiDogEnabled/widgetbot)管可见性(两级开关,遗留开关不变)。
+- web-pet-plugin.js(WagiDogPet overlay)+ widgetbot-plugin.js(WidgetBotOverlay,
+  widgetbot.js 改 React 组件,注入逻辑不变)。
+- 实测:10 插件 loaded;pet/crate 在标志持久后启动即出现;disable/enable 全
+  生命周期无崩;console 零报错。

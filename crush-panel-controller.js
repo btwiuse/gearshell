@@ -24,7 +24,7 @@ import {
 import {
   detectCrushInstallation,
   installCrushViaW9y,
-} from "./crush-install.js?v=20260828.71";
+} from "./crush-install.js?v=20260828.72";
 import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.3";
 import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.3";
 

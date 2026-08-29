@@ -148,7 +148,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/group-plugin.js?v=20260829.2",
+    entry: "/group-plugin.js?v=20260829.3",
   },
   {
     id: "browser",
@@ -201,6 +201,24 @@ export const DEFAULT_PLUGINS = [
         "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
       allowFullscreen: true,
     },
+  },
+  // Ambient shell chrome (overlays): the plugin manifest gates
+  // availability; the legacy config flags (wagiDogEnabled / widgetbot)
+  // keep gating visibility so the Settings / launcher toggles keep
+  // working exactly as before.
+  {
+    id: "web-pet",
+    name: "Wagi Dog",
+    version: "1.0.0",
+    icon: "Dog",
+    entry: "/web-pet-plugin.js?v=20260829.2",
+  },
+  {
+    id: "widgetbot",
+    name: "Discord Widget",
+    version: "1.0.0",
+    icon: "MessageSquare",
+    entry: "/widgetbot-plugin.js?v=20260829.2",
   },
 ];
 export const DEFAULT_CONFIG = {
