@@ -20,7 +20,8 @@ import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.9";
+} from "./panels-task.js?v=20260828.11";
+import { openPluginPanel } from "./plugins.js?v=20260829.22";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -356,7 +357,6 @@ const PANEL_ADDERS = {
   settings: (api, group) => panelsDep("addSettingsPanel")(api, group),
   files: (api, group) => panelsDep("addFilesPanel")(api, group),
   runtime: (api, group) => panelsDep("addRuntimePanel")(api, group),
-  music: (api, group) => panelsDep("addMusicPanel")(api, group),
   playground: (api, group) => panelsDep("addPlaygroundPanel")(api, group),
   fallback: (api, group) => panelsDep("addFallbackPanel")(api, group),
   "crush-runner": (api, group) => panelsDep("addCrushRunnerPanel")(api, group),
@@ -373,6 +373,10 @@ function addPanelByComponent(api, component, group, options) {
   }
   const adder = PANEL_ADDERS[component];
   if (adder) return adder(api, targetGroup);
+  // Plugin panels register with the kernel (plugins.js); the generic
+  // opener mints `${component}-<n>` ids exactly like the built-ins.
+  const pluginPanel = openPluginPanel(api, component, targetGroup);
+  if (pluginPanel) return pluginPanel;
   const iframeConfig = panelsDep("IFRAME_PANEL_OPTIONS")[component];
   if (iframeConfig) {
     return addIframePanel(api, iframeConfig, targetGroup, options);

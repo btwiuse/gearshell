@@ -375,3 +375,34 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   getShell 渲染 apiKey:"" 无泄漏;Events emit/drain 正常;console 零报错。
 - ⚠️ WISHLIST #1 的 UI 放在 Playground 而非 Settings(用户本轮的指示优先);
   如需 Settings 也出入口,复用 playground-providers.js 组件即可。
+
+## 十四、轮次 27:插件内核(WISHLIST #9 切片 1)+ Music 插件化(2026-08-29,已提交)
+
+- commit:`<本轮 commit>`。新增 `plugins.js` 运行时插件内核 + `music-plugin.js`
+  (Music 变成第一个插件,dogfood)。
+- **加载**:`config.plugins`(shell config,normalize 合并 DEFAULT_PLUGINS,用户按
+  id 覆盖内置)→ `registerPlugin(manifest)` → `import(entry)`。entry 三种:
+  http(s) URL(需 CORS)/ `/` 同源路径 / `vfs:/...`(readFile → Blob,单文件)。
+  模块约定:`export function register(ctx)` 或 `plugin.register(ctx)`。
+- **注册**:`ctx.registerPanel({component,label,icon,title,render})` → 直接 mutate
+  `PANEL_COMPONENTS`(dockview 在 addPanel 时按名实时查 components[name],已对
+  v8.2.0 源码核实)+ `PANEL_CREATION_OPTIONS` push + 未知名类型补进
+  DEFAULT_LAUNCHER_ITEM_ORDER;`panels.open("music")` 与 launcher 经
+  panels.js `addPanelByComponent` 的 openPluginPanel 分支路由(通用 opener:
+  `${component}-<n>` id + rememberOpenPanel)。
+- **权限(T1 护栏)**:`createScopedApi(api, allow)` —— Proxy 按点号路径解析,
+  通配 `panels.*`;未授权返回 `{ok:false, error:"permission denied: path"}`;
+  manifest `permissions.api` 声明(内置 music:music.* + panels.open/list)。
+  T2 iframe postMessage 桥是后续切片(真正可强制)。
+- **Music 去硬编码**:app-shell PANEL_COMPONENTS / panels.js PANEL_ADDERS /
+  app-panels PANEL_CREATION_OPTIONS 三处删掉 music;music.js 删除
+  initMusic/addMusicPanel/nextPanelIndex;launcher 顺序保留(位置不变)。
+- **实测**(浏览器):boot 后插件内核 `listPluginPanels`=[music]、load ok;
+  `panels.open("music")` → music-1;launcher Music 行点击开面板(点按钮而非
+  行 div);Music 面板渲染 + `music.nowPlaying` 正常;`createScopedApi` 拒绝
+  ping/允许 config.getShell 与 config.providers.*;VFS 插件(`vfs:/opfs/...`)
+  注册 + 打开成功。console 零真实报错(仅 scratch 测试组件的预期 React 报错)。
+- ⚠️ 踩坑:`normalizePlugin/normalizePlugins` 首次 edit 静默失败(modified since
+  last read),浏览器报 "app-normalize.js does not provide an export named
+  normalizePlugin" 才抓到 —— ESM 检查不查缺导出;edit 失败必须重试确认。
+- 后续:Plugins 设置页(安装/启停/权限编辑)、T2 iframe 桥、市场(JSON 清单)。

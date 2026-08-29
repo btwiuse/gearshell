@@ -34,7 +34,7 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.62";
+} from "./files-panel-hooks.js?v=20260826.63";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
@@ -46,7 +46,7 @@ import {
   filesystemPathParent,
   normalizeFilesystemPath,
 } from "./files-path.js?v=20260826.70";
-import { filesDep } from "./files-registry.js?v=20260826.28";
+import { filesDep } from "./files-registry.js?v=20260826.29";
 
 // === External open bridge ===
 // `GearShell.files.open(path)` (gctl open) lands here: while the panel is

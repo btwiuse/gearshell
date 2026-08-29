@@ -10,6 +10,7 @@ import {
   DEFAULT_CONFIG,
   DEFAULT_HUSH_BINARY_URL,
   DEFAULT_LAUNCHER_ITEM_ORDER,
+  DEFAULT_PLUGINS,
   DEFAULT_VM_BACKEND_URL,
   DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
@@ -29,16 +30,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.22";
+} from "./app-constants.js?v=20260828.23";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.50";
+} from "./crush-runner.js?v=20260826.53";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.55";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.20";
+} from "./app-workspace.js?v=20260826.58";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.21";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -50,7 +51,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.14";
+} from "./app-normalize-system.js?v=20260828.15";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -62,7 +63,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.14";
+} from "./app-normalize-system.js?v=20260828.15";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -239,6 +240,44 @@ function normalizeProviderModels(models) {
   return [];
 }
 
+function normalizeStringList(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => String(item)).filter(Boolean);
+}
+
+// Plugin manifests (WISHLIST #9): { id, name, version, icon, entry,
+// enabled, permissions: { api, origins } }. entry is an http(s) URL, a
+// /same-origin path, or a vfs:/... path (see plugins.js).
+export function normalizePlugin(plugin = {}) {
+  const id = String(plugin.id || "").trim();
+  if (!id) return null;
+  return {
+    id,
+    name: String(plugin.name || id).trim(),
+    version: String(plugin.version || "1.0.0").trim(),
+    icon: String(plugin.icon || "Wrench").trim(),
+    entry: String(plugin.entry || "").trim(),
+    enabled: plugin.enabled !== false,
+    permissions: {
+      api: normalizeStringList(plugin.permissions?.api),
+      origins: normalizeStringList(plugin.permissions?.origins),
+    },
+  };
+}
+
+// User config wins by id; built-in defaults fill in the rest, so a
+// saved workspace that predates the plugin kernel still boots Music.
+export function normalizePlugins(list, defaults) {
+  const user = (Array.isArray(list) ? list : [])
+    .map(normalizePlugin)
+    .filter(Boolean);
+  const userIds = new Set(user.map((item) => item.id));
+  const fallback = (Array.isArray(defaults) ? defaults : [])
+    .map(normalizePlugin)
+    .filter((item) => item && !userIds.has(item.id));
+  return [...user, ...fallback];
+}
+
 export function normalizeShellConfig(config) {
   const { terminalProfiles, crushRunnerPresets } = normalizeProfileLists(
     config,
@@ -263,6 +302,7 @@ export function normalizeShellConfig(config) {
     wagiDogEnabled: config?.wagiDogEnabled === true,
     widgetbot: config?.widgetbot === true,
     providers: normalizeProviders(config?.providers),
+    plugins: normalizePlugins(config?.plugins, DEFAULT_PLUGINS),
     favorites: normalizeFavorites(config),
     collapsedLauncherItems: normalizeCollapsedLauncherItems(config),
     launcherOrder: normalizeLauncherOrder(config?.launcherOrder),

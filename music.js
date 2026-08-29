@@ -6,11 +6,12 @@
 // with drag-reorder, shuffle + three loop modes, seek, named playlists
 // (save / load / rename / delete), and synced lyrics + metadata.
 // Presentational pieces live in music-panel-parts.js (500-line rule);
-// this module owns the state wiring and panel registration.
+// this module owns the state wiring. Panel registration moved to
+// music-plugin.js — Music now loads through the plugin kernel
+// (WISHLIST #9), the same path a third-party panel uses.
 
 import React, { useEffect, useState } from "react";
 import { Music2 } from "lucide-react";
-import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   MUSIC_STATE_EVENT,
   MUSIC_TIME_EVENT,
@@ -47,23 +48,6 @@ import {
   MusicQueueList,
   PlaylistToolbar,
 } from "./music-playlist-ui.js?v=20260829.10";
-
-let __musicDeps = null;
-export function initMusic(dependencies) {
-  __musicDeps = dependencies;
-}
-function musicDep(name) {
-  if (__musicDeps == null) {
-    throw new Error(
-      "music: initMusic() has not been called; ensure app.js wires it in.",
-    );
-  }
-  const value = __musicDeps[name];
-  if (value === undefined) {
-    throw new Error(`music: missing dependency ${name}`);
-  }
-  return value;
-}
 
 const LOOP_CYCLE = ["off", "all", "one"];
 
@@ -302,20 +286,4 @@ export function MusicPanel() {
       enqueueAll,
     }),
   );
-}
-
-// === Panel registration ===
-
-export function addMusicPanel(api, group) {
-  const id = nextPanelIndex("music");
-  const panel = api.addPanel({
-    id: `music-${id}`,
-    component: "music",
-    params: { musicId: id, panelType: "music" },
-    title: `Music ${id}`,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  musicDep("rememberOpenPanel")(panel, { component: "music" });
-  panel.api.setActive();
-  return panel;
 }

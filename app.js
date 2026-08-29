@@ -9,21 +9,24 @@ import { LicenseManager } from "dockview-enterprise";
 import {
   addCrushRunnerPanel,
   initCrushRunner,
-} from "./crush-runner.js?v=20260826.50";
+} from "./crush-runner.js?v=20260826.53";
 import { addLandingPanel, initHome } from "./home.js?v=20260812.24";
 import {
   addSettingsPanel,
   initSettings,
   TerminalPresetIconPicker,
-} from "./settings.js?v=20260826.40";
+} from "./settings.js?v=20260826.43";
 
-import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.28";
+import { addFilesPanel, initFiles } from "./files-registry.js?v=20260826.29";
 import { addRuntimePanel, initRuntime } from "./runtime.js?v=20260826.44";
-import { addMusicPanel, initMusic } from "./music.js?v=20260829.11";
+import {
+  initPlugins,
+  registerPluginsFromConfig,
+} from "./plugins.js?v=20260829.22";
 import {
   addPlaygroundPanel,
   initPlayground,
-} from "./playground-panel.js?v=20260829.16";
+} from "./playground-panel.js?v=20260829.20";
 import { addDeckPanel, initDeck } from "./deck.js?v=20260812.30";
 import { addFallbackPanel, initLauncher } from "./launcher.js?v=20260812.39";
 import {
@@ -31,18 +34,18 @@ import {
   addTerminalPanel as addTerminalPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
   initPanels,
-} from "./panels.js?v=20260812.44";
+} from "./panels.js?v=20260812.46";
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
   workspaceApi,
-} from "./workspace-api.js?v=20260828.71";
+} from "./workspace-api.js?v=20260828.74";
 import {
   clearAuditEntries,
   listAuditEntries,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.30";
-import { App } from "./app-shell.js?v=20260828.67";
+} from "./workspace-audit.js?v=20260829.33";
+import { App, PANEL_COMPONENTS } from "./app-shell.js?v=20260828.71";
 
 import {
   getWanixRoot,
@@ -53,7 +56,7 @@ import {
   terminalSessions,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { createWanixSystem } from "./app-wanix.js?v=20260826.55";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.58";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -87,24 +90,25 @@ import {
   updateWorkspaceBind,
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
-} from "./app-workspace.js?v=20260826.55";
+} from "./app-workspace.js?v=20260826.58";
 import {
   listWorkspacePresets,
   loadCustomWorkspacePreset,
   removeCustomWorkspacePreset,
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
-} from "./app-workspace-presets.js?v=20260826.55";
+} from "./app-workspace-presets.js?v=20260826.58";
 import {
   blankCrushRunnerPresetDraft,
   clone,
   getActiveCrushRunnerPreset,
   getTerminalPresetIcon,
   normalizeLauncherOrder,
+  normalizePlugin,
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.56";
+} from "./app-normalize.js?v=20260828.59";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -113,35 +117,35 @@ import {
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.55";
+} from "./app-terminal-profiles.js?v=20260826.58";
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
   createTerminalSession,
   destroyTerminalSession,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.55";
+} from "./app-terminal-sessions.js?v=20260826.58";
 import {
   attachIframeSession,
   attachVmSession,
   attachWorkbenchSession,
   waitForWanixSystem,
-} from "./app-sessions.js?v=20260828.59";
+} from "./app-sessions.js?v=20260828.62";
 import {
   attachWorkspaceTaskSession,
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.61";
+} from "./app-workspace-task-sessions.js?v=20260828.64";
 import {
   getDockviewApi,
   rememberOpenPanel,
-} from "./app-panels-store.js?v=20260826.55";
+} from "./app-panels-store.js?v=20260826.58";
 import {
   blankTerminalPresetDraft,
   IFRAME_PANEL_OPTIONS,
   PANEL_CREATION_OPTIONS,
-} from "./app-panels.js?v=20260826.56";
+} from "./app-panels.js?v=20260826.59";
 import {
   dismissHomeDebugErrors,
   DOCKVIEW_LICENSE_KEY,
@@ -154,7 +158,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.22";
+} from "./app-constants.js?v=20260828.23";
 
 // Set the license key before any DockviewComponent is created so the
 // watermark never renders; a late setLicenseKey also works (LicenseModule
@@ -248,7 +252,6 @@ initPanels({
   addSettingsPanel,
   addFilesPanel,
   addRuntimePanel,
-  addMusicPanel,
   addPlaygroundPanel,
   addFallbackPanel,
   addCrushRunnerPanel,
@@ -282,12 +285,22 @@ initRuntime({
   rememberOpenPanel,
 });
 
-// Initialise the Music submodule with the helpers it needs at
-// runtime. The panel is a thin UI over the music-engine singleton
-// (shared with gctl music.*); it only needs panel registration.
-initMusic({
+// Initialise the plugin kernel (WISHLIST #9) with the shared registry
+// maps dockview/launcher resolve panel types against, then load every
+// enabled plugin from the shell config (the normalized config merges
+// DEFAULT_PLUGINS, so the Music dogfood loads here too). Plugin loads
+// are async and individually failure-isolated; boot continues either
+// way.
+initPlugins({
+  PANEL_COMPONENTS,
+  PANEL_CREATION_OPTIONS,
   rememberOpenPanel,
+  getWanixRoot,
+  loadConfig,
+  workspaceApi,
+  normalizePlugin,
 });
+registerPluginsFromConfig();
 
 // Initialise the Playground submodule with the helpers it needs at
 // runtime. The panel exercises window.GearShell directly; it only

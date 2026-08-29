@@ -8,12 +8,11 @@ import React, { useCallback } from "react";
 import { DockviewReact } from "dockview-react";
 import { LandingPanel } from "./home.js?v=20260812.24";
 import { DeckPanel } from "./deck.js?v=20260812.30";
-import { SettingsPanel } from "./settings.js?v=20260826.40";
-import { FilesPanel } from "./files.js?v=20260826.71";
+import { SettingsPanel } from "./settings.js?v=20260826.43";
+import { FilesPanel } from "./files.js?v=20260826.72";
 import { RuntimePanel } from "./runtime.js?v=20260826.44";
-import { MusicPanel } from "./music.js?v=20260829.11";
-import { PlaygroundPanel } from "./playground-panel.js?v=20260829.16";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.50";
+import { PlaygroundPanel } from "./playground-panel.js?v=20260829.20";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.53";
 import {
   addFallbackPanel,
   AddTerminalButton,
@@ -28,45 +27,45 @@ import {
   WagiDogPet,
   WorkbenchPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.44";
+} from "./panels.js?v=20260812.46";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.55";
+} from "./app-panels-store.js?v=20260826.58";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import { initWidgetBot } from "./widgetbot.js?v=20260829.1";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.55";
+} from "./app-terminal-sessions.js?v=20260826.58";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.59";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.61";
+} from "./app-sessions.js?v=20260828.62";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.64";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.56";
+} from "./app-panels.js?v=20260826.59";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.55";
-import { addPanelByComponent } from "./panels.js?v=20260812.44";
+} from "./app-workspace.js?v=20260826.58";
+import { addPanelByComponent } from "./panels.js?v=20260812.46";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.84";
+} from "./app-layout.js?v=20260828.87";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.71";
+} from "./workspace-api.js?v=20260828.74";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -218,13 +217,16 @@ function dockviewOptions(onReady) {
   };
 }
 
-const PANEL_COMPONENTS = {
+// Exported so the plugin kernel (app.js -> initPlugins) can register
+// runtime panel types by mutating the same map dockview resolves
+// component names against (dockview reads components[name] at addPanel
+// time — no snapshot — so in-place registration works).
+export const PANEL_COMPONENTS = {
   home: LandingPanel,
   deck: DeckPanel,
   settings: SettingsPanel,
   files: FilesPanel,
   runtime: RuntimePanel,
-  music: MusicPanel,
   playground: PlaygroundPanel,
   workbench: WorkbenchPanel,
   vm: VmPanel,

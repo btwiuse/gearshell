@@ -115,6 +115,22 @@ export const DEFAULT_LAUNCHER_ITEM_ORDER = [
   "rickroll",
 ];
 export const CONFIG_KEY = "gear-shell-config";
+// Built-in plugins (WISHLIST #9). The shell's own panels load through
+// the same plugin kernel as third-party ones — Music is the dogfood.
+// The entry URL carries its own ?v= token (bumped alongside the plugin
+// module's edits; the version cascade only rewrites import statements).
+export const DEFAULT_PLUGINS = [
+  {
+    id: "music",
+    name: "Music",
+    version: "1.0.0",
+    icon: "Music2",
+    entry: "/music-plugin.js?v=20260829.21",
+    permissions: {
+      api: ["music.*", "panels.open", "panels.list"],
+    },
+  },
+];
 export const DEFAULT_CONFIG = {
   cmd: DEFAULT_CMD,
   env: "",
@@ -130,6 +146,7 @@ export const DEFAULT_CONFIG = {
   wagiDogEnabled: false,
   widgetbot: false,
   providers: [],
+  plugins: DEFAULT_PLUGINS,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   launcherOrder: DEFAULT_LAUNCHER_ITEM_ORDER,
   pinnedLauncherItems: [],
