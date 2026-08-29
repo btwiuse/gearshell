@@ -8,10 +8,10 @@ import {
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.28";
-import { normalizeTask } from "./app-normalize.js?v=20260828.70";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.69";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.69";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.31";
+import { normalizeTask } from "./app-normalize.js?v=20260828.73";
+import { buildEnv } from "./app-terminal-profiles.js?v=20260826.72";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.72";
 
 export function createBindElement(bind) {
   const element = document.createElement("wanix-bind");

@@ -39,13 +39,13 @@
 // enforcement for untrusted pages (T2, iframe bridge) is a later slice.
 
 import { icons as LucideIcons } from "lucide-react";
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.69";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.72";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.28";
+} from "./app-constants.js?v=20260828.31";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 
 // Fired whenever a plugin finishes loading (ok or failed) or is
@@ -395,7 +395,7 @@ export function listOverlays() {
 
 function registerPluginPanel(
   manifest,
-  { component, label, icon, title, render },
+  { component, label, icon, title, render, open },
 ) {
   if (typeof component !== "string" || !component) {
     throw new Error("plugin panel requires a component name");
@@ -411,6 +411,10 @@ function registerPluginPanel(
     label: label || manifest.name,
     title: title || label || manifest.name,
     render,
+    // Optional custom panel opener (api, group) => panel, for panels
+    // with creation-time behavior the generic opener does not cover
+    // (renderer mode, single-instance semantics, open-panel tracking).
+    open: typeof open === "function" ? open : null,
   };
   pluginPanels.set(component, entry);
   const components = pluginsDep("PANEL_COMPONENTS");
@@ -506,6 +510,17 @@ export async function registerPluginsFromConfig() {
   return results;
 }
 
+// Memoized boot promise: the shell (app-shell's openStartupPanels) awaits
+// this before opening startup / restored panels. A startup component whose
+// plugin module is still loading would hit dockview with an unregistered
+// component name and crash the grid, so the boot path waits for plugin
+// registration before adding any panel.
+let pluginBootPromise = null;
+export function getPluginBootPromise() {
+  if (!pluginBootPromise) pluginBootPromise = registerPluginsFromConfig();
+  return pluginBootPromise;
+}
+
 // Tear down a loaded plugin: drop every panel component it registered
 // (component map, launcher entry, launcher order), close any open panels
 // of those types, and forget the manifest + load result.
@@ -584,9 +599,12 @@ export function mergePluginStatus(manifest) {
 // --- Panel opener (routed from addPanelByComponent + panels.open) ---
 // The generic opener mints `${component}-<n>` ids and remembers the panel
 // for layout persistence, mirroring the built-in add*Panel helpers.
+// Plugins that registered a custom `open` (renderer mode, single-instance
+// semantics, open-panel tracking) take that path instead.
 export function openPluginPanel(api, component, group) {
   const entry = pluginPanels.get(component);
   if (!entry) return null;
+  if (entry.open) return entry.open(api, group);
   const id = nextPanelId(component);
   const panel = api.addPanel({
     id,

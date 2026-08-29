@@ -6,11 +6,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { DockviewReact } from "dockview-react";
-import { LandingPanel } from "./home.js?v=20260812.24";
-import { SettingsPanel } from "./settings.js?v=20260826.62";
-import { FilesPanel } from "./files.js?v=20260826.77";
-import { PluginsPanel } from "./plugins-panel.js?v=20260829.6";
-import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.64";
+import { SettingsPanel } from "./settings.js?v=20260826.65";
+import { PluginsPanel } from "./plugins-panel.js?v=20260829.9";
+import { CrushRunnerPanel } from "./crush-runner.js?v=20260826.67";
 import {
   addFallbackPanel,
   AddTerminalButton,
@@ -21,47 +19,50 @@ import {
   PanelTab,
   TerminalPanel,
   VmPanel,
-  WorkbenchPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.57";
+} from "./panels.js?v=20260812.60";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.69";
+} from "./app-panels-store.js?v=20260826.72";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { listOverlays, PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.33";
+import {
+  getPluginBootPromise,
+  listOverlays,
+  PLUGIN_CHANGED_EVENT,
+} from "./plugins.js?v=20260829.36";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.69";
+} from "./app-terminal-sessions.js?v=20260826.72";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.73";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.75";
+} from "./app-sessions.js?v=20260828.76";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.78";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.70";
+} from "./app-panels.js?v=20260826.73";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.69";
-import { addPanelByComponent } from "./panels.js?v=20260812.57";
+} from "./app-workspace.js?v=20260826.72";
+import { addPanelByComponent } from "./panels.js?v=20260812.60";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.98";
+} from "./app-layout.js?v=20260828.101";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.85";
+} from "./workspace-api.js?v=20260828.88";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -97,10 +98,14 @@ function trackActivePanel(api) {
   });
 }
 
-function openStartupPanels(api) {
+async function openStartupPanels(api) {
   // Prune finished agent-managed task definitions before anything can
   // restore or respawn them (ephemeral agent tasks were never stored).
   gcWorkspaceTasks();
+  // Startup / restored components may be pluginized (home, runtime,
+  // music, ...): wait for their async registration so dockview never
+  // receives an unregistered component name (which crashes the grid).
+  await getPluginBootPromise();
   const cfg = loadConfig();
   // Prefer the full dockview layout snapshot (group tree, split sizes,
   // pinned tabs); fall back to the legacy panel-by-panel restore for
@@ -219,11 +224,8 @@ function dockviewOptions(onReady) {
 // component names against (dockview reads components[name] at addPanel
 // time — no snapshot — so in-place registration works).
 export const PANEL_COMPONENTS = {
-  home: LandingPanel,
   settings: SettingsPanel,
-  files: FilesPanel,
   plugins: PluginsPanel,
-  workbench: WorkbenchPanel,
   vm: VmPanel,
   fallback: FallbackPanel,
   task: WorkspaceTaskPanel,
@@ -233,7 +235,7 @@ export const PANEL_COMPONENTS = {
 };
 
 function App() {
-  const onReady = useCallback((event) => {
+  const onReady = useCallback(async (event) => {
     setDockviewApi(event.api);
     // This covers both the HTML5 and Pointer Event drag backends used by Dockview.
     event.api.onWillShowOverlay(hideTerminalLayer);
@@ -244,7 +246,7 @@ function App() {
     // Persist the full dockview layout (groups, sizes, pinned tabs) so a
     // reload with Restore tabs brings the exact arrangement back.
     wireLayoutPersistence(event.api);
-    const restored = openStartupPanels(event.api);
+    const restored = await openStartupPanels(event.api);
     trackActivePanel(event.api);
     // Start configured processes only after Wanix is ready so they follow the
     // same allocation path as tasks opened from Settings. Restored task tabs

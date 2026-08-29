@@ -5,7 +5,7 @@ import {
   loadActiveWorkspace,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.69";
+} from "./app-workspace.js?v=20260826.72";
 
 // --- Agent-managed task registry ---
 // Persisted tasks created via tasks.create({ persist: true }) are tracked

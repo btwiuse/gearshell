@@ -5,7 +5,7 @@
 // loads through the plugin kernel like Music / Deck. Disabling the group
 // plugin in Settings hides the panel type from the launcher.
 
-import { GroupPanel } from "./panels.js?v=20260812.57";
+import { GroupPanel } from "./panels.js?v=20260812.60";
 
 export const plugin = {
   register(ctx) {

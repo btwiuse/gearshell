@@ -508,3 +508,22 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   生命周期无崩;console 零报错。
 - 下一轮候选:home(需处理 addPanelByComponent 默认 fallback 分支)→ files
   → workbench。crush-runner 按信任定位留内核。
+
+## 二十、home + files + workbench 插件化(round 33+34,commit `<本轮 commit>`)
+
+- **round 33 home**:home-plugin.js 注册 LandingPanel;home.js 不动(initHome +
+  addLandingPanel 保留:LandingPanel 读 homeDep、addLandingPanel 是
+  addPanelByComponent 未知组件兜底)。三处内核登记移除。
+- **启动竞态修复(关键)**:home 是 startupPanels 默认项,每次 boot 必开;插件
+  异步注册可能晚于 dockview onReady → addPanel 拿 undefined 组件 → dockview
+  崩溃全白屏(实测复现)。plugins.js 加 getPluginBootPromise()(memoized
+  registerPluginsFromConfig);app-shell openStartupPanels await 后再开
+  startup/restore 面板;onReady 改 async。消除所有 plugin 化面板的启动竞态。
+- **round 34 files + workbench**:registerPanel 新增可选 open(api, group)
+  自定义 opener(openPluginPanel 优先);files 用 addFilesPanel(renderer 模式
+  实时翻转 + openFilesPanels 追踪),workbench 用 addWorkbenchPanel(单实例)。
+  restore 路径不动(直接调 addWorkbenchPanel)。
+- 实测:15 插件全 loaded;boot 正常;files 渲染 explorer;workbench 双开仍
+  单实例;disable/enable 全生命周期无崩;console 零报错。
+- 剩内置:terminal/vm/task(高风险低价值)+ settings/plugins/fallback/
+  iframe/crush-runner(内核身份)。
