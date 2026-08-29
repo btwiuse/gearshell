@@ -7,7 +7,7 @@
 // source of truth, and its exit code doubles as the installed flag.
 
 import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260828.3";
-import { runHeadlessTask } from "./workspace-api.js?v=20260828.82";
+import { runHeadlessTask } from "./workspace-api.js?v=20260828.83";
 
 export async function detectCrushInstallation() {
   if (!__getWanixSystem()) return null;

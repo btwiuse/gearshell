@@ -476,3 +476,10 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 - 实测:7 卡渲染、toggle 禁用、模态框装 iframe 插件、Settings 卡片计数/开面板、
   launcher 无残留、console 零报错。
 - 待办:Plugins 市场(T2 桥后)、T2 iframe 桥、plugin 更新机制。
+
+## 十七b、group 面板 plugin 化(round 30b,commit `<本轮 commit>`)
+
+- GroupPanel(静态图)迁为插件 group-plugin.js;panels.js addGroupPanel /
+  PANEL_ADDERS 条目删除,app-shell / app-panels 移除注册;DEFAULT_PLUGINS 加
+  group。可 plugin 化的面板至此全部迁完(music 27、deck+iframe 29、group 30b)。
+- 实测:8 插件 loaded、open 渲染、launcher 有 Group、disable/enable 正常。

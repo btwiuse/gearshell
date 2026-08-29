@@ -144,6 +144,13 @@ export const DEFAULT_PLUGINS = [
     entry: "/deck-plugin.js?v=20260829.2",
   },
   {
+    id: "group",
+    name: "Group",
+    version: "1.0.0",
+    icon: "UsersRound",
+    entry: "/group-plugin.js?v=20260829.2",
+  },
+  {
     id: "browser",
     name: "Browser",
     version: "1.0.0",

@@ -4,24 +4,24 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.66";
+} from "./app-workspace.js?v=20260826.67";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.66";
+} from "./app-terminal-profiles.js?v=20260826.67";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.66";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.61";
+} from "./app-panels-store.js?v=20260826.67";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.62";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.54";
+} from "./panels.js?v=20260812.55";
 import {
   Activity,
   Cpu,
@@ -33,7 +33,6 @@ import {
   Settings,
   SlidersHorizontal,
   Terminal,
-  UsersRound,
 } from "lucide-react";
 
 export function blankTerminalPresetDraft() {
@@ -77,7 +76,6 @@ export const PANEL_CREATION_OPTIONS = [
   { component: "runtime", label: "Runtime", icon: Activity },
   { component: "playground", label: "Playground", icon: SlidersHorizontal },
   { component: "plugins", label: "Plugins", icon: Puzzle },
-  { component: "group", label: "Group", icon: UsersRound },
   { component: "crush-runner", label: "Crush Runner", icon: Rocket },
 ];
 

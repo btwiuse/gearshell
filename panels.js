@@ -20,11 +20,11 @@ import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.19";
+} from "./panels-task.js?v=20260828.20";
 import {
   getPluginIframeConfig,
   openPluginPanel,
-} from "./plugins.js?v=20260829.30";
+} from "./plugins.js?v=20260829.31";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -112,7 +112,10 @@ function TerminalPanel({ api, params }) {
 }
 
 // === GroupPanel ===
-function GroupPanel() {
+// A static About panel (the "Gear Shell group" image). Registered as a
+// plugin (group-plugin.js) like Deck: the kernel mints `group-<n>` ids
+// and remembers the panel, so this component is all the module owns.
+export function GroupPanel() {
   return React.createElement(
     "div",
     { className: "group-panel panel-content" },
@@ -310,21 +313,6 @@ function addVmPanel(api, group, config = panelsDep("getVmPanelConfig")()) {
   return panel;
 }
 
-// === addGroupPanel ===
-function addGroupPanel(api, group) {
-  const id = nextPanelIndex("group");
-  const panel = api.addPanel({
-    id: `group-${id}`,
-    component: "group",
-    params: { groupId: id, panelType: "group" },
-    title: "Group",
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  panelsDep("rememberOpenPanel")(panel, { component: "group" });
-  panel.api.setActive();
-  return panel;
-}
-
 // === addIframePanel ===
 function addIframePanel(api, config, group) {
   const id = nextPanelIndex("iframe");
@@ -354,7 +342,6 @@ const PANEL_ADDERS = {
   workbench: addWorkbenchPanel,
   vm: addVmPanel,
   "workspace-task": addWorkspaceTaskPanel,
-  group: addGroupPanel,
   home: (api, group) => panelsDep("addLandingPanel")(api, group),
   settings: (api, group) => panelsDep("addSettingsPanel")(api, group),
   files: (api, group) => panelsDep("addFilesPanel")(api, group),
@@ -418,14 +405,12 @@ const PANEL_ICONS = new Proxy({}, {
 });
 
 export {
-  addGroupPanel,
   addIframePanel,
   addPanelByComponent,
   addTerminalPanel,
   addVmPanel,
   addWorkbenchPanel,
   addWorkspaceTaskPanel,
-  GroupPanel,
   IframePanel,
   PANEL_ICONS,
   PanelTab,
