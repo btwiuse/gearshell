@@ -8,45 +8,45 @@ import { LicenseManager } from "dockview-enterprise";
 
 import {
   initCrushRunner,
-} from "./crush-runner.js?v=20260826.90";
-import { addLandingPanel, initHome } from "./home.js?v=20260812.27";
+} from "./plugin/crush-runner/crush-runner.js?v=20260826.98";
+import { addLandingPanel, initHome } from "./plugin/home/home.js?v=20260812.31";
 import {
   initSettings,
   TerminalPresetIconPicker,
-} from "./settings.js?v=20260826.88";
+} from "./plugin/settings/settings.js?v=20260826.96";
 
-import { initFiles } from "./files-registry.js?v=20260826.60";
-import { initRuntime } from "./runtime.js?v=20260826.45";
+import { initFiles } from "./plugin/files/files-registry.js?v=20260826.68";
+import { initRuntime } from "./plugin/runtime/runtime.js?v=20260826.49";
 import {
   getPluginBootPromise,
   initPlugins,
   registerSyncPlugins,
-} from "./plugins.js?v=20260829.59";
-import { registerPluginsSettingsSection } from "./settings-plugins.js?v=20260829.69";
+} from "./plugins.js?v=20260829.66";
+import { registerPluginsSettingsSection } from "./settings-plugins.js?v=20260829.76";
 import {
   addPluginsPanel,
   initPluginsPanel,
-} from "./plugins-panel.js?v=20260829.32";
-import { initDeck } from "./deck.js?v=20260812.30";
-import { initLauncher } from "./launcher.js?v=20260812.40";
+} from "./plugins-panel.js?v=20260829.39";
+import { initDeck } from "./plugin/deck/deck.js?v=20260812.34";
+import { initLauncher } from "./plugin/launcher/launcher.js?v=20260812.46";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
   initPanels,
-} from "./panels.js?v=20260812.83";
+} from "./panels.js?v=20260812.90";
 import {
   ensureGearShellBinds,
   initWorkspaceApi,
   workspaceApi,
-} from "./workspace-api.js?v=20260828.111";
-import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.17";
+} from "./workspace-api.js?v=20260828.118";
+import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.24";
 import {
   clearAuditEntries,
   listAuditEntries,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.70";
-import { App, PANEL_COMPONENTS } from "./app-shell.js?v=20260828.116";
+} from "./workspace-audit.js?v=20260829.77";
+import { App, PANEL_COMPONENTS } from "./app-shell.js?v=20260828.123";
 
 import {
   getWanixRoot,
@@ -57,7 +57,7 @@ import {
   terminalSessions,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { createWanixSystem } from "./app-wanix.js?v=20260826.95";
+import { createWanixSystem } from "./app-wanix.js?v=20260826.102";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -91,14 +91,14 @@ import {
   updateWorkspaceBind,
   updateWorkspaceSystemBind,
   updateWorkspaceTask,
-} from "./app-workspace.js?v=20260826.95";
+} from "./app-workspace.js?v=20260826.102";
 import {
   listWorkspacePresets,
   loadCustomWorkspacePreset,
   removeCustomWorkspacePreset,
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
-} from "./app-workspace-presets.js?v=20260826.95";
+} from "./app-workspace-presets.js?v=20260826.102";
 import {
   blankCrushRunnerPresetDraft,
   clone,
@@ -109,7 +109,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.96";
+} from "./app-normalize.js?v=20260828.103";
 import {
   buildEnv,
   getDefaultTerminalProfile,
@@ -118,34 +118,34 @@ import {
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.95";
+} from "./app-terminal-profiles.js?v=20260826.102";
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
   createTerminalSession,
   destroyTerminalSession,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.95";
+} from "./app-terminal-sessions.js?v=20260826.102";
 import {
   attachIframeSession,
   attachVmSession,
   attachWorkbenchSession,
   waitForWanixSystem,
-} from "./app-sessions.js?v=20260828.99";
+} from "./app-sessions.js?v=20260828.106";
 import {
   attachWorkspaceTaskSession,
   getWorkspaceTaskSession,
   taskEnvLines,
   wakeWorkspaceTaskSession,
-} from "./app-workspace-task-sessions.js?v=20260828.101";
+} from "./app-workspace-task-sessions.js?v=20260828.108";
 import {
   getDockviewApi,
   rememberOpenPanel,
-} from "./app-panels-store.js?v=20260826.95";
+} from "./app-panels-store.js?v=20260826.102";
 import {
   blankTerminalPresetDraft,
   PANEL_CREATION_OPTIONS,
-} from "./app-panels.js?v=20260826.96";
+} from "./app-panels.js?v=20260826.103";
 import {
   dismissHomeDebugErrors,
   DOCKVIEW_LICENSE_KEY,
@@ -158,7 +158,7 @@ import {
   WANIX_RUNTIME,
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.54";
+} from "./app-constants.js?v=20260828.61";
 
 // Set the license key before any DockviewComponent is created so the
 // watermark never renders; a late setLicenseKey also works (LicenseModule
