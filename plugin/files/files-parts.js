@@ -4,8 +4,8 @@
 // this module renders them without touching the filesystem itself.
 import React from "react";
 import { Check, ChevronRight, X } from "lucide-react";
-import { FilesEditorPane } from "./files-editor-pane.js?v=20260828.6";
-import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.44";
+import { FilesEditorPane } from "./files-editor-pane.js?v=20260828.7";
+import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.45";
 import { VolumesSidebar } from "../files-mounts.js?v=20260826.44";
 
 // === Right pane (editor / directory grid preview) ===

@@ -22,7 +22,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { useFilesEditor } from "./files-editor.js?v=20260826.44";
 import { useFilesSelection } from "./files-context-menu.js?v=20260826.44";
 import { useFavorites } from "./files-favorites.js?v=20260826.38";
-import { useFilesTree } from "./files-tree.js?v=20260826.40";
+import { useFilesTree } from "./files-tree.js?v=20260826.41";
 import { useFilesSidebarResize } from "./files-resize.js?v=20260826.29";
 import {
   useFilesMediaLayout,
@@ -34,19 +34,19 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.127";
+} from "./files-panel-hooks.js?v=20260826.130";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
   FilesPanelSidebar,
   FilesPanelTopbar,
-} from "./files-panel-sections.js?v=20260826.51";
-import { FilesResizer } from "./files-parts.js?v=20260826.49";
+} from "./files-panel-sections.js?v=20260826.52";
+import { FilesResizer } from "./files-parts.js?v=20260826.50";
 import {
   filesystemPathParent,
   normalizeFilesystemPath,
 } from "../files-path.js?v=20260826.71";
-import { filesDep } from "./files-registry.js?v=20260826.94";
+import { filesDep } from "./files-registry.js?v=20260826.97";
 
 // === External open bridge ===
 // `GearShell.files.open(path)` (gear open) lands here: while the panel is

@@ -14,7 +14,7 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { FilesInfoPane } from "../../files-info.js?v=20260826.41";
+import { FilesInfoPane } from "./files-info.js?v=20260826.42";
 
 function buildMarkdownHtml(source) {
   if (typeof window.marked?.parse !== "function") return null;

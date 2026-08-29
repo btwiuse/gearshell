@@ -131,7 +131,7 @@ if (!has("src: '/bonsai/'") || !has("name: 'Bonsai 27B'")) {
 if (!has("DEFAULT_LAUNCHER_ITEM_ORDER") || !has("'bonsai'")) {
   throw new Error("Launcher layout must include Bonsai 27B.");
 }
-if (!has("import('./web-pet/index.js')")) {
+if (!has('import("../../web-pet/index.js")')) {
   throw new Error("Wagi Dog must use the bundled web-pet runtime.");
 }
 if (!has("new WebPetRef.current()")) {
@@ -267,7 +267,7 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.178")) {
+if (!has("app.js?v=20260828.181")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

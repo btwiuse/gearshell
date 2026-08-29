@@ -1,12 +1,13 @@
 // workbench-plugin.js — the Workbench panel as a plugin.
 //
-// WorkbenchPanel lives in panels.js (next to the terminal / vm panel
-// components) and keeps its custom opener: addWorkbenchPanel enforces
-// single-instance semantics (re-activate the existing panel instead of
-// duplicating). The restore path (app-panels addRestoredPanel) still
-// calls addWorkbenchPanel directly for saved workbench tabs.
+// The WorkbenchPanel component lives with the plugin
+// (workbench-panel.js); the custom opener addWorkbenchPanel (with its
+// single-instance semantics) stays in the root panels.js because the
+// saved-tab restore path (app-panels addRestoredPanel) calls it
+// directly.
 
-import { addWorkbenchPanel, WorkbenchPanel } from "../../panels.js?v=20260812.116";
+import { addWorkbenchPanel } from "../../panels.js?v=20260812.119";
+import { WorkbenchPanel } from "./workbench-panel.js?v=20260830.4";
 
 export const plugin = {
   register(ctx) {

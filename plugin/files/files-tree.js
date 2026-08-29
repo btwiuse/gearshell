@@ -9,7 +9,7 @@ import {
   filesystemPathJoin,
   normalizeFilesystemPath,
 } from "../files-path.js?v=20260826.71";
-import { getEntryIcon } from "../../files-ui.js?v=20260826.38";
+import { getEntryIcon } from "./files-ui.js?v=20260826.39";
 
 export const TREE_ROOT = ".";
 

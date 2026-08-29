@@ -104,7 +104,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js?v=20260829.64",
+    entry: "/plugin/group/group-plugin.js?v=20260829.65",
   },
   {
     id: "runtime",
@@ -118,7 +118,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.112",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.115",
   },
   {
     id: "home",
@@ -135,28 +135,28 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.120",
+    entry: "/plugin/files/files-plugin.js?v=20260829.123",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.121",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.124",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.122",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.125",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.126",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.129",
   },
   {
     id: "launcher",
@@ -170,7 +170,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.127",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.130",
   },
   {
     id: "browser",
@@ -233,7 +233,7 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.34",
+    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.36",
   },
   {
     id: "widgetbot",
@@ -256,7 +256,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.29",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.32",
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
     preset: [
@@ -379,7 +379,7 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
     name: "Plugin Template",
     version: "1.0.0",
     icon: "BookOpen",
-    entry: "/plugin/template/template-plugin.js?v=20260830.3",
+    entry: "/plugin/template/template-plugin.js?v=20260830.5",
     // Disabled by default: the plugin shows up in the Plugins page for
     // reference but is not loaded until the user enables it.
     enabled: false,

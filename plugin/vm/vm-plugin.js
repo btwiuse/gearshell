@@ -1,12 +1,11 @@
 // vm-plugin.js — the VM panel as a plugin.
 //
-// VmPanel lives in panels.js next to the terminal / workbench panels
-// and keeps its custom opener: addVmPanel clones the panel config for
-// the session params and remembers the panel for layout persistence.
-// The restore path (app-panels addRestoredPanel) still calls
-// addVmPanel directly for saved VM tabs.
+// The VmPanel component lives with the plugin (vm-panel.js); the custom
+// opener addVmPanel stays in the root panels.js because the saved-tab
+// restore path (app-panels addRestoredPanel) calls it directly.
 
-import { addVmPanel, VmPanel } from "../../panels.js?v=20260812.116";
+import { addVmPanel } from "../../panels.js?v=20260812.119";
+import { VmPanel } from "./vm-panel.js?v=20260830.4";
 
 export const plugin = {
   register(ctx) {

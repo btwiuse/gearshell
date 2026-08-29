@@ -93,35 +93,66 @@ function TemplateHeader({ manifest }) {
 }
 
 // --- Demo 1: headless tasks (tasks.create + events) ---
+// term: false is required for headless capture — tasks default to an
+// interactive terminal (normalizeTask: term: task.term !== false). The
+// result renders the captured stdout/stderr as a log plus a JSON
+// metadata block (exit code, duration) — console.log never shows it.
 function TaskDemo({ onNotice }) {
   const [running, setRunning] = useState(false);
-  const [output, setOutput] = useState("");
-  const run = async () => {
+  const [result, setResult] = useState(null);
+  const run = () => {
     setRunning(true);
-    onNotice("tasks.create: started a headless task; its exit + log arrive via task.status / task.output.");
-    const created = window.GearShell?.tasks?.create?.({
-      cmd: "echo hello from the template task; w9y mod list-installed --prefix /opfs/wanix 2>&1",
-      background: true,
-    });
+    setResult(null);
+    onNotice("tasks.create: headless task started — output lands as a log below, metadata as JSON.");
+    // term: false makes it headless-capturable; background lives in the
+    // OPTIONS (2nd arg), not the spec — inside the spec it is ignored
+    // and the task would become a real panel task with a definition id
+    // that never matches the numeric session list.
+    const created = window.GearShell?.tasks?.create?.(
+      {
+        cmd: "echo hello from the template task; w9y mod list-installed --prefix /opfs/wanix 2>&1",
+        term: false,
+      },
+      { background: true },
+    );
     if (!created?.ok) {
       onNotice("tasks.create failed: " + (created?.error || "unknown"));
       setRunning(false);
       return;
     }
     const id = created.taskId;
-    const deadline = Date.now() + 60000;
-    const poll = async () => {
-      const task = window.GearShell?.tasks?.list?.()?.find?.((item) => item.id === id);
+    const startedAt = Date.now();
+    const deadline = startedAt + 60000;
+    const poll = () => {
+      const task = window.GearShell?.tasks?.list?.()?.find?.(
+        (item) => item.id === id,
+      );
       if (task && (task.status === "succeeded" || task.status === "failed")) {
         const out = window.GearShell?.tasks?.output?.(id);
-        setOutput(out?.ok ? out.output || "(no output)" : out?.error || "(no output)");
-        onNotice(`task ${id} finished: ${task.status}${task.error ? " (" + task.error + ")" : ""}`);
+        setResult({
+          cmd: task.cmd,
+          status: task.status,
+          error: task.error || null,
+          exitCode: task.status === "succeeded" ? 0 : parseExitCode(task.error),
+          durationMs: Date.now() - startedAt,
+          output: out?.ok ? out.output || "" : out?.error || "(unavailable)",
+        });
+        onNotice(
+          `task ${id} finished: ${task.status}${task.error ? " (" + task.error + ")" : ""}`,
+        );
         setRunning(false);
         return;
       }
       if (Date.now() < deadline) setTimeout(poll, 800);
       else {
-        onNotice("task timed out (headless output needs the log path)");
+        setResult({
+          cmd: "…",
+          status: "timeout",
+          error: "exceeded 60s",
+          exitCode: null,
+          durationMs: 60000,
+          output: "",
+        });
         setRunning(false);
       }
     };
@@ -146,9 +177,45 @@ function TaskDemo({ onNotice }) {
       },
       running ? "Running…" : "Run a headless task",
     ),
-    output
-      ? React.createElement("pre", { className: "template-output" }, output)
-      : null,
+    result ? React.createElement(TaskResult, { result }) : null,
+  );
+}
+
+// Parse "exit 3" from a task error into the numeric exit code.
+function parseExitCode(error) {
+  const match = /exit (\d+)/.exec(String(error || ""));
+  return match ? Number(match[1]) : null;
+}
+
+// The headless task result: the captured stdout/stderr rendered as a
+// log, followed by a JSON metadata block (cmd, exit code, duration).
+function TaskResult({ result }) {
+  const meta = {
+    status: result.status,
+    exitCode: result.exitCode,
+    error: result.error,
+    durationMs: result.durationMs,
+    duration: (result.durationMs / 1000).toFixed(2) + "s",
+    outputBytes: String(result.output || "").length,
+  };
+  return React.createElement(
+    "div",
+    { className: "template-task-result" },
+    React.createElement(
+      "div",
+      { className: "template-log-head" },
+      "stdout/stderr (captured via the task log, not console)",
+    ),
+    React.createElement(
+      "pre",
+      { className: "template-output" },
+      result.output || "(no output)",
+    ),
+    React.createElement(
+      "pre",
+      { className: "template-json" },
+      JSON.stringify(meta, null, 2),
+    ),
   );
 }
 

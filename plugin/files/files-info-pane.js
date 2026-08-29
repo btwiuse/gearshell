@@ -2,14 +2,14 @@
 // shell). The body renderers live in files-info-pane-body.js and the
 // pure formatting/sorting helpers in files-info.js (500-line splits).
 import React from "react";
-import { sortFilesEntries } from "./files-info.js?v=20260826.41";
+import { sortFilesEntries } from "./files-info.js?v=20260826.42";
 import {
   entryTypeLabel,
   makeChildInteraction,
   renderInfoFooter,
   renderPreviewBody,
   renderViewToolbar,
-} from "./files-info-pane-body.js?v=20260826.41";
+} from "./files-info-pane-body.js?v=20260826.42";
 
 // Selection is in-pane: single click highlights a tile and shows its
 // details in the footer; the grid stays put so a double click reliably

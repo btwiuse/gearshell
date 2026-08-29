@@ -10,7 +10,7 @@ import {
   Home,
   X,
 } from "lucide-react";
-import { getEntryIcon } from "../../files-ui.js?v=20260826.38";
+import { getEntryIcon } from "./files-ui.js?v=20260826.39";
 // File favorites get their extension icon; directories keep the special
 // id-based icons (Home / root / mounts) or a plain folder.
 export function getFavoriteIcon(favorite) {

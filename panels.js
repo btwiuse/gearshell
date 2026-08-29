@@ -20,36 +20,17 @@ import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.81";
+} from "./panels-task.js?v=20260828.84";
 import {
   getPluginIframeConfig,
   openPluginPanel,
-} from "./plugins.js?v=20260829.92";
+} from "./plugins.js?v=20260829.95";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
 // builds where the web-pet submodule failed to materialise (404s on
 // /web-pet/index.js) don't crash the whole shell — the desktop pet
 // just stays disabled, the rest of the app keeps working.
-let webPetModulePromise = null;
-function loadWebPetModule() {
-  if (webPetModulePromise) return webPetModulePromise;
-  webPetModulePromise = import("./web-pet/index.js")
-    .then((mod) => mod.default || mod.WebPet)
-    .catch((error) => {
-      // Reset so a later retry (e.g. after a config toggle) can try
-      // again; surface the failure once via the dev-error overlay so
-      // it's diagnosable but don't throw — the shell has to keep
-      // running without the desktop pet.
-      webPetModulePromise = null;
-      if (typeof console !== "undefined") {
-        console.warn("web-pet unavailable:", error);
-      }
-      return null;
-    });
-  return webPetModulePromise;
-}
-
 let __panelsDeps = null;
 export function initPanels(dependencies) {
   __panelsDeps = dependencies;
@@ -111,18 +92,6 @@ function TerminalPanel({ api, params }) {
   });
 }
 
-// === GroupPanel ===
-// A static About panel (the "Gear Shell group" image). Registered as a
-// plugin (group-plugin.js) like Deck: the kernel mints `group-<n>` ids
-// and remembers the panel, so this component is all the module owns.
-export function GroupPanel() {
-  return React.createElement(
-    "div",
-    { className: "group-panel panel-content" },
-    React.createElement("img", { src: "group.png", alt: "Gear Shell group" }),
-  );
-}
-
 // === IframePanel ===
 function IframePanel({ api, params }) {
   const wrapperRef = useRef(null);
@@ -144,44 +113,6 @@ function IframePanel({ api, params }) {
   });
 }
 
-// === WorkbenchPanel ===
-function WorkbenchPanel({ api, params }) {
-  const wrapperRef = useRef(null);
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    return panelsDep("attachWorkbenchSession")(
-      params.workbenchId,
-      params.config || panelsDep("getWorkbenchPanelConfig")(),
-      wrapper,
-      api,
-    );
-  }, [api, params.workbenchId]);
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
-}
-
-// === VmPanel ===
-function VmPanel({ api, params }) {
-  const wrapperRef = useRef(null);
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    return panelsDep("attachVmSession")(
-      params.vmId,
-      params.config || panelsDep("getVmPanelConfig")(),
-      wrapper,
-      api,
-    );
-  }, [api, params.vmId]);
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
-}
-
 // === PanelTab ===
 function PanelTab(props) {
   const Icon = props.params.panelType === "terminal"
@@ -197,44 +128,6 @@ function PanelTab(props) {
     }),
     React.createElement(DockviewDefaultTab, props),
   );
-}
-
-// === WagiDogPet ===
-function WagiDogPet() {
-  const petRef = useRef(null);
-  const WebPetRef = useRef(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadWebPetModule().then((WebPetClass) => {
-      if (cancelled) return;
-      WebPetRef.current = WebPetClass;
-      if (WebPetClass) syncWagiDog();
-    });
-    function syncWagiDog() {
-      if (panelsDep("loadConfig")().wagiDogEnabled) {
-        if (WebPetRef.current && !petRef.current) {
-          petRef.current = new WebPetRef.current();
-        }
-      } else {
-        petRef.current?.destroy();
-        petRef.current = null;
-      }
-    }
-    syncWagiDog();
-    window.addEventListener(panelsDep("WORKSPACE_CHANGED_EVENT"), syncWagiDog);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(
-        panelsDep("WORKSPACE_CHANGED_EVENT"),
-        syncWagiDog,
-      );
-      petRef.current?.destroy();
-      petRef.current = null;
-    };
-  }, []);
-
-  return null;
 }
 
 // === addTerminalPanel ===
@@ -409,8 +302,5 @@ export {
   PANEL_ICONS,
   PanelTab,
   TerminalPanel,
-  VmPanel,
-  WagiDogPet,
-  WorkbenchPanel,
   WorkspaceTaskPanel,
 };
