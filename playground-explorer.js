@@ -16,7 +16,7 @@ import {
   gctlInvocation,
   PLAYGROUND_CATALOG,
   serializeArgs,
-} from "./playground-api-catalog.js?v=20260829.13";
+} from "./playground-api-catalog.js?v=20260829.14";
 import {
   ArgField,
   HistoryList,
@@ -94,7 +94,12 @@ function pushRunResult({
     setResponse({ ok: false, error: parsed.message });
     return;
   }
-  const result = callApiEntry(group, method, parsed.args);
+  const result = method.kind === "value"
+    ? {
+      ok: true,
+      value: resolveApiPath(window.GearShell, group.namespace, method.name),
+    }
+    : callApiEntry(group, method, parsed.args);
   let argsJson = "[]";
   try {
     argsJson = serializeArgs(method, values[selectedId]);

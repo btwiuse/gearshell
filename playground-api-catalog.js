@@ -22,8 +22,11 @@ export const PLAYGROUND_CATALOG = [
     methods: [
       {
         name: "version",
+        kind: "value",
         args: [],
-        hint: "The GearShell API version string.",
+        hint:
+          "The GearShell API version string — a constant, not a callable. " +
+          "Run reads the value; gctl version aliases to ping.",
       },
       {
         name: "ping",
