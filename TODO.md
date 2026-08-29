@@ -1,0 +1,273 @@
+# TODO / 工作交接（Agentic Workspace）
+
+> 会话压缩前的完整上下文快照。下次继续先读本文件 + `memory/agentic-workspace.md`（已同步 wiki）。
+
+## 一、总体状态：Plan A 已走通 ✅
+
+**愿景**：沙盒内 agent（Crush/bash）通过 `gctl` CLI 操控 GearShell 面板（建任务、读写配置、开面板、读输出）。
+
+**通道（Route A）**：wanix 内核 jsfs `/js` 投影（`globalThis` 即文件系统）+ gctl bash 脚本走 fd>2 协议：
+- agent → `/bin/gctl <method> '<json-args>'` → `exec 3<>/js/GearShell/<method>:json` → 写 JSON 行 → 内核 `reflectApply` 调 `window.GearShell.<method>` → 读回 JSON。
+- **jsfs 关键协议**：后缀是 **`:json`（冒号）**；`:json` 模式把 JSON 数组**展开成位置参数**（`fn(...args)`），所以 `gctl tasks.create '[{...}]'` 到 JS 侧是**单个对象**；jsfs 不 await Promise → API **必须同步**。
+- 要求：hush ≥ v0.5.9（fd>2 重定向 + 脚本参数）、wanix ≥ v0.4.16（shebang + `:json` OpenFile + bytesArg）。
+
+**真机验证过的能力**（CDP 驱动真实 Chrome @ localhost:8000）：
+- `gctl ping` → `"pong"`
+- `gctl panels.list` → 真实组件名（`params.panelType`，非 dockview component 引用）
+- `gctl tasks.create '[{"name":"x","cmd":"bash"}]'` → 终端面板出 `➜ / $` 提示符、可输入
+- headless（`term:false`）→ 面板显示 `$ cmd` / `workdir` / `env (N)` 折叠
+- **`gctl tasks.output <id>`** → `{ok, taskId, path, output}` 读回 headless 输出
+- `./gm` shebang 脚本可执行；`config.getShell` 正常
+- `wd` 生效（`task/<alias>/dir` + 提示符 `➜ ~ $`）
+
+**里程碑（2026-08-29，wanix v0.4.20 + 浏览器实测）**：
+- **实时输出流闭环**：`{ cmd; } > tmp/<id>.log 2>&1` 的日志**逐行实时落盘**（t=2 见 out-1/err-1，旧版 t=1..6 空、t=7 全量）；页面 800ms 轮询器（startTaskOutputCapture）**零改动**即可实时读 `tasks.output`。
+- **exec-redirect 谜题闭环**：根因 = fskit `nodeFile` 缓冲（见踩坑 5），`exec > f` 字节正常落盘。
+- **内核死锁修复（wanix v0.4.23, commit 6686897）**：autoDriver 持 `fsys.mu` 期间调 `driver.Start`（gojs 的 GetOrCompile 等 WebAssembly.compile promise 需 JS 事件循环）与 term connect 的 `_updateTerminals`（等同一把锁）互锁 → 首次任务 + 终端并发连接必死锁（“all goroutines are asleep”）。修复：**driver 查找锁内、Start 锁外**。
+- 测试任务已清（备份到 `gear-shell-workspace-backup:hush-shell`，累计 71 个）。
+
+## 二、本轮已提交（勿重复）
+
+> 历史已重写：TODO.md 从未进入 git（`738ca8c` 等 4 个 TODO commit 已全部 drop，reflog 可查）；工作副本以未跟踪文件保留在仓库根。
+
+| commit | 内容 |
+|---|---|
+| `d79b18f` | agentic workspace 主体：workspace-api.js + app-workspace-task-sessions.js（app-sessions 拆分，500 行规则）、gctl、修复双 `_awake` 崩溃 + 空 env 杀 bash |
+| `b8d0de0` | headless 面板显示 workdir |
+| `4a5c545` | headless 输出捕获 `tasks.output`（块重定向 wrapper） |
+| `7ba497b` | memory wiki round-7/8 发布（子模块指针） |
+| `17e1e98` | WANIX_RUNTIME pin → v0.4.20 + 22 文件版本级联（app.js → v20260828.20） |
+| `d9f5c8c`/`936fa40`/`c48918a`/`f0b8ba4` | **终端版 agent 闭环 demo**：scripts/demo-agent-term-loop.sh + 时序硬化 + 读回修复（hush 镜像 `/bin` 只有 bash/gctl/w9y → `$(< file)` 只在裸 `< file` 形态生效，裸 bash 行为相同；agent 建 term:true 任务 → agents.prompt 注入 → OPFS 读回 result=42 → CLOSED LOOP OK (term)，非 CDP 浏览器实测通过） |
+| `8d34453` | **代码健康度（500/50 行规则回归）**：拆分 home.js(895→4 文件)、panels.js(571→2)、app.js(540→2)、app-normalize.js(539→2)、settings-terminal-editor.js(540→3)、crush-panel.js(453→2)、crush-panel-config.js(457→2)、launcher.js(393)；新增 10 模块；版本级联 28 文件 + index.html + verify-static；deno fmt + ESM check + verify-static + 浏览器实测（ping/tasks.create/Crush Runner 渲染 OK）；sh/hush/wanix 零改动 |
+| `40a2397` | **P1：agent 任务临时化 + 事件读通道**：`tasks.create` 默认 ephemeral（不写 ws.tasks、不 rememberOpenPanel），`persist:true` 才持久化并登记 agent-task registry（`gear-shell-agent-tasks`，刻意不进 workspace schema——normalizeTask 会剥外来字段）+ 启动 GC 清终态定义；`events.drain/pending` 环形缓冲（task.status / panel.added-removed-activated / config.changed → agent 轮询，800ms 节奏同 tasks.output） |
+| `6e02434` | **P2：`agents.read` + `agents.prompt` 双门控**：read 读 xterm scrollback 纯文本（`translateToString`，转义已被解析器消费，serialize 是终端→终端回放用的，不适用）；prompt 空闲门控（onWriteParsed 后 1200ms 拒绝，`retryAfterMs`）+ 真人门控（onKey 只对真实键盘触发，5s 宽限，`force:true` 覆盖）+ 串行投递（60ms 间隔）；**修了 wanix-term 面板重挂重建 xterm 导致门控监听器随旧实例死掉的 bug**（按 xterm 实例身份重挂）。浏览器实测：busy 拒绝/真人拒绝/force 放行/宽限恢复全过 |
+
+上游发布：**sh v3.14.4**（fd>2 重定向）、**hush v0.5.9**（脚本参数）、**wanix v0.4.18**（task 元素 `stdout/stderr` 属性绑 fd + allocate 内 `_ensureFile`）、**v0.4.19**（逐级 mkdir）、**v0.4.20**（commit `e0e14b2`：fskit nodeFile write-through 修复实时流 + `_awake()` 幂等）。均 push tag + w9y.io 构建验证（`\0asm` magic + jsdelivr min.js 字节一致）。memory 已同步 wiki（`1d34c61` round-8）。
+
+## 三、关键踩坑（继续工作前必读，全部有源码依据）
+
+1. **`Task already allocated` 崩溃**：wanix task 元素**自激活**（`base.js` connectedCallback → `_connect` → `_activate` → `_awake()` 自动 allocate+start）。应用再调 `_awake()` 必炸。REPL 会话用 `autoActivates: "_connectStarted" in task` 闸；workspace 会话已补同样标志（app-workspace-task-sessions.js），`wakeWorkspaceTaskSession` 对自激活会话早退。
+2. **空 env 杀 bash**：gojs worker 读空 env 文件 → `env: ['']` → bash 立即 exit 1。workspace 任务 env 缺省回落 `buildEnv()`（BASH_ENV + 配置 env，app-constants.js:64）。
+3. **gojs term 任务 stdout——实际没坏(2026-08-29 实测推翻"fd 解析断链"假说)**：`Task.FD`(task.go:243)fd<3 解析顺序 ①已注册 `fds[fd]` → ②`VFSOpen`(`NS().Open("#task/<rid>/fd/N")`)→ ③nullFile 兜底。轮次 10 一度判断 term 任务 stdout 被 nullFile 吞(两套 fd 视图假说),**错**：bind 表按全路径 key 存,`NS.OpenContext` 先查 direct bind,`elements/task.js` 的 `bind #term/1/program #task/2/fd/1` 真实命中(Go 测试 + 浏览器 `task/<rid>/binds` 双证)。**term 输出路径本来就通**(v0.4.23 实测:直接写 fd/1 → 字符串出现在 xterm;`agents.prompt` + `agents.read` 交互闭环完整成立)。真正的问题只是 **gojs 冷编译 30-60s**(缓存热后 ~5s),编译窗口期读屏必空,加上内核被积压任务压卡 → 双重误判。详见 memory round-11。wanix `task_termfd_test.go` 作为回归测试保留(v0.4.24 SetFD 修复计划取消)。
+4. **OPFS 写缓冲**：`web/fsa` 用 `createWritable`，字节只在 `close()` 提交（`.crswap` 临时文件），运行中读不到还可能丢。
+5. **`exec > f 2>&1; cmd` 输出蒸发 —— 已闭环（v0.4.20）**：根因不是 fd 路由也不是 go4js，而是 **fskit `nodeFile` 缓冲**（`fs/fskit/node.go`）：`Node.Open` 打开时**快照**节点数据副本，`Write` 只写本地 `f.data`，`Close()` 才 `SetData` 提交。→ 文件保持打开时（块重定向/`exec` keepRedirs）节点对读者永远为空；`exec > f` 永不 close 则数据**永不提交 = 写丢失**；`echo x > f` 语句级关闭反而正常（这就是 fd3 案例为何成功）。mvdan/sh 重定向是 **Go io.Writer 级**（`> file` → `r.stdout = *os.File`；`2>&1` → `r.stderr = r.stdout`），**根本不调 dup2**（go4js `Dup2` 是 ENOSYS 也无所谓）。上游 mvdan v3.11.0 的 `defer cls.Close()` bug 仍可选修。
+6. **修复（v0.4.20, commit e0e14b2）**：`nodeFile.Write` 末尾 `SetData(f.inode, f.data)` **write-through**（每次写即时提交，close 重提同一 slice 为 no-op；modTime 仍 close 提交，锁序 f.mu→inode.mu 与 Close 一致）。`-race` 全绿；新增 `TestNodeFileWriteThrough`；既有快照语义测试（TestNodeDataIsolation 等）不受影响（读仍走各句柄本地缓冲）。块重定向 wrapper 保留即可——**现在日志实时增长，`tasks.output` 运行中即返回部分输出**。
+7. **测试任务污染工作区**：`tasks.create` 走 `addWorkspaceTask` **持久化**进 localStorage；reload 全 restore 重 spawn（含会 panic 的 `crush --version` → gojs RPC panic → 内核卡死、`root.readText` 挂 20s、新任务不出提示符）。**已在 Settings 关掉 "restore tabs"**。工作区现攒 40+ 测试任务（backup key：`gear-shell-workspace-backup:hush-shell`，25 个旧任务的完整 JSON）。
+8. **诊断手法**：`await root.readText("task/workspace-task-N/exit")`：`""`=存活 / `"1"`=启动即死 / 其他=退出码；`ctl` 空=没 start；`task/<alias>/ns/tmp/` = 任务自己的 ramfs（捕获日志位置）。扩展 `read_console_messages` **只覆盖页面 console**，blob worker 的 log 抓不到。
+9. **task cmd 直接 exec 首 token（不经 shell）——已修（GearShell `44fbad5` wrapTermCmd）**：内核 gojs driver 按 `args[0]` 找二进制（worker.js `readFile(args[0])`）。`cmd:"echo hi; sleep 2"` → 找 `/bin/echo`（镜像没有，/bin 只有 bash/gctl/w9y）→ 任务起不来。headless 因 wrapper 包 `bash -c '{...}'` 首 token=bash 才没事；`cmd:"bash"` 能成因首 token 可执行。**修法（已做）**：term 任务也包 `bash -c '<cmd>'`（wrapTermCmd，与 wrapHeadlessCmd 对称）；面板仍显示原始 cmd；内核 task.go:322 用 shlex.Split 解析 cmd 属性，单引号转义 `'\''` 实测往返正确（`echo it's fine` → args `["bash","-c","echo it's fine"]`）。**行为级验证待非 CDP 浏览器复跑**（wrap 后 `cmd:"bash"` 变成 `bash -c 'bash'`，外层非交互内层交互，提示符应仍出现）。
+10. **CDP 自动化环境干扰**：open-claude-in-chrome 扩展附加调试器时，gojs worker 的 blob 脚本 fetch 永久 pending（网络面板 `blob:` 请求 pending）→ worker 不加载 → 任务 ctl 空、永不 start。**同一调用在无自动化浏览器（用户手动）完全正常**。**结论必须非 CDP 环境复核**；判“卡 vs 慢”：hush wasm（20MB）首次下载+编译 1-2 分钟属正常慢。
+
+**代码健康度（commit `8d34453`）**：500/50 行规则长期漂移已修。拆分前最大文件 home.js=895；拆分后所有 JS 文件均 <500 行（最大 files-info.js=488 是既有债务），所有函数 <50 行；具体拆分详见 commit message 列表。新增 10 个模块（home-data/-sections/-xcards、panels-task、app-shell、app-normalize-system、settings-terminal-presets/-fields、crush-runner-parts、crush-panel-tabs）。版本级联 28 文件 + index.html + verify-static；deno fmt 已跑；ESM check + verify-static 全绿；浏览器实测 GearShell.ping/tasks.create/Crush Runner panel 渲染 OK。期间修了 app-shell.js 的导入 bug（AddTerminalButton/FallbackPanel 实际在 launcher.js，不是 panels.js）— ESM 名导出检查的必要性。
+
+## 四、版本/环境现状
+
+- `WANIX_RUNTIME`（app-constants.js）→ **v0.4.23**（含内核死锁修复 `6686897`，`AutoDriver.Start` 移出 `fsys.mu`）；`DEFAULT_HUSH_BINARY_URL` → **v0.5.9**；模块版本（v0.4.23 级联后，2026-08-29 晚）：app-sessions=v20260828.10、app-workspace-task-sessions=v20260828.10、workspace-api=v20260828.17、app.js=v20260828.26、app-constants=v20260828.9、app-normalize=v20260828.7、panels=v20260812.35（未动）、settings.css=v20260812.29（未动）。
+- **浏览器 localStorage 的 runtime pin 是手动的**（迁移只处理 legacy URL/host 不处理 semver pin）：`gear-shell-workspace:hush-shell` 的 `ws.runtime` 已手动升 v0.4.23；下次升 wanix 要再手动。
+- **版本级联顺序陷阱**：多个模块共享同一版本 token（如 v20260826.2 有 10+ 个模块）时，token 级联会溢出到非依赖模块 → 必须用**全量传播算法**（dirty 集 + 对每个被改动模块升自身版本再传播到其 importer，直到 index.html 的 app.js），且**先 .5→.6 再 .4→.5 防止 token 冲突**（app-constants 的新 .5 会撞 app-sessions 的旧 .5）。`app.js` 自己的 own-name 与 version key 因 `index.html` 无 `./` 前缀始终不对齐 → 必须手动补升 `index.html` + `scripts/verify-static.mjs`。
+- 版本纪律：改模块必须 `?v=` 全树 grep 更新 importers（app.js/workspace-api.js/13 个 app-constants importers 等）；index.html 的 app.js 版本与 `scripts/verify-static.mjs:84` 的 marker 同步；`node --input-type=module --check < file.js` 校验 ESM。
+- 500/50 行规则：app-sessions.js 已拆（360 行）；**panels.js(553)/app.js(538)/app-normalize.js(528) 在 HEAD 时已 >500（既有债务，未拆）**。
+- `memory/` 是 git submodule（wiki 仓库）：改后 `./scripts/sync-wiki.sh`（会 push wiki）+ `git submodule update --remote memory`（若 untracked 冲突先 `git checkout -- .` 再 update）+ 主仓提交指针。
+- **wanix 发布链路（每次改 wanix 都照此）**：`node --input-type=module --check < elements/xx.js` → `make js`（重建 dist）→ commit（elements/*.js + **`git add -f dist/wanix.min.js`**，dist 在 .gitignore 需 -f）→ `git tag vX.Y.Z` → `git push origin vX.Y.Z` → 验证 `curl https://w9y.io/go/github.com/justwasm/wanix/wasm@vX.Y.Z` 头部是 `\0asm` + jsdelivr min.js 含新代码 → GearShell `app-constants.js` WANIX_RUNTIME 升 pin → 浏览器 localStorage `ws.runtime` 手动升 pin（semver pin 不自动迁移）。注意：amend 后 tag 要 `git tag -f` + `push --force`。
+
+## 五、下一步方向（按优先级）
+
+> ✅ 已完成：实时输出流（v0.4.20 write-through，页面零改动）、`_awake` 幂等（v0.4.20）、exec-redirect 源码修复（v0.4.20）、测试任务清理（38+9 个已备份清空）、**真 agent 闭环演示**（`scripts/demo-agent-loop.sh`，沙盒内 agent 用 gctl 自驱 create→轮询 output→取结果，实测 CLOSED LOOP OK）、**files-ui 版本分裂**（4 importer 统一 .38，commit `df2c9fa`）。
+
+**搁置（用户决定，面向开发者工具现阶段不做）**：
+- ~~agents.prompt 撞车~~（**P2 已实现，commit `6e02434`**）：空闲门控（输出后 1200ms 拒绝 + retryAfterMs）+ 真人门控（onKey 记真人键入，5s 内拒绝，`force:true` 覆盖）+ 串行投递。真人空闲时仍可共享终端；Tier 1 通道隔离（agent 自建任务、拒绝注入真人终端）未做，保持共享体验。
+- `/js` 安全收窄（P2）：jsfs 当前 rw 挂所有 task，agent 能读 document/fetch。需要时再做白名单根（内核改动）。
+
+**已解决（2026-08-29 晚）**：
+- **console 噪音**：WidgetBot Discord 组件改为 opt-in（`widgetbot` 配置开关，Settings 里有 toggle，默认 off，动态加载）；headless 面板文案改为指向 `gctl tasks.output`（不再声称输出进 console）；wanix v0.4.22 移除内核 bind-alloc/fetch-url 调试 println（commit `d92b3f3`）。页面加载 console 已干净。**教训：w9y.io 会缓存 tag 的失败构建（v0.4.21 首次构建失败后同 tag 强推仍 502），必须换新 tag（v0.4.22）**。
+- **终端任务内核死锁 = 已修（wanix v0.4.23）**：详见里程碑。死锁栈（archive）：goroutine 8 `Task.Tasks` 等 `fsys.mu`（由 `_updateTerminals` 触发）+ goroutine 30 `GetOrCompile` 等 `WebAssembly.compile` promise + goroutine 1 空 select。假说修正：不是“term 绑定与 start RPC 互等”，而是**持锁等 JS promise**（JS handler 未返回 → 微任务队列不跑 → promise 永不 resolve）。
+- **railway 域名退役**：`isLegacyHushBinaryUrl` 原来只比版本不比 host，`w9y.up.railway.app`（bin/bash/bin/w9y 的 fetch bind）带当前版本时不迁移 → 已修（railway host 视为 legacy，迁移到 w9y.io，随 `700d0e8`）。
+
+**环境陷阱（重要，勿再误判为产品 bug）**：
+- **CDP 自动化环境下 worker blob fetch 永久 pending**：open-claude-in-chrome 扩展附加调试器时，gojs worker 的 blob 脚本请求在网络面板长期 pending → worker 不加载 → 任务 ctl 空、永不 start。**同一调用在无自动化的浏览器（用户手动）完全正常**。判定：网络面板 blob pending = 自动化干扰；hush wasm 下载/编译中（1-2 分钟）= 正常慢。**结论必须在非 CDP 环境（用户浏览器）复核**。
+- **task cmd 直接 exec 首 token**（不经 shell）：`cmd:"echo hi; sleep 2"` 会找 `/bin/echo`（镜像没有，/bin 只有 bash/gctl/w9y）→ 任务起不来。headless 没事因 wrapper 包 `bash -c '{...}'`；`cmd:"bash"` 能成因首 token 可执行。**已修：term 任务也包 `bash -c`（`44fbad5`，见踩坑 9）**；行为级验证待非 CDP 浏览器。
+
+**接下来要做（2026-08-29 晚，更新后）**：
+1. ✅ **wrapTermCmd（已完成，commit `44fbad5`）**：term:true 任务 cmd 包 `bash -c '<cmd>'`。已实测（非 CDP 浏览器）：`cmd:"bash"` 交互正常、`echo hi; sleep 2` 可跑、终端版闭环 demo 通过（CLOSED LOOP OK (term)）。
+2. ✅ **真 agent 闭环 · 终端版（已完成，commit `d9f5c8c` 脚本 + `936fa40` 时序 + `c48918a` 读回修复）**：`scripts/demo-agent-term-loop.sh`——agent 创建 term:true 任务 → `gctl agents.prompt` 注入命令 → 任务写共享 OPFS → agent 用 `read` 内建读回 → `CLOSED LOOP OK (term)`。非 CDP 浏览器实测通过。
+3. ~~⬜ wanix v0.4.24:term 任务 stdout 落 term(SetFD 方案)~~(**取消,2026-08-29**)——实测 term 输出路径本来就通(见踩坑 3 与 memory round-11),"断链"是 gojs 冷编译慢 + 内核被压卡造成的误判。留给 wanix 的是回归测试 `task_termfd_test.go`(fd bind → Task.FD → term 数据全链路,含根 "." 绑定干扰场景)。
+4. ⬜ **wanix v0.4.25(可选增强,非补断链):内核 tee(fd 1/2 镜像 term + 文件)——无损实时转录**：
+   - 动机：`agents.read` 是快照（xterm scrollback 有界、alt-screen 应用只有一屏）；agent 要完整 transcript 目前只能走 headless + tasks.output。
+   - 方案：term 任务 stdout 同时写 term 流与 append-only 日志文件；v0.4.20 write-through 后页面 800ms 轮询器（startTaskOutputCapture）零改动即可读 → `tasks.output` 对 term 任务也生效。
+   - 意义：交互 agent 拿无损历史；`tasks.output` 的 "task has a terminal; read its panel" 错误分支可删，headless/term 两路 API 统一。
+5. ⬜ **wanix:task 退出 → 关 term 资源(term 泄漏清理,可选、低优先)**：
+   - **现状(2026-08-29 查证)**:进程退出后 `#term/<id>` 资源在内核永不释放——`wanix-term` 元素断连只 `_term.dispose()` 不碰内核资源(`elements/term.js:81-89`),`wanix-task` 断连只 `ctl terminate` 不释放 term(`elements/task.js:158-161`);`PortFile.Close` 是 no-op(`fs/pipe/portfile.go:29`)所以进程退出不会 EOF 管道。agent 长会话反复建 term 任务 → 内核 term 资源无限累积(单资源几 KB,慢腐烂非急性)。
+   - **相关已提交**:wanix `1a56988`(term fd 回归测试 `task_termfd_test.go`)、`7f78e8a`(启用 programFile EOF 移除 + 修 `d.remove` Lock/RLock 死锁)。**注意**:EOF 触发需要有人读 program 侧,浏览器没人读 → 该修复本身治不了浏览器泄漏,只是铺好钩子。
+   - **方案(三件套,每步独立测试)**:①内核给 `#term/<id>` 加 `ctl` 字段文件处理 `"close"`(给 `d.remove` 公开调用面,零行为变更,纯增量可测);②内核监视器照抄 `spawn.go:243 monitorChildExit`——分配带 term 的任务时起 goroutine 盯 `task/<rid>/exit`,非空即关 term(直接调 `d.remove` 或走 ① 的 ctl,统一入口是设计选择非硬依赖);③`task.js disconnectedCallback` 在 `ctl terminate` 外补关 term(面板关闭即释放)。
+   - **顺序理由**:行为变更最小化(先加"删除原语"再加"触发源")+ 纯内核可测先行(快、确定)、浏览器验证最后(慢、环境干扰)。风险点:term 被移除时 `wanix-term` 元素重连流要宽容"资源消失"(P2 已踩过 xterm 重建同类问题)。
+   - **价值评估**:不是急性 bug;真正重的是 gojs worker 泄漏(已由 ephemeral 默认解决),term 是第二阶。做不做取决于 term 任务是否为 agent 常用形态。
+
+### 调查存档（已解决，勿重开）
+
+- **exec-redirect 源码调查**：根因 = fskit nodeFile 缓冲（见踩坑 5/6），v0.4.20 已修。过程中的有价值结论：go4js 工具链在 `/Users/gear/Documents/GitHub/go`（Go 1.27 + go4js.1 fork，HEAD d90a163e71）；`src/syscall/fs_js.go` `syscall.Write(fd)` 统一 `fsCall("write",...)` 无 fd 1/2 特殊路由（go4js 层干净）；`Dup2` 在 go4js 是 `ENOSYS`（但 mvdan/sh 重定向是 io.Writer 级、从不调 dup2，故无关）；wanix `Task.FD`（task.go:243）fd<3 未注册时走 `VFSOpen` → `#task/<rid>/fd/N` 绑定。上游 mvdan v3.11.0 `defer cls.Close()` bug 可选提 PR。
+
+## 六、浏览器测试环境速查（CDP MCP）
+
+- 页面：`http://localhost:8000/`，workspace `hush-shell`；tab 需 `tabs_context_mcp({createIfEmpty:true})` 拿 tabId。
+- 常用验证：`performance.getEntriesByType('resource')` 确认 `?v=` 模块真实加载；`window.GearShell.ping()` / `tasks.list()` / `tasks.output(id)`；`window.__wanix["1"].root.readText/readDir`（async，await）；`.task-headless` 面板 DOM 检查 cmd/workdir/env。
+- 踩坑：扩展偶发断连（`Browser extension is not connected`，等/重开页面）；`root.readText` 偶发挂起（内核卡时，包 try/catch）；**别碰 `term._writer`/`term._reader` 私有字段**（会 60s 超时）；探测脚本别写成一个长表达式。
+- **CDP 环境陷阱**：open-claude-in-chrome 扩展附调试器时 worker blob fetch 永久 pending（任务永不 start），**结论必须非 CDP 环境复核**。判“卡 vs 慢”看网络面板：blob: pending = 自动化干扰（自动环境特有）；hush wasm 下载/编译 1-2 分钟 = 正常慢（首次）。
+- 直调 API 注意：`tasks.create` 传**对象**（jsfs 展开数组，传数组报 "A command is required."）；`cmd` 任意 shell 语法均可（GearShell 已包 `bash -c`，`44fbad5`）；镜像 /bin 只有 bash/gctl/w9y。
+
+## 七、UX Wishlist 会话（2026-08-28 下午，已提交 edf7157 + 本轮未提交）
+
+> 详情见 `memory/ux-wishlist.md`（功能）与 `memory/gctl-examples.md`（已验证调用清单）。
+
+### 交付功能（浏览器实测全过）
+
+1. **Markdown 预览**：files 编辑器 Eye 切换渲染/源码；`marked` + **DOMPurify**（index.html 新增 CDN）净化，XSS 实测（onerror/script 被剥）
+2. **iframe popout 按钮**：wrapper 右上角（hover），`window.open(src,"_blank","noopener")` 真 tab
+3. **视频 PiP**：`.files-pip-button`
+4. **分屏「在新窗格打开」**：`addPanelByComponent` 单点 `options.direction` → `api.addGroup({referenceGroup, direction})`；launcher「+」菜单 Shift+点击 = 右侧新窗格 + hint
+5. **多行标签**：`overflow: { mode: "wrap" }`
+6. **gctl open 双路由**：`open <url>` → `browser.open`（任意 URL iframe 面板）；`open <file>` → `files.open`（文件浏览器预览，**audio 自动播放**——autoPlay 实测 t=1.2s paused:false）
+7. **新窗格参数统一**：`{ group?, referencePanel?, direction? }` 覆盖 panels.open / browser.open / tasks.create / files.open；`panels.list` 暴露 `groupId`
+8. **gctl 脚本现代化**：bash `[[ ]]` 全构造 hush 实测解析执行 OK；纯内建 dirname/basename（镜像无）；`$1/$2` 需 hush v0.5.9+
+
+### 代码健康度（500/50 行回归）
+
+- **workspace-api.js 869→131**：拆 7 part（events/open-api/config-api/tasks-api/agents-api/task-registry/gctl-bind）
+- **files-parts.js 529→269**：FilesEditorPane 拆 files-editor-pane.js 并重构为小组件
+- 新工具：`scripts/cascade-bump.mjs`（?v= 全量传播）、`scripts/fn-length-audit.mjs`（>50 行函数扫描）、`scripts/token-scan.mjs`（token 一致性，抓版本分裂）
+- **抓到的版本分裂**：parts 硬编码旧 token（4 处）→ 双实例 → "dockview not ready"；已对齐（0 SPLIT）
+- **剩余既有债务**：50 行 ×28（FilesPanel 165L、TerminalPresetIconPicker 289L 等，会话前已有）、500 行 ×1（scripts/cdp-mount-test.mjs 600L）
+
+### 版本/环境现状
+
+- `WANIX_RUNTIME` v0.4.23 未动；app.js **v20260828.47**；workspace-api 拆 7 part 后 token 各自独立（events .2、open .4、config .4、tasks .4、agents .1、registry .4、gctl-bind .4）
+- **新踩坑**：①wanix 根 FS **reload 即重置**（root.writeFile 的文件刷新消失，测试须同一 page load 内完成）②`root.readDir(".")` 返回**路径字符串**数组非 entry 对象 ③GearShell ready ≠ wanix root ready（写文件要重试等 wasm）④agent 调用无手势，`window.open` 必被弹窗拦（真 tab 只能 popout 按钮）
+- memory 子模块：ux-wishlist.md / gctl-examples.md 新增，Home.md 索引已加
+
+## 八、wanix v0.4.24 内核修复 + 下一步方向（2026-08-28 晚）
+
+### 本次发布（已完成，勿重复）
+
+- **wanix v0.4.24**（push 完成，w9y.io wasm + jsdelivr min.js 实测 200）：
+  - `f02ad33` jsfs `bad type flag` 崩溃——`safeType()` 防御分类 + 枚举/路径解析逐值降级（`ls /js/document:obj` 不再崩内核）
+  - `bac00e5` 任务启动死锁——driver Check 移出 TaskFS 注册表锁 + idbfs `_openDB` 3s 超时/onblocked/重试；VM 激活——`vm.Device`/`VM` 实现 `fs.RouteFS`（chmod/writeFile 下钻）+ worker.go Resolve 断言修正
+- **gearshell**：app-constants WANIX_RUNTIME → v0.4.24，cascade 至 app.js **v20260828.48**（commit fb64bc6/4c4ee2b/0fd45f6/acfc974/614dfef 全 push，与 origin 同步）
+- memory 已同步 wiki：wanix-jsfs-crash.md / wanix-routfs-device-namespaces.md / lessons.md（`/js` 禁区、探针数括号、RouteFS 规则）
+
+### 下一步方向（按推荐顺序）
+
+1. ~~**B1：`tasks.create({background:true})` ResizeObserver 报错**~~ **已修（2026-08-28 深夜）**：
+   根因是 background 任务默认带 term（normalizeTask `term !== false`），而 background 分支传的
+   anchor 是 `null` → `attachOverlayTerminalSession` 里 `ResizeObserver.observe(null)` 抛 TypeError。
+   修复：`app-workspace-task-sessions.js` `attachWorkspaceTaskSession` 对 `!session.term || !anchor`
+   都走 wake 分支（跳过 overlay）。实测 `tasks.create({cmd:'gctl panels.list'},{background:true})`
+   → `ok:true`、无报错；term/无 term 两种 background 任务均正常跑完并 cancel 干净。
+   **附带发现并修复**：`panels.open('vm', {})` 把 options 泄漏成 VM config（`addPanelByComponent`
+   把第 4 参 options 传给 adder 的第 3 参 config/profile 槽）→ `config.backendUrl=undefined` →
+   v86 归档 bind src=null → 404「Failed to fetch archive null」。修复：addPanelByComponent 不再把
+   options 传给 PANEL_ADDERS（direction/group 已在上方消费）。VM/workbench/terminal 经 API 打开
+   现在都用默认 config。
+2. ~~**B2：VM 面板启动恢复验证**~~ **已过（2026-08-28 深夜）**：restoreTabs=true + 保存 VM 面板后
+   reload，home+vm 恢复、`wanix-vm` 重建（vm-panel-1 + term 连接 `#vm/vm-panel-1/term`），
+   全程 0 console error——无 deadlock、无 `chmod #vm/1/alias` 激活错误（对比 v0.4.23 时代的报错）。
+   workspace 已还原（restoreTabs=false、VM panel 关闭）。
+3. ~~**A：代码健康债**~~ **已清（2026-08-28 深夜）**：`fn-length-audit` 0 violations（原 28→34 个 >50 行函数全部
+   拆完：FilesInfoPane 396L 拆为 files-info-pane.js + files-info-pane-body.js + helpers；useCrushRunnerPanelController
+   281L 拆 3 sub-hooks + 6 模块函数；TerminalPresetIconPicker 289L 拆 catalog/categories/keyboard；useCrushPresetCrud、
+   useFilesActions/useFilesEditor、files-tree/files-topbar/files-mounts/files-context-menu/files-favorites-ui/
+   files-resize/files-panel-sections、AddTerminalButton、launcher/settings-launcher/home-sections/runtime/
+   settings-terminal-presets/app-terminal-sessions 全部 ≤50）；`scripts/cdp-mount-test.mjs` 600L 拆出
+   `cdp-mount-driver.mjs`（419+190，冒烟通过）。验证：fn-length-audit 0 + token-scan 0 SPLIT + verify-static +
+   deno fmt --check 91 文件 + eslint 0 errors + ESM check + ?v= 一致性全绿；浏览器实测 Files 面板（tree/topbar/
+   info grid↔list/排序/选择/volumes/favorites）、Crush Runner、Settings launcher-order、IconPicker（动态挂载
+   1549 图标 + 6 分类）、background 任务全过。
+4. **C：wanix term-leak 收尾**（TODO 五的剩余）：task-exit 监控（spawn.go:243 模式）+
+   `task.js` disconnectedCallback close + 内核 ctl "close" 文件；改后 `go test -count=1 ./term/ ./`，
+   发 v0.4.25
+5. **B3：任务输出读取 UX**——`tasks.output` 对带终端任务返回 "read its panel"，agent 读输出绕
+6. **D：竞赛交付物**——docs/、神奇海螺队-第一轮评审/、README/TODO 均 untracked；README 补 v0.4.24 能力
+
+### 环境备忘
+
+- 测试 tab 590428658/590428736：workspace runtime 已清 override（用 CDN v0.4.24 默认）
+- dev server：localhost:8080 python ThreadingHTTPServer（本次会话一直在线）
+- wanix 本地仓库 /Users/gear/GitHub/wanix（= /Users/gear/Documents/GitHub/wanix 同 inode），dist/wanix.debug.wasm 为本地产物（gitignored）
+- 死锁/崩溃复现姿势：`ls -la /js/document:obj`（旧内核崩）、多 tab 同开同 workspace（idbfs blocked）、保存 VM 面板后重启
+
+## 九、低垂果实盘点(2026-08-29,agentic workspace 收尾候选)
+
+> 基于 milestone 表(M1-M5/P2)+ 评测缺口(#1-#8)逐项核对代码现状。纯 app 侧、
+> 无内核改动的优先;内核项单列(非低垂)。详细分析见 memory/agentic-workspace.md
+> 「低垂果实盘点 2026-08-29」。
+
+**已落地(勿重复)**:M0 桥、config/panels/browser/files/tasks/agents/events 全
+namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读屏+双门控、
+评测 #1/#3/#4 已通、A 代码健康债清零、B1/B2 修复。
+
+**低垂果实(按优先级,全部 app 侧)**:
+- ✅ **A1(#8/M2)配置审计环 + Settings「Agent Activity」+ undo**:workspace-audit.js
+  (localStorage 环,封顶 50)+ `config.audit.*` + updateShell 审计包装(字符串或
+  options 第二参都收);Settings agent-activity 区(条目 + Undo + before/after
+  diff + Clear)。浏览器实测 14 项全过(API+UI)。
+- ✅ **A2(#6 最小形态)事件持久化**:workspace-events.js 落盘 + 高水位 drained,
+  跨 reload 不重投;boot seedEventBuffer。实测 emit → reload → drain 读回 → 不重投。
+- ✅ **A3 `gctl help`**:方法清单 + examples(heredoc);`gctl version` 映射 ping。
+- ✅ **A4 `gctl agents.prompt-wait <id> <text> [timeout]`**:bash 重试糖 +
+  `_ge_json_escape` 纯 bash 转义;JS 单引号 `\"` 被吞的坑已修(`\\"`)。
+- ✅ **A5(M5 降级 + D)README/docs**:README 加 Agentic Workspace 章节 + v0.4.24
+  能力;browser 降级文档化。
+- ✅ **A6 scripts/demo-agentic-eval.sh**:#1/#3/#4/#8 一条脚本。**真实浏览器已跑**
+  (MCP 扩展,2026-08-29,详见 round-19):稳定 PASS 8/9——#8/#3/#4/A3 全绿;
+  #1 在扩展附着会话下 term worker 输出被环境阻塞(headless 全通,eval2 同会话
+  提示符曾渲染 → 间歇性),非扩展真实浏览器应全绿待复核。修过的脚本 bug:
+  ①tasks.output 用 panelId 提取数字 session id(create 返回 UUID taskId);
+  ②#4 只比 workspace tasks 数组(updatedAt 每次 save 都变,尾部对比误伤);
+  ③#1 注入前等 `➜` 提示符(冷编译窗口注入被吞);④set -u 下 read 前初始化 line。
+  另修真 bug:crush recheck 崩溃(ctl 漏 programAutoManagedRef)。
+
+- ✅ **M4 音乐面板 + `gctl music.*`**(round-18 初版 + **round-23/24 补全**,
+  commit 84ee6b4/f5f3b7b):
+  - round-18:music-engine.js(单例 `<audio>` + 异步 VFS 解析)+ music.js 面板 +
+    注册链 + workspace-api music 命名空间 + gctl help;autoplay 政策下 agent 调用
+    停在 paused,真人点击面板即播。
+  - **round-23**:队列/播放列表 + 三档循环 + 自动连播;audio-tags.js(ID3v2 元数据 +
+    USLT/.lrc 歌词);VFS 文件选择器(vfs-picker.js 可复用);tab 右键 Duplicate。
+  - **round-24**:进度条 Seek、拖拽排序、随机播放、多命名歌单(localStorage)、
+    历史去重 + 播放次数徽标。详见「十、轮次 23/24」+ memory/music-player.md。
+
+**内核/搁置(非低垂)**:C1 wanix v0.4.25 term-leak 三件套(可选)、C2 内核 tee
+(可选增强,tasks.output 对 term 任务生效)、C3 P2 /js 安全收窄(设计搁置)、
+#2 Tier-1 隔离(刻意保留共享终端;agent 自建任务即可自隔离,无需代码)。
+
+## 十、轮次 23/24:Music 播放器补全 + 可复用 VFS 选择器 + tab Duplicate(2026-08-29,已提交)
+
+> commit:`84ee6b4`(round-23)、`f5f3b7b`(round-24)+ 各 memory 指针提交。全部浏览器实测。
+
+### round-23:基础能力(commit 84ee6b4)
+- **可复用基础设施 `vfs-picker.js`**:Wanix FS 文件选择器(单/多选、扩展名过滤、
+  面包屑 + 路径直达、键盘导航),与 Files 面板同一 readDir 契约,样式独立
+  vfs-picker.css(z-index 1100)。任何"从 FS 选文件"的面板可复用。
+- **Music 播放器(网易云式基础)**:music-engine 加队列 + 三档循环(off/all/one)+
+  自动连播;`audio-tags.js`(零依赖)ID3v2 元数据 + USLT 歌词 + `.lrc` 侧车解析;
+  面板加 Playlist 区 + 歌词滚动高亮 + Browse 按钮。
+- **dockview tab 右键菜单 Duplicate**:`getTabContextMenuItems`(Pin 自动前置),
+  仅 content 面板(home/deck/settings/files/runtime/music/fallback);同组内源 tab
+  右侧打开 + rememberOpenPanel 保持久化。实测 files-1/files-2 并存,各自独立目录。
+- **Launcher 溢出修复**:卡片 680px 在矮视口被 grid 居中裁切 → `.fallback-panel`
+  改 flex + `overflow-y:auto` + 卡片 `margin:auto`;顺带修 `moreOptions.map(renderRow)`
+  ReferenceError(应为 rowFor)。
+
+### round-24:播放器补全(commit f5f3b7b)
+- **进度条/Seek**:`musicSeek(seconds)` + MusicSeekBar(range slider,拖拽本地值 +
+  pointerup 提交);根因修复——audio 事件补 `loadedmetadata/durationchange`
+  (paused 时 duration 才进得去状态)。
+- **播放列表拖拽排序**:`musicReorderQueue(from,to)`,播放指针钉住原曲;面板行
+  draggable + drag-over 高亮(真实鼠标拖拽可用,合成 DragEvent 不触发 React onDrop)。
+- **随机播放**:`musicSetShuffle(on)`,next/ended 随机挑非当前曲;面板 Shuffle 按钮。
+- **多命名歌单**:`music-playlists.js` localStorage 持久化(gearshell.music.playlists.v1),
+  save/load/rename/delete/list;面板 dropdown + Save/Rename/Delete。
+- **历史去重 + 播放次数**:recordHistory 按 src 合并置顶 count+1,面板 `×N` 徽标。
+- **500 行拆分**:music.js 581→321 + music-panel-parts.js(334)+ music-playlist-ui.js(228);
+  engine 481(歌单持久化拆 music-playlists.js)。
+
+### 环境备忘(round-24 更新)
+- 全部新 API 经 gctl `music.*` 暴露(jsfs 同步);面板/API 同一 engine 单例。
+- 可复用参考:`memory/music-player.md`(模块结构 + API 表 + vfs-picker 复用手册)。
