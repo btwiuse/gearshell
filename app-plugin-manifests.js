@@ -104,7 +104,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js?v=20260829.62",
+    entry: "/plugin/group/group-plugin.js?v=20260829.64",
   },
   {
     id: "runtime",
@@ -118,7 +118,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.110",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.112",
   },
   {
     id: "home",
@@ -135,28 +135,28 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.118",
+    entry: "/plugin/files/files-plugin.js?v=20260829.120",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.119",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.121",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.120",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.122",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.124",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.126",
   },
   {
     id: "launcher",
@@ -170,7 +170,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.125",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.127",
   },
   {
     id: "browser",
@@ -256,7 +256,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.27",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.29",
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
     preset: [
@@ -357,5 +357,46 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
         perm: "0666",
       },
     ],
+  },
+  // The GearShell plugin template: a reference implementation showing
+  // every extension point (panel + settings section + overlay + the
+  // permission-scoped API) from one entry module. It appears in the
+  // Plugins page but ships DISABLED — nothing imports or fetches until
+  // you enable it. Copy plugin/template/ as the starting point for your
+  // own plugin.
+  //
+  // Other manifest fields you can declare:
+  //   wasm:   [{ id, dst, src }]              binaries mounted into every
+  //                                           task namespace at dst
+  //   preset: [{ id, dst, content, perm }]    inline files on /preset
+  //   w9y:    { mod, version? }               a package the w9y CLI
+  //                                           installs (dual-mode deps)
+  //   iframe: { src, allow?, allowFullscreen? } a sandboxed app instead
+  //                                           of an entry module
+  //   required: true                          cannot be disabled/removed
+  {
+    id: "template",
+    name: "Plugin Template",
+    version: "1.0.0",
+    icon: "BookOpen",
+    entry: "/plugin/template/template-plugin.js?v=20260830.3",
+    // Disabled by default: the plugin shows up in the Plugins page for
+    // reference but is not loaded until the user enables it.
+    enabled: false,
+    permissions: {
+      api: [
+        "config.getShell",
+        "tasks.create",
+        "tasks.list",
+        "tasks.output",
+        "events.on",
+        "events.off",
+        "events.drain",
+        "w9y.list",
+        "w9y.status",
+        "terminal.embed",
+        "panels.open",
+      ],
+    },
   },
 ];

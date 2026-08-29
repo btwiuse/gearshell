@@ -267,7 +267,7 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.176")) {
+if (!has("app.js?v=20260828.178")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

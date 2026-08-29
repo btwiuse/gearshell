@@ -4,7 +4,7 @@
 import {
   SUPPORTED_SYSTEM_BIND_TYPES,
   SUPPORTED_UNION_MODES,
-} from "./app-constants.js?v=20260828.85";
+} from "./app-constants.js?v=20260828.87";
 import {
   normalizeBind,
   normalizeSystemBind,
@@ -12,11 +12,11 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize.js?v=20260828.127";
+} from "./app-normalize.js?v=20260828.129";
 import {
   loadActiveWorkspace,
   updateActiveWorkspace,
-} from "./app-workspace-store.js?v=20260826.126";
+} from "./app-workspace-store.js?v=20260826.128";
 
 export function addWorkspaceBind(bind) {
   const nextBind = normalizeBind(bind);
