@@ -4,8 +4,8 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.64";
-import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.24";
+} from "./app-workspace.js?v=20260826.66";
+import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.25";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
 // jsfs roots at globalThis; window.GearShell = api makes the methods

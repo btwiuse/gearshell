@@ -12,7 +12,11 @@
 //   module contract: `export function register(ctx)` or
 //                    `export const plugin = { register(ctx) }`; ctx is:
 //                      registerPanel({ component, label, icon, title, render })
+//                      registerSettingsSection({ id, label, render })
 //                      api — a permission-scoped view of window.GearShell
+//   Settings sections are DOM render functions `(root, ctx) => dispose`
+//   mounted by the Settings panel; plugins get their own preferences UI
+//   the same way the shell's built-in Plugins card does.
 //
 //   Iframe plugins are the entry-less form: `{ ..., iframe: { src,
 //   allow?, allowFullscreen? } }` registers a panel that hosts the src in
@@ -34,13 +38,13 @@
 // enforcement for untrusted pages (T2, iframe bridge) is a later slice.
 
 import { icons as LucideIcons } from "lucide-react";
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.64";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.66";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.24";
+} from "./app-constants.js?v=20260828.25";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 
 // Fired whenever a plugin finishes loading (ok or failed) or is
@@ -300,6 +304,61 @@ export function getPluginIframeConfig(component) {
   };
 }
 
+// --- Settings sections ---
+// Plugins may also contribute settings UI: `registerSettingsSection`
+// mirrors registerPanel for the Settings page, letting a plugin's own
+// preferences / management UI live inside the shell's settings. The
+// section render is a DOM function `(root, ctx) => disposeFn`; ctx.api
+// is the same permission-scoped view plugins already get for panels.
+// The built-in Plugins link card in Settings registers through this
+// same path (see settings-plugins.js), so third parties get a working
+// template to copy.
+
+const pluginSettingsSections = new Map(); // id -> { manifest, label, render, ctx }
+
+export function registerSettingsSection(
+  manifest,
+  { id, label, render },
+) {
+  if (typeof id !== "string" || !id) {
+    throw new Error("settings section requires an id");
+  }
+  if (typeof label !== "string" || !label) {
+    throw new Error(`settings section "${id}" requires a label`);
+  }
+  if (typeof render !== "function") {
+    throw new Error(`settings section "${id}" requires a render function`);
+  }
+  if (pluginSettingsSections.has(id)) {
+    throw new Error(`settings section "${id}" already registered`);
+  }
+  const entry = {
+    manifest,
+    label,
+    render,
+    ctx: {
+      manifest,
+      api: createScopedApi(
+        pluginsDep("workspaceApi"),
+        manifest?.permissions?.api,
+      ),
+    },
+  };
+  pluginSettingsSections.set(id, entry);
+  return entry;
+}
+
+// Ordered (insertion-ordered) list of registered settings sections for
+// the Settings panel to mount after its built-in template content.
+export function listSettingsSections() {
+  return [...pluginSettingsSections.entries()].map(([id, entry]) => ({
+    id,
+    label: entry.label,
+    render: entry.render,
+    ctx: entry.ctx,
+  }));
+}
+
 function registerPluginPanel(
   manifest,
   { component, label, icon, title, render },
@@ -364,6 +423,7 @@ async function loadComponentPlugin(manifest) {
   const ctx = {
     manifest,
     registerPanel: (opts) => registerPluginPanel(manifest, opts),
+    registerSettingsSection: (opts) => registerSettingsSection(manifest, opts),
     api: createScopedApi(
       pluginsDep("workspaceApi"),
       manifest.permissions?.api,
@@ -424,12 +484,16 @@ export function unregisterPlugin(id) {
   // Close open panels BEFORE dropping the registry entry: a re-render of
   // a still-open panel whose component just vanished would crash the
   // dockview grid.
-  const dropRegistration = (component, hasEntry) => {
+  const dropRegistration = (component, hasComponentEntry) => {
     for (const panel of dockview?.panels || []) {
       if (panel.params?.panelType === component) panel.api.close();
     }
-    if (!hasEntry) return;
-    delete pluginsDep("PANEL_COMPONENTS")[component];
+    // Iframe panels never touch the component map, but every panel type
+    // (component or iframe) must leave the creation options + launcher
+    // order when its plugin is removed.
+    if (hasComponentEntry) {
+      delete pluginsDep("PANEL_COMPONENTS")[component];
+    }
     const options = pluginsDep("PANEL_CREATION_OPTIONS");
     const index = options.findIndex((option) => option.component === component);
     if (index !== -1) options.splice(index, 1);
@@ -445,6 +509,10 @@ export function unregisterPlugin(id) {
     if (entry.manifest.id !== id) continue;
     dropRegistration(component, false);
     pluginIframes.delete(component);
+  }
+  for (const [sectionId, entry] of [...pluginSettingsSections]) {
+    if (entry.manifest?.id !== id) continue;
+    pluginSettingsSections.delete(sectionId);
   }
   pluginManifests.delete(id);
   pluginLoadResults.delete(id);

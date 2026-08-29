@@ -457,3 +457,22 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   startupPanels 里 iframe 插件(rickroll)启动即开(同步注册生效),组件插件
   (deck)启动兜底 Home(T1 异步固有,已接受);console 零报错。
 - 待办:Plugins 市场(T2 iframe 桥之后)、T2 桥、plugin 更新机制。
+
+## 十七、Settings 组件化 + Plugins 独立页面(round 30,commit `<本轮 commit>`)
+
+- **研究**:Settings 分区可插件化 —— 内核 `registerSettingsSection({id,label,
+  render})` + listSettingsSections()(SettingsPanel 挂载时追加 `<details>` 分区);
+  ctx.api 与面板插件同款权限裁剪。**dogfood**:Plugins 分区走该 API
+  (settings-plugins.js),第三方照抄。
+- **抽取**:Plugins 管理从 Settings 折叠块迁出为独立面板 plugins-panel.js
+  (launcher + panels.open 可达),Settings 留紧凑卡片(N installed · M enabled
+  + Open plugins page 按钮,scoped api 打开)。
+- **美化**(plugins.css):渐变 header、卡片网格、lucide 头像、动画 toggle、
+  彩色徽章、hover 浮起、错误横幅、空状态;**模态框** Add/Edit 表单支持
+  Module / Iframe app 双形态(entry+permissions 或 src+allow+allowFullscreen),
+  编辑态 id 锁定。
+- **修 round 29 bug**:unregister 对 iframe 面板漏清 PANEL_CREATION_OPTIONS /
+  DEFAULT_LAUNCHER_ITEM_ORDER(提前 return),卸载后 launcher 残留;已修。
+- 实测:7 卡渲染、toggle 禁用、模态框装 iframe 插件、Settings 卡片计数/开面板、
+  launcher 无残留、console 零报错。
+- 待办:Plugins 市场(T2 桥后)、T2 iframe 桥、plugin 更新机制。

@@ -5,7 +5,7 @@
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.2";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.13";
+import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.14";
 import { setupConfigForm } from "./settings-config.js?v=20260826.11";
 import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.4";
 import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.2";
@@ -13,8 +13,37 @@ import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.2";
 import { setupSystemForm } from "./settings-system.js?v=20260826.2";
 import { setupBindForm } from "./settings-binds.js?v=20260826.2";
 import { setupTaskForm } from "./settings-task.js?v=20260826.2";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.40";
-import { setupPluginsForm } from "./settings-plugins.js?v=20260829.37";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.42";
+import { listSettingsSections } from "./plugins.js?v=20260829.30";
+
+// Mount plugin-registered settings sections (ctx.registerSettingsSection)
+// after the built-in template content. Each section gets a <details>
+// shell matching the built-in sections; render(root, ctx) returns a
+// dispose function.
+function mountSettingsSections(settingsContent) {
+  const sections = listSettingsSections();
+  if (sections.length === 0) return null;
+  const disposes = [];
+  const details = document.createElement("details");
+  details.className = "settings-section";
+  details.open = true;
+  const summary = document.createElement("summary");
+  const label = document.createElement("span");
+  label.textContent = sections.map((section) => section.label).join(" · ");
+  summary.append(label);
+  const body = document.createElement("div");
+  body.className = "body";
+  details.append(summary, body);
+  settingsContent.append(details);
+  for (const section of sections) {
+    const dispose = section.render(body, section.ctx);
+    if (typeof dispose === "function") disposes.push(dispose);
+  }
+  return () => {
+    for (const dispose of disposes) dispose();
+  };
+}
+
 export function SettingsPanel({ containerApi }) {
   const wrapperRef = useRef(null);
 
@@ -35,7 +64,7 @@ export function SettingsPanel({ containerApi }) {
     const disposeBindForm = setupBindForm(settingsContent);
     const disposeTaskForm = setupTaskForm(settingsContent, containerApi);
     const disposeAgentActivity = setupAgentActivity(settingsContent);
-    const disposePluginsForm = setupPluginsForm(settingsContent);
+    const disposeSections = mountSettingsSections(settingsContent);
     return () => {
       disposeConfigForm?.();
       disposeTerminalProfileForm?.();
@@ -44,7 +73,7 @@ export function SettingsPanel({ containerApi }) {
       disposeSystemForm?.();
       disposeBindForm?.();
       disposeAgentActivity?.();
-      disposePluginsForm?.();
+      disposeSections?.();
       disposeTaskForm?.();
       if (wrapper.firstElementChild) wrapper.innerHTML = "";
     };

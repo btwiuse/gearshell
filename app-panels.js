@@ -4,30 +4,31 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.64";
+} from "./app-workspace.js?v=20260826.66";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.64";
+} from "./app-terminal-profiles.js?v=20260826.66";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.64";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.59";
+} from "./app-panels-store.js?v=20260826.66";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.61";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.52";
+} from "./panels.js?v=20260812.54";
 import {
   Activity,
   Cpu,
   FolderOpen,
   House,
   Monitor,
+  Puzzle,
   Rocket,
   Settings,
   SlidersHorizontal,
@@ -75,6 +76,7 @@ export const PANEL_CREATION_OPTIONS = [
   { component: "files", label: "Files", icon: FolderOpen },
   { component: "runtime", label: "Runtime", icon: Activity },
   { component: "playground", label: "Playground", icon: SlidersHorizontal },
+  { component: "plugins", label: "Plugins", icon: Puzzle },
   { component: "group", label: "Group", icon: UsersRound },
   { component: "crush-runner", label: "Crush Runner", icon: Rocket },
 ];
