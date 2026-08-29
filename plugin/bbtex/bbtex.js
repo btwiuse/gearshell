@@ -12,7 +12,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.109";
+import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.117";
 
 // Every example in the w9y bbtex@v2.0.12 manifest, grouped by theme. Each
 // id must match a `wasm` declaration in the plugin manifest (same dst

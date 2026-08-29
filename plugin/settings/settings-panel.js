@@ -13,8 +13,8 @@ import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.3";
 import { setupSystemForm } from "./settings-system.js?v=20260826.3";
 import { setupBindForm } from "./settings-binds.js?v=20260826.3";
 import { setupTaskForm } from "./settings-task.js?v=20260826.3";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.85";
-import { listSettingsSections } from "../../plugins.js?v=20260829.73";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.93";
+import { listSettingsSections } from "../../plugins.js?v=20260829.81";
 
 // Mount plugin-registered settings sections (ctx.registerSettingsSection)
 // after the built-in template content. Each section gets a <details>

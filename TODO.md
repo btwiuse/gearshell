@@ -630,3 +630,16 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 - 步骤 3(内核作为 plugin 条目):runtime 进 DEFAULT_PLUGINS 作为特殊"boot 插件"
   (必须最先解析),boot 顺序:页面 → 内核插件 → 其它插件;版本管理/更新流统一。
 - 边界:任务命名空间不能绕过内核(命名空间是内核侧的);"plugin 直读 OPFS"仅页面侧成立。
+
+### D. w9y 自持 registry(round 45,已实现 —— 用户设计裁定:registry 归 w9y,非 GearShell)
+
+- 用户裁定:GearShell 不该 bookkeep;registry 由 w9y CLI 自己写在 prefix 根
+  (`<prefix>/w9y-registry.json`)。**上游 w9y 已发布 v0.0.7**(registry.go +
+  mod apply 记账 + mod list-installed + mod remove);GearShell 只剩薄编排
+  (headless 任务跑 CLI + 镜像读取,app-w9y-registry.js)。
+- 已实测:apply/remove/自动同步/重启持久化/`/opfs/wanix/examples/spinner`
+  直接跑(懒投影零副本)。详见 memory/plugins.md round 45。
+- 遗留(未做):bbtex 面板接入已安装的 /opfs/wanix/examples(直接 cmd 路径,
+  取代 fetch bind/blob 缓存——app-plugin-cache.js 可整体退役);C 步骤 2
+  (bind opfs: src)可缓;w9y mod apply 的 manifest 变更后旧 entry 文件不清理
+  (stale file, registry 正确替换)。

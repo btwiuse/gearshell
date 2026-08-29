@@ -27,7 +27,7 @@
 // split.
 
 import { workspaceTaskSessions } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.68";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.76";
 import {
   drainEvents,
   emit,
@@ -38,20 +38,27 @@ import {
   seedEventBuffer,
   wirePanelEvents,
 } from "./workspace-events.js?v=20260828.4";
-import { openApi } from "./workspace-open-api.js?v=20260828.94";
-import { configApi } from "./workspace-config-api.js?v=20260828.94";
+import { openApi } from "./workspace-open-api.js?v=20260828.102";
+import { configApi } from "./workspace-config-api.js?v=20260828.102";
 import {
   runHeadlessTask,
   tasksApi,
-} from "./workspace-tasks-api.js?v=20260828.94";
+} from "./workspace-tasks-api.js?v=20260828.102";
 import { agentsApi } from "./workspace-agents-api.js?v=20260828.1";
 import { musicApi } from "./music-engine.js?v=20260829.11";
-import { terminalApi } from "./workspace-terminal-api.js?v=20260829.114";
+import { terminalApi } from "./workspace-terminal-api.js?v=20260829.122";
+import {
+  applyW9yMod,
+  installedModStatus,
+  listInstalledMods,
+  refreshW9yRegistry,
+  removeW9yMod,
+} from "./app-w9y-registry.js?v=20260830.8";
 import {
   gcWorkspaceTasks,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.94";
-import { ensureGearShellBinds, GEAR_BIND } from "./gear-bind.js?v=20260828.94";
+} from "./workspace-task-registry.js?v=20260828.102";
+import { ensureGearShellBinds, GEAR_BIND } from "./gear-bind.js?v=20260828.102";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
@@ -87,6 +94,33 @@ const api = {
   agents: wrapNamespace(agentsApi),
   music: wrapNamespace(musicApi),
   terminal: wrapNamespace(terminalApi),
+
+  // Global w9y package registry: which mods are installed and at which
+  // version (WANIX/w9y-registry.json, written by the w9y CLI itself).
+  // apply/remove orchestrate headless `w9y mod apply/remove` tasks and
+  // fire-and-forget from the sync jsfs surface; results arrive as
+  // w9y.changed events (events.drain). list/status read the in-memory
+  // mirror of the registry; refresh re-reads the file.
+  w9y: {
+    list: safe(() => ({ ok: true, packages: listInstalledMods() })),
+    status: safe((id) => ({ ok: true, ...installedModStatus(id) })),
+    refresh: safe(() => {
+      refreshW9yRegistry();
+      return { ok: true, note: "registry refresh started" };
+    }),
+    apply: safe((id, version) => {
+      applyW9yMod(id, version);
+      return {
+        ok: true,
+        id,
+        note: `w9y mod apply ${id}${version ? `@${version}` : "@latest"} started`,
+      };
+    }),
+    remove: safe((id) => {
+      removeW9yMod(id);
+      return { ok: true, id, note: `w9y mod remove ${id} started` };
+    }),
+  },
 
   events: {
     on: safe(on),
