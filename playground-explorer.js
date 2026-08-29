@@ -16,13 +16,13 @@ import {
   gctlInvocation,
   PLAYGROUND_CATALOG,
   serializeArgs,
-} from "./playground-api-catalog.js?v=20260829.14";
+} from "./playground-api-catalog.js?v=20260829.15";
 import {
   ArgField,
   HistoryList,
   MethodList,
   ResultView,
-} from "./playground-parts.js?v=20260829.13";
+} from "./playground-parts.js?v=20260829.14";
 
 // Resolve a dotted method name (config.providers.save) against a
 // namespace (config) inside the GearShell api object.

@@ -21,12 +21,14 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.58";
+} from "./app-workspace.js?v=20260826.63";
 import {
+  normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.59";
+} from "./app-normalize.js?v=20260828.64";
+import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.23";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
@@ -34,7 +36,12 @@ import {
   pushAuditEntry,
   redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.33";
+} from "./workspace-audit.js?v=20260829.38";
+import {
+  mergePluginStatus,
+  registerPlugin,
+  unregisterPlugin,
+} from "./plugins.js?v=20260829.27";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
@@ -159,6 +166,89 @@ function removeProvider(id, agentOrOptions = {}) {
   return { ok: true, removed: id };
 }
 
+// --- Plugin management (WISHLIST #9) ---
+// config.plugins mirrors config.providers: manifests live in the shell
+// config (audited writes), and every change is reflected into the plugin
+// kernel. The jsfs bridge is sync-only, so the kernel reload happens
+// fire-and-forget after the config write; list() merges the live load
+// status so callers can see the outcome.
+function reloadPluginKernel(manifest) {
+  unregisterPlugin(manifest.id);
+  registerPlugin(manifest).catch(() => {});
+}
+
+function listPlugins() {
+  return loadConfig().plugins.map(mergePluginStatus);
+}
+
+function installPlugin(manifest, agentOrOptions = {}) {
+  const normalized = normalizePlugin(manifest);
+  if (!normalized) {
+    throw new Error("plugin requires an id");
+  }
+  if (!normalized.entry) {
+    throw new Error("plugin requires an entry URL or vfs: path");
+  }
+  const prev = loadConfig();
+  const next = {
+    ...prev,
+    plugins: [
+      ...prev.plugins.filter((item) => item.id !== normalized.id),
+      normalized,
+    ],
+  };
+  saveConfig(next);
+  pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
+  reloadPluginKernel(normalized);
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  return {
+    ok: true,
+    id: normalized.id,
+    note: "plugin loads asynchronously; config.plugins.list shows status",
+  };
+}
+
+function setPluginEnabled(id, enabled, agentOrOptions = {}) {
+  const prev = loadConfig();
+  const exists = prev.plugins.find((item) => item.id === id);
+  if (!exists) throw new Error(`plugin "${id}" not found`);
+  const next = {
+    ...prev,
+    plugins: prev.plugins.map((item) =>
+      item.id === id ? { ...item, enabled: enabled === true } : item
+    ),
+  };
+  saveConfig(next);
+  pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
+  if (enabled === true) {
+    reloadPluginKernel(next.plugins.find((item) => item.id === id));
+  } else {
+    unregisterPlugin(id);
+  }
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  return { ok: true, id, enabled: enabled === true };
+}
+
+function removePlugin(id, agentOrOptions = {}) {
+  const builtin = (DEFAULT_PLUGINS || []).some((item) => item.id === id);
+  if (builtin) {
+    throw new Error(`"${id}" is a built-in plugin; disable it instead`);
+  }
+  const prev = loadConfig();
+  const next = {
+    ...prev,
+    plugins: prev.plugins.filter((item) => item.id !== id),
+  };
+  if (next.plugins.length === prev.plugins.length) {
+    throw new Error(`plugin "${id}" not found`);
+  }
+  saveConfig(next);
+  pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
+  unregisterPlugin(id);
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  return { ok: true, removed: id };
+}
+
 export const configApi = {
   getShell: () => redactSecrets(loadConfig()),
   updateShell: (patch, agentOrOptions = {}) => {
@@ -190,6 +280,12 @@ export const configApi = {
     list: listProviders,
     save: saveProvider,
     remove: removeProvider,
+  },
+  plugins: {
+    list: listPlugins,
+    install: installPlugin,
+    remove: removePlugin,
+    setEnabled: setPluginEnabled,
   },
   getWorkspace: () => redactSecrets(loadActiveWorkspace()),
   getBinds: () => loadActiveWorkspace().system.binds,

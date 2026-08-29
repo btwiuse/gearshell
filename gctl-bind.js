@@ -4,7 +4,7 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.58";
+} from "./app-workspace.js?v=20260826.63";
 import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.23";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
@@ -44,6 +44,7 @@ export const GCTL_BIND = {
     "  config.getBinds   config.addBind   config.updateBind   config.removeBind   config.setBinds",
     "  config.updateRuntime   config.reload",
     "  config.providers.list  config.providers.save  config.providers.remove",
+    "  config.plugins.list  config.plugins.install  config.plugins.remove  config.plugins.setEnabled",
     "  config.audit.list  config.audit.undo  config.audit.clear",
     "  panels.list  panels.open  panels.close  panels.focus",
     "  browser.open  files.open",

@@ -406,3 +406,35 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   last read),浏览器报 "app-normalize.js does not provide an export named
   normalizePlugin" 才抓到 —— ESM 检查不查缺导出;edit 失败必须重试确认。
 - 后续:Plugins 设置页(安装/启停/权限编辑)、T2 iframe 桥、市场(JSON 清单)。
+
+## 十五、轮次 28:Plugins 设置/管理页 + config.plugins API(2026-08-29,已提交)
+
+- commit:`<本轮 commit>`。Settings 新增「Plugins」分区(settings-plugins.js +
+  settings-template 区块 + settings.css 样式),配套 `config.plugins.*` API。
+- **API**(workspace-config-api.js,与 providers 同款:存 shell config、写路径
+  审计):`config.plugins.list / install / remove / setEnabled`。jsfs 同步桥 →
+  写 config 后 fire-and-forget 重载内核(`unregister + register`);
+  `list()` 合并内核实时状态(loaded / loadError / panels / builtin)。
+- **UI**:列表行(built-in/enabled/disabled/loaded/load-error 徽章、面板名、
+  错误信息)+ Enable/Disable/Edit/Remove 按钮;Add/Edit 表单(id/name/
+  version/icon/entry/permissions 每行一条);built-in 只能禁用不能删;
+  PLUGIN_CHANGED_EVENT + WORKSPACE_CHANGED_EVENT 双刷新。
+- **内核扩展**(plugins.js):`unregisterPlugin(id)`(关面板→删组件/launcher
+  条目/顺序,顺序关键:先关面板再删组件,否则 dockview 渲染已开面板撞缺失
+  组件 → 整个 grid 崩)、`mergePluginStatus`、PLUGIN_CHANGED_EVENT 事件。
+- gctl help + playground catalog 加 config.plugins.*。
+- **实测**(浏览器全生命周期):Settings UI 安装(VFS 插件)→ loaded → 打开面板
+  渲染 → Disable(面板关闭 + 注销,无崩溃)→ Enable(重载)→ Remove(卸载 +
+  审计条目);坏 entry → load-error 徽章显示错误;console 零报错。
+- ⚠️ 本轮踩坑(全部已修 + 记 memory):
+  1. queryElements 漏 addButton(edit 静默失败)—— 按钮永远找不到;
+  2. pluginActionButtons 解构名与 actions 返回键不符(onToggle vs
+     togglePlugin)—— 监听器绑到 undefined;
+  3. unregisterPlugin 先删组件后关面板 → dockview 崩(改先关后删);
+  4. **?v= 版本分裂三处**(app-panels-store@59/62、playground-parts@13/14、
+     workspace-config-api@43/47):cascade 单次只抬一级,落后的文件永远差一档;
+     plugins.js 的 getDockviewApi 拿到空实例 → 面板不关闭。写了个全库引用
+     审计脚本(统计每模块所有 ?v= 引用去重)手工对齐,并手工改 settings-plugins
+     的 plugins.js 引用。
+- 待办:Plugins 市场(JSON 清单 + 安装按钮)、T2 iframe 桥、plugin 更新机制
+  (同 id 重装 = 更新)。

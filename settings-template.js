@@ -211,6 +211,38 @@ export const SETTINGS_TEMPLATE_HTML =
               <div class="hint" data-task="status" role="status" aria-live="polite"></div>
             </div>
           </details>
+          <details class="plugin-form" open>
+            <summary><span>Plugins</span></summary>
+            <div class="body">
+              <p class="hint">Third-party tabs load as ES modules and register panels with the shell
+                (config.plugins). Entries are URLs (<code>https://…</code>), same-origin paths
+                (<code>/plugin.js</code>) or Wanix VFS files (<code>vfs:/opfs/plugins/x.js</code>).
+                Built-in plugins (Music) can only be disabled.</p>
+              <div class="plugin-list" data-plugin-list></div>
+              <div class="workspace-actions">
+                <button type="button" data-plugin-action="add">Add plugin</button>
+              </div>
+              <div class="plugin-fields" hidden>
+                <label for="plugin-id">Id</label>
+                <input id="plugin-id" data-plugin="id" type="text" spellcheck="false" placeholder="my-app">
+                <label for="plugin-name">Name</label>
+                <input id="plugin-name" data-plugin="name" type="text" placeholder="My App">
+                <label for="plugin-version">Version</label>
+                <input id="plugin-version" data-plugin="version" type="text" value="1.0.0" spellcheck="false">
+                <label for="plugin-icon">Icon</label>
+                <input id="plugin-icon" data-plugin="icon" type="text" value="Wrench" spellcheck="false" placeholder="Wrench">
+                <label for="plugin-entry">Entry URL / VFS path</label>
+                <input id="plugin-entry" data-plugin="entry" type="text" spellcheck="false" placeholder="https://cdn.example.com/my-app.js">
+                <label for="plugin-permissions">API permissions (one per line)</label>
+                <textarea id="plugin-permissions" data-plugin="permissions" spellcheck="false" placeholder="panels.*&#10;config.providers.list"></textarea>
+              </div>
+              <div class="workspace-actions">
+                <button type="button" data-plugin-action="install" hidden>Install / update plugin</button>
+                <button type="button" data-plugin-action="cancel" hidden>Cancel edit</button>
+              </div>
+              <div class="hint" data-plugin="status" role="status" aria-live="polite"></div>
+            </div>
+          </details>
           <div class="config-form">
             <details open>
               <summary><span>Behavior</span></summary>

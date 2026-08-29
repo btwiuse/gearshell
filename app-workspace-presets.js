@@ -17,7 +17,7 @@ import {
   normalizeShellConfig,
   normalizeSystemConfig,
   normalizeTask,
-} from "./app-normalize.js?v=20260828.59";
+} from "./app-normalize.js?v=20260828.64";
 import {
   createWorkspaceId,
   readStoredJson,
@@ -27,7 +27,7 @@ import {
 import {
   normalizeWorkspaceName,
   notifyWorkspaceChange,
-} from "./app-workspace.js?v=20260826.58";
+} from "./app-workspace.js?v=20260826.63";
 
 export function loadWorkspacePresetIndex() {
   const index = readStoredJson(WORKSPACE_PRESET_INDEX_KEY, []);

@@ -5,7 +5,7 @@
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.2";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.11";
+import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.13";
 import { setupConfigForm } from "./settings-config.js?v=20260826.11";
 import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.4";
 import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.2";
@@ -13,7 +13,8 @@ import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.2";
 import { setupSystemForm } from "./settings-system.js?v=20260826.2";
 import { setupBindForm } from "./settings-binds.js?v=20260826.2";
 import { setupTaskForm } from "./settings-task.js?v=20260826.2";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.34";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.39";
+import { setupPluginsForm } from "./settings-plugins.js?v=20260829.36";
 export function SettingsPanel({ containerApi }) {
   const wrapperRef = useRef(null);
 
@@ -34,6 +35,7 @@ export function SettingsPanel({ containerApi }) {
     const disposeBindForm = setupBindForm(settingsContent);
     const disposeTaskForm = setupTaskForm(settingsContent, containerApi);
     const disposeAgentActivity = setupAgentActivity(settingsContent);
+    const disposePluginsForm = setupPluginsForm(settingsContent);
     return () => {
       disposeConfigForm?.();
       disposeTerminalProfileForm?.();
@@ -42,6 +44,7 @@ export function SettingsPanel({ containerApi }) {
       disposeSystemForm?.();
       disposeBindForm?.();
       disposeAgentActivity?.();
+      disposePluginsForm?.();
       disposeTaskForm?.();
       if (wrapper.firstElementChild) wrapper.innerHTML = "";
     };

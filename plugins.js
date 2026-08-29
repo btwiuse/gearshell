@@ -26,8 +26,24 @@
 // enforcement for untrusted pages (T2, iframe bridge) is a later slice.
 
 import { icons as LucideIcons } from "lucide-react";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.63";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
-import { DEFAULT_LAUNCHER_ITEM_ORDER } from "./app-constants.js?v=20260828.23";
+import {
+  DEFAULT_LAUNCHER_ITEM_ORDER,
+  DEFAULT_PLUGINS,
+} from "./app-constants.js?v=20260828.23";
+import { pushEvent } from "./workspace-events.js?v=20260828.4";
+
+// Fired whenever a plugin finishes loading (ok or failed) or is
+// unregistered; the Settings plugins section re-renders on it.
+export const PLUGIN_CHANGED_EVENT = "GearShellPluginsChanged";
+
+function emitPluginChanged(payload) {
+  window.dispatchEvent(
+    new CustomEvent(PLUGIN_CHANGED_EVENT, { detail: payload || {} }),
+  );
+  pushEvent("plugins.changed", payload || {});
+}
 
 let __pluginsDeps = null;
 export function initPlugins(dependencies) {
@@ -235,6 +251,7 @@ export async function registerPlugin(rawManifest) {
     };
     await register(ctx);
     pluginLoadResults.set(manifest.id, { ok: true, at: Date.now() });
+    emitPluginChanged({ id: manifest.id, ok: true });
     return { ok: true, id: manifest.id };
   } catch (error) {
     pluginManifests.delete(manifest.id);
@@ -242,6 +259,11 @@ export async function registerPlugin(rawManifest) {
       ok: false,
       error: error?.message || String(error),
       at: Date.now(),
+    });
+    emitPluginChanged({
+      id: manifest.id,
+      ok: false,
+      error: error?.message || String(error),
     });
     return {
       ok: false,
@@ -261,6 +283,54 @@ export async function registerPluginsFromConfig() {
     results.push(await registerPlugin(manifest));
   }
   return results;
+}
+
+// Tear down a loaded plugin: drop every panel component it registered
+// (component map, launcher entry, launcher order), close any open panels
+// of those types, and forget the manifest + load result.
+export function unregisterPlugin(id) {
+  const manifest = pluginManifests.get(id);
+  if (!manifest) {
+    return { ok: false, error: `plugin "${id}" is not loaded` };
+  }
+  const dockview = getDockviewApi();
+  for (const [component, entry] of [...pluginPanels]) {
+    if (entry.manifest.id !== id) continue;
+    // Close open panels BEFORE dropping the component map entry: a
+    // re-render of a still-open panel whose component just vanished
+    // would crash the dockview grid.
+    for (const panel of dockview?.panels || []) {
+      if (panel.params?.panelType === component) panel.api.close();
+    }
+    pluginPanels.delete(component);
+    delete pluginsDep("PANEL_COMPONENTS")[component];
+    const options = pluginsDep("PANEL_CREATION_OPTIONS");
+    const index = options.findIndex((option) => option.component === component);
+    if (index !== -1) options.splice(index, 1);
+    const orderIndex = DEFAULT_LAUNCHER_ITEM_ORDER.indexOf(component);
+    if (orderIndex !== -1) DEFAULT_LAUNCHER_ITEM_ORDER.splice(orderIndex, 1);
+  }
+  pluginManifests.delete(id);
+  pluginLoadResults.delete(id);
+  emitPluginChanged({ id, ok: true, unregistered: true });
+  return { ok: true, id };
+}
+
+// Merge the kernel's live load status onto a config manifest (the
+// config.plugins.list view). Missing status = not loaded (disabled or
+// failed before the kernel tracked it).
+export function mergePluginStatus(manifest) {
+  const result = pluginLoadResults.get(manifest.id);
+  return {
+    ...manifest,
+    builtin: (DEFAULT_PLUGINS || []).some((item) => item.id === manifest.id),
+    loaded: pluginManifests.has(manifest.id),
+    loadError: result && !result.ok ? result.error : null,
+    loadAt: result?.at ?? null,
+    panels: [...pluginPanels.entries()]
+      .filter(([, entry]) => entry.manifest.id === manifest.id)
+      .map(([component]) => component),
+  };
 }
 
 // --- Panel opener (routed from addPanelByComponent + panels.open) ---
