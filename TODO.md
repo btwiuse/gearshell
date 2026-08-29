@@ -283,12 +283,16 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
    - 锚点:settings-panel.js 分区模式、workspace-config-api.js(getSystem 等)、
      gctl-bind.js help 扩展。⚠️ apiKey 属敏感字段,审计环(workspace-audit)要脱敏。
 
-2. **Home 页面改用调用 gctl 的方式实现(并把 gctl 重命名为 gear)**
-   - 内容:①`gctl` 二进制/帮助/文档改名 `gear`(bind 名 bin/gctl、
-     GCTL_BIND help、memory/gctl-*.md 文档同步);②Home 内容不再纯静态 React,
-     改由 shell 内 agent(gear)驱动渲染——即"页面 = agent 的产物"。
-   - 锚点:ensureGearShellBinds(app-constants)、home.js/home-sections.js/home-data.js、
-     agentic-workspace 通道(jsfs /js/GearShell + fd>2 协议)。
+2. **Home 直接用 GearShell API 实现面板操作(简化版,取代"gctl 驱动 Home")**
+   - 结论(2026-08-29 用户拍板):不必让 Home 走 bash 里的 gctl——`window.GearShell`
+     就是 gctl 的 JS 本体(workspace-api.js:112),Home 的按钮(open Terminal /
+     Browse apps)改调 `window.GearShell.panels.open(component, {direction?})` 即可,
+     与 agent 通道同一 API、白拿分屏参数 + workspace-audit 审计。
+   - 现状:home.js openPanel 走 DI 注入的 addPanelByComponent(panels.js PANEL_ADDERS),
+     等价但不在审计内、无 direction 参数。
+   - 顺带:`gctl`→`gear` 重命名(bind/help/文档)与 #2 解耦,单独成项或砍掉。
+   - 锚点:workspace-open-api.js(panels.open)、home-sections.js 三处 openPanel 调用、
+     home.js:49 openPanel。
 
 3. **iframe 本地网页支持**
    - 内容:browser.open 现在只收 http(s)://(非 http(s) 返回 error),本地页面=
