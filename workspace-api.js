@@ -27,7 +27,7 @@
 // split.
 
 import { workspaceTaskSessions } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.83";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.84";
 import {
   drainEvents,
   emit,
@@ -38,27 +38,27 @@ import {
   seedEventBuffer,
   wirePanelEvents,
 } from "./workspace-events.js?v=20260828.4";
-import { openApi } from "./workspace-open-api.js?v=20260828.109";
-import { configApi } from "./workspace-config-api.js?v=20260828.109";
+import { openApi } from "./workspace-open-api.js?v=20260828.110";
+import { configApi } from "./workspace-config-api.js?v=20260828.110";
 import {
   runHeadlessTask,
   tasksApi,
-} from "./workspace-tasks-api.js?v=20260828.109";
+} from "./workspace-tasks-api.js?v=20260828.110";
 import { agentsApi } from "./workspace-agents-api.js?v=20260828.1";
 import { musicApi } from "./music-engine.js?v=20260829.11";
-import { terminalApi } from "./workspace-terminal-api.js?v=20260829.129";
+import { terminalApi } from "./workspace-terminal-api.js?v=20260829.130";
 import {
   applyW9yMod,
   installedModStatus,
   listInstalledMods,
   refreshW9yRegistry,
   removeW9yMod,
-} from "./app-w9y-registry.js?v=20260830.15";
+} from "./app-w9y-registry.js?v=20260830.16";
 import {
   gcWorkspaceTasks,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.109";
-import { ensureGearShellBinds, GEAR_BIND } from "./gear-bind.js?v=20260828.109";
+} from "./workspace-task-registry.js?v=20260828.110";
+import { ensureGearShellBinds, GEAR_BIND } from "./gear-bind.js?v=20260828.110";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
