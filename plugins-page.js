@@ -3,7 +3,7 @@
 // A full-page UI (opened from the launcher, the Settings Plugins card,
 // or panels.open("plugins")) for installing, editing, enabling and
 // removing plugins. Every write goes through configApi.plugins.* — the
-// same audited surface gctl and the Settings section use — and the grid
+// same audited surface gear and the Settings section use — and the grid
 // re-renders on PLUGIN_CHANGED_EVENT (async kernel loads) and
 // WORKSPACE_CHANGED_EVENT (config edits elsewhere).
 //
@@ -20,9 +20,9 @@ import {
   PackageOpen,
   Plus,
 } from "lucide-react";
-import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.40";
-import { configApi } from "./workspace-config-api.js?v=20260828.61";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.35";
+import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.43";
+import { configApi } from "./workspace-config-api.js?v=20260828.64";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.38";
 import { PluginCard } from "./plugins-cards.js?v=20260829.2";
 import { PluginModal } from "./plugins-modal.js?v=20260829.2";
 

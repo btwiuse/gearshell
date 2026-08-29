@@ -1,8 +1,8 @@
 // playground-explorer.js — the Explorer tab of the GearShell API
 // Playground: a searchable method catalog on the left, a generated
-// argument form + Run / copy-gctl / JSON result on the right, and a
+// argument form + Run / copy-gear / JSON result on the right, and a
 // per-method request log. All calls go through window.GearShell — the
-// same synchronous bridge the gctl CLI wraps — so what you exercise
+// same synchronous bridge the gear CLI wraps — so what you exercise
 // here is exactly what an agent can call.
 //
 // The method catalog (playground-api-catalog.js) is pure data; this
@@ -13,10 +13,10 @@ import React, { useState } from "react";
 import {
   buildMethodArgs,
   findCatalogMethod,
-  gctlInvocation,
+  gearInvocation,
   PLAYGROUND_CATALOG,
   serializeArgs,
-} from "./playground-api-catalog.js?v=20260829.15";
+} from "./playground-api-catalog.js?v=20260829.16";
 import {
   ArgField,
   HistoryList,
@@ -71,9 +71,9 @@ function parseRunArgs(method, values) {
   }
 }
 
-// The gctl CLI line equivalent of the current form values.
-function gctlLineFor(group, method, values) {
-  return gctlInvocation(group, method, serializeArgs(method, values));
+// The gear CLI line equivalent of the current form values.
+function gearLineFor(group, method, values) {
+  return gearInvocation(group, method, serializeArgs(method, values));
 }
 
 // Run a method against window.GearShell and push the outcome into the
@@ -121,7 +121,7 @@ function pushRunResult({
 function copyGctlLine({ group, method, selectedId, values, setNotice }) {
   if (!method) return;
   try {
-    const line = gctlLineFor(group, method, values[selectedId]);
+    const line = gearLineFor(group, method, values[selectedId]);
     navigator.clipboard?.writeText(line);
     setNotice(`Copied: ${line}`);
   } catch (error) {
@@ -284,7 +284,7 @@ function DetailActions({ onRun, onCopy }) {
     React.createElement(
       "button",
       { type: "button", className: "playground-copy", onClick: onCopy },
-      "Copy gctl line",
+      "Copy gear line",
     ),
   );
 }

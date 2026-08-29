@@ -53,7 +53,7 @@ export const SETTINGS_TEMPLATE_HTML =
           <details class="agent-activity">
             <summary><span>Agent activity</span></summary>
             <div class="body">
-              <p class="hint">Changes made through the workspace API (gctl config.updateShell) are recorded here and can be undone.</p>
+              <p class="hint">Changes made through the workspace API (gear config.updateShell) are recorded here and can be undone.</p>
               <div class="agent-activity-list" data-agent-activity-list></div>
               <div class="workspace-actions">
                 <button type="button" data-agent-activity-action="clear">Clear history</button>

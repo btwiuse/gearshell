@@ -1,5 +1,5 @@
 // Music panel: a small NetEase-style player over the music-engine
-// singleton (shared with the gctl music.* API).
+// singleton (shared with the gear music.* API).
 //
 // The panel covers the everyday player flows: pick audio files from the
 // Wanix FS through the reusable VfsFilePicker, build a playlist (queue)
@@ -34,8 +34,8 @@ import {
   musicSetLoop,
   musicSetShuffle,
   musicStop,
-} from "./music-engine.js?v=20260829.10";
-import { isAudioFilePath, VfsFilePicker } from "./vfs-picker.js?v=20260829.8";
+} from "./music-engine.js?v=20260829.11";
+import { isAudioFilePath, VfsFilePicker } from "./vfs-picker.js?v=20260829.9";
 import {
   MusicSeekBar,
   renderControls,

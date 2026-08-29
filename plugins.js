@@ -1,80 +1,49 @@
 // plugins.js — the runtime plugin kernel (WISHLIST #9, slice 1).
 //
 // Third-party tabs arrive as ES modules and register panels with the
-// shell at runtime:
+// shell at runtime: config.plugins: [{ id, name, version, icon, entry,
+// permissions }]. `entry` is a same/cross-origin URL or a vfs:/ path;
+// the module exports `register(ctx)` or `plugin.register(ctx)` with ctx:
+//   registerPanel({ component, label, icon, title, render, open? })
+//   registerSettingsSection({ id, label, render })
+//   registerOverlay({ id, render })
+//   api — a permission-scoped view of window.GearShell
+// Iframe plugins are the entry-less form ({ iframe: { src, ... } }),
+// registered synchronously so the boot/restore path can open them
+// before any module import resolves. Registration mutates the live
+// PANEL_COMPONENTS / PANEL_CREATION_OPTIONS maps and appends unknown
+// components to DEFAULT_LAUNCHER_ITEM_ORDER; panels.open and the
+// launcher route plugin panels through openPluginPanel. The scoped api
+// is a capability guardrail (T1, install = full trust); enforcement
+// for untrusted pages (T2 iframe bridge) is a later slice.
 //
-//   config.plugins: [{ id, name, version, icon, entry, permissions }]
-//
-//   entry:  "https://host/plugin.js"  cross-origin URL (needs CORS)
-//           "/plugin.js"              same-origin URL
-//           "vfs:/opfs/plugins/x.js"  Wanix VFS file (readFile -> blob)
-//
-//   module contract: `export function register(ctx)` or
-//                    `export const plugin = { register(ctx) }`; ctx is:
-//                      registerPanel({ component, label, icon, title, render })
-//                      registerSettingsSection({ id, label, render })
-//                      registerOverlay({ id, render })
-//                      api — a permission-scoped view of window.GearShell
-//   Settings sections are DOM render functions `(root, ctx) => dispose`
-//   mounted by the Settings panel; overlays are null-rendering React
-//   components mounted beside the dockview grid (ambient shell chrome).
-//
-//   Iframe plugins are the entry-less form: `{ ..., iframe: { src,
-//   allow?, allowFullscreen? } }` registers a panel that hosts the src in
-//   a sandboxed iframe. Registration is synchronous (no module import),
-//   so iframe plugins are available to the boot/restore path immediately
-//   (registerSyncPlugins runs before dockview onReady). The shell's own
-//   Browser / Bonsai / Codigo / Crush / Rick Roll tabs are built-ins of
-//   this kind — the same manifests any third party would write.
-//
-// Registration mutates the live PANEL_COMPONENTS / PANEL_CREATION_OPTIONS
-// maps (dockview resolves components by name at addPanel time, so new
-// panel types are visible immediately) and appends unknown components to
-// DEFAULT_LAUNCHER_ITEM_ORDER so launcher normalization keeps them.
-// `panels.open("<component>")` and the launcher route plugin panels
-// through openPluginPanel.
-//
-// The scoped api is a capability guardrail (T1): an in-page plugin
-// shares the shell's JS context, so install is full trust. Real
-// enforcement for untrusted pages (T2, iframe bridge) is a later slice.
 
-import { icons as LucideIcons } from "lucide-react";
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.76";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.79";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.35";
-import { pushEvent } from "./workspace-events.js?v=20260828.4";
+} from "./app-constants.js?v=20260828.38";
+// Split parts (500-line rule): DI shim + change event, permission
+// scoping + icon resolution, and entry-module loading.
+import {
+  emitPluginChanged,
+  initPlugins,
+  PLUGIN_CHANGED_EVENT,
+  pluginsDep,
+} from "./plugins-deps.js?v=20260829.97";
+import {
+  createScopedApi,
+  resolveIcon,
+} from "./plugins-scope.js?v=20260829.98";
+import {
+  loadEntryModule,
+  registerFnOf,
+} from "./plugins-loading.js?v=20260829.99";
 
-// Fired whenever a plugin finishes loading (ok or failed) or is
-// unregistered; the Settings plugins section re-renders on it.
-export const PLUGIN_CHANGED_EVENT = "GearShellPluginsChanged";
-
-function emitPluginChanged(payload) {
-  window.dispatchEvent(
-    new CustomEvent(PLUGIN_CHANGED_EVENT, { detail: payload || {} }),
-  );
-  pushEvent("plugins.changed", payload || {});
-}
-
-let __pluginsDeps = null;
-export function initPlugins(dependencies) {
-  __pluginsDeps = dependencies;
-}
-function pluginsDep(name) {
-  if (__pluginsDeps == null) {
-    throw new Error(
-      "plugins: initPlugins() has not been called; ensure app.js wires it in.",
-    );
-  }
-  const value = __pluginsDeps[name];
-  if (value === undefined) {
-    throw new Error(`plugins: missing dependency ${name}`);
-  }
-  return value;
-}
+// Re-export the kernel surface importers keep reading from plugins.js.
+export { initPlugins, PLUGIN_CHANGED_EVENT };
 
 // --- Registry state ---
 const pluginManifests = new Map(); // id -> normalized manifest
@@ -108,103 +77,7 @@ export function listPluginPanels() {
   ];
 }
 
-// --- Permissions (T1 capability guardrail) ---
-function permitsPath(allow, path) {
-  return allow.some((pattern) => {
-    if (pattern === "*" || pattern === path) return true;
-    if (pattern.endsWith(".*") && path.startsWith(pattern.slice(0, -1))) {
-      return true;
-    }
-    return false;
-  });
-}
 
-function denied(path) {
-  return { ok: false, error: `permission denied: ${path}` };
-}
-
-// A Proxy over the workspace api that resolves dotted paths
-// (config.providers.save) and refuses anything not in the allow list
-// with a safe-style {ok:false} result.
-export function createScopedApi(api, allow = []) {
-  const rules = Array.isArray(allow) ? allow.map(String).filter(Boolean) : [];
-  const scoped = (target, prefix) =>
-    new Proxy(target, {
-      get(obj, key) {
-        if (key === "then") return undefined; // keep Proxies thenable-safe
-        const value = obj[key];
-        if (typeof value === "function") {
-          const path = prefix + key;
-          return (
-            ...args
-          ) => (permitsPath(rules, path) ? value(...args) : denied(path));
-        }
-        if (value && typeof value === "object") {
-          return scoped(value, prefix + key + ".");
-        }
-        return value;
-      },
-    });
-  return scoped(api, "");
-}
-
-// --- Icon resolution (shell-side lucide catalog, plugins never bundle icons) ---
-function resolveIcon(name) {
-  const icon = LucideIcons[name];
-  return typeof icon === "function" ? icon : LucideIcons.Wrench;
-}
-
-// --- Loading ---
-function entryUrl(entry) {
-  if (/^https?:\/\//i.test(entry)) return entry;
-  if (entry.startsWith("/")) return entry;
-  return null;
-}
-
-function vfsPath(entry) {
-  if (entry.startsWith("vfs:")) return entry.slice(4);
-  return null;
-}
-
-// Load the plugin entry module. URL entries import directly (relative
-// sub-imports resolve against the URL; bare specifiers use the page
-// importmap, so plugins share the shell's React instance). VFS entries
-// become blob URLs: single-file only, no relative sub-imports.
-async function loadEntryModule(manifest) {
-  const url = entryUrl(manifest.entry, manifest.version);
-  if (url) {
-    const target = url.includes("?") ? url : `${url}?v=${manifest.version}`;
-    return import(target);
-  }
-  const path = vfsPath(manifest.entry);
-  if (path) {
-    const root = pluginsDep("getWanixRoot")();
-    if (!root) {
-      throw new Error("wanix is not ready; cannot read plugin entry");
-    }
-    const data = await root.readFile(path);
-    const blobUrl = URL.createObjectURL(
-      new Blob([data], { type: "text/javascript" }),
-    );
-    try {
-      return await import(blobUrl);
-    } finally {
-      URL.revokeObjectURL(blobUrl);
-    }
-  }
-  throw new Error(
-    "entry must be an http(s) URL, a /same-origin path, or a vfs:/... path",
-  );
-}
-
-function registerFnOf(mod) {
-  if (typeof mod?.register === "function") return mod.register;
-  if (typeof mod?.plugin?.register === "function") return mod.plugin.register;
-  if (typeof mod?.default?.register === "function") {
-    return mod.default.register;
-  }
-  return null;
-}
 
 // --- Panel registration ---
 function ensureLauncherKnown(component) {

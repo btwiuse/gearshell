@@ -5,7 +5,7 @@ const files = [
   "workspace-open-api.js",
   "workspace-tasks-api.js",
   "workspace-config-api.js",
-  "gctl-bind.js",
+  "gear-bind.js",
   "workspace-task-registry.js",
   "workspace-agents-api.js",
   "files-editor-pane.js",

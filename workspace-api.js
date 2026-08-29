@@ -10,10 +10,10 @@
 //   read -r out <&3           # returns the JSON result line
 //
 // This requires hush >= v0.5.9 (sh v3.14.4: fd>2 + `<>` redirections, script
-// args) and the wanix kernel >= v0.4.14 (shebang exec, so `gctl` itself can
+// args) and the wanix kernel >= v0.4.14 (shebang exec, so `gear` itself can
 // run via #!/bin/bash). See ../sh interp/runner.go redirFd and
-// ../wanix task.go resolveShebang. The `gctl` bind (GCTL_BIND) wraps that
-// protocol into `gctl <method> '<json-args-array>'`.
+// ../wanix task.go resolveShebang. The `gear` bind (GEAR_BIND) wraps that
+// protocol into `gear <method> '<json-args-array>'`.
 //
 // Only SYNCHRONOUS methods are bridged: jsfs serializes the return value
 // with JSON.stringify and never awaits promises (../wanix
@@ -22,12 +22,12 @@
 // write the shared VFS natively with cat/echo instead.
 //
 // This entry module only assembles the API from the per-domain parts
-// (events / open / config / tasks / agents / registry / gctl bind) and
+// (events / open / config / tasks / agents / registry / gear bind) and
 // re-exports the boot hooks; the 500-line rule is enforced across the
 // split.
 
 import { workspaceTaskSessions } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.35";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.38";
 import {
   drainEvents,
   emit,
@@ -38,20 +38,20 @@ import {
   seedEventBuffer,
   wirePanelEvents,
 } from "./workspace-events.js?v=20260828.4";
-import { openApi } from "./workspace-open-api.js?v=20260828.61";
-import { configApi } from "./workspace-config-api.js?v=20260828.61";
+import { openApi } from "./workspace-open-api.js?v=20260828.64";
+import { configApi } from "./workspace-config-api.js?v=20260828.64";
 import {
   runHeadlessTask,
   tasksApi,
-} from "./workspace-tasks-api.js?v=20260828.61";
+} from "./workspace-tasks-api.js?v=20260828.64";
 import { agentsApi } from "./workspace-agents-api.js?v=20260828.1";
-import { musicApi } from "./music-engine.js?v=20260829.10";
-import { terminalApi } from "./workspace-terminal-api.js?v=20260829.81";
+import { musicApi } from "./music-engine.js?v=20260829.11";
+import { terminalApi } from "./workspace-terminal-api.js?v=20260829.84";
 import {
   gcWorkspaceTasks,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.61";
-import { ensureGearShellBinds, GCTL_BIND } from "./gctl-bind.js?v=20260828.61";
+} from "./workspace-task-registry.js?v=20260828.64";
+import { ensureGearShellBinds, GEAR_BIND } from "./gear-bind.js?v=20260828.64";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
@@ -116,7 +116,7 @@ export function initWorkspaceApi() {
     // non-browser environment
   }
   // Permanent task-status listener: mirrors every status into the event
-  // ring buffer (agents poll it via events.drain / gctl events.drain) and
+  // ring buffer (agents poll it via events.drain / gear events.drain) and
   // writes terminal statuses into the agent-task registry so the boot-time
   // GC can prune persisted one-shots. The per-call runHeadlessTask
   // listener below is separate and short-lived.
@@ -135,13 +135,13 @@ export function initWorkspaceApi() {
 // etc.) so they don't have to read window.GearShell at call time. The
 // reference is the same object that gets published to the kernel via
 // window.GearShell = api, so calls here are identical to calls from
-// an agent via gctl.
+// an agent via gear.
 export const workspaceApi = api;
 
 export {
   api,
   ensureGearShellBinds,
-  GCTL_BIND,
+  GEAR_BIND,
   gcWorkspaceTasks,
   runHeadlessTask,
   wirePanelEvents,

@@ -34,7 +34,7 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.75";
+} from "./files-panel-hooks.js?v=20260826.78";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
@@ -46,10 +46,10 @@ import {
   filesystemPathParent,
   normalizeFilesystemPath,
 } from "./files-path.js?v=20260826.70";
-import { filesDep } from "./files-registry.js?v=20260826.41";
+import { filesDep } from "./files-registry.js?v=20260826.44";
 
 // === External open bridge ===
-// `GearShell.files.open(path)` (gctl open) lands here: while the panel is
+// `GearShell.files.open(path)` (gear open) lands here: while the panel is
 // mounted, the handler routes straight to the open flow; a request that
 // arrives before mount is queued and drained by the panel's first effect.
 let filesOpenHandler = null;
@@ -199,7 +199,7 @@ function useFilesPanelActionsWire(panel, fileInputRef) {
   });
 }
 
-// Drain the external-open bridge (gctl open). No dep array: re-runs each
+// Drain the external-open bridge (gear open). No dep array: re-runs each
 // render so the closure always sees the freshest panel actions, and the
 // cleanup unregisters the handler when the panel unmounts.
 function useFilesOpenBridge(panel) {

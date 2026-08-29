@@ -46,7 +46,7 @@ function homeDep(name) {
 }
 
 export function LandingPanel({ containerApi }) {
-  // Route panel opens through the GearShell API — the same surface gctl
+  // Route panel opens through the GearShell API — the same surface gear
   // agents call — so Home shares the agent channel (split-pane options,
   // audit events) instead of reaching into the panel adder directly.
   // Falls back to the direct adder if the API is not up yet.

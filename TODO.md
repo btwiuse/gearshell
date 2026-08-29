@@ -4,19 +4,19 @@
 
 ## 一、总体状态：Plan A 已走通 ✅
 
-**愿景**：沙盒内 agent（Crush/bash）通过 `gctl` CLI 操控 GearShell 面板（建任务、读写配置、开面板、读输出）。
+**愿景**：沙盒内 agent（Crush/bash）通过 `gear` CLI 操控 GearShell 面板（建任务、读写配置、开面板、读输出）。
 
-**通道（Route A）**：wanix 内核 jsfs `/js` 投影（`globalThis` 即文件系统）+ gctl bash 脚本走 fd>2 协议：
-- agent → `/bin/gctl <method> '<json-args>'` → `exec 3<>/js/GearShell/<method>:json` → 写 JSON 行 → 内核 `reflectApply` 调 `window.GearShell.<method>` → 读回 JSON。
-- **jsfs 关键协议**：后缀是 **`:json`（冒号）**；`:json` 模式把 JSON 数组**展开成位置参数**（`fn(...args)`），所以 `gctl tasks.create '[{...}]'` 到 JS 侧是**单个对象**；jsfs 不 await Promise → API **必须同步**。
+**通道（Route A）**：wanix 内核 jsfs `/js` 投影（`globalThis` 即文件系统）+ gear bash 脚本走 fd>2 协议：
+- agent → `/bin/gear <method> '<json-args>'` → `exec 3<>/js/GearShell/<method>:json` → 写 JSON 行 → 内核 `reflectApply` 调 `window.GearShell.<method>` → 读回 JSON。
+- **jsfs 关键协议**：后缀是 **`:json`（冒号）**；`:json` 模式把 JSON 数组**展开成位置参数**（`fn(...args)`），所以 `gear tasks.create '[{...}]'` 到 JS 侧是**单个对象**；jsfs 不 await Promise → API **必须同步**。
 - 要求：hush ≥ v0.5.9（fd>2 重定向 + 脚本参数）、wanix ≥ v0.4.16（shebang + `:json` OpenFile + bytesArg）。
 
 **真机验证过的能力**（CDP 驱动真实 Chrome @ localhost:8000）：
-- `gctl ping` → `"pong"`
-- `gctl panels.list` → 真实组件名（`params.panelType`，非 dockview component 引用）
-- `gctl tasks.create '[{"name":"x","cmd":"bash"}]'` → 终端面板出 `➜ / $` 提示符、可输入
+- `gear ping` → `"pong"`
+- `gear panels.list` → 真实组件名（`params.panelType`，非 dockview component 引用）
+- `gear tasks.create '[{"name":"x","cmd":"bash"}]'` → 终端面板出 `➜ / $` 提示符、可输入
 - headless（`term:false`）→ 面板显示 `$ cmd` / `workdir` / `env (N)` 折叠
-- **`gctl tasks.output <id>`** → `{ok, taskId, path, output}` 读回 headless 输出
+- **`gear tasks.output <id>`** → `{ok, taskId, path, output}` 读回 headless 输出
 - `./gm` shebang 脚本可执行；`config.getShell` 正常
 - `wd` 生效（`task/<alias>/dir` + 提示符 `➜ ~ $`）
 
@@ -71,14 +71,14 @@
 
 ## 五、下一步方向（按优先级）
 
-> ✅ 已完成：实时输出流（v0.4.20 write-through，页面零改动）、`_awake` 幂等（v0.4.20）、exec-redirect 源码修复（v0.4.20）、测试任务清理（38+9 个已备份清空）、**真 agent 闭环演示**（`scripts/demo-agent-loop.sh`，沙盒内 agent 用 gctl 自驱 create→轮询 output→取结果，实测 CLOSED LOOP OK）、**files-ui 版本分裂**（4 importer 统一 .38，commit `df2c9fa`）。
+> ✅ 已完成：实时输出流（v0.4.20 write-through，页面零改动）、`_awake` 幂等（v0.4.20）、exec-redirect 源码修复（v0.4.20）、测试任务清理（38+9 个已备份清空）、**真 agent 闭环演示**（`scripts/demo-agent-loop.sh`，沙盒内 agent 用 gear 自驱 create→轮询 output→取结果，实测 CLOSED LOOP OK）、**files-ui 版本分裂**（4 importer 统一 .38，commit `df2c9fa`）。
 
 **搁置（用户决定，面向开发者工具现阶段不做）**：
 - ~~agents.prompt 撞车~~（**P2 已实现，commit `6e02434`**）：空闲门控（输出后 1200ms 拒绝 + retryAfterMs）+ 真人门控（onKey 记真人键入，5s 内拒绝，`force:true` 覆盖）+ 串行投递。真人空闲时仍可共享终端；Tier 1 通道隔离（agent 自建任务、拒绝注入真人终端）未做，保持共享体验。
 - `/js` 安全收窄（P2）：jsfs 当前 rw 挂所有 task，agent 能读 document/fetch。需要时再做白名单根（内核改动）。
 
 **已解决（2026-08-29 晚）**：
-- **console 噪音**：WidgetBot Discord 组件改为 opt-in（`widgetbot` 配置开关，Settings 里有 toggle，默认 off，动态加载）；headless 面板文案改为指向 `gctl tasks.output`（不再声称输出进 console）；wanix v0.4.22 移除内核 bind-alloc/fetch-url 调试 println（commit `d92b3f3`）。页面加载 console 已干净。**教训：w9y.io 会缓存 tag 的失败构建（v0.4.21 首次构建失败后同 tag 强推仍 502），必须换新 tag（v0.4.22）**。
+- **console 噪音**：WidgetBot Discord 组件改为 opt-in（`widgetbot` 配置开关，Settings 里有 toggle，默认 off，动态加载）；headless 面板文案改为指向 `gear tasks.output`（不再声称输出进 console）；wanix v0.4.22 移除内核 bind-alloc/fetch-url 调试 println（commit `d92b3f3`）。页面加载 console 已干净。**教训：w9y.io 会缓存 tag 的失败构建（v0.4.21 首次构建失败后同 tag 强推仍 502），必须换新 tag（v0.4.22）**。
 - **终端任务内核死锁 = 已修（wanix v0.4.23）**：详见里程碑。死锁栈（archive）：goroutine 8 `Task.Tasks` 等 `fsys.mu`（由 `_updateTerminals` 触发）+ goroutine 30 `GetOrCompile` 等 `WebAssembly.compile` promise + goroutine 1 空 select。假说修正：不是“term 绑定与 start RPC 互等”，而是**持锁等 JS promise**（JS handler 未返回 → 微任务队列不跑 → promise 永不 resolve）。
 - **railway 域名退役**：`isLegacyHushBinaryUrl` 原来只比版本不比 host，`w9y.up.railway.app`（bin/bash/bin/w9y 的 fetch bind）带当前版本时不迁移 → 已修（railway host 视为 legacy，迁移到 w9y.io，随 `700d0e8`）。
 
@@ -88,7 +88,7 @@
 
 **接下来要做（2026-08-29 晚，更新后）**：
 1. ✅ **wrapTermCmd（已完成，commit `44fbad5`）**：term:true 任务 cmd 包 `bash -c '<cmd>'`。已实测（非 CDP 浏览器）：`cmd:"bash"` 交互正常、`echo hi; sleep 2` 可跑、终端版闭环 demo 通过（CLOSED LOOP OK (term)）。
-2. ✅ **真 agent 闭环 · 终端版（已完成，commit `d9f5c8c` 脚本 + `936fa40` 时序 + `c48918a` 读回修复）**：`scripts/demo-agent-term-loop.sh`——agent 创建 term:true 任务 → `gctl agents.prompt` 注入命令 → 任务写共享 OPFS → agent 用 `read` 内建读回 → `CLOSED LOOP OK (term)`。非 CDP 浏览器实测通过。
+2. ✅ **真 agent 闭环 · 终端版（已完成，commit `d9f5c8c` 脚本 + `936fa40` 时序 + `c48918a` 读回修复）**：`scripts/demo-agent-term-loop.sh`——agent 创建 term:true 任务 → `gear agents.prompt` 注入命令 → 任务写共享 OPFS → agent 用 `read` 内建读回 → `CLOSED LOOP OK (term)`。非 CDP 浏览器实测通过。
 3. ~~⬜ wanix v0.4.24:term 任务 stdout 落 term(SetFD 方案)~~(**取消,2026-08-29**)——实测 term 输出路径本来就通(见踩坑 3 与 memory round-11),"断链"是 gojs 冷编译慢 + 内核被压卡造成的误判。留给 wanix 的是回归测试 `task_termfd_test.go`(fd bind → Task.FD → term 数据全链路,含根 "." 绑定干扰场景)。
 4. ⬜ **wanix v0.4.25(可选增强,非补断链):内核 tee(fd 1/2 镜像 term + 文件)——无损实时转录**：
    - 动机：`agents.read` 是快照（xterm scrollback 有界、alt-screen 应用只有一屏）；agent 要完整 transcript 目前只能走 headless + tasks.output。
@@ -124,9 +124,9 @@
 3. **视频 PiP**：`.files-pip-button`
 4. **分屏「在新窗格打开」**：`addPanelByComponent` 单点 `options.direction` → `api.addGroup({referenceGroup, direction})`；launcher「+」菜单 Shift+点击 = 右侧新窗格 + hint
 5. **多行标签**：`overflow: { mode: "wrap" }`
-6. **gctl open 双路由**：`open <url>` → `browser.open`（任意 URL iframe 面板）；`open <file>` → `files.open`（文件浏览器预览，**audio 自动播放**——autoPlay 实测 t=1.2s paused:false）
+6. **gear open 双路由**：`open <url>` → `browser.open`（任意 URL iframe 面板）；`open <file>` → `files.open`（文件浏览器预览，**audio 自动播放**——autoPlay 实测 t=1.2s paused:false）
 7. **新窗格参数统一**：`{ group?, referencePanel?, direction? }` 覆盖 panels.open / browser.open / tasks.create / files.open；`panels.list` 暴露 `groupId`
-8. **gctl 脚本现代化**：bash `[[ ]]` 全构造 hush 实测解析执行 OK；纯内建 dirname/basename（镜像无）；`$1/$2` 需 hush v0.5.9+
+8. **gear 脚本现代化**：bash `[[ ]]` 全构造 hush 实测解析执行 OK；纯内建 dirname/basename（镜像无）；`$1/$2` 需 hush v0.5.9+
 
 ### 代码健康度（500/50 行回归）
 
@@ -158,7 +158,7 @@
    根因是 background 任务默认带 term（normalizeTask `term !== false`），而 background 分支传的
    anchor 是 `null` → `attachOverlayTerminalSession` 里 `ResizeObserver.observe(null)` 抛 TypeError。
    修复：`app-workspace-task-sessions.js` `attachWorkspaceTaskSession` 对 `!session.term || !anchor`
-   都走 wake 分支（跳过 overlay）。实测 `tasks.create({cmd:'gctl panels.list'},{background:true})`
+   都走 wake 分支（跳过 overlay）。实测 `tasks.create({cmd:'gear panels.list'},{background:true})`
    → `ok:true`、无报错；term/无 term 两种 background 任务均正常跑完并 cancel 干净。
    **附带发现并修复**：`panels.open('vm', {})` 把 options 泄漏成 VM config（`addPanelByComponent`
    把第 4 参 options 传给 adder 的第 3 参 config/profile 槽）→ `config.backendUrl=undefined` →
@@ -209,8 +209,8 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   diff + Clear)。浏览器实测 14 项全过(API+UI)。
 - ✅ **A2(#6 最小形态)事件持久化**:workspace-events.js 落盘 + 高水位 drained,
   跨 reload 不重投;boot seedEventBuffer。实测 emit → reload → drain 读回 → 不重投。
-- ✅ **A3 `gctl help`**:方法清单 + examples(heredoc);`gctl version` 映射 ping。
-- ✅ **A4 `gctl agents.prompt-wait <id> <text> [timeout]`**:bash 重试糖 +
+- ✅ **A3 `gear help`**:方法清单 + examples(heredoc);`gear version` 映射 ping。
+- ✅ **A4 `gear agents.prompt-wait <id> <text> [timeout]`**:bash 重试糖 +
   `_ge_json_escape` 纯 bash 转义;JS 单引号 `\"` 被吞的坑已修(`\\"`)。
 - ✅ **A5(M5 降级 + D)README/docs**:README 加 Agentic Workspace 章节 + v0.4.24
   能力;browser 降级文档化。
@@ -223,10 +223,10 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   ③#1 注入前等 `➜` 提示符(冷编译窗口注入被吞);④set -u 下 read 前初始化 line。
   另修真 bug:crush recheck 崩溃(ctl 漏 programAutoManagedRef)。
 
-- ✅ **M4 音乐面板 + `gctl music.*`**(round-18 初版 + **round-23/24 补全**,
+- ✅ **M4 音乐面板 + `gear music.*`**(round-18 初版 + **round-23/24 补全**,
   commit 84ee6b4/f5f3b7b):
   - round-18:music-engine.js(单例 `<audio>` + 异步 VFS 解析)+ music.js 面板 +
-    注册链 + workspace-api music 命名空间 + gctl help;autoplay 政策下 agent 调用
+    注册链 + workspace-api music 命名空间 + gear help;autoplay 政策下 agent 调用
     停在 paused,真人点击面板即播。
   - **round-23**:队列/播放列表 + 三档循环 + 自动连播;audio-tags.js(ID3v2 元数据 +
     USLT/.lrc 歌词);VFS 文件选择器(vfs-picker.js 可复用);tab 右键 Duplicate。
@@ -269,26 +269,26 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   engine 481(歌单持久化拆 music-playlists.js)。
 
 ### 环境备忘(round-24 更新)
-- 全部新 API 经 gctl `music.*` 暴露(jsfs 同步);面板/API 同一 engine 单例。
+- 全部新 API 经 gear `music.*` 暴露(jsfs 同步);面板/API 同一 engine 单例。
 - 可复用参考:`memory/music-player.md`(模块结构 + API 表 + vfs-picker 复用手册)。
 
 ## 十一、用户 WISHLIST(2026-08-29,全部未开始)
 
 > 用户明确提出的长期愿景,按原话整理;每条附实现锚点(现有代码/机制),未做任何一条。
 
-1. **设置中加模型 provider 配置能力,并暴露给 gctl**
+1. **设置中加模型 provider 配置能力,并暴露给 gear**
    - 内容:Settings 新增 provider 管理(name/baseURL/apiKey/model 列表,可增删改),
-     存入 workspace config(`config.*` 已可被 gctl 读写,settings 已有
-     launcher-order/terminal-presets 同款模式可抄);gctl 暴露 `config.providers.*`。
+     存入 workspace config(`config.*` 已可被 gear 读写,settings 已有
+     launcher-order/terminal-presets 同款模式可抄);gear 暴露 `config.providers.*`。
    - 锚点:settings-panel.js 分区模式、workspace-config-api.js(getSystem 等)、
-     gctl-bind.js help 扩展。⚠️ apiKey 属敏感字段,审计环(workspace-audit)要脱敏。
-   - ✅ 配置层 + gctl + 脱敏已实现(2026-08-29,round 26):`config.providers`
-     存 shell config,`config.providers.list/save/remove` 经 gctl 暴露,审计/读取
+     gear-bind.js help 扩展。⚠️ apiKey 属敏感字段,审计环(workspace-audit)要脱敏。
+   - ✅ 配置层 + gear + 脱敏已实现(2026-08-29,round 26):`config.providers`
+     存 shell config,`config.providers.list/save/remove` 经 gear 暴露,审计/读取
      全链路 `redactSecrets` 脱敏,空 apiKey 保存保留存量 key。UI 在 Playground
      Providers tab(playground-providers.js);如需 Settings 出入口,复用该组件。
 
 2. ✅ **Home 直接用 GearShell API 实现面板操作**(2026-08-29 已实现,见「十二、
-   轮次 25」):`window.GearShell.panels.open(component, options)` 就是 gctl 的
+   轮次 25」):`window.GearShell.panels.open(component, options)` 就是 gear 的
    JS 本体(workspace-api.js:112),Home 按钮改调它,与 agent 通道同一 API、白拿
    分屏参数 + 审计。home.js openPanel 保留 addPanelByComponent 作 fallback
    (API 未就绪时)。`gctl`→`gear` 重命名已解耦,单独成项或砍掉。
@@ -303,7 +303,7 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 
 4. **AI 聊天、生成视频、生成图片等功能**
    - 内容:依赖 #1(provider 配置)。聊天面板(流式输出)、图片/视频生成工具。
-     生成结果落 VFS(`/opfs`),Files 面板直接可见;gctl 暴露 `ai.*` 供 agent 调用。
+     生成结果落 VFS(`/opfs`),Files 面板直接可见;gear 暴露 `ai.*` 供 agent 调用。
    - 锚点:依赖 #1;面板注册走 addPanelByComponent 目录;流式可借鉴
      tasks.output 800ms 轮询 / term 通道。
 
@@ -358,11 +358,11 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   三个 tab:Explorer / Providers / Events。
 - **Explorer**:`playground-api-catalog.js` 手写全量 API 目录(59 个方法,9 个
   分组:Root/config/panels/browser/files/tasks/agents/music/events),每方法
-  带参数 schema(string/number/boolean/json/handler)、hint、gctl 等价命令;
-  运行走 `window.GearShell`(与 gctl 同桥),JSON 结果 + 请求历史;点状方法名
+  带参数 schema(string/number/boolean/json/handler)、hint、gear 等价命令;
+  运行走 `window.GearShell`(与 gear 同桥),JSON 结果 + 请求历史;点状方法名
   (`config.providers.save`)按段解析。
 - **Providers**(WISHLIST #1 的配置层):provider 存 shell config
-  `config.providers`,app-normalize 归一化,DEFAULT_CONFIG 加空数组;gctl 暴露
+  `config.providers`,app-normalize 归一化,DEFAULT_CONFIG 加空数组;gear 暴露
   `config.providers.list/save/remove`;UI 增删改(编辑时空 apiKey 保留存量 key)。
 - **Events**:live `gear-shell:*` feed(patch window.dispatchEvent 观察,不动
   agent 的 ring;drain 需手动点)+ pending 计数 + emit 表单。
@@ -422,7 +422,7 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 - **内核扩展**(plugins.js):`unregisterPlugin(id)`(关面板→删组件/launcher
   条目/顺序,顺序关键:先关面板再删组件,否则 dockview 渲染已开面板撞缺失
   组件 → 整个 grid 崩)、`mergePluginStatus`、PLUGIN_CHANGED_EVENT 事件。
-- gctl help + playground catalog 加 config.plugins.*。
+- gear help + playground catalog 加 config.plugins.*。
 - **实测**(浏览器全生命周期):Settings UI 安装(VFS 插件)→ loaded → 打开面板
   渲染 → Disable(面板关闭 + 注销,无崩溃)→ Enable(重载)→ Remove(卸载 +
   审计条目);坏 entry → load-error 徽章显示错误;console 零报错。
@@ -567,3 +567,13 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   "➜ / $" 提示符,输入可达)。home manifest 加 terminal.embed 权限。
 - 已知:Home 隐藏重挂载后 demo 回静态(会话持久但不可见);会话按重挂载递增。
 - 后续候选:embed 复用/清理策略、T2 iframe 桥、plugins 市场。
+
+## 二十五、gctl→gear 改名 + 500 行拆分(round 39,commit `<本轮 commit>`)
+
+- gctl→gear:GEAR_BIND(gear-bind.js)+ bin/gear + shell 内容 + memory 文档
+  (gear-examples/gear-cookbook)+ 脚本;legacy bin/gctl 迁移保留。
+- 500 行:5 超限文件全拆(app-plugin-manifests / app-normalize-runtime /
+  app-normalize-plugins / playground-catalog-shell+agent / vfs-picker-parts /
+  plugins-deps+scope+loading);全树 <500,fn-length 0。
+- 拆分教训:跨文件缺失符号 node --check 查不出 → 必 browser 实测;数组
+  拆分布局 brace 随行搬;私有 helper 跟调用方走。

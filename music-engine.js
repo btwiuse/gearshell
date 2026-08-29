@@ -1,6 +1,6 @@
 // music-engine.js — page-wide music playback singleton (M4).
 //
-// Owns one <audio> element shared by the Music panel and the gctl
+// Owns one <audio> element shared by the Music panel and the gear
 // music.* API, so both drive the same playback state. The panel is a
 // user-gesture surface (autoplay policy); the API entry musicPlay is
 // synchronous (jsfs bridge), so VFS paths resolve asynchronously and

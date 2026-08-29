@@ -2,6 +2,20 @@
 // tasks (500-line rule split). Pure functions.
 
 import {
+  isLegacyWanixRuntimeUrl,
+  normalizeRuntimeConfig,
+} from "./app-normalize-runtime.js?v=20260829.94";
+import {
+  normalizePlugin,
+  normalizePlugins,
+} from "./app-normalize-plugins.js?v=20260829.94";
+
+// Runtime + plugin normalizers live in app-normalize-runtime.js /
+// app-normalize-plugins.js; re-exported so existing importers (app.js,
+// workspace-config-api, app-workspace-presets) keep working unchanged.
+export { isLegacyWanixRuntimeUrl, normalizeRuntimeConfig, normalizePlugin, normalizePlugins };
+
+import {
   BUILTIN_TERMINAL_PROFILES,
   CANONICAL_LUCIDE_ICON_IDS,
   CONFIG_KEY,
@@ -30,16 +44,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.35";
+} from "./app-constants.js?v=20260828.38";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.71";
+} from "./crush-runner.js?v=20260826.74";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.76";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.33";
+} from "./app-workspace.js?v=20260826.79";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.36";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -51,7 +65,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.27";
+} from "./app-normalize-system.js?v=20260828.30";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -63,7 +77,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.27";
+} from "./app-normalize-system.js?v=20260828.30";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -102,55 +116,6 @@ export function normalizeCustomWorkspacePreset(preset = {}) {
 // v0.4.0 (which predates the multiline-argv kernel), are migrated to
 // the current default; any other semver-pinned URL is an intentional
 // override and stays as-is.
-const WANIX_RUNTIME_SEMVER = /^v\d+\.\d+\.\d+/;
-const LEGACY_WANIX_KERNEL_WASM = "v0.4.0";
-// Local-directory mounting needs the "localdir" bind type added in v0.4.11;
-// workspaces saved against older pins hit an unknown-type rejection instead.
-const MIN_LOCALDIR_RUNTIME = [0, 4, 11];
-
-function semverParts(ref) {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(ref);
-  if (!match) return null;
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-function isOlderThan(ref, min) {
-  const parts = semverParts(ref);
-  if (!parts) return false;
-  for (let i = 0; i < 3; i++) {
-    if (parts[i] !== min[i]) return parts[i] < min[i];
-  }
-  return false;
-}
-
-export function isLegacyWanixRuntimeUrl(url, kind) {
-  if (typeof url !== "string" || !url.includes("justwasm/wanix")) {
-    return false;
-  }
-  const ref = url.slice(url.lastIndexOf("@") + 1);
-  if (WANIX_RUNTIME_SEMVER.test(ref)) {
-    return kind === "wasm" &&
-      (ref === LEGACY_WANIX_KERNEL_WASM ||
-        isOlderThan(ref, MIN_LOCALDIR_RUNTIME));
-  }
-  return true; // commit hashes, @main, or any other floating ref
-}
-
-export function normalizeRuntimeConfig(runtime = {}) {
-  const configured = runtime && typeof runtime === "object" ? runtime : {};
-  const wasmUrl = isLegacyWanixRuntimeUrl(configured.wasmUrl, "wasm")
-    ? WANIX_RUNTIME.wasmUrl
-    : configured.wasmUrl;
-  const moduleUrl = isLegacyWanixRuntimeUrl(configured.moduleUrl, "module")
-    ? WANIX_RUNTIME.moduleUrl
-    : configured.moduleUrl;
-  return {
-    ...WANIX_RUNTIME,
-    ...configured,
-    ...(wasmUrl ? { wasmUrl } : {}),
-    ...(moduleUrl ? { moduleUrl } : {}),
-  };
-}
 
 function normalizeStartupPanels(config) {
   return Array.isArray(config?.startupPanels)
@@ -240,54 +205,9 @@ function normalizeProviderModels(models) {
   return [];
 }
 
-function normalizeStringList(list) {
-  if (!Array.isArray(list)) return [];
-  return list.map((item) => String(item)).filter(Boolean);
-}
-
 // Plugin manifests (WISHLIST #9): { id, name, version, icon, entry,
 // enabled, permissions: { api, origins } }. entry is an http(s) URL, a
 // /same-origin path, or a vfs:/... path (see plugins.js).
-export function normalizePlugin(plugin = {}) {
-  const id = String(plugin.id || "").trim();
-  if (!id) return null;
-  const iframe = plugin?.iframe;
-  const iframeSrc = String(iframe?.src || "").trim();
-  return {
-    id,
-    name: String(plugin.name || id).trim(),
-    version: String(plugin.version || "1.0.0").trim(),
-    icon: String(plugin.icon || "Wrench").trim(),
-    entry: String(plugin.entry || "").trim(),
-    enabled: plugin.enabled !== false,
-    permissions: {
-      api: normalizeStringList(plugin.permissions?.api),
-      origins: normalizeStringList(plugin.permissions?.origins),
-    },
-    ...(iframeSrc
-      ? {
-        iframe: {
-          src: iframeSrc,
-          ...(iframe.allow ? { allow: String(iframe.allow).trim() } : {}),
-          ...(iframe.allowFullscreen ? { allowFullscreen: true } : {}),
-        },
-      }
-      : {}),
-  };
-}
-
-// User config wins by id; built-in defaults fill in the rest, so a
-// saved workspace that predates the plugin kernel still boots Music.
-export function normalizePlugins(list, defaults) {
-  const user = (Array.isArray(list) ? list : [])
-    .map(normalizePlugin)
-    .filter(Boolean);
-  const userIds = new Set(user.map((item) => item.id));
-  const fallback = (Array.isArray(defaults) ? defaults : [])
-    .map(normalizePlugin)
-    .filter((item) => item && !userIds.has(item.id));
-  return [...user, ...fallback];
-}
 
 export function normalizeShellConfig(config) {
   const { terminalProfiles, crushRunnerPresets } = normalizeProfileLists(

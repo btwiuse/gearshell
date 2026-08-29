@@ -1,42 +1,42 @@
-// gctl-bind.js — the bin/gctl CLI bind + workspace bind boot hook
+// gear-bind.js — the bin/gear CLI bind + workspace bind boot hook
 // (split out of workspace-api.js for the 500-line rule).
 
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.76";
-import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.35";
+} from "./app-workspace.js?v=20260826.79";
+import { TASK_SHELL_BINDS } from "./app-constants.js?v=20260828.38";
 
 // --- The jsfs projection of the API lives at /js/GearShell (kernel
 // jsfs roots at globalThis; window.GearShell = api makes the methods
 // reachable). The js bind is already part of DEFAULT_SYSTEM_CONFIG; the
-// gctl helper below wraps the protocol for shells. ---
+// gear helper below wraps the protocol for shells. ---
 
-// The gctl CLI (Route A). Requires hush >= v0.5.8 for fd>2 + `<>`
+// The gear CLI (Route A). Requires hush >= v0.5.8 for fd>2 + `<>`
 // redirections. Uses modern bash syntax ([[ ]], parameter expansion) —
 // hush runs scripts with a #!/bin/bash shebang in bash language mode.
 // Args are a JSON array of parameters.
-export const GCTL_BIND = {
-  id: "gctl",
+export const GEAR_BIND = {
+  id: "gear",
   type: "file",
-  dst: "bin/gctl",
+  dst: "bin/gear",
   perm: "0755",
   content: [
     "#!/bin/bash",
-    "# gctl: GearShell workspace control (jsfs fd bridge).",
-    "# usage: gctl <method.dotted.path> [json-args-array]",
+    "# gear: GearShell workspace control (jsfs fd bridge).",
+    "# usage: gear <method.dotted.path> [json-args-array]",
     "# Bashisms ([[ ]], parameter expansion) are fine: hush runs scripts",
     "# with a #!/bin/bash shebang in bash language mode.",
     "set -u",
     "if [[ $# -lt 1 ]]; then",
-    '  echo "usage: gctl <method.dotted.path> [json-args-array] (try: gctl help)" >&2',
+    '  echo "usage: gear <method.dotted.path> [json-args-array] (try: gear help)" >&2',
     "  exit 2",
     "fi",
     'method="$1"',
     'args="${2:-[]}"',
     "if [[ $method == help || $method == --help || $method == -h ]]; then",
     "  cat <<'HELP' >&2",
-    "gctl <method> '<json-args-array>' - GearShell workspace control (jsfs fd bridge)",
+    "gear <method> '<json-args-array>' - GearShell workspace control (jsfs fd bridge)",
     "",
     "methods:",
     "  ping",
@@ -55,21 +55,21 @@ export const GCTL_BIND = {
     "  open <file|url>",
     "",
     "examples:",
-    "  gctl ping",
-    "  gctl panels.list",
-    '  gctl tasks.create \'[{"name":"x","cmd":"echo hi"}]\'',
-    '  gctl config.updateShell \'[{"foo":"bar"}]\'',
-    "  gctl config.getSystem",
-    '  gctl config.updateBind \'["opfs",{"type":"ns","dst":"opfs","src":"#web/opfs","mode":"0755"}]\'',
-    "  gctl config.removeBind '[\"tmp\"]'",
-    '  gctl config.setBinds \'[{"id":"root","type":"ns","dst":".","src":"#ramfs/new"},{"id":"task","type":"ns","dst":"task","src":"#task"}]\'',
-    '  gctl config.updateRuntime \'[{"allowOrigins":"https://example.com"}]\'',
-    '  gctl agents.read \'["task-1",{"rows":50}]\'',
-    "  gctl open https://example.com",
+    "  gear ping",
+    "  gear panels.list",
+    '  gear tasks.create \'[{"name":"x","cmd":"echo hi"}]\'',
+    '  gear config.updateShell \'[{"foo":"bar"}]\'',
+    "  gear config.getSystem",
+    '  gear config.updateBind \'["opfs",{"type":"ns","dst":"opfs","src":"#web/opfs","mode":"0755"}]\'',
+    "  gear config.removeBind '[\"tmp\"]'",
+    '  gear config.setBinds \'[{"id":"root","type":"ns","dst":".","src":"#ramfs/new"},{"id":"task","type":"ns","dst":"task","src":"#task"}]\'',
+    '  gear config.updateRuntime \'[{"allowOrigins":"https://example.com"}]\'',
+    '  gear agents.read \'["task-1",{"rows":50}]\'',
+    "  gear open https://example.com",
     "",
     "note: system bind/runtime changes only apply on reload;",
-    "gctl config.reload restarts the workspace (kills all tasks).",
-    "provider apiKeys are redacted from every gctl response;",
+    "gear config.reload restarts the workspace (kills all tasks).",
+    "provider apiKeys are redacted from every gear response;",
     "config.providers.save with an empty apiKey keeps the stored key.",
     "HELP",
     "  exit 0",
@@ -78,7 +78,7 @@ export const GCTL_BIND = {
     "  method=ping",
     "  args='[]'",
     "fi",
-    "# `gctl agents.prompt-wait <session-id> <text> [timeout-secs]`: the",
+    "# `gear agents.prompt-wait <session-id> <text> [timeout-secs]`: the",
     "# jsfs bridge is synchronous, so agents.prompt answers {busy,",
     "# retryAfterMs} while terminal output is still landing. This sugar",
     "# retries until ok or the timeout elapses (default 30s).",
@@ -99,25 +99,25 @@ export const GCTL_BIND = {
     '  _target_id="${2:-}"',
     '  _target_text="${3:-}"',
     '  _timeout="${4:-30}"',
-    '  [[ -n $_target_id ]] || { echo "usage: gctl agents.prompt-wait <session-id> <text> [timeout-secs]" >&2; exit 2; }',
+    '  [[ -n $_target_id ]] || { echo "usage: gear agents.prompt-wait <session-id> <text> [timeout-secs]" >&2; exit 2; }',
     "  _max_ms=$(( _timeout * 1000 ))",
     "  _waited=0",
     "  method=agents.prompt",
     "  while :; do",
     '    _escaped_text="$(_ge_json_escape "$_target_text")"',
-    '    _result="$(gctl agents.prompt "[\\"$_target_id\\",\\"$_escaped_text\\"]")"',
+    '    _result="$(gear agents.prompt "[\\"$_target_id\\",\\"$_escaped_text\\"]")"',
     "    [[ $_result == *'\"ok\":true'* ]] && { printf '%s\\n' \"$_result\"; exit 0; }",
     "    [[ $_waited -ge $_max_ms ]] && { printf '%s\\n' \"$_result\"; exit 1; }",
     "    sleep 1",
     "    _waited=$(( _waited + 1000 ))",
     "  done",
     "fi",
-    "# `gctl open <file|url>`: http(s) URLs open a browser iframe panel;",
+    "# `gear open <file|url>`: http(s) URLs open a browser iframe panel;",
     "# anything else is resolved against $PWD (the task ns) and opened as",
     "# a file in the file browser with a preview.",
     "if [[ $method == open ]]; then",
     '  _target="$args"',
-    '  [[ -n $_target ]] || { echo "usage: gctl open <file|url>" >&2; exit 2; }',
+    '  [[ -n $_target ]] || { echo "usage: gear open <file|url>" >&2; exit 2; }',
     "  if [[ $_target == http://* || $_target == https://* ]]; then",
     "    method=browser.open",
     '    args="[\\"$_target\\"]"',
@@ -149,13 +149,13 @@ export const GCTL_BIND = {
     "# would be treated as part of the object key and silently create a",
     "# bogus property on GearShell (web/jsfs helpers.go parseSuffixSegment).",
     'path="$path:json"',
-    'exec 3<>"$path" 2>/dev/null || { echo "gctl: cannot open $path" >&2; exit 1; }',
-    'echo "$args" >&3 || { echo "gctl: call failed" >&2; exit 1; }',
+    'exec 3<>"$path" 2>/dev/null || { echo "gear: cannot open $path" >&2; exit 1; }',
+    'echo "$args" >&3 || { echo "gear: call failed" >&2; exit 1; }',
     "# mvdan.cc/sh's read builtin exits 1 when the line has no trailing",
     "# newline (the jsfs funcfile result is newline-less), so gate on the",
     "# variable instead of the exit status. A failed invoke (e.g. args not",
     "# a JSON array) surfaces here as an empty read.",
-    'read -r out <&3 || [[ -n ${out:-} ]] || { echo "gctl: no response (args must be a JSON array)" >&2; exit 1; }',
+    'read -r out <&3 || [[ -n ${out:-} ]] || { echo "gear: no response (args must be a JSON array)" >&2; exit 1; }',
     "exec 3<&-",
     'printf "%s\\n" "$out"',
     "",
@@ -164,9 +164,9 @@ export const GCTL_BIND = {
 
 // --- Boot hooks ---
 // Ensure the active workspace carries (1) the /js projection bind (needed
-// for the gctl protocol; normally part of DEFAULT_SYSTEM_CONFIG) in the
+// for the gear protocol; normally part of DEFAULT_SYSTEM_CONFIG) in the
 // system namespace, and (2) the per-task shell toolset (writable /bin +
-// bash + w9y + the gctl CLI) in workspace.binds. The shell tools must NOT
+// bash + w9y + the gear CLI) in workspace.binds. The shell tools must NOT
 // live in the system namespace: the VM guest mounts the root at / via 9p,
 // and host-side wasm tools would leak into the x86 guest where they cannot
 // run. workspace.binds are bound into each task's own namespace (the
@@ -174,7 +174,7 @@ export const GCTL_BIND = {
 // while the guest root stays clean. Must run BEFORE the wanix namespace is
 // built (app.js calls this right after loadActiveWorkspace()), because
 // binds are baked into the namespace at construction. Idempotent by bind
-// dst; the gctl CLI content is REFRESHED when the protocol changes (e.g.
+// dst; the gear CLI content is REFRESHED when the protocol changes (e.g.
 // the jsfs `:json` suffix), so saved workspaces pick up fixes without
 // manual edits. Also migrates legacy workspaces that still carry the shell
 // binds at system level.
@@ -208,17 +208,27 @@ function ensureTaskShellBinds(workspace) {
       changed = true;
     }
   }
-  const gctlIndex = workspace.binds.findIndex((item) =>
+  // Legacy name for the CLI bind: drop any saved `bin/gctl` so old
+  // workspaces migrate to the renamed bin/gear (its content is refreshed
+  // below regardless).
+  const legacyGctl = workspace.binds.findIndex((item) =>
     item.dst === "bin/gctl"
   );
-  if (gctlIndex === -1) {
-    workspace.binds.push({ ...GCTL_BIND });
+  if (legacyGctl !== -1) {
+    workspace.binds.splice(legacyGctl, 1);
+    changed = true;
+  }
+  const gearIndex = workspace.binds.findIndex((item) =>
+    item.dst === "bin/gear"
+  );
+  if (gearIndex === -1) {
+    workspace.binds.push({ ...GEAR_BIND });
     changed = true;
   } else if (
-    workspace.binds[gctlIndex].content !== GCTL_BIND.content ||
-    workspace.binds[gctlIndex].perm !== GCTL_BIND.perm
+    workspace.binds[gearIndex].content !== GEAR_BIND.content ||
+    workspace.binds[gearIndex].perm !== GEAR_BIND.perm
   ) {
-    workspace.binds[gctlIndex] = { ...GCTL_BIND };
+    workspace.binds[gearIndex] = { ...GEAR_BIND };
     changed = true;
   }
   return changed;
@@ -236,11 +246,14 @@ export function ensureGearShellBinds(workspace) {
     });
     changed = true;
   }
-  // Migrate away from the old root-level shell binds (incl. /profile).
+  // Migrate away from the old root-level shell binds (incl. /profile);
+  // both the current (bin/gear) and legacy (bin/gctl) CLI names are
+  // dropped from the system namespace — the CLI rides per-task binds.
   const rootLevelDsts = new Set([
     "bin",
     "bin/bash",
     "bin/w9y",
+    "bin/gear",
     "bin/gctl",
     "profile",
   ]);

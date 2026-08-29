@@ -3,7 +3,7 @@
 #
 # Like demo-agent-loop.sh (headless), but drives a term:true task
 # through its live terminal: the in-sandbox agent creates an
-# interactive bash task, injects a command via gctl agents.prompt,
+# interactive bash task, injects a command via gear agents.prompt,
 # and reads the result back from a shared OPFS file the task wrote.
 # This exercises the whole term path: task create, prompt channel,
 # shared-fs read-back, wrapTermCmd (`bash -c '<cmd>'`) on the task.
@@ -21,7 +21,7 @@
 # Use the builtin `read` and guard the exit code instead.
 #
 # Constraints (hush-shell workspace, minimal POSIX-ish image): no
-# sed/awk/jq/seq/cat in /bin, only bash builtins; gctl takes a
+# sed/awk/jq/seq/cat in /bin, only bash builtins; gear takes a
 # JSON-array args string, so scalars must be wrapped: tasks.output
 # '[3]' not '3'. Copy to the workspace (e.g. /opfs/home) and run
 # with `bash /opfs/home/demo-agent-term-loop.sh`.
@@ -29,8 +29,8 @@ set -u
 
 RESULT=/opfs/home/term-result.txt
 
-echo "[agent] 1/4 create term sub-task via gctl"
-res=$(gctl tasks.create '[{"name":"term-sub","cmd":"bash","term":true}]')
+echo "[agent] 1/4 create term sub-task via gear"
+res=$(gear tasks.create '[{"name":"term-sub","cmd":"bash","term":true}]')
 echo "[agent]    create -> $res"
 rest=${res#*'"panelId":"workspace-task-'}
 panel=${rest%%'"'*}
@@ -41,7 +41,7 @@ fi
 
 echo "[agent] 2/4 prompt the task terminal (cold worker may take a while)"
 sleep 3
-pr=$(gctl agents.prompt "[\"task-$panel\",\"echo result=\$((6*7)) > $RESULT\"]")
+pr=$(gear agents.prompt "[\"task-$panel\",\"echo result=\$((6*7)) > $RESULT\"]")
 echo "[agent]    prompt -> $pr"
 case "$pr" in
   *'"ok":true'*) ;;
@@ -66,7 +66,7 @@ for ((attempt = 1; attempt <= 2; attempt++)); do
   done
   if [ -z "$out" ] && [ "$attempt" -eq 1 ]; then
     echo "[agent]    retrying prompt (input may have queued before bash was up)"
-    pr=$(gctl agents.prompt "[\"task-$panel\",\"echo result=\$((6*7)) > $RESULT\"]")
+    pr=$(gear agents.prompt "[\"task-$panel\",\"echo result=\$((6*7)) > $RESULT\"]")
     echo "[agent]    prompt -> $pr"
   fi
 done

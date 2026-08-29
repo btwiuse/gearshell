@@ -8,10 +8,10 @@ import {
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.35";
-import { normalizeTask } from "./app-normalize.js?v=20260828.77";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.76";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.76";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.38";
+import { normalizeTask } from "./app-normalize.js?v=20260828.80";
+import { buildEnv } from "./app-terminal-profiles.js?v=20260826.79";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.79";
 
 export function createBindElement(bind) {
   const element = document.createElement("wanix-bind");
@@ -102,7 +102,7 @@ function wrapHeadlessCmd(def) {
 
 // Wrap a term cmd the same way: the kernel execs the first token of cmd
 // directly (gojs driver readFile(args[0])), so a cmd like "echo hi; sleep
-// 2" would look for /bin/echo (the image only ships bash/gctl/w9y) and
+// 2" would look for /bin/echo (the image only ships bash/gear/w9y) and
 // never start. Running the whole cmd under `bash -c` makes the full shell
 // grammar available. The outer bash is non-interactive, so the BASH_ENV
 // base env from the task env still applies; a wrapped interactive "bash"

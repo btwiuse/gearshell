@@ -21,14 +21,14 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.76";
+} from "./app-workspace.js?v=20260826.79";
 import {
   normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.77";
-import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.35";
+} from "./app-normalize.js?v=20260828.80";
+import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.38";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
@@ -36,16 +36,16 @@ import {
   pushAuditEntry,
   redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.51";
+} from "./workspace-audit.js?v=20260829.54";
 import {
   mergePluginStatus,
   registerPlugin,
   unregisterPlugin,
-} from "./plugins.js?v=20260829.40";
+} from "./plugins.js?v=20260829.43";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
-// as a trailing argument (gctl config.updateBind '[id,{...},"agent"]') or
+// as a trailing argument (gear config.updateBind '[id,{...},"agent"]') or
 // inside an options object; both are accepted.
 function auditOptions(agentOrOptions) {
   return typeof agentOrOptions === "string"
@@ -65,7 +65,7 @@ function systemSnapshot() {
 }
 
 const SYSTEM_RELOAD_NOTE =
-  "takes effect on workspace reload (gctl config.reload applies it)";
+  "takes effect on workspace reload (gear config.reload applies it)";
 
 // Record a kind:"system" change in the audit ring + event buffer.
 function recordSystemChange(prev, agentOrOptions) {
@@ -89,7 +89,7 @@ function requireRootBind(binds) {
 
 // --- Provider config (WISHLIST #1) ---
 // Model providers live in the shell config (config.providers), the same
-// store config.getShell / updateShell expose to gctl. Writes record audit
+// store config.getShell / updateShell expose to gear. Writes record audit
 // entries like any other shell change; every agent-facing read redacts
 // apiKey (providers.list shows hasApiKey instead). The save path keeps
 // the stored key whenever the caller sends an empty one, so an agent can
@@ -309,7 +309,7 @@ export const configApi = {
     };
   },
   // Per-task binds (workspace.binds): the per-task toolset (bash/w9y/
-  // gctl/profile) plus anything the workspace declares for task namespaces.
+  // legacy gctl/profile, now bin/gear) plus anything the workspace declares for task namespaces.
   getTaskBinds: () => loadActiveWorkspace().binds || [],
   // Update a system bind by id; validates + audits + reports the reload
   // requirement. Throws (surfaced as {ok:false,error}) when the id is

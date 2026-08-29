@@ -2,7 +2,7 @@
 //
 // Records every agent-initiated config change (config.updateShell plus the
 // system-config writes config.updateBind/removeBind/setBinds/updateRuntime
-// through window.GearShell / gctl) as {id, ts, agent, kind, prev, next} in
+// through window.GearShell / gear) as {id, ts, agent, kind, prev, next} in
 // a capped localStorage ring, so a human can review agent edits in the
 // Settings panel and undo them. The Settings UI saves config through
 // saveConfig directly (never config.updateShell), so UI-driven changes
@@ -23,8 +23,8 @@ import {
   saveConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.76";
-import { normalizeSystemConfig } from "./app-normalize.js?v=20260828.77";
+} from "./app-workspace.js?v=20260826.79";
+import { normalizeSystemConfig } from "./app-normalize.js?v=20260828.80";
 
 const AUDIT_KEY = "gear-shell-agent-audit";
 const AUDIT_CAP = 50;
@@ -106,7 +106,7 @@ export function redactSecrets(value) {
 }
 
 // The ring is stored raw so undo can restore real snapshots; every read
-// path (Settings "Agent activity", gctl config.audit.list) gets scrubbed
+// path (Settings "Agent activity", gear config.audit.list) gets scrubbed
 // copies instead.
 export function listAuditEntries() {
   return readAudit().map(redactSecrets);

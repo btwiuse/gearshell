@@ -4,7 +4,7 @@
 // injection table as panels.js via the exported `panelsDep`.
 
 import React, { useEffect, useRef, useState } from "react";
-import { panelsDep } from "./panels.js?v=20260812.64";
+import { panelsDep } from "./panels.js?v=20260812.67";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 
 // Per-workspace-task id minting so multiple task panels can coexist.
@@ -138,7 +138,7 @@ const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
         ? "Task finished."
         : status.status === "starting"
         ? "Starting task…"
-        : "Headless task: no terminal. Output is captured to a per-task log; read it with gctl tasks.output <id> (live with wanix v0.4.20).",
+        : "Headless task: no terminal. Output is captured to a per-task log; read it with gear tasks.output <id> (live with wanix v0.4.20).",
     ),
     React.createElement(HeadlessTaskInfo, { task, envLines }),
     React.createElement("span", {

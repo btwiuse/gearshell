@@ -2,10 +2,10 @@
 // Playground: model provider CRUD over config.providers.
 //
 // Providers live in the shell config (gear-shell-config, the same
-// store config.getShell / config.updateShell expose to gctl), so they
+// store config.getShell / config.updateShell expose to gear), so they
 // are readable and writable from both the UI and the agent channel.
 // Writes go through configApi.providers.save/remove (the very methods
-// gctl exposes), which record audit entries and redact apiKeys in every
+// gear exposes), which record audit entries and redact apiKeys in every
 // agent-facing view. The editor deliberately starts the apiKey field
 // empty when editing: an empty key means "keep the stored key".
 //
@@ -15,9 +15,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { loadConfig } from "./app-workspace.js?v=20260826.76";
-import { configApi } from "./workspace-config-api.js?v=20260828.61";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.35";
+import { loadConfig } from "./app-workspace.js?v=20260826.79";
+import { configApi } from "./workspace-config-api.js?v=20260828.64";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.38";
 
 function blankDraft() {
   return {
@@ -389,7 +389,7 @@ function ProvidersHead({ adding, onAdd }) {
         "p",
         { className: "playground-hint" },
         "Stored in the shell config and exposed to agents via " +
-          "config.providers.* (gctl). API keys are never shown back " +
+          "config.providers.* (gear). API keys are never shown back " +
           "through the agent channel.",
       ),
     ),

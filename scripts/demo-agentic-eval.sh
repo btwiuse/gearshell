@@ -6,7 +6,7 @@
 #   #3  events read     events.drain returns config.changed / task.status
 #   #4  ephemeral       tasks.create does not persist to workspace tasks
 #   #8  audit undo      config.updateShell -> audit entry -> undo restores
-# (A3 gctl help / A4 agents.prompt-wait are exercised along the way.)
+# (A3 gear help / A4 agents.prompt-wait are exercised along the way.)
 #
 # Run inside the sandbox (mirror /bin has no jq/sed/awk, bash builtins
 # only): copy to /opfs/home and run `bash /opfs/home/demo-agentic-eval.sh`.
@@ -62,37 +62,37 @@ extract_tasks() { # $1=workspace json
 }
 
 # --- preflight: channel alive + A3 help ---
-ping=$(gctl ping)
+ping=$(gear ping)
 case "$ping" in
-  '"pong"') pass "channel alive (gctl ping)" ;;
+  '"pong"') pass "channel alive (gear ping)" ;;
   *) fail "channel alive" "$ping" ;;
 esac
-gctl help >/dev/null 2>&1 && pass "gctl help lists methods (A3)" ||
-  fail "gctl help" "help did not exit 0"
+gear help >/dev/null 2>&1 && pass "gear help lists methods (A3)" ||
+  fail "gear help" "help did not exit 0"
 
 # --- #8 config audit + undo ---
-before=$(gctl config.getShell)
+before=$(gear config.getShell)
 cur_wagi=$(bool_field "$before" wagiDogEnabled)
 if [ "$cur_wagi" = "true" ]; then patch='{"wagiDogEnabled":false}'; else patch='{"wagiDogEnabled":true}'; fi
-upd=$(gctl config.updateShell "[$patch]")
+upd=$(gear config.updateShell "[$patch]")
 echo "[eval]      updateShell -> $upd"
-audit=$(gctl config.audit.list)
+audit=$(gear config.audit.list)
 audit_id=$(str_field "$audit" id)
 case "$audit_id" in
   a*) ;;
   *) fail "#8 audit entry" "no id in $audit" ;;
 esac
-after=$(gctl config.getShell)
+after=$(gear config.getShell)
 if [ "$after" != "$before" ]; then
-  undo=$(gctl config.audit.undo "[\"$audit_id\"]")
+  undo=$(gear config.audit.undo "[\"$audit_id\"]")
   echo "[eval]      undo -> $undo"
-  restored=$(gctl config.getShell)
+  restored=$(gear config.getShell)
   if [ "$restored" = "$before" ]; then
     pass "#8 audit undo restores exact config"
   else
     fail "#8 audit undo" "config differs after undo"
   fi
-  undo2=$(gctl config.audit.undo "[\"$audit_id\"]")
+  undo2=$(gear config.audit.undo "[\"$audit_id\"]")
   case "$undo2" in
     *'"ok":false'*) pass "#8 double-undo rejected" ;;
     *) fail "#8 double-undo" "$undo2" ;;
@@ -102,7 +102,7 @@ else
 fi
 
 # --- #3 events read (updateShell + undo both pushed config.changed) ---
-drained=$(gctl events.drain)
+drained=$(gear events.drain)
 echo "[eval]      events.drain -> ${drained:0:200}"
 case "$drained" in
   *'"topic":"config.changed"'*) pass "#3 events.drain sees config.changed" ;;
@@ -110,16 +110,16 @@ case "$drained" in
 esac
 
 # --- #4 ephemeral task lifecycle (no workspace persistence) ---
-ws_before=$(gctl config.getWorkspace)
+ws_before=$(gear config.getWorkspace)
 tasks_before=$(extract_tasks "$ws_before")
-created=$(gctl tasks.create '[{"name":"eval-ephemeral","cmd":"echo eval-done","term":false}]')
+created=$(gear tasks.create '[{"name":"eval-ephemeral","cmd":"echo eval-done","term":false}]')
 echo "[eval]      tasks.create -> $created"
-# tasks.create returns a UUID taskDefinition id; the API / gctl numeric
+# tasks.create returns a UUID taskDefinition id; the API / gear numeric
 # session id comes from the panelId (workspace-task-N).
 panel_id=$(str_field "$created" panelId)
 task_id="${panel_id#workspace-task-}"
 if [ -n "$task_id" ]; then
-  ws_after=$(gctl config.getWorkspace)
+  ws_after=$(gear config.getWorkspace)
   tasks_after=$(extract_tasks "$ws_after")
   if [ "$tasks_after" = "$tasks_before" ]; then
     pass "#4 ephemeral task not persisted to workspace"
@@ -130,7 +130,7 @@ if [ -n "$task_id" ]; then
   got_output=""
   for ((i = 0; i < 15; i++)); do
     sleep 1
-    out=$(gctl tasks.output "[$task_id]")
+    out=$(gear tasks.output "[$task_id]")
     case "$out" in
       *"eval-done"*) got_output="$out"; break ;;
     esac
@@ -140,8 +140,8 @@ if [ -n "$task_id" ]; then
   else
     fail "#4 tasks.output" "${got_output:-no output after 15s}"
   fi
-  gctl tasks.cancel "[$task_id]" >/dev/null 2>&1
-  listed=$(gctl tasks.list)
+  gear tasks.cancel "[$task_id]" >/dev/null 2>&1
+  listed=$(gear tasks.list)
   case "$listed" in
     *"\"id\":$task_id"*) fail "#4 cancel" "task still listed" ;;
     *) pass "#4 cancel removes task from list" ;;
@@ -152,7 +152,7 @@ fi
 
 # --- #1 interact loop: term task + prompt-wait + agents.read ---
 rm -f "$RESULT"
-created=$(gctl tasks.create '[{"name":"eval-term","cmd":"bash","term":true}]')
+created=$(gear tasks.create '[{"name":"eval-term","cmd":"bash","term":true}]')
 term_panel=$(str_field "$created" panelId)
 tid="${term_panel#workspace-task-}"
 echo "[eval]      term task panelId -> $term_panel"
@@ -163,7 +163,7 @@ echo "[eval]      term task panelId -> $term_panel"
 ready=""
 last_read=""
 for ((i = 0; i < 30; i++)); do
-  rd=$(gctl agents.read "[\"task-$tid\",{\"rows\":10}]")
+  rd=$(gear agents.read "[\"task-$tid\",{\"rows\":10}]")
   last_read="$rd"
   case "$rd" in
     *"➜"*) ready="yes"; break ;;
@@ -176,7 +176,7 @@ fi
 delivered=""
 if [ -n "$ready" ]; then
   for ((attempt = 1; attempt <= 4; attempt++)); do
-    pr=$(gctl agents.prompt-wait "task-$tid" "echo EVAL_TERM_OK > $RESULT" 30)
+    pr=$(gear agents.prompt-wait "task-$tid" "echo EVAL_TERM_OK > $RESULT" 30)
     case "$pr" in
       *'"ok":true'*) delivered="yes"; break ;;
       *) echo "[eval]      prompt-wait attempt $attempt -> $pr" ;;
@@ -199,7 +199,7 @@ if [ -n "$delivered" ]; then
   else
     fail "#1 interact loop" "no EVAL_TERM_OK in $RESULT"
   fi
-  rd=$(gctl agents.read "[\"task-$tid\",{\"rows\":50}]")
+  rd=$(gear agents.read "[\"task-$tid\",{\"rows\":50}]")
   case "$rd" in
     *"EVAL_TERM_OK"*) pass "#1 agents.read sees prompt output" ;;
     *) fail "#1 agents.read" "$rd" ;;
@@ -207,7 +207,7 @@ if [ -n "$delivered" ]; then
 else
   fail "#1 interact loop" "prompt-wait never delivered"
 fi
-gctl tasks.cancel "[\"$tid\"]" >/dev/null 2>&1
+gear tasks.cancel "[\"$tid\"]" >/dev/null 2>&1
 
 echo "[eval] ======================="
 echo "[eval] PASS=$PASS FAIL=$FAIL"

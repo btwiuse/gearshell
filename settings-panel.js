@@ -5,7 +5,7 @@
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.2";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.14";
+import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.15";
 import { setupConfigForm } from "./settings-config.js?v=20260826.11";
 import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.4";
 import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.2";
@@ -13,8 +13,8 @@ import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.2";
 import { setupSystemForm } from "./settings-system.js?v=20260826.2";
 import { setupBindForm } from "./settings-binds.js?v=20260826.2";
 import { setupTaskForm } from "./settings-task.js?v=20260826.2";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.52";
-import { listSettingsSections } from "./plugins.js?v=20260829.40";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.55";
+import { listSettingsSections } from "./plugins.js?v=20260829.43";
 
 // Mount plugin-registered settings sections (ctx.registerSettingsSection)
 // after the built-in template content. Each section gets a <details>

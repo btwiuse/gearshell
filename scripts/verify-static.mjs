@@ -246,12 +246,12 @@ if (!has("window.GearShell")) {
     "Workspace API must be exposed to agents via window.GearShell (jsfs /js bridge).",
   );
 }
-if (!has("initWorkspaceApi") || !has("GCTL_BIND")) {
+if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
   throw new Error(
-    "Workspace API boot hook and gctl bind must exist for agent-side control.",
+    "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.124")) {
+if (!has("app.js?v=20260828.127")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

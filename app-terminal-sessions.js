@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.76";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.35";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.76";
+} from "./app-terminal-profiles.js?v=20260826.79";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.38";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.79";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -98,7 +98,7 @@ function createTaskElement(id, profile) {
   winchBind.setAttribute("src", "#task/self/term/winch");
   task.appendChild(winchBind);
 
-  // The per-task shell toolset (writable /bin + bash + w9y + gctl, see
+  // The per-task shell toolset (writable /bin + bash + w9y + gear, see
   // ensureGearShellBinds): each terminal task declares its own private
   // namespace view, the same way workspace-task panels and crushrc do.
   for (const bind of loadActiveWorkspace().binds || []) {
