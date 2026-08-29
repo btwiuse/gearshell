@@ -21,14 +21,15 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.79";
+} from "./app-workspace.js?v=20260826.94";
 import {
   normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.80";
-import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.38";
+} from "./app-normalize.js?v=20260828.95";
+import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.16";
+import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.53";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
@@ -36,12 +37,12 @@ import {
   pushAuditEntry,
   redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.54";
+} from "./workspace-audit.js?v=20260829.69";
 import {
   mergePluginStatus,
   registerPlugin,
   unregisterPlugin,
-} from "./plugins.js?v=20260829.43";
+} from "./plugins.js?v=20260829.58";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
@@ -186,8 +187,11 @@ function installPlugin(manifest, agentOrOptions = {}) {
   if (!normalized) {
     throw new Error("plugin requires an id");
   }
-  if (!normalized.entry && !normalized.iframe?.src) {
-    throw new Error("plugin requires an entry URL, vfs: path, or iframe src");
+  if (!normalized.entry && !normalized.iframe?.src &&
+      !normalized.wasm?.length && !normalized.preset?.length) {
+    throw new Error(
+      "plugin requires an entry URL, vfs: path, iframe src, or wasm/preset tools",
+    );
   }
   const prev = loadConfig();
   const next = {
@@ -200,6 +204,10 @@ function installPlugin(manifest, agentOrOptions = {}) {
   saveConfig(next);
   pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
   reloadPluginKernel(normalized);
+  // Plugin-declared wasm binaries + preset resources become per-task
+  // binds immediately; they take effect on the next reload / new task
+  // (binds are baked into the namespace at construction).
+  ensurePluginToolBinds(loadActiveWorkspace(), next.plugins);
   pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
   return {
     ok: true,
@@ -225,6 +233,7 @@ function setPluginEnabled(id, enabled, agentOrOptions = {}) {
   } else {
     unregisterPlugin(id);
   }
+  ensurePluginToolBinds(loadActiveWorkspace(), next.plugins);
   pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, id, enabled: enabled === true };
 }
@@ -245,6 +254,7 @@ function removePlugin(id, agentOrOptions = {}) {
   saveConfig(next);
   pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
   unregisterPlugin(id);
+  ensurePluginToolBinds(loadActiveWorkspace(), next.plugins);
   pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, removed: id };
 }

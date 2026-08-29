@@ -6,11 +6,59 @@ function normalizeStringList(list) {
   return list.map((item) => String(item)).filter(Boolean);
 }
 
+// Mount points must be relative paths inside the task namespace (no
+// absolute paths or parent traversal).
+function normalizeDst(dst) {
+  const d = String(dst || "").trim();
+  if (!d) return "";
+  if (d.startsWith("/") || d.split("/").includes("..")) return "";
+  return d;
+}
+
+// wasm: [{ id, dst, src, perm }] — a w9y-hosted wasm binary mounted into
+// every task's namespace as a fetch bind (e.g. dst "bin/mytool").
+function normalizeWasmList(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const raw of list) {
+    const src = String(raw?.src || "").trim();
+    const dst = normalizeDst(raw?.dst);
+    if (!src || !dst) continue;
+    out.push({
+      id: String(raw?.id || dst).trim() || dst,
+      dst,
+      src,
+      perm: String(raw?.perm || "0755").trim(),
+    });
+  }
+  return out;
+}
+
+// preset: [{ id, dst, content, perm }] — an inline file mounted on the
+// per-task /preset ramfs (e.g. dst "preset/myrc").
+function normalizePresetList(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const raw of list) {
+    const dst = normalizeDst(raw?.dst);
+    if (!dst || typeof raw?.content !== "string") continue;
+    out.push({
+      id: String(raw?.id || dst).trim() || dst,
+      dst,
+      content: raw.content,
+      perm: String(raw?.perm || "0666").trim(),
+    });
+  }
+  return out;
+}
+
 export function normalizePlugin(plugin = {}) {
   const id = String(plugin.id || "").trim();
   if (!id) return null;
   const iframe = plugin?.iframe;
   const iframeSrc = String(iframe?.src || "").trim();
+  const wasm = normalizeWasmList(plugin?.wasm);
+  const preset = normalizePresetList(plugin?.preset);
   return {
     id,
     name: String(plugin.name || id).trim(),
@@ -31,6 +79,8 @@ export function normalizePlugin(plugin = {}) {
         },
       }
       : {}),
+    ...(wasm.length ? { wasm } : {}),
+    ...(preset.length ? { preset } : {}),
   };
 }
 

@@ -6,7 +6,7 @@
 // The restore path (app-panels addRestoredPanel) still calls
 // addVmPanel directly for saved VM tabs.
 
-import { addVmPanel, VmPanel } from "./panels.js?v=20260812.67";
+import { addVmPanel, VmPanel } from "./panels.js?v=20260812.82";
 
 export const plugin = {
   register(ctx) {

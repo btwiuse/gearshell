@@ -10,7 +10,7 @@ import {
   crushRunnerDep,
   nextCrushRunnerId,
 } from "./crush-deps.js?v=20260828.3";
-import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.79";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.94";
 import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.3";
 import {
   CrushCtaRow,
@@ -18,7 +18,7 @@ import {
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "./crush-runner-parts.js?v=20260828.79";
+} from "./crush-runner-parts.js?v=20260828.94";
 
 function CrushHero({ children }) {
   return React.createElement(

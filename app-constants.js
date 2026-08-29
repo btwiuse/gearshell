@@ -3,7 +3,7 @@
 // built-in workspace presets. Pure data (500-line rule split).
 
 import { icons as LucideIcons } from "lucide-react";
-import { DEFAULT_PLUGINS } from "./app-plugin-manifests.js?v=20260829.93";
+import { DEFAULT_PLUGINS } from "./app-plugin-manifests.js?v=20260829.108";
 
 // Built-in plugin manifests live in app-plugin-manifests.js; re-exported
 // so every existing importer (app.js, plugins.js, workspace-config-api,

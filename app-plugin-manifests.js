@@ -27,7 +27,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/group-plugin.js?v=20260829.14",
+    entry: "/group-plugin.js?v=20260829.29",
   },
   {
     id: "runtime",
@@ -41,7 +41,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/playground-plugin.js?v=20260829.62",
+    entry: "/playground-plugin.js?v=20260829.77",
   },
   {
     id: "home",
@@ -58,28 +58,28 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/files-plugin.js?v=20260829.70",
+    entry: "/files-plugin.js?v=20260829.85",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/workbench-plugin.js?v=20260829.71",
+    entry: "/workbench-plugin.js?v=20260829.86",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/vm-plugin.js?v=20260829.72",
+    entry: "/vm-plugin.js?v=20260829.87",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/settings-plugin.js?v=20260829.76",
+    entry: "/settings-plugin.js?v=20260829.91",
   },
   {
     id: "launcher",
@@ -93,7 +93,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/crush-runner-plugin.js?v=20260829.77",
+    entry: "/crush-runner-plugin.js?v=20260829.92",
   },
   {
     id: "browser",
@@ -156,7 +156,7 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/web-pet-plugin.js?v=20260829.13",
+    entry: "/web-pet-plugin.js?v=20260829.28",
   },
   {
     id: "widgetbot",

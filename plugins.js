@@ -18,13 +18,13 @@
 // for untrusted pages (T2 iframe bridge) is a later slice.
 //
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.79";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.94";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.38";
+} from "./app-constants.js?v=20260828.53";
 // Split parts (500-line rule): DI shim + change event, permission
 // scoping + icon resolution, and entry-module loading.
 import {
@@ -363,6 +363,14 @@ export async function registerPlugin(rawManifest) {
     } catch (error) {
       return recordPluginFailure(manifest.id, error);
     }
+  }
+  // Tool-only plugins (wasm binaries / preset resources, no UI surface)
+  // have nothing to load: the manifest stays registered so its binds are
+  // reconciled by ensurePluginToolBinds, but no panel is created.
+  if (!manifest.entry) {
+    pluginLoadResults.set(manifest.id, { ok: true, at: Date.now() });
+    emitPluginChanged({ id: manifest.id, ok: true });
+    return { ok: true, id: manifest.id };
   }
   try {
     return await loadComponentPlugin(manifest);
