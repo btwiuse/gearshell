@@ -12,9 +12,10 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.108";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.67";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.108";
+} from "./app-terminal-profiles.js?v=20260826.109";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.68";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.109";
+import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -111,7 +112,12 @@ function appendBindElement(task, bind, permKey) {
   const element = document.createElement("wanix-bind");
   element.setAttribute("dst", bind.dst);
   if (bind.type) element.setAttribute("type", bind.type);
-  if (bind.src) element.setAttribute("src", bind.src);
+  // Fetch binds prefer the OPFS-cached copy (a session blob URL) when
+  // priming already downloaded it; otherwise keep the origin src.
+  if (bind.src) {
+    const cached = bind.type === "fetch" ? cachedBlobUrl(bind.src) : null;
+    element.setAttribute("src", cached || bind.src);
+  }
   const perm = bind[permKey];
   if (perm) element.setAttribute("perm", perm);
   if (bind.union) element.setAttribute("union", bind.union);

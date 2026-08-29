@@ -2,7 +2,7 @@
 //
 // The Crush Runner feature was split into small modules under the
 // 500-line rule; this file only re-exports the public surface app.js
-// imports so its `import { ... } from "./crush-runner.js?v=20260826.104"` line stays
+// imports so its `import { ... } from "./crush-runner.js?v=20260826.105"` line stays
 // stable:
 //
 //   crush-deps.js           dependency registry + panel id counters
@@ -27,4 +27,4 @@ export {
 export {
   addCrushRunnerPanel,
   CrushRunnerPanel,
-} from "./crush-panel.js?v=20260828.104";
+} from "./crush-panel.js?v=20260828.105";

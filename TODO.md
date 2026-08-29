@@ -577,3 +577,56 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   plugins-deps+scope+loading);全树 <500,fn-length 0。
 - 拆分教训:跨文件缺失符号 node --check 查不出 → 必 browser 实测;数组
   拆分布局 brace 随行搬;私有 helper 跟调用方走。
+
+## 二十六、插件内容 OPFS 缓存(round 44,已做)+ 内存统计 & 内核插件化(设计,未拍板)
+
+### A. 插件 bind 内容 OPFS 缓存(round 44,已实现)
+
+- 动机:每次任务启动都 fetch 全部绑定的 wasm(w9y.io 往返 + 每任务主 frame 流缓冲 + 并发 fetch 风暴阻塞主线程)。
+- 实现:`app-plugin-cache.js`。boot 时 `primePluginContentCache(loadConfig().plugins)`
+  把 enabled 插件的 wasm 依赖下载进 `opfs/cache/plugin/<pluginId>@<pluginVersion>/<dst basename>`
+  (`.src` 边车文件存来源 URL,同版本 pin 升级自动重下;并发 3;`response.body.pipeTo(createWritable())`
+  流式落盘不占 JS 堆);成功后建 **src → blob URL** 会话级映射。
+  `appendBindElement`(app-terminal-sessions.js)对 `type:"fetch"` 的 bind 优先用
+  `cachedBlobUrl(src)` 换 src → 任务挂载零网络、离线可用。
+- 接线:app.js boot(ensurePluginToolBinds 之后)+ workspace-config-api.js 的
+  install/setEnabled/remove 三处(和 ensurePluginToolBinds 配对)。
+- **诚实边界:不减少每任务挂载内存**(字节进任务内核 fs 就得留一份,nodeFile.data);
+  减少内存的正解是按需挂载(round 43 fix 2)。缓存解决的是:重复下载、网络延迟、
+  离线、per-open fetch 风暴。
+- **关键事实(用户指出)**:OPFS 是浏览器 API(`navigator.storage.getDirectory()`),
+  页面在内核启动前就能直读,`/opfs` 只是浏览器 OPFS 的投影 —— 所以这个缓存
+  已经绕过内核 VFS,不存在"蛋鸡"问题。
+- 待办:blob URL 映射是会话级(每次 boot 重建);若 blob 常驻内存成为问题,加 LRU 上限。
+
+### B. 内核内存统计 runtime.ReadMemStats(设计,未拍板)
+
+- 动机:8+ 并发终端 OOM 只能靠 goroutine dump 反推;有 stats 可在逼近 4GB 前预警。
+- 方案:wanix 内核(task fs 视角)暴露每任务内存统计:
+  - 每个 task 的 `ctl` 支持 write `"mem"` → 返回该 worker 内核的
+    `runtime.ReadMemStats` JSON(HeapAlloc/HeapSys/HeapObjects/StackInuse/NumGC 等)。
+  - 或暴露只读 `/task/<rid>/mem` 文件,打开即返回快照。
+  - 页面侧:轮询器(复用 events 800ms 节奏)把每个活跃任务的 HeapAlloc/4GB 占比
+    画进诊断页,超 70% 预警。
+- 注意:每个 gojs worker 是独立 wasm 实例,MemStats 只能从 worker 内部读 →
+  必须走 task fs 通道(`ctl` 由 worker 内核自己回答即可,天然可行)。
+- 备选:`performance.memory` 只覆盖主 frame JS 堆,不含 wasm 线性内存,不可用。
+- 收益:同类 OOM(embed 泄漏、bind 挂载过量)下次 crash 前就能定位。
+
+### C. 内核/系统组件插件化(可能设计,未拍板 —— 用户:标注为一种可能,不是决定)
+
+> 方向:让 wanix 内核乃至所有系统组件像插件一样可缓存、可 pin、可更新。
+> **以下为探讨性设计,尚未决定是否实施。**
+
+- 事实:内核 = workspace.runtime 里一对可 pin URL(`wasmUrl` + `moduleUrl`),
+  `app-wanix.js:25` 把 wasmUrl 设成 `<wanix-namespace>` 的 `wasm` 属性;页面完全掌控。
+  w9y.io 的 `wanix/wasm@v0.4.25` 与插件 wasm 同一构建管道。
+- 步骤 1(内核 wasm 缓存引导):boot 时用 A 的同款机制把内核 wasm 缓存进 OPFS,
+  用 blob URL 启动内核 → 内核离线可启动。**坑**:内核 JS 模块(wanix.min.js)含
+  `new URL("workbench/", import.meta.url)` 相对资源解析,`import(blobUrl)` 会断;
+  JS 部分更适合同源打包(现有 `wanix-dist`)或 SW 拦截,wasm 部分 blob 缓存无副作用。
+- 步骤 2(内核 bind 支持 OPFS src):bind 新增 `opfs:` 前缀 src
+  (如 `src: "opfs:/cache/plugin/..."`),任务启动彻底零 HTTP —— 需要小内核特性。
+- 步骤 3(内核作为 plugin 条目):runtime 进 DEFAULT_PLUGINS 作为特殊"boot 插件"
+  (必须最先解析),boot 顺序:页面 → 内核插件 → 其它插件;版本管理/更新流统一。
+- 边界:任务命名空间不能绕过内核(命名空间是内核侧的);"plugin 直读 OPFS"仅页面侧成立。

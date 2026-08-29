@@ -6,15 +6,15 @@ import {
   DEFAULT_VM_BACKEND_URL,
   DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
-} from "./app-constants.js?v=20260828.67";
+} from "./app-constants.js?v=20260828.68";
 import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmNetworkMode,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.109";
-import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260828.67";
-import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.108";
+} from "./app-normalize.js?v=20260828.110";
+import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260828.68";
+import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.109";
 
 export function getTerminalProfiles(config = loadConfig()) {
   const shell = {

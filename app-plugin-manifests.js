@@ -89,7 +89,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js?v=20260829.44",
+    entry: "/plugin/group/group-plugin.js?v=20260829.45",
   },
   {
     id: "runtime",
@@ -103,7 +103,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.92",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.93",
   },
   {
     id: "home",
@@ -120,28 +120,28 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.100",
+    entry: "/plugin/files/files-plugin.js?v=20260829.101",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.101",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.102",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.102",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.103",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.106",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.107",
   },
   {
     id: "launcher",
@@ -155,7 +155,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.107",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.108",
   },
   {
     id: "browser",
@@ -240,7 +240,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.9",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.10",
     permissions: { api: ["terminal.embed"] },
     wasm: [
       { id: "altscreen-toggle", dst: "bin/altscreen-toggle", src: "https://w9y.io/go/github.com/bubbletui/bubbletea/v2/examples/altscreen-toggle@v2.0.12" },
