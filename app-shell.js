@@ -6,56 +6,56 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { DockviewReact } from "dockview-react";
-import { PluginsPanel } from "./plugins-panel.js?v=20260829.62";
+import { PluginsPanel } from "./plugins-panel.js?v=20260829.63";
 import { AddTerminalButton } from "./plugin/launcher/launcher.js?v=20260812.47";
 import {
   IframePanel,
   PanelTab,
   TerminalPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.113";
+} from "./panels.js?v=20260812.114";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.125";
+} from "./app-panels-store.js?v=20260826.126";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   getPluginBootPromise,
   listOverlays,
   PLUGIN_CHANGED_EVENT,
-} from "./plugins.js?v=20260829.89";
+} from "./plugins.js?v=20260829.90";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.125";
+} from "./app-terminal-sessions.js?v=20260826.126";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.129";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.131";
+} from "./app-sessions.js?v=20260828.130";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.132";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.126";
+} from "./app-panels.js?v=20260826.127";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.125";
-import { addPanelByComponent } from "./panels.js?v=20260812.113";
+} from "./app-workspace.js?v=20260826.126";
+import { addPanelByComponent } from "./panels.js?v=20260812.114";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.154";
+} from "./app-layout.js?v=20260828.155";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.141";
+} from "./workspace-api.js?v=20260828.142";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);

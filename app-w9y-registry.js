@@ -10,7 +10,7 @@
 // after each orchestrated operation, and on demand via w9y.refresh.
 
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
-import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.110";
+import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.111";
 
 const REGISTRY_OPFS = ["wanix", "w9y-registry.json"];
 const INSTALL_PREFIX = "/opfs/wanix";
@@ -93,6 +93,10 @@ export async function ensureW9yDependencies(plugins, cliVersion) {
   await refreshW9yRegistry();
   const applied = [];
   for (const plugin of plugins || []) {
+    // Disabled plugins are never loaded at runtime and must not trigger
+    // installs: their entry/iframe/wasm fetch nothing, so a w9y
+    // dependency must not either.
+    if (plugin?.enabled === false) continue;
     const dep = plugin?.w9y;
     if (!dep || typeof dep.mod !== "string" || !dep.mod) continue;
     const status = installedModStatus(dep.mod);

@@ -5,7 +5,7 @@
 // live while the panel stays open.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
-import { AGENT_AUDIT_CHANGED_EVENT } from "../../workspace-audit.js?v=20260829.100";
+import { AGENT_AUDIT_CHANGED_EVENT } from "../../workspace-audit.js?v=20260829.101";
 
 function queryElements(settingsContent) {
   return {

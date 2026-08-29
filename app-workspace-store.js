@@ -9,23 +9,23 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_INDEX_KEY,
   WORKSPACE_SCHEMA_VERSION,
-} from "./app-constants.js?v=20260828.84";
+} from "./app-constants.js?v=20260828.85";
 import {
   isLegacySystemMirrorBind,
   normalizeBind,
   normalizeShellConfig,
   normalizeTask,
-} from "./app-normalize.js?v=20260828.126";
+} from "./app-normalize.js?v=20260828.127";
 import {
   createWorkspaceId,
   readStoredJson,
   workspaceStorageKey,
   writeStoredJson,
-} from "./app-storage.js?v=20260826.82";
+} from "./app-storage.js?v=20260826.83";
 import {
   createWorkspace,
   getWorkspacePreset,
-} from "./app-workspace-presets.js?v=20260826.125";
+} from "./app-workspace-presets.js?v=20260826.126";
 
 export function migrateWorkspace(workspace) {
   if (!workspace || typeof workspace !== "object") return null;

@@ -104,7 +104,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js?v=20260829.61",
+    entry: "/plugin/group/group-plugin.js?v=20260829.62",
   },
   {
     id: "runtime",
@@ -118,7 +118,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.109",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.110",
   },
   {
     id: "home",
@@ -135,28 +135,28 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.117",
+    entry: "/plugin/files/files-plugin.js?v=20260829.118",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.118",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.119",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.119",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.120",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.123",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.124",
   },
   {
     id: "launcher",
@@ -170,7 +170,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.124",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.125",
   },
   {
     id: "browser",
@@ -256,7 +256,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.26",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.27",
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
     preset: [

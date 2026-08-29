@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.125";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.84";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.125";
+} from "./app-terminal-profiles.js?v=20260826.126";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.85";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.126";
 import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
 
 export function hideTerminalLayer() {

@@ -21,17 +21,17 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.125";
+} from "./app-workspace.js?v=20260826.126";
 import {
   normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.126";
-import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.47";
+} from "./app-normalize.js?v=20260828.127";
+import { ensurePluginToolBinds } from "./app-plugin-binds.js?v=20260830.48";
 import { primePluginContentCache } from "./app-plugin-cache.js?v=20260830.2";
-import { ensureW9yDependencies } from "./app-w9y-registry.js?v=20260830.16";
-import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.84";
+import { ensureW9yDependencies } from "./app-w9y-registry.js?v=20260830.17";
+import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.85";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
@@ -39,12 +39,12 @@ import {
   pushAuditEntry,
   redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.100";
+} from "./workspace-audit.js?v=20260829.101";
 import {
   mergePluginStatus,
   registerPlugin,
   unregisterPlugin,
-} from "./plugins.js?v=20260829.89";
+} from "./plugins.js?v=20260829.90";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
