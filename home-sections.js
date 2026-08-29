@@ -3,7 +3,7 @@
 // composes these and wires the openPanel/openExternal/scrollToId
 // callbacks. Each component stays under 50 lines.
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, BookOpen, Github, LayoutGrid, Zap } from "lucide-react";
 import { localFirstChips } from "./home-data.js?v=20260828.1";
 
@@ -196,7 +196,37 @@ function DemoTerminal() {
   );
 }
 
-export function HomeDemo({ openPanel }) {
+// The traffic-light title bar shown above both the static transcript
+// and the live terminal.
+function DemoBar() {
+  return React.createElement(
+    "div",
+    { className: "mkt-demo-bar" },
+    React.createElement("span", { className: "mkt-demo-dot" }),
+    React.createElement("span", { className: "mkt-demo-dot" }),
+    React.createElement("span", { className: "mkt-demo-dot" }),
+    React.createElement(
+      "span",
+      { className: "mkt-demo-title" },
+      "gear@gear: ~",
+    ),
+  );
+}
+
+// Live embedded terminal: the demo frame swaps its static transcript
+// for a real wanix terminal (window.GearShell.terminal.embed) once
+// clicked; detach tears the session down on unmount.
+function LiveTerminal() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const handle = window.GearShell?.terminal?.embed(ref.current);
+    return () => handle?.detach?.();
+  }, []);
+  return React.createElement("div", { ref, className: "mkt-demo-live" });
+}
+
+export function HomeDemo() {
+  const [live, setLive] = useState(false);
   return React.createElement(
     "section",
     { className: "mkt-page mkt-section", id: "mkt-demo" },
@@ -208,26 +238,21 @@ export function HomeDemo({ openPanel }) {
       "Same shell. Same dotfiles. Same state. On a borrowed laptop, a coffee shop Wi-Fi, or a phone on a plane.",
     ),
     React.createElement(
-      "button",
+      live ? "div" : "button",
       {
         className: "mkt-demo-frame",
-        type: "button",
-        "aria-label": "Open Terminal",
-        onClick: () => openPanel("terminal"),
+        ...(live
+          ? { "aria-label": "Live terminal" }
+          : {
+            type: "button",
+            "aria-label": "Open Terminal",
+            onClick: () => setLive(true),
+          }),
       },
-      React.createElement(
-        "div",
-        { className: "mkt-demo-bar" },
-        React.createElement("span", { className: "mkt-demo-dot" }),
-        React.createElement("span", { className: "mkt-demo-dot" }),
-        React.createElement("span", { className: "mkt-demo-dot" }),
-        React.createElement(
-          "span",
-          { className: "mkt-demo-title" },
-          "gear@gear: ~",
-        ),
-      ),
-      React.createElement(DemoTerminal),
+      React.createElement(DemoBar),
+      live
+        ? React.createElement(LiveTerminal)
+        : React.createElement(DemoTerminal),
     ),
     React.createElement(
       "p",

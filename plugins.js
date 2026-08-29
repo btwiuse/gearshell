@@ -39,13 +39,13 @@
 // enforcement for untrusted pages (T2, iframe bridge) is a later slice.
 
 import { icons as LucideIcons } from "lucide-react";
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.75";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.76";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.34";
+} from "./app-constants.js?v=20260828.35";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 
 // Fired whenever a plugin finishes loading (ok or failed) or is

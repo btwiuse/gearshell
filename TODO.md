@@ -558,3 +558,12 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   生命周期无崩;console 零报错。
 - 至此内核面板仅剩:terminal(核心)、task(双模任务面板)、plugins(管理器
   自指)、iframe(插件基座)。
+
+## 二十四、terminal.embed API + Home 实时终端(round 38,commit `<本轮 commit>`)
+
+- 新 API:window.GearShell.terminal.embed(anchor, profile?) → {sessionId,
+  detach}(同步,内核 attachTerminalSession 路径;插件面板可嵌真终端)。
+- Home:点击 mkt-demo-frame → 静态演示换成真 wanix 终端(实测出现
+  "➜ / $" 提示符,输入可达)。home manifest 加 terminal.embed 权限。
+- 已知:Home 隐藏重挂载后 demo 回静态(会话持久但不可见);会话按重挂载递增。
+- 后续候选:embed 复用/清理策略、T2 iframe 桥、plugins 市场。

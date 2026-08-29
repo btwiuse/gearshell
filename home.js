@@ -25,7 +25,7 @@ import {
   HomeLocalFirst,
   HomeNav,
   HomeQuotes,
-} from "./home-sections.js?v=20260828.3";
+} from "./home-sections.js?v=20260828.4";
 import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.1";
 
 let __homeDeps = null;
@@ -83,7 +83,7 @@ export function LandingPanel({ containerApi }) {
       }),
     ),
     React.createElement(HomeFeatures, { features }),
-    React.createElement(HomeDemo, { openPanel }),
+    React.createElement(HomeDemo),
     React.createElement(HomeLocalFirst),
     React.createElement(HomeHow, { steps }),
     React.createElement(HomeQuotes, { quotes }),
