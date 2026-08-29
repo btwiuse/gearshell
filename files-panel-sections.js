@@ -16,7 +16,7 @@ import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.39";
 import {
   filesystemPathJoin,
   filesystemPathParent,
-} from "./files-path.js?v=20260826.38";
+} from "./files-path.js?v=20260826.70";
 import { FilesTopbar } from "./files-topbar.js?v=20260826.40";
 import { FilesTree } from "./files-tree.js?v=20260826.39";
 

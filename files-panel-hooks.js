@@ -10,7 +10,7 @@ import {
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "./files-path.js?v=20260826.38";
+} from "./files-path.js?v=20260826.70";
 import {
   sniffWasmBytes,
   useFilesActions,

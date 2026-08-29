@@ -45,7 +45,7 @@ import { FilesResizer } from "./files-parts.js?v=20260826.48";
 import {
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "./files-path.js?v=20260826.38";
+} from "./files-path.js?v=20260826.70";
 import { filesDep } from "./files-registry.js?v=20260826.27";
 
 // === External open bridge ===

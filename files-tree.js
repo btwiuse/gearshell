@@ -8,7 +8,7 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import {
   filesystemPathJoin,
   normalizeFilesystemPath,
-} from "./files-path.js?v=20260826.38";
+} from "./files-path.js?v=20260826.70";
 import { getEntryIcon } from "./files-ui.js?v=20260826.38";
 
 export const TREE_ROOT = ".";
