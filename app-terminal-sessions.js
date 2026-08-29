@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.107";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.66";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.107";
+} from "./app-terminal-profiles.js?v=20260826.108";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.67";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.108";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -98,39 +98,55 @@ function createTaskElement(id, profile) {
   winchBind.setAttribute("src", "#task/self/term/winch");
   task.appendChild(winchBind);
 
-  // The per-task shell toolset (writable /bin + bash + w9y + gear, see
-  // ensureGearShellBinds): each terminal task declares its own private
-  // namespace view, the same way workspace-task panels and crushrc do.
-  for (const bind of loadActiveWorkspace().binds || []) {
-    const element = document.createElement("wanix-bind");
-    element.setAttribute("dst", bind.dst);
-    if (bind.type) element.setAttribute("type", bind.type);
-    if (bind.src) element.setAttribute("src", bind.src);
-    if (bind.perm) element.setAttribute("perm", bind.perm);
-    if (bind.union) element.setAttribute("union", bind.union);
-    if (typeof bind.content === "string") element.textContent = bind.content;
-    task.appendChild(element);
-  }
-
-  // Per-task extra binds (any mix of ns/file/fetch/archive). Profiles use
-  // this to attach a private file into the task namespace without having
-  // to round-trip through the wanix kernel writeFile API. Bind `dst`
-  // paths must be relative — wanix-bind rejects leading slashes — and
-  // are mounted inside the task's own namespace.
-  if (Array.isArray(profile.extraBinds)) {
-    for (const bind of profile.extraBinds) {
-      if (!bind || typeof bind.dst !== "string" || !bind.dst) continue;
-      const element = document.createElement("wanix-bind");
-      element.setAttribute("dst", bind.dst);
-      if (bind.type) element.setAttribute("type", bind.type);
-      if (bind.src) element.setAttribute("src", bind.src);
-      if (bind.mode) element.setAttribute("perm", bind.mode);
-      if (bind.union) element.setAttribute("union", bind.union);
-      if (typeof bind.content === "string") element.textContent = bind.content;
-      task.appendChild(element);
-    }
-  }
+  appendWorkspaceBinds(task, profile);
+  appendExtraBinds(task, profile);
   return task;
+}
+
+// Append one bind declaration as a <wanix-bind> child of the task.
+// `permKey` selects the permission attribute: workspace binds carry
+// `perm`, profile extraBinds use `mode`.
+function appendBindElement(task, bind, permKey) {
+  if (!bind || typeof bind.dst !== "string" || !bind.dst) return;
+  const element = document.createElement("wanix-bind");
+  element.setAttribute("dst", bind.dst);
+  if (bind.type) element.setAttribute("type", bind.type);
+  if (bind.src) element.setAttribute("src", bind.src);
+  const perm = bind[permKey];
+  if (perm) element.setAttribute("perm", perm);
+  if (bind.union) element.setAttribute("union", bind.union);
+  if (typeof bind.content === "string") element.textContent = bind.content;
+  task.appendChild(element);
+}
+
+// The per-task shell toolset (writable /bin + bash + w9y + gear, see
+// ensureGearShellBinds): each terminal task declares its own private
+// namespace view, the same way workspace-task panels and crushrc do.
+// `profile.skipPluginBinds` drops every plugin-owned bind (ids starting
+// with "plugin-"), so a task mounts only what its profile's extraBinds
+// declares - embed callers that run a single known binary (e.g. one
+// bbtex example) avoid pulling the whole plugin toolset and every wasm
+// dep into their namespace (~100MB+ per task).
+function appendWorkspaceBinds(task, profile) {
+  for (const bind of loadActiveWorkspace().binds || []) {
+    if (
+      profile.skipPluginBinds &&
+      typeof bind?.id === "string" &&
+      bind.id.startsWith("plugin-")
+    ) continue;
+    appendBindElement(task, bind, "perm");
+  }
+}
+
+// Per-task extra binds (any mix of ns/file/fetch/archive). Profiles use
+// this to attach a private file into the task namespace without having
+// to round-trip through the wanix kernel writeFile API. Bind `dst`
+// paths must be relative - wanix-bind rejects leading slashes - and
+// are mounted inside the task's own namespace.
+function appendExtraBinds(task, profile) {
+  for (const bind of profile.extraBinds || []) {
+    appendBindElement(task, bind, "mode");
+  }
 }
 
 export function getTerminalSession(id, profile) {

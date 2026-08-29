@@ -12,7 +12,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.107";
+import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.108";
 
 // Every example in the w9y bbtex@v2.0.12 manifest, grouped by theme. Each
 // id must match a `wasm` declaration in the plugin manifest (same dst
@@ -101,11 +101,114 @@ export const BTEX_GROUPS = [
   "Commands & Messaging",
 ];
 
-// Default profile with cmd = example id, then per-example overrides.
+// Hard cap on simultaneously open terminals. Every example runs as its
+// own gojs kernel instance, so opening the whole catalog at once would
+// exhaust the wasm heap and crash the kernel.
+export const MAX_OPEN_EXAMPLES = 12;
+
+// Mirrors the plugin manifest's preset/artichoke.md (the pager example
+// reads artichoke.md from its CWD). Kept in sync with the manifest.
+const ARTICHOKE_MD = `
+Glow
+====
+
+A casual introduction. 你好世界!
+
+## Let’s talk about artichokes
+
+The _artichoke_ is mentioned as a garden plant in the 8th century BC by Homer
+**and** Hesiod. The naturally occurring variant of the artichoke, the cardoon,
+which is native to the Mediterranean area, also has records of use as a food
+among the ancient Greeks and Romans. Pliny the Elder mentioned growing of
+_carduus_ in Carthage and Cordoba.
+
+> He holds him with a skinny hand,
+> ‘There was a ship,’ quoth he.
+> ‘Hold off! unhand me, grey-beard loon!’
+> An artichoke, dropt he.
+
+--Samuel Taylor Coleridge, [The Rime of the Ancient Mariner][rime]
+
+[rime]: https://poetryfoundation.org/poems/43997/
+
+## Other foods worth mentioning
+
+1. Carrots
+1. Celery
+1. Tacos
+    * Soft
+    * Hard
+1. Cucumber
+
+## Things to eat today
+
+* [x] Carrots
+* [x] Ramen
+* [ ] Currywurst
+
+### Power levels of the aforementioned foods
+
+| Name       | Power | Comment          |
+| ---        | ---   | ---              |
+| Carrots    | 9001  | It’s over 9000?! |
+| Ramen      | 9002  | Also over 9000?! |
+| Currywurst | 10000 | What?!           |
+
+## Currying Artichokes
+
+Here’s a bit of code in [Haskell](https://haskell.org), because we are fancy.
+Remember that to compile Haskell you’ll need \`ghc\`.
+
+\`\`\`haskell
+module Main where
+
+import Data.Function ( (&) )
+import Data.List ( intercalculate )
+
+hello :: String -> String
+hello s =
+    "Hello, " ++ s ++ "."
+
+main :: IO ()
+main =
+    map hello [ "artichoke", "alcachofa" ] & intercalculate "\\n" & putStrLn
+\`\`\`
+
+***
+
+_Alcachofa_, if you were wondering, is artichoke in Spanish.
+`;
+
+// The w9y on-demand build URL for one example binary (pinned to the same
+// v2.0.12 as the plugin manifest's wasm declarations).
+const W9Y_EXAMPLE = (id) =>
+  `https://w9y.io/go/github.com/bubbletui/bubbletea/v2/examples/${id}@v2.0.12`;
+
+// Default profile with cmd = example id, then per-example overrides. Each
+// terminal mounts ONLY its own binary (plus the pager preset) through
+// extraBinds and skips the system-wide plugin binds, so the namespace
+// stays a few MB instead of pulling every wasm dep - many examples can
+// be open at once without exhausting memory.
 function embedProfileFor(example) {
   return {
     ...getDefaultTerminalProfile(),
     cmd: example.id,
+    skipPluginBinds: true,
+    extraBinds: [
+      { type: "ns", dst: "bin", src: "#ramfs/new", mode: "0755" },
+      {
+        type: "fetch",
+        dst: `bin/${example.id}`,
+        src: W9Y_EXAMPLE(example.id),
+        mode: "0755",
+      },
+      ...(example.id === "pager"
+        ? [
+            { type: "ns", dst: "preset", src: "#ramfs/new" },
+            { type: "file", dst: "preset/artichoke.md", content: ARTICHOKE_MD },
+          ]
+        : []),
+    ],
     ...(example.profile || {}),
   };
 }
@@ -157,54 +260,71 @@ function ExampleTerminal({ example, onClose }) {
 }
 
 // The left sidebar: every example grouped by theme, with the open ones
-// highlighted and a per-group count.
-function ExampleList({ open, onToggle }) {
+// highlighted, a per-group count, and the open-total cap.
+function ExampleList({ open, onToggle, atCap }) {
   const isOpen = (example) => open.some((item) => item.id === example.id);
   return React.createElement(
     "div",
     { className: "bbtex-sidebar" },
-    React.createElement("h3", { className: "bbtex-title" }, "Examples"),
+    React.createElement(
+      "h3",
+      { className: "bbtex-title" },
+      `Examples (${open.length}/${MAX_OPEN_EXAMPLES})`,
+    ),
+    atCap
+      ? React.createElement(
+          "div",
+          { className: "bbtex-cap-hint" },
+          `Close a terminal first (max ${MAX_OPEN_EXAMPLES} open)`,
+        )
+      : null,
     React.createElement(
       "div",
       { className: "bbtex-examples" },
-      BTEX_GROUPS.map((group) => {
-        const items = BTEX_EXAMPLES.filter((example) =>
-          example.group === group
-        );
-        if (items.length === 0) return null;
-        return React.createElement(
-          "div",
-          { key: group, className: "bbtex-group" },
-          React.createElement(
-            "div",
-            { className: "bbtex-group-head" },
-            React.createElement("span", null, group),
-            React.createElement("span", { className: "bbtex-group-count" }, items.length),
-          ),
-          items.map((example) =>
-            React.createElement(
-              "button",
-              {
-                key: example.id,
-                type: "button",
-                className:
-                  "bbtex-example" + (isOpen(example) ? " is-open" : ""),
-                onClick: () => onToggle(example),
-              },
-              React.createElement(
-                "span",
-                { className: "bbtex-example-name" },
-                example.label,
-              ),
-              React.createElement(
-                "span",
-                { className: "bbtex-example-blurb" },
-                example.blurb,
-              ),
-            )
-          ),
-        );
-      })
+      BTEX_GROUPS.map((group) => renderExampleGroup(group, isOpen, onToggle)),
+    ),
+  );
+}
+
+// One theme group: header with count, then a button per example.
+function renderExampleGroup(group, isOpen, onToggle) {
+  const items = BTEX_EXAMPLES.filter((example) =>
+    example.group === group
+  );
+  if (items.length === 0) return null;
+  return React.createElement(
+    "div",
+    { key: group, className: "bbtex-group" },
+    React.createElement(
+      "div",
+      { className: "bbtex-group-head" },
+      React.createElement("span", null, group),
+      React.createElement(
+        "span",
+        { className: "bbtex-group-count" },
+        items.length,
+      ),
+    ),
+    items.map((example) =>
+      React.createElement(
+        "button",
+        {
+          key: example.id,
+          type: "button",
+          className: "bbtex-example" + (isOpen(example) ? " is-open" : ""),
+          onClick: () => onToggle(example),
+        },
+        React.createElement(
+          "span",
+          { className: "bbtex-example-name" },
+          example.label,
+        ),
+        React.createElement(
+          "span",
+          { className: "bbtex-example-blurb" },
+          example.blurb,
+        ),
+      )
     ),
   );
 }
@@ -237,7 +357,14 @@ function PlaygroundStage({ open, onClose }) {
 
 export function BbtexPlayground() {
   const [open, setOpen] = useState([]);
+  const [atCap, setAtCap] = useState(false);
   const toggle = (example) => {
+    const isOpen = open.some((item) => item.id === example.id);
+    if (!isOpen && open.length >= MAX_OPEN_EXAMPLES) {
+      setAtCap(true);
+      return;
+    }
+    setAtCap(false);
     setOpen((prev) =>
       prev.some((item) => item.id === example.id)
         ? prev.filter((item) => item.id !== example.id)
@@ -247,7 +374,7 @@ export function BbtexPlayground() {
   return React.createElement(
     "div",
     { className: "bbtex-playground" },
-    React.createElement(ExampleList, { open, onToggle: toggle }),
+    React.createElement(ExampleList, { open, onToggle: toggle, atCap }),
     React.createElement(PlaygroundStage, { open, onClose: toggle }),
   );
 }
