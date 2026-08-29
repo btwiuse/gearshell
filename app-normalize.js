@@ -30,16 +30,16 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_SCHEMA_VERSION,
   WORKSPACE_TASK_STATUS_EVENT,
-} from "./app-constants.js?v=20260828.23";
+} from "./app-constants.js?v=20260828.24";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./crush-runner.js?v=20260826.58";
+} from "./crush-runner.js?v=20260826.59";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,
-} from "./app-workspace.js?v=20260826.63";
-import { createWorkspaceId } from "./app-storage.js?v=20260826.21";
+} from "./app-workspace.js?v=20260826.64";
+import { createWorkspaceId } from "./app-storage.js?v=20260826.22";
 import {
   clone,
   isLegacySystemMirrorBind,
@@ -51,7 +51,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.15";
+} from "./app-normalize-system.js?v=20260828.16";
 export {
   clone,
   isLegacySystemMirrorBind,
@@ -63,7 +63,7 @@ export {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.15";
+} from "./app-normalize-system.js?v=20260828.16";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";
@@ -251,6 +251,8 @@ function normalizeStringList(list) {
 export function normalizePlugin(plugin = {}) {
   const id = String(plugin.id || "").trim();
   if (!id) return null;
+  const iframe = plugin?.iframe;
+  const iframeSrc = String(iframe?.src || "").trim();
   return {
     id,
     name: String(plugin.name || id).trim(),
@@ -262,6 +264,15 @@ export function normalizePlugin(plugin = {}) {
       api: normalizeStringList(plugin.permissions?.api),
       origins: normalizeStringList(plugin.permissions?.origins),
     },
+    ...(iframeSrc
+      ? {
+        iframe: {
+          src: iframeSrc,
+          ...(iframe.allow ? { allow: String(iframe.allow).trim() } : {}),
+          ...(iframe.allowFullscreen ? { allowFullscreen: true } : {}),
+        },
+      }
+      : {}),
   };
 }
 

@@ -21,14 +21,14 @@ import {
   updateWorkspaceIndex,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js?v=20260826.63";
+} from "./app-workspace.js?v=20260826.64";
 import {
   normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js?v=20260828.64";
-import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.23";
+} from "./app-normalize.js?v=20260828.65";
+import { DEFAULT_PLUGINS } from "./app-constants.js?v=20260828.24";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 import {
   clearAuditEntries,
@@ -36,12 +36,12 @@ import {
   pushAuditEntry,
   redactSecrets,
   undoAuditEntry,
-} from "./workspace-audit.js?v=20260829.38";
+} from "./workspace-audit.js?v=20260829.39";
 import {
   mergePluginStatus,
   registerPlugin,
   unregisterPlugin,
-} from "./plugins.js?v=20260829.27";
+} from "./plugins.js?v=20260829.28";
 
 // --- Agent write-path helpers ---
 // jsfs gives no caller identity, so the agent may pass its name either
@@ -186,8 +186,8 @@ function installPlugin(manifest, agentOrOptions = {}) {
   if (!normalized) {
     throw new Error("plugin requires an id");
   }
-  if (!normalized.entry) {
-    throw new Error("plugin requires an entry URL or vfs: path");
+  if (!normalized.entry && !normalized.iframe?.src) {
+    throw new Error("plugin requires an entry URL, vfs: path, or iframe src");
   }
   const prev = loadConfig();
   const next = {

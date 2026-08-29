@@ -20,8 +20,11 @@ import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.16";
-import { openPluginPanel } from "./plugins.js?v=20260829.27";
+} from "./panels-task.js?v=20260828.17";
+import {
+  getPluginIframeConfig,
+  openPluginPanel,
+} from "./plugins.js?v=20260829.28";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -353,7 +356,6 @@ const PANEL_ADDERS = {
   "workspace-task": addWorkspaceTaskPanel,
   group: addGroupPanel,
   home: (api, group) => panelsDep("addLandingPanel")(api, group),
-  deck: (api, group) => panelsDep("addDeckPanel")(api, group),
   settings: (api, group) => panelsDep("addSettingsPanel")(api, group),
   files: (api, group) => panelsDep("addFilesPanel")(api, group),
   runtime: (api, group) => panelsDep("addRuntimePanel")(api, group),
@@ -377,9 +379,12 @@ function addPanelByComponent(api, component, group, options) {
   // opener mints `${component}-<n>` ids exactly like the built-ins.
   const pluginPanel = openPluginPanel(api, component, targetGroup);
   if (pluginPanel) return pluginPanel;
-  const iframeConfig = panelsDep("IFRAME_PANEL_OPTIONS")[component];
-  if (iframeConfig) {
-    return addIframePanel(api, iframeConfig, targetGroup, options);
+  // Plugin iframe panels (Browser / Bonsai / Codigo / Crush / Rick Roll
+  // are built-ins of this kind) host a sandboxed iframe like the legacy
+  // kernel iframe branch did — same panel, config-driven source.
+  const pluginIframe = getPluginIframeConfig(component);
+  if (pluginIframe) {
+    return addIframePanel(api, pluginIframe, targetGroup, options);
   }
   return panelsDep("addLandingPanel")(api, targetGroup, options);
 }

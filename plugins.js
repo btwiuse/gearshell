@@ -14,6 +14,14 @@
 //                      registerPanel({ component, label, icon, title, render })
 //                      api — a permission-scoped view of window.GearShell
 //
+//   Iframe plugins are the entry-less form: `{ ..., iframe: { src,
+//   allow?, allowFullscreen? } }` registers a panel that hosts the src in
+//   a sandboxed iframe. Registration is synchronous (no module import),
+//   so iframe plugins are available to the boot/restore path immediately
+//   (registerSyncPlugins runs before dockview onReady). The shell's own
+//   Browser / Bonsai / Codigo / Crush / Rick Roll tabs are built-ins of
+//   this kind — the same manifests any third party would write.
+//
 // Registration mutates the live PANEL_COMPONENTS / PANEL_CREATION_OPTIONS
 // maps (dockview resolves components by name at addPanel time, so new
 // panel types are visible immediately) and appends unknown components to
@@ -26,12 +34,13 @@
 // enforcement for untrusted pages (T2, iframe bridge) is a later slice.
 
 import { icons as LucideIcons } from "lucide-react";
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.63";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.64";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
-} from "./app-constants.js?v=20260828.23";
+  STARTUP_PANEL_TYPES,
+} from "./app-constants.js?v=20260828.24";
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
 
 // Fired whenever a plugin finishes loading (ok or failed) or is
@@ -65,6 +74,7 @@ function pluginsDep(name) {
 // --- Registry state ---
 const pluginManifests = new Map(); // id -> normalized manifest
 const pluginPanels = new Map(); // component -> { manifest, label, title, render }
+const pluginIframes = new Map(); // component -> { manifest, title, src, allow, allowFullscreen }
 const pluginLoadResults = new Map(); // id -> { ok, error?, at }
 
 export function getPluginLoadResults() {
@@ -75,15 +85,22 @@ export function getPluginLoadResults() {
 }
 
 export function isPluginPanel(component) {
-  return pluginPanels.has(component);
+  return pluginPanels.has(component) || pluginIframes.has(component);
 }
 
 export function listPluginPanels() {
-  return [...pluginPanels.entries()].map(([component, entry]) => ({
-    component,
-    label: entry.label,
-    pluginId: entry.manifest.id,
-  }));
+  return [
+    ...[...pluginPanels.entries()].map(([component, entry]) => ({
+      component,
+      label: entry.label,
+      pluginId: entry.manifest.id,
+    })),
+    ...[...pluginIframes.entries()].map(([component, entry]) => ({
+      component,
+      label: entry.title,
+      pluginId: entry.manifest.id,
+    })),
+  ];
 }
 
 // --- Permissions (T1 capability guardrail) ---
@@ -191,6 +208,98 @@ function ensureLauncherKnown(component) {
   }
 }
 
+// Plugin panels must survive reloads like built-ins: getSavedOpenPanels
+// filters restored panels by STARTUP_PANEL_TYPES, so every registered
+// component joins that allow-list (it is a mutable array — the kernel
+// appends, never reorders).
+function ensureRestorable(component) {
+  if (!STARTUP_PANEL_TYPES.includes(component)) {
+    STARTUP_PANEL_TYPES.push(component);
+  }
+}
+
+// Iframe plugins need no JS module: the manifest itself carries the
+// iframe src, so registration is synchronous (no import round-trip),
+// which also removes the boot race where openStartupPanels / restore
+// would miss a panel type that is still loading.
+function registerIframePanel(manifest, opts) {
+  const component = opts.component || manifest.id;
+  const { src, title, allow, allowFullscreen } = opts;
+  if (typeof src !== "string" || !src) {
+    throw new Error("iframe plugin requires an iframe.src");
+  }
+  if (pluginIframes.has(component) || pluginPanels.has(component)) {
+    throw new Error(`panel type "${component}" already registered`);
+  }
+  const entry = {
+    manifest,
+    title: title || manifest.name,
+    src,
+    allow,
+    allowFullscreen,
+  };
+  pluginIframes.set(component, entry);
+  const options = pluginsDep("PANEL_CREATION_OPTIONS");
+  if (!options.some((option) => option.component === component)) {
+    options.push({
+      component,
+      label: manifest.name,
+      icon: resolveIcon(manifest.icon || "Globe2"),
+    });
+  }
+  ensureLauncherKnown(component);
+  ensureRestorable(component);
+  return entry;
+}
+
+function registerIframePlugin(manifest) {
+  registerIframePanel(manifest, {
+    component: manifest.id,
+    ...manifest.iframe,
+    title: manifest.name,
+  });
+  pluginLoadResults.set(manifest.id, { ok: true, at: Date.now() });
+  emitPluginChanged({ id: manifest.id, ok: true });
+  return { ok: true, id: manifest.id };
+}
+
+// Sync half of registerPluginsFromConfig: entry-less iframe manifests
+// register immediately (no module import), so they are available to the
+// dockview onReady boot path before any panel is opened. Component
+// plugins still load asynchronously via registerPluginsFromConfig.
+export function registerSyncPlugins() {
+  const plugins = pluginsDep("loadConfig")().plugins || [];
+  const results = [];
+  for (const rawManifest of plugins) {
+    const manifest = pluginsDep("normalizePlugin")(rawManifest);
+    if (!manifest || !manifest.enabled || !manifest.iframe) continue;
+    if (pluginManifests.has(manifest.id)) continue;
+    pluginManifests.set(manifest.id, manifest);
+    try {
+      results.push(registerIframePlugin(manifest));
+    } catch (error) {
+      results.push(recordPluginFailure(manifest.id, error));
+    }
+  }
+  return results;
+}
+
+// Config lookup for the panels.js addPanelByComponent iframe branch.
+// Returns the addIframePanel-shaped config ({ title, src, panelType,
+// allow, allowFullscreen }) or null when the component is not a
+// plugin-provided iframe panel.
+export function getPluginIframeConfig(component) {
+  const entry = pluginIframes.get(component);
+  if (!entry) return null;
+  return {
+    title: entry.title,
+    src: entry.src,
+    panelType: component,
+    ...(entry.allow ? { allow: entry.allow } : {}),
+    ...(entry.allowFullscreen ? { allowFullscreen: true } : {}),
+  };
+}
+
 function registerPluginPanel(
   manifest,
   { component, label, icon, title, render },
@@ -226,6 +335,46 @@ function registerPluginPanel(
 }
 
 // --- Plugin lifecycle ---
+
+// Shared failure path: drop the manifest, record the load error, emit,
+// and hand back the {ok:false} result (used by the sync, async, and
+// boot registration paths).
+function recordPluginFailure(id, error) {
+  pluginManifests.delete(id);
+  pluginLoadResults.set(id, {
+    ok: false,
+    error: error?.message || String(error),
+    at: Date.now(),
+  });
+  emitPluginChanged({ id, ok: false, error: error?.message || String(error) });
+  return { ok: false, id, error: error?.message || String(error) };
+}
+
+// Load an entry-module plugin and run its register(ctx). The module's
+// registerPanel call (or the manifest's iframe field — handled by the
+// caller) is what actually creates the panel type.
+async function loadComponentPlugin(manifest) {
+  const mod = await loadEntryModule(manifest);
+  const register = registerFnOf(mod);
+  if (typeof register !== "function") {
+    throw new Error(
+      "plugin module must export register(ctx) or plugin.register(ctx)",
+    );
+  }
+  const ctx = {
+    manifest,
+    registerPanel: (opts) => registerPluginPanel(manifest, opts),
+    api: createScopedApi(
+      pluginsDep("workspaceApi"),
+      manifest.permissions?.api,
+    ),
+  };
+  await register(ctx);
+  pluginLoadResults.set(manifest.id, { ok: true, at: Date.now() });
+  emitPluginChanged({ id: manifest.id, ok: true });
+  return { ok: true, id: manifest.id };
+}
+
 export async function registerPlugin(rawManifest) {
   const manifest = pluginsDep("normalizePlugin")(rawManifest);
   if (!manifest) return { ok: false, error: "plugin requires an id" };
@@ -233,43 +382,20 @@ export async function registerPlugin(rawManifest) {
     return { ok: true, already: true, id: manifest.id };
   }
   pluginManifests.set(manifest.id, manifest);
-  try {
-    const mod = await loadEntryModule(manifest);
-    const register = registerFnOf(mod);
-    if (typeof register !== "function") {
-      throw new Error(
-        "plugin module must export register(ctx) or plugin.register(ctx)",
-      );
+  // Entry-less iframe manifests register synchronously — no module load.
+  // (registerSyncPlugins already did this at boot; this path covers
+  // config.plugins.install fired after startup.)
+  if (manifest.iframe) {
+    try {
+      return registerIframePlugin(manifest);
+    } catch (error) {
+      return recordPluginFailure(manifest.id, error);
     }
-    const ctx = {
-      manifest,
-      registerPanel: (opts) => registerPluginPanel(manifest, opts),
-      api: createScopedApi(
-        pluginsDep("workspaceApi"),
-        manifest.permissions?.api,
-      ),
-    };
-    await register(ctx);
-    pluginLoadResults.set(manifest.id, { ok: true, at: Date.now() });
-    emitPluginChanged({ id: manifest.id, ok: true });
-    return { ok: true, id: manifest.id };
+  }
+  try {
+    return await loadComponentPlugin(manifest);
   } catch (error) {
-    pluginManifests.delete(manifest.id);
-    pluginLoadResults.set(manifest.id, {
-      ok: false,
-      error: error?.message || String(error),
-      at: Date.now(),
-    });
-    emitPluginChanged({
-      id: manifest.id,
-      ok: false,
-      error: error?.message || String(error),
-    });
-    return {
-      ok: false,
-      id: manifest.id,
-      error: error?.message || String(error),
-    };
+    return recordPluginFailure(manifest.id, error);
   }
 }
 
@@ -294,21 +420,31 @@ export function unregisterPlugin(id) {
     return { ok: false, error: `plugin "${id}" is not loaded` };
   }
   const dockview = getDockviewApi();
-  for (const [component, entry] of [...pluginPanels]) {
-    if (entry.manifest.id !== id) continue;
-    // Close open panels BEFORE dropping the component map entry: a
-    // re-render of a still-open panel whose component just vanished
-    // would crash the dockview grid.
+  // Drop one panel registration (component panel or iframe panel).
+  // Close open panels BEFORE dropping the registry entry: a re-render of
+  // a still-open panel whose component just vanished would crash the
+  // dockview grid.
+  const dropRegistration = (component, hasEntry) => {
     for (const panel of dockview?.panels || []) {
       if (panel.params?.panelType === component) panel.api.close();
     }
-    pluginPanels.delete(component);
+    if (!hasEntry) return;
     delete pluginsDep("PANEL_COMPONENTS")[component];
     const options = pluginsDep("PANEL_CREATION_OPTIONS");
     const index = options.findIndex((option) => option.component === component);
     if (index !== -1) options.splice(index, 1);
     const orderIndex = DEFAULT_LAUNCHER_ITEM_ORDER.indexOf(component);
     if (orderIndex !== -1) DEFAULT_LAUNCHER_ITEM_ORDER.splice(orderIndex, 1);
+  };
+  for (const [component, entry] of [...pluginPanels]) {
+    if (entry.manifest.id !== id) continue;
+    dropRegistration(component, true);
+    pluginPanels.delete(component);
+  }
+  for (const [component, entry] of [...pluginIframes]) {
+    if (entry.manifest.id !== id) continue;
+    dropRegistration(component, false);
+    pluginIframes.delete(component);
   }
   pluginManifests.delete(id);
   pluginLoadResults.delete(id);
@@ -327,9 +463,14 @@ export function mergePluginStatus(manifest) {
     loaded: pluginManifests.has(manifest.id),
     loadError: result && !result.ok ? result.error : null,
     loadAt: result?.at ?? null,
-    panels: [...pluginPanels.entries()]
-      .filter(([, entry]) => entry.manifest.id === manifest.id)
-      .map(([component]) => component),
+    panels: [
+      ...[...pluginPanels.entries()]
+        .filter(([, entry]) => entry.manifest.id === manifest.id)
+        .map(([component]) => component),
+      ...[...pluginIframes.entries()]
+        .filter(([, entry]) => entry.manifest.id === manifest.id)
+        .map(([component]) => component),
+    ],
   };
 }
 

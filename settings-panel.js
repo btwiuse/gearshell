@@ -13,8 +13,8 @@ import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.2";
 import { setupSystemForm } from "./settings-system.js?v=20260826.2";
 import { setupBindForm } from "./settings-binds.js?v=20260826.2";
 import { setupTaskForm } from "./settings-task.js?v=20260826.2";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.39";
-import { setupPluginsForm } from "./settings-plugins.js?v=20260829.36";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.40";
+import { setupPluginsForm } from "./settings-plugins.js?v=20260829.37";
 export function SettingsPanel({ containerApi }) {
   const wrapperRef = useRef(null);
 

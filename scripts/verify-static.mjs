@@ -107,7 +107,7 @@ if (!has("onDragStart:") || !has("EyeOff") || !has("Open by default")) {
     "Launcher layout must support drag, visibility icons, and default startup.",
   );
 }
-if (!has("src: '/bonsai/'") || !has("label: 'Bonsai 27B'")) {
+if (!has("src: '/bonsai/'") || !has("name: 'Bonsai 27B'")) {
   throw new Error(
     "Launcher must offer Bonsai 27B from the bundled Bonsai app.",
   );
@@ -251,7 +251,7 @@ if (!has("initWorkspaceApi") || !has("GCTL_BIND")) {
     "Workspace API boot hook and gctl bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.111")) {
+if (!has("app.js?v=20260828.112")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

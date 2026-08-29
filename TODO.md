@@ -438,3 +438,22 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
      的 plugins.js 引用。
 - 待办:Plugins 市场(JSON 清单 + 安装按钮)、T2 iframe 桥、plugin 更新机制
   (同 id 重装 = 更新)。
+
+## 十六、内置 panel 批量 plugin 化 — iframe 插件 + deck(round 29,commit `<本轮 commit>`)
+
+- **研究结论**:内置 panel 三类可 plugin 化 —— ①iframe 配置型(rickroll /
+  browser / bonsai / codigo / crush)②React 组件 + DI 型(music 已做,deck 本轮
+  以「注册型插件」方式做:deck-plugin.js 只管 registerPanel,deck.js 的 initDeck
+  dep shim 保留在 app.js)③内核持有型(home/settings/files/runtime/terminal/
+  workbench/vm/group/task/fallback)不可 plugin 化(boot 兜底 + 会话持有)。
+- **内核扩展**(plugins.js):`registerIframePanel` + `getPluginIframeConfig` +
+  `registerSyncPlugins()`(boot 同步注册 entry-less iframe 插件,消除启动竞态);
+  `ensureRestorable`(插件组件推入 STARTUP_PANEL_TYPES,修复 music 面板重载不
+  恢复的 round 27 遗留);unregister/mergeStatus/list/is 全覆盖 iframe。
+- **迁移**:IFRAME_PANEL_OPTIONS 删除;deck + 5 iframe 进 DEFAULT_PLUGINS
+  (built-in 可禁用不可删);DEFAULT_LAUNCHER_ITEM_ORDER / STARTUP_PANEL_TYPES
+  / DEFAULT_COLLAPSED_LAUNCHER_ITEMS 保留为持久化 allow-list。
+- **实测**:7 插件全 loaded;open/render/disable/enable 全生命周期无崩;
+  startupPanels 里 iframe 插件(rickroll)启动即开(同步注册生效),组件插件
+  (deck)启动兜底 Home(T1 异步固有,已接受);console 零报错。
+- 待办:Plugins 市场(T2 iframe 桥之后)、T2 桥、plugin 更新机制。

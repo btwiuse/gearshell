@@ -5,9 +5,9 @@
 // section re-renders on PLUGIN_CHANGED_EVENT (async kernel loads) and
 // WORKSPACE_CHANGED_EVENT (config edits elsewhere).
 
-import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.27";
-import { configApi } from "./workspace-config-api.js?v=20260828.48";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.23";
+import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.28";
+import { configApi } from "./workspace-config-api.js?v=20260828.49";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.24";
 
 function queryElements(settingsContent) {
   return {

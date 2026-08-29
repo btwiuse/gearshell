@@ -116,7 +116,12 @@ export const DEFAULT_LAUNCHER_ITEM_ORDER = [
 ];
 export const CONFIG_KEY = "gear-shell-config";
 // Built-in plugins (WISHLIST #9). The shell's own panels load through
-// the same plugin kernel as third-party ones — Music is the dogfood.
+// the same plugin kernel as third-party ones — Music (component) was the
+// first dogfood; Deck followed as a registration-only component plugin
+// (deck.js keeps its dep shim); Browser / Bonsai / Codigo / Crush / Rick
+// Roll are entry-less iframe plugins (the manifest carries the src, so
+// they register synchronously at boot). Disabling a built-in hides its
+// panel type; built-ins cannot be removed, only disabled.
 // The entry URL carries its own ?v= token (bumped alongside the plugin
 // module's edits; the version cascade only rewrites import statements).
 export const DEFAULT_PLUGINS = [
@@ -128,6 +133,65 @@ export const DEFAULT_PLUGINS = [
     entry: "/music-plugin.js?v=20260829.21",
     permissions: {
       api: ["music.*", "panels.open", "panels.list"],
+    },
+  },
+  {
+    id: "deck",
+    name: "Deck",
+    version: "1.0.0",
+    icon: "LayoutDashboard",
+    entry: "/deck-plugin.js?v=20260829.2",
+  },
+  {
+    id: "browser",
+    name: "Browser",
+    version: "1.0.0",
+    icon: "Globe2",
+    iframe: {
+      src: "/browser/",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+  },
+  {
+    id: "bonsai",
+    name: "Bonsai 27B",
+    version: "1.0.0",
+    icon: "TreePine",
+    iframe: {
+      src: "/bonsai/",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+  },
+  {
+    id: "codigo",
+    name: "Codigo",
+    version: "1.0.0",
+    icon: "Code2",
+    iframe: {
+      src: "https://codigo.dev",
+    },
+  },
+  {
+    id: "crush",
+    name: "Crush",
+    version: "1.0.0",
+    icon: "Bot",
+    iframe: {
+      src: "https://justwasm.github.io/crush/",
+    },
+  },
+  {
+    id: "rickroll",
+    name: "Rick Roll",
+    version: "1.0.0",
+    icon: "Music2",
+    iframe: {
+      src: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      allow:
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+      allowFullscreen: true,
     },
   },
 ];

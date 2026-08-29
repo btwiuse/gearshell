@@ -4,40 +4,34 @@ import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.63";
+} from "./app-workspace.js?v=20260826.64";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.63";
+} from "./app-terminal-profiles.js?v=20260826.64";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.63";
-import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.58";
+} from "./app-panels-store.js?v=20260826.64";
+import { reserveCrushRunnerIds } from "./crush-runner.js?v=20260826.59";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.51";
+} from "./panels.js?v=20260812.52";
 import {
   Activity,
-  Bot,
-  Code2,
   Cpu,
   FolderOpen,
-  Globe2,
   House,
-  LayoutDashboard,
   Monitor,
-  Music2,
   Rocket,
   Settings,
   SlidersHorizontal,
   Terminal,
-  TreePine,
   UsersRound,
 } from "lucide-react";
 
@@ -71,42 +65,10 @@ export function autoStartWorkspaceTasks(api) {
   }
 }
 
-export const IFRAME_PANEL_OPTIONS = {
-  browser: {
-    title: "Browser",
-    src: "/browser/",
-    panelType: "browser",
-    allow: "clipboard-read; clipboard-write; fullscreen",
-    allowFullscreen: true,
-  },
-  bonsai: {
-    title: "Bonsai 27B",
-    src: "/bonsai/",
-    panelType: "bonsai",
-    allow: "clipboard-read; clipboard-write; fullscreen",
-    allowFullscreen: true,
-  },
-  codigo: { title: "Codigo", src: "https://codigo.dev", panelType: "codigo" },
-  crush: {
-    title: "Crush",
-    src: "https://justwasm.github.io/crush/",
-    panelType: "crush",
-  },
-  rickroll: {
-    title: "Rick Roll",
-    src: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    panelType: "rickroll",
-    allow:
-      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
-    allowFullscreen: true,
-  },
-};
-
 export const PANEL_CREATION_OPTIONS = [
   { component: "terminal", label: "Terminal", icon: Terminal },
   { component: "fallback", label: "Launcher", icon: Rocket },
   { component: "home", label: "Home", icon: House },
-  { component: "deck", label: "Deck", icon: LayoutDashboard },
   { component: "workbench", label: "Workbench", icon: Monitor },
   { component: "vm", label: "VM", icon: Cpu },
   { component: "settings", label: "Settings", icon: Settings },
@@ -114,12 +76,7 @@ export const PANEL_CREATION_OPTIONS = [
   { component: "runtime", label: "Runtime", icon: Activity },
   { component: "playground", label: "Playground", icon: SlidersHorizontal },
   { component: "group", label: "Group", icon: UsersRound },
-  { component: "browser", label: "Browser", icon: Globe2 },
-  { component: "bonsai", label: "Bonsai 27B", icon: TreePine },
-  { component: "codigo", label: "Codigo", icon: Code2 },
-  { component: "crush", label: "Crush", icon: Bot },
   { component: "crush-runner", label: "Crush Runner", icon: Rocket },
-  { component: "rickroll", label: "Rick Roll", icon: Music2 },
 ];
 
 function reserveMaxCrushRunnerId(panels) {
