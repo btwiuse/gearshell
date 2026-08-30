@@ -35,7 +35,7 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.140";
+} from "./files-panel-hooks.js?v=20260826.141";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
@@ -47,7 +47,7 @@ import {
   filesystemPathParent,
   normalizeFilesystemPath,
 } from "../files-path.js?v=20260826.71";
-import { filesDep } from "./files-registry.js?v=20260826.107";
+import { filesDep } from "./files-registry.js?v=20260826.108";
 
 const html = htm.bind(React.createElement);
 

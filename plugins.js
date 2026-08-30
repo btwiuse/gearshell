@@ -18,13 +18,13 @@
 // for untrusted pages (T2 iframe bridge) is a later slice.
 //
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.141";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.142";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.100";
+} from "./app-constants.js?v=20260828.101";
 // Split parts (500-line rule): DI shim + change event, permission
 // scoping + icon resolution, and entry-module loading.
 import {
@@ -45,7 +45,7 @@ import {
   cssLoaded,
   injectPluginCss,
   removePluginCss,
-} from "./plugins-css.js?v=20260830.2";
+} from "./plugins-css.js?v=20260830.3";
 import {
   listOverlays,
   registerOverlay,

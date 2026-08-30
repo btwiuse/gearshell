@@ -14,11 +14,11 @@
 // fine, because embedding only makes sense for in-page (T1) callers; an
 // agent driving this through /js would just get the sessionId.
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.141";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.142";
 import {
   attachTerminalSession,
   destroyTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.141";
+} from "./app-terminal-sessions.js?v=20260826.142";
 
 let embedCounter = 0;
 

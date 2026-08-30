@@ -10,7 +10,7 @@ import {
   crushRunnerDep,
   nextCrushRunnerId,
 } from "./crush-deps.js?v=20260828.4";
-import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.141";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.142";
 import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.7";
 import {
   CrushCtaRow,
@@ -18,7 +18,7 @@ import {
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "./crush-runner-parts.js?v=20260828.141";
+} from "./crush-runner-parts.js?v=20260828.142";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

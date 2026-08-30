@@ -7,7 +7,7 @@
 // gates visibility; the plugin manifest gates availability.
 
 import React, { useEffect, useRef } from "react";
-import { panelsDep } from "../../panels.js?v=20260812.129";
+import { panelsDep } from "../../panels.js?v=20260812.130";
 
 let webPetModulePromise = null;
 function loadWebPetModule() {

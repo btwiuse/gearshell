@@ -7,12 +7,17 @@ import { html as domHtml } from "./dom-html.js?v=20260830.3";
 
 export function injectPluginCss(manifest) {
   if (!Array.isArray(manifest.css) || manifest.css.length === 0) return [];
+  // Version only same-origin paths: remote css is pinned by its own URL
+  // (e.g. a jsdelivr reveal.js stylesheet) and needs no cache-buster.
   const version = (manifest.entry || "").match(/[?&]v=([\w.]+)/)?.[1] || "";
   const links = [];
   for (const path of manifest.css) {
+    const href = path.startsWith("/") && version
+      ? `${path}?v=${version}`
+      : path;
     const link = domHtml`<link
       rel="stylesheet"
-      href=${version ? `${path}?v=${version}` : path}
+      href=${href}
       data-plugin-css=${manifest.id}
     />`;
     document.head.appendChild(link);

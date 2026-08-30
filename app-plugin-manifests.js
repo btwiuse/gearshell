@@ -103,10 +103,12 @@ export const DEFAULT_PLUGINS = [
     version: "1.0.0",
     icon: "LayoutDashboard",
     entry: "/plugin/deck/deck-plugin.js?v=20260829.10",
-    // Library styles first, deck overrides last (cascade order matters).
+    // Reveal.js library + black theme come from the CDN (the reveal.js JS
+    // is also a CDN script in index.html); deck.css / reveal.css are the
+    // local overrides and must load after the library styles.
     css: [
-      "/plugin/deck/reveal-lib.css",
-      "/plugin/deck/reveal-theme.css",
+      "https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.css",
+      "https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/black.css",
       "/plugin/deck/deck.css",
       "/plugin/deck/reveal.css",
     ],
@@ -131,7 +133,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.125",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.126",
     css: ["/plugin/playground/playground.css"],
   },
   {
@@ -150,7 +152,7 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.133",
+    entry: "/plugin/files/files-plugin.js?v=20260829.134",
     css: ["/plugin/files/files.css"],
   },
   {
@@ -158,21 +160,21 @@ export const DEFAULT_PLUGINS = [
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.134",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.135",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.135",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.136",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.139",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.140",
     css: ["/plugin/settings/settings.css"],
   },
   {
@@ -188,7 +190,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.140",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.141",
     css: ["/plugin/crush-runner/crush-runner.css"],
   },
   {
@@ -275,7 +277,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.42",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.43",
     css: ["/plugin/bbtex/bbtex.css"],
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
