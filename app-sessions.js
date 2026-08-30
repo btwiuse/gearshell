@@ -56,6 +56,7 @@ export function createIframeSession(
   </div>`;
 
   terminalLayer?.appendChild(wrapper);
+  const iframe = wrapper.querySelector("iframe");
 
   const session = { id, wrapper, iframe, anchor: null, layout: null };
   iframeSessions.set(id, session);

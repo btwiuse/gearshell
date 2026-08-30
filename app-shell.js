@@ -37,7 +37,7 @@ import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.172";
+} from "./app-sessions.js?v=20260828.173";
 import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.174";
 import {
   autoStartWorkspaceTasks,

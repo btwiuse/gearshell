@@ -54,7 +54,7 @@ import {
   listAuditEntries,
   undoAuditEntry,
 } from "./workspace-audit.js?v=20260829.143";
-import { App, PANEL_COMPONENTS } from "./app-shell.js?v=20260828.189";
+import { App, PANEL_COMPONENTS } from "./app-shell.js?v=20260828.190";
 
 import {
   getWanixRoot,
@@ -139,7 +139,7 @@ import {
   attachVmSession,
   attachWorkbenchSession,
   waitForWanixSystem,
-} from "./app-sessions.js?v=20260828.172";
+} from "./app-sessions.js?v=20260828.173";
 import {
   attachWorkspaceTaskSession,
   getWorkspaceTaskSession,
