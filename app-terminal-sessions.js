@@ -12,11 +12,11 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.137";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.96";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.137";
+} from "./app-terminal-profiles.js?v=20260826.140";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.99";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.140";
 import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
-import { html } from "./dom-html.js?v=20260830.2";
+import { html } from "./dom-html.js?v=20260830.3";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");

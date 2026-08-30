@@ -5,20 +5,20 @@
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
 import htm from "htm";
-import { html as domHtml } from "../../dom-html.js?v=20260830.2";
+import { html as domHtml } from "../../dom-html.js?v=20260830.3";
 
 const html = htm.bind(React.createElement);
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
 import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.16";
 import { setupConfigForm } from "./settings-config.js?v=20260826.13";
 import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.7";
-import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.4";
-import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.4";
-import { setupSystemForm } from "./settings-system.js?v=20260826.4";
-import { setupBindForm } from "./settings-binds.js?v=20260826.4";
-import { setupTaskForm } from "./settings-task.js?v=20260826.4";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.113";
-import { listSettingsSections } from "../../plugins.js?v=20260829.101";
+import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.5";
+import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.5";
+import { setupSystemForm } from "./settings-system.js?v=20260826.5";
+import { setupBindForm } from "./settings-binds.js?v=20260826.5";
+import { setupTaskForm } from "./settings-task.js?v=20260826.5";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.116";
+import { listSettingsSections } from "../../plugins.js?v=20260829.104";
 
 // Mount plugin-registered settings sections (ctx.registerSettingsSection)
 // after the built-in template content. Each section gets a <details>

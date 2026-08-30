@@ -19,7 +19,7 @@
 
 import React, { useEffect, useRef } from "react";
 import htm from "htm";
-import { html as domHtml } from "../../dom-html.js?v=20260830.2";
+import { html as domHtml } from "../../dom-html.js?v=20260830.3";
 
 const html = htm.bind(React.createElement);
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";

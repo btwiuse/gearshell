@@ -18,13 +18,13 @@
 // for untrusted pages (T2 iframe bridge) is a later slice.
 //
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.137";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.140";
 import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.96";
+} from "./app-constants.js?v=20260828.99";
 // Split parts (500-line rule): DI shim + change event, permission
 // scoping + icon resolution, and entry-module loading.
 import {
@@ -41,9 +41,19 @@ import {
   loadEntryModule,
   registerFnOf,
 } from "./plugins-loading.js?v=20260829.99";
+import {
+  cssLoaded,
+  injectPluginCss,
+  removePluginCss,
+} from "./plugins-css.js?v=20260830.2";
+import {
+  listOverlays,
+  registerOverlay,
+  removeOverlaysForPlugin,
+} from "./plugins-overlays.js?v=20260830.2";
 
 // Re-export the kernel surface importers keep reading from plugins.js.
-export { initPlugins, PLUGIN_CHANGED_EVENT };
+export { initPlugins, PLUGIN_CHANGED_EVENT, listOverlays };
 
 // --- Registry state ---
 const pluginManifests = new Map(); // id -> normalized manifest
@@ -131,6 +141,7 @@ function registerIframePanel(manifest, opts) {
 }
 
 function registerIframePlugin(manifest) {
+  injectPluginCss(manifest);
   registerIframePanel(manifest, {
     component: manifest.id,
     ...manifest.iframe,
@@ -233,38 +244,8 @@ export function listSettingsSections() {
   }));
 }
 
-// --- Shell overlays ---
-// Ambient shell chrome (a desktop pet, a chat widget, a status pill) is
-// a third registration kind: `registerOverlay` mounts a null-rendering
-// React component at the top of the shell, beside the dockview grid.
-// The built-in Wagi Dog pet and Discord widget load this way (their
-// config flags still decide visibility; the plugin manifest decides
-// availability), and any third party can contribute the same.
-const pluginOverlays = new Map(); // id -> { manifest, render }
-
-export function registerOverlay(manifest, { id, render }) {
-  if (typeof id !== "string" || !id) {
-    throw new Error("overlay requires an id");
-  }
-  if (typeof render !== "function") {
-    throw new Error(`overlay "${id}" requires a render component`);
-  }
-  if (pluginOverlays.has(id)) {
-    throw new Error(`overlay "${id}" already registered`);
-  }
-  const entry = { manifest, render };
-  pluginOverlays.set(id, entry);
-  return entry;
-}
-
-// Overlays for the shell chrome (rendered by app-shell's PluginOverlays,
-// which re-renders on PLUGIN_CHANGED_EVENT so async plugin loads show up).
-export function listOverlays() {
-  return [...pluginOverlays.entries()].map(([id, entry]) => ({
-    id,
-    render: entry.render,
-  }));
-}
+// --- Panel registration (component panels) ---
+// (overlay registration lives in plugins-overlays.js)
 
 function registerPluginPanel(
   manifest,
@@ -324,7 +305,10 @@ function recordPluginFailure(id, error) {
 // registerPanel call (or the manifest's iframe field — handled by the
 // caller) is what actually creates the panel type.
 async function loadComponentPlugin(manifest) {
-  const mod = await loadEntryModule(manifest);
+  const [mod] = await Promise.all([
+    loadEntryModule(manifest),
+    cssLoaded(injectPluginCss(manifest)),
+  ]);
   const register = registerFnOf(mod);
   if (typeof register !== "function") {
     throw new Error(
@@ -445,12 +429,10 @@ export function unregisterPlugin(id) {
     if (entry.manifest?.id !== id) continue;
     pluginSettingsSections.delete(sectionId);
   }
-  for (const [overlayId, entry] of [...pluginOverlays]) {
-    if (entry.manifest?.id !== id) continue;
-    pluginOverlays.delete(overlayId);
-  }
+  removeOverlaysForPlugin(id);
   pluginManifests.delete(id);
   pluginLoadResults.delete(id);
+  removePluginCss(id);
   emitPluginChanged({ id, ok: true, unregistered: true });
   return { ok: true, id };
 }

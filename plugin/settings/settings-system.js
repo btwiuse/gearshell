@@ -1,7 +1,7 @@
 // System form section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
-import { html } from "../../dom-html.js?v=20260830.2";
+import { html } from "../../dom-html.js?v=20260830.3";
 
 function querySystemElements(settingsContent) {
   return {

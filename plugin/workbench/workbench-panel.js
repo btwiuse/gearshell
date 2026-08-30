@@ -7,7 +7,7 @@
 
 import React, { useEffect, useRef } from "react";
 import htm from "htm";
-import { panelsDep } from "../../panels.js?v=20260812.125";
+import { panelsDep } from "../../panels.js?v=20260812.128";
 
 const html = htm.bind(React.createElement);
 

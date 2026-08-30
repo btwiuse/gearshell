@@ -13,8 +13,8 @@ import {
   isBinaryData,
   sniffWasmBytes,
   toFilesystemBytes,
-} from "./files-editor.js?v=20260826.45";
-import { html } from "../../dom-html.js?v=20260830.2";
+} from "./files-editor.js?v=20260826.46";
+import { html } from "../../dom-html.js?v=20260830.3";
 
 // === Selection metadata (single-click info panel) ===
 

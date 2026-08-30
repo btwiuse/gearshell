@@ -59,6 +59,7 @@ export function normalizePlugin(plugin = {}) {
   const iframeSrc = String(iframe?.src || "").trim();
   const wasm = normalizeWasmList(plugin?.wasm);
   const preset = normalizePresetList(plugin?.preset);
+  const css = normalizeStringList(plugin?.css);
   return {
     id,
     name: String(plugin.name || id).trim(),
@@ -98,6 +99,9 @@ export function normalizePlugin(plugin = {}) {
         },
       }
       : {}),
+    // Plugin stylesheet paths (same-origin, no version: the loader appends
+    // the entry's ?v= so cascade bumps keep CSS and JS in sync).
+    ...(css.length ? { css } : {}),
   };
 }
 
@@ -130,6 +134,7 @@ export function normalizePlugins(list, defaults) {
         wasm: def.wasm || [],
         ...(def.preset ? { preset: def.preset } : {}),
         ...(def.w9y ? { w9y: def.w9y } : {}),
+        ...(def.css ? { css: def.css } : {}),
       };
     });
   const userIds = new Set(user.map((item) => item.id));

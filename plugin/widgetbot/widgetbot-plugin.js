@@ -5,7 +5,7 @@
 // the shell config `widgetbot` flag still gates visibility so the
 // existing Settings toggle keeps working.
 
-import { WidgetBotOverlay } from "./widgetbot.js?v=20260829.7";
+import { WidgetBotOverlay } from "./widgetbot.js?v=20260829.8";
 
 export const plugin = {
   register(ctx) {

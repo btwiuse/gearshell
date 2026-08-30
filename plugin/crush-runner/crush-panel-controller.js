@@ -20,13 +20,13 @@ import {
 import {
   crushRunDirFor,
   prepareCrushLaunch,
-} from "./crush-config.js?v=20260826.4";
+} from "./crush-config.js?v=20260826.5";
 import {
   detectCrushInstallation,
   installCrushViaW9y,
-} from "./crush-install.js?v=20260828.141";
+} from "./crush-install.js?v=20260828.144";
 import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.4";
-import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.5";
+import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.6";
 
 function makeCrushDetector(
   { setCrushInstalled, setDetectSource, applyDetectedProgram },

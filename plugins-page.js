@@ -20,9 +20,9 @@ import {
   PackageOpen,
   Plus,
 } from "lucide-react";
-import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.101";
-import { configApi } from "./workspace-config-api.js?v=20260828.122";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.96";
+import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.104";
+import { configApi } from "./workspace-config-api.js?v=20260828.125";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.99";
 import { PluginCard } from "./plugins-cards.js?v=20260829.4";
 import { PluginModal } from "./plugins-modal.js?v=20260829.3";
 import htm from "htm";

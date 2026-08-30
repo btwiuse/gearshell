@@ -7,7 +7,7 @@
 // stays the visibility switch; the plugin manifest decides availability.
 
 import React, { useEffect } from "react";
-import { html } from "../../dom-html.js?v=20260830.2";
+import { html } from "../../dom-html.js?v=20260830.3";
 
 const SERVER_ID = "967111927299969064";
 const CHANNEL_ID = "967111927740366888";
