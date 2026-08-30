@@ -8,7 +8,7 @@ import { terminalLayer } from "./app-state.js?v=20260826.2";
 import {
   getTerminalSession,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.165";
+} from "./app-terminal-sessions.js?v=20260826.168";
 
 export function layoutTerminalSession(session, anchor, isVisible) {
   if (!terminalLayer || !anchor || !isVisible) {

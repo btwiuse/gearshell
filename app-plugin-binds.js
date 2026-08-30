@@ -13,7 +13,7 @@
 import {
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.165";
+} from "./app-workspace.js?v=20260826.168";
 
 // Plugin-owned binds carry this prefix; ensurePluginToolBinds prunes any
 // bind with it that no enabled plugin declares (disable / remove / config
@@ -81,8 +81,11 @@ function collectPluginFiles(managed, need, plugin) {
 
 // Collect the system-level managed binds for the enabled plugins
 // (systemFiles declarations): dst -> bind. These mount into the SYSTEM
-// root namespace (workspace.system.binds), which the kernel's js driver
-// reads worker scripts from (it uses the root ns, not the task ns).
+// root namespace (workspace.system.binds) and are visible to every task
+// via the ns clone. Since the kernel's js driver started reading worker
+// scripts from the task namespace (wanix v0.4.27), js workers can be
+// declared per-task with `files`; systemFiles remains for resources that
+// genuinely need to live in the root namespace.
 export function collectPluginSystemBinds(plugins) {
   const managed = new Map();
   for (const plugin of Array.isArray(plugins) ? plugins : []) {

@@ -133,7 +133,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.149",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.152",
     css: ["/plugin/playground/playground.css"],
   },
   {
@@ -152,7 +152,7 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.157",
+    entry: "/plugin/files/files-plugin.js?v=20260829.160",
     css: ["/plugin/files/files.css"],
   },
   {
@@ -160,21 +160,21 @@ export const DEFAULT_PLUGINS = [
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.158",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.161",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.159",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.162",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.163",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.166",
     css: ["/plugin/settings/settings.css"],
   },
   {
@@ -190,7 +190,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.164",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.167",
     css: ["/plugin/crush-runner/crush-runner.css"],
   },
   {
@@ -254,7 +254,7 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.57",
+    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.60",
   },
   {
     id: "widgetbot",
@@ -277,7 +277,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.66",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.69",
     css: ["/plugin/bbtex/bbtex.css"],
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
@@ -449,13 +449,14 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
     // content edit would keep serving the stale cached copy.
     version: "1.0.12",
     icon: "Lightbulb",
-    // No entry module: purely a bind provider. Mounts the examples into
-    // the SYSTEM root namespace (systemFiles) instead of per-task binds:
-    // the kernel's js driver reads worker scripts from the root namespace,
-    // so js workers must live there; task namespaces clone the root, so
-    // the wasi/gojs drivers see them too.
+    // No entry module: purely a bind provider. Declares the examples as
+    // per-task `files` binds (same shape the shell-tools plugin uses for
+    // its /bin binaries): every task namespace gets examples/ mounted
+    // into it, so any terminal can run them. The kernel's js driver
+    // reads worker scripts from the task's own namespace (like wasi and
+    // gojs), so per-task mounts work for all four worker kinds.
     enabled: false,
-    systemFiles: [
+    files: [
       { id: "hello-js", dst: "examples/hello.js", src: "/examples/js/hello.js" },
       { id: "fs-demo-js", dst: "examples/fs-demo.js", src: "/examples/js/fs-demo.js" },
       { id: "ipc-probe-js", dst: "examples/ipc-probe.js", src: "/examples/js/ipc-probe.js" },

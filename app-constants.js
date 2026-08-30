@@ -13,7 +13,7 @@ import {
   isLegacyHushBinaryUrl,
   SHELL_PROFILE_CONTENT,
   W9Y_BINARY_VERSION,
-} from "./app-plugin-manifests.js?v=20260829.179";
+} from "./app-plugin-manifests.js?v=20260829.182";
 
 // Built-in plugin manifests + the shell toolset constants live in
 // app-plugin-manifests.js; re-exported so every existing importer
@@ -302,9 +302,9 @@ export const BUILTIN_TERMINAL_PROFILES = [
 ];
 
 export const WANIX_RUNTIME = {
-  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.25",
+  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.28",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.25/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.28/dist/wanix.min.js",
 };
 
 // The shell toolset (bash/w9y/gear binaries + the rc file) now ships as

@@ -101,20 +101,31 @@
    - **顺序理由**:行为变更最小化(先加"删除原语"再加"触发源")+ 纯内核可测先行(快、确定)、浏览器验证最后(慢、环境干扰)。风险点:term 被移除时 `wanix-term` 元素重连流要宽容"资源消失"(P2 已踩过 xterm 重建同类问题)。
    - **价值评估**:不是急性 bug;真正重的是 gojs worker 泄漏(已由 ephemeral 默认解决),term 是第二阶。做不做取决于 term 任务是否为 agent 常用形态。
 
-## 五·五、js/wasi 多 worker 协作（微服务计算器，2026-08-30 已完成 ✅）
+## 五·五、js/wasi 多 worker 协作（微服务计算器 + 终端换行,2026-08-30 深夜 已完成 ✅）
 
-> 详情见 `memory/dev-server-and-task-workers.md`。**本节已全部落地**：examples 微服务计算器 + wanix fork 内核修复（730f330）+ 本轮待提交的 examples/manifest 改动。
+> 详情见 `memory/dev-server-and-task-workers.md` + `memory/ongoing-work.md`。
 
-### 已完成（全部浏览器实测，生产内核 v0.4.25）
-- **微服务计算器跑通**：`calc.js 6 7 mul` / `calc.js 20 22 add` 均 exit 0，编排者(js)+wasi+gojs+js 四种子任务协作，输出 `✅ all three workers agree: 42`。
-- **spawn"卡死"真相（三因）**：① calc-service.js `appendFile` 不建文件 → 改 `writeFile`；② 插件 OPFS 缓存陈旧（fe46ad0 已修 version 刷新）；③ **内核真 bug**：task.go `nullFile` 缺 `Stat` → 嵌 nil fs.File → stat 继承 fd 时 panic → 整个内核死亡 → 表现为 spawn 挂起。
-- **wanix fork 修复已提交（`730f330`）**：`nullFile.Stat` + spawn 缺 stdio 默认 inherit；回归测试 `task_nullfile_test.go`。随下个 wanix 版本发布。
-- 排查教训：workspace runtime 持久化在 localStorage（`gear-shell-workspace:hush-shell`），会覆盖 app-constants 的 WANIX_RUNTIME；wasm 改动必须 `performance.getEntriesByType('resource')` 确认浏览器加载的是新文件。
+### 已完成（全部浏览器实测,生产 CDN）
+- **微服务计算器全通**:`examples/calc.js 6 7 mul` exit 0,编排者(js)+wasi+gojs+js
+  四种子任务协作,`✅ all three workers agree: 42`。
+- **examples 插件改为 preset 式 per-task `files` binds**(不再 systemFiles):
+  `app-plugin-manifests.js` examples 插件 `systemFiles` → `files`;内核 js driver
+  改读任务 ns(`t.NS()`)后四种 worker 全走 per-task 挂载。`getTaskBinds()` 可见
+  `plugin-examples-files-*` + `plugin-examples-ns`(父挂载),workspace.system.binds
+  干净。crush runner 同款机制。
+- **wanix 三连发**:v0.4.26(spawn 卡死=nullFile.Stat panic + stdio 默认 inherit)、
+  v0.4.27(js driver 读任务 ns)、v0.4.28(终端换行:programFile.WriteAt 翻译 +
+  xterm convertEol)。全部 w9y.io/jsdelivr 验证 + 浏览器实测。
+- **终端输出堆叠 bug 修复**:appendFile → WriteAt 绕过 programFile 的 
+→
+
+  翻译 → 裸 
+ + convertEol 未开 → 输出堆一行。双修(WriteAt 覆写 + convertEol)。
 
 ### 待办
-1. ⬜ 提交本轮 gearshell 改动（examples 微服务计算器 + manifest 清理 + panels-task.js 文案 + memory/TODO）。
-2. ⬜ memory wiki 同步（sync-wiki.sh + 子模块指针）。
-3. ⬜ wanix fork 修复随下个版本发布后，把 WANIX_RUNTIME pin 升上去。
+1. ⬜ 提交本轮 gearshell 改动(manifest files 转换 + runtime v0.4.28 + cascade + 文案)。
+2. ⬜ memory wiki 同步(sync-wiki.sh + 子模块指针)。
+3. ⬜ wanix fork 三连发已 push;gearshell push。
 
 ### 规则（已确立，2026-08-30）
 - **go dev server（no-store）下不需要 ?v= cascade bump**：本地调试改模块直接生效，cascade-bump 只在发布前统一跑一次。减少无关 diff。
