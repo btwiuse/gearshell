@@ -822,8 +822,13 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
      `Cross-Origin-Resource-Policy: cross-origin`(不可控);
   2. **自托管 iframe 源**(同源,不触发 CORP 检查)——bonsai/browser 已是同源
      (`src: "/bonsai/"`、`src: "/browser/"`),codigo/crush/rickroll 是跨源。
-- **可选 TODO(P2,未拍板)**:把 codigo 自托管(proxy 或 vendoring)以消提示 +
-   免依赖上游可用性。参考 `isolation/` Cloudflare Worker 的 proxy 先例。
+- **✅ 已走通第 1 条(2026-08-30)**:codigo 的 Vercel 部署(btwiuse/vscode
+  `vercel.json`)补上了 `Cross-Origin-Opener-Policy: same-origin` +
+  `Cross-Origin-Embedder-Policy: require-corp`(提交 `ec6e514cc7f`,含 COEP 的
+  响应即满足父页面 credentialless 下的 frame embed 检查),实测跨源 iframe 正常
+  渲染、无 NOT-SET 提示。注意 codigo.dev 会拒绝陌生 Host 头(308→vercel.com /
+  403),所以 **Vercel 外部 rewrite 代理方案不可行**(会带原 Host);若将来仍要
+  自托管,走 `isolation/` CF Worker(Worker fetch 自动带目标 Host)。
 - **验证陷阱**(再次踩):DevTools 的 Issues/Network 提示**不在 console 消息里**,
   `read_console_messages` 读不到;旧版本残留错误(.172)会留在 console 缓冲区误导
   判断,判定新版本是否生效要看 `performance.getEntriesByType('resource')` 的
