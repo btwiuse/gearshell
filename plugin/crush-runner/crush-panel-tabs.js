@@ -7,7 +7,7 @@
 import React from "react";
 import { RefreshCw, Save } from "lucide-react";
 import { crushRunnerDep } from "./crush-deps.js?v=20260828.4";
-import { crushRunDirFor } from "./crush-config.js?v=20260826.5";
+import { crushRunDirFor } from "./crush-config.js?v=20260826.6";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

@@ -7,6 +7,13 @@
 // download links, ...) can use the same htm templates instead of
 // document.createElement + appendChild chains. This file is the single
 // sanctioned home of document.createElement in the tree.
+//
+// PITFALL: htm caches STATIC templates (no ${} parts) and returns the SAME
+// element on every call — a `<section />` inside a loop yields one shared
+// node that gets moved, not duplicated. Any template that must produce a
+// fresh node per call (loop items, remounts) needs a dynamic part that
+// evaluates to nothing, e.g. `<section>${null}</section>` (see
+// plugin/deck/deck.js freshSection).
 
 import htm from "htm";
 

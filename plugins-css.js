@@ -3,7 +3,7 @@
 // carrying the entry's ?v= so cascade bumps keep CSS and JS cache-busted
 // together; unregisterPlugin removes them again via removePluginCss.
 
-import { html as domHtml } from "./dom-html.js?v=20260830.3";
+import { html as domHtml } from "./dom-html.js?v=20260830.4";
 
 export function injectPluginCss(manifest) {
   if (!Array.isArray(manifest.css) || manifest.css.length === 0) return [];

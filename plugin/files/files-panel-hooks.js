@@ -14,10 +14,10 @@ import {
 import {
   sniffWasmBytes,
   useFilesActions,
-} from "./files-editor.js?v=20260826.46";
-import { useFilesContextMenu } from "./files-context-menu.js?v=20260826.46";
+} from "./files-editor.js?v=20260826.47";
+import { useFilesContextMenu } from "./files-context-menu.js?v=20260826.47";
 import { useLocalDirMounts } from "../files-mounts.js?v=20260826.45";
-import { filesDep } from "./files-registry.js?v=20260826.108";
+import { filesDep } from "./files-registry.js?v=20260826.112";
 
 async function sniffWasmEntries(getRoot, path, entries) {
   // Extension-less files are often WebAssembly binaries in this sandbox;

@@ -8,7 +8,7 @@ import {
   CRUSH_RUNNER_DEFAULT_PROFILE,
   DEFAULT_CRUSHRC,
 } from "./crush-presets.js?v=20260826.3";
-import { crushRunDirFor } from "./crush-config.js?v=20260826.5";
+import { crushRunDirFor } from "./crush-config.js?v=20260826.6";
 
 function uniquePresetName(config, baseName) {
   let candidate = baseName;

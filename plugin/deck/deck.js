@@ -19,7 +19,7 @@
 
 import React, { useEffect, useRef } from "react";
 import htm from "htm";
-import { html as domHtml } from "../../dom-html.js?v=20260830.3";
+import { html as domHtml } from "../../dom-html.js?v=20260830.4";
 
 const html = htm.bind(React.createElement);
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
@@ -67,7 +67,14 @@ let slidesMarkdownPromise = null;
 
 function loadSlidesMarkdown() {
   if (!slidesMarkdownPromise) {
-    slidesMarkdownPromise = fetch("slides.md?v=20260725.1").then(
+    // The deck module URL carries the cascade ?v=; reuse it as the slides
+    // cache-buster so editing slides.md bumps deck.js (cascade) instead of
+    // a frozen manual token like the old ?v=20260725.1 that served stale
+    // content forever. Resolve against import.meta.url: a bare fetch("...")
+    // would hit the page base URL, not this module.
+    const version = new URL(import.meta.url).searchParams.get("v") || "1";
+    const url = new URL(`slides.md?v=${version}`, import.meta.url).href;
+    slidesMarkdownPromise = fetch(url).then(
       async (response) => {
         if (!response.ok) {
           throw new Error(`Unable to load slides.md (${response.status})`);
@@ -79,6 +86,14 @@ function loadSlidesMarkdown() {
   return slidesMarkdownPromise;
 }
 
+// htm caches STATIC templates and returns the SAME element on every call,
+// so a template with no ${} parts would hand the loop (and every remount)
+// one shared <section>. The ${null} child marks the template dynamic and
+// evaluates to nothing, forcing a fresh node per call.
+function freshSection() {
+  return domHtml`<section>${null}</section>`;
+}
+
 function layoutReveal(homeContent) {
   revealStates.get(homeContent)?.deck?.layout();
 }
@@ -87,9 +102,9 @@ async function prepareRevealSlides(homeContent) {
   const placeholder = homeContent.querySelector("[data-home-slides-markdown]");
   if (!placeholder) return;
 
-  const stack = domHtml`<section />`;
+  const stack = freshSection();
   for (const source of (await loadSlidesMarkdown()).split(/^\s*--\s*$/m)) {
-    const slide = domHtml`<section />`;
+    const slide = freshSection();
     slide.innerHTML = deckDep("marked").parse(source);
     stack.appendChild(slide);
   }

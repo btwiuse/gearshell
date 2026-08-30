@@ -102,7 +102,7 @@ export const DEFAULT_PLUGINS = [
     name: "Deck",
     version: "1.0.0",
     icon: "LayoutDashboard",
-    entry: "/plugin/deck/deck-plugin.js?v=20260829.10",
+    entry: "/plugin/deck/deck-plugin.js?v=20260829.14",
     // Reveal.js library + black theme come from the CDN (the reveal.js JS
     // is also a CDN script in index.html); deck.css / reveal.css are the
     // local overrides and must load after the library styles.
@@ -133,7 +133,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.126",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.130",
     css: ["/plugin/playground/playground.css"],
   },
   {
@@ -152,7 +152,7 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.134",
+    entry: "/plugin/files/files-plugin.js?v=20260829.138",
     css: ["/plugin/files/files.css"],
   },
   {
@@ -160,21 +160,21 @@ export const DEFAULT_PLUGINS = [
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.135",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.139",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.136",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.140",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.140",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.144",
     css: ["/plugin/settings/settings.css"],
   },
   {
@@ -190,7 +190,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.141",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.145",
     css: ["/plugin/crush-runner/crush-runner.css"],
   },
   {
@@ -261,7 +261,7 @@ export const DEFAULT_PLUGINS = [
     name: "Discord Widget",
     version: "1.0.0",
     icon: "MessageSquare",
-    entry: "/plugin/widgetbot/widgetbot-plugin.js?v=20260829.9",
+    entry: "/plugin/widgetbot/widgetbot-plugin.js?v=20260829.10",
   },
   // Bubble Tea playground: w9y-installed examples from the bbtex manifest
   // (https://w9y.io/manifest/bbtex@v2.0.12/). The examples are a w9y mod
@@ -277,7 +277,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.43",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.47",
     css: ["/plugin/bbtex/bbtex.css"],
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
