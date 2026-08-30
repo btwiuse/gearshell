@@ -986,3 +986,45 @@ iframe 形式承载大部分插件。研究结论见 memory/iframe-plugins.md。
   subscribe 后 shell `events.emit("task.status")` 推送到 iframe 的
   on 回调;unsubscribe 后事件不再推送;permissions.api 留空 → 全部 denied;
   console 无桥相关错误(browser/ 子模块的跨源报错是既有噪音)。
+
+### §二十九 终端桥(vscode.Terminal 式数据 API,2026-08-31 已落地)
+
+**背景**:mkt-demo Home 的嵌入终端是 `terminal.embed(anchor)`(DOM 参数 +
+detach 函数返回值,workspace-terminal-api.js),**无法跨 iframe**。iframe 插件
+需要 vscode.Terminal 式数据 API:iframe 自己渲染 xterm,shell 持有内核会话,
+postMessage 传字节。wanix 内核协议(../wanix elements/term.js + term/device.go):
+`#task/repl-<id>/term/data`(ReadableStream+WritableStream)、`.../winch`(写
+"cols rows xpixel ypixel")、`#task/repl-<id>/exit`。**路径必须带 `#`**
+(`#task/...`);`waitFor` 的 timeout 必须是整数字面量(浮点 → CBOR 非 uint64
+→ 内核 panic "arg 1 is not a uint64")。
+
+**已交付**:
+- `workspace-terminal-bridge.js`:shell 侧。`dispatchTerminalCall(event, gear,
+  plugin)` 由 plugins-iframe-api 路由(terminal.* 在通用 scoped 调用之前特判,
+  权限用 permitsPath 自检)。API:create(默认 profile 合并,创建无 wanix-term
+  的 headless 会话 + 回复 sessionId,异步连接数据流)/ write(Uint8Array)/ 
+  resize(winch)/ dispose / list。数据泵:waitFor data → openReadable+Writable
+  → 读循环 → `event.source.postMessage({ gear: { event: { topic: "term.data",
+  payload: { sessionId, data } } } }, origin)`;exit 轮询 → term.exit。
+- `app-terminal-sessions.js`:`createHeadlessTerminalSession`(task-only,无
+  wanix-term DOM;session.term=null,wakeTerminalSession 不可用于它);同时把
+  `startReplExitPolling` 的路径从 `task/repl-<id>/exit` 修正为
+  `#task/repl-<id>/exit`(前者静默读不到)。
+- `app-terminal-sessions.js` 另一修复:终端任务默认 profile 之前被 workspace
+  残留的 `defaultTerminalProfileId:"jsdemo"`(examples 测试遗留)劫持,所有终端
+  都跑 examples/hello.js 一次性脚本——**不是桥的问题**,是 workspace 配置污染。
+- demo(`plugin/iframe-template-plugin/index.html`)加 Live terminal 卡片:
+  jsdelivr 动态 import `@xterm/xterm@6.1.0-beta.303`(与内核同版)+ addon-fit,
+  `terminal.create({})` + subscribe term.data/term.exit + onData→write + fit
+  缩放→resize。
+- manifest:iframe-template permissions 加 terminal.create/write/resize/dispose
+  (注释:write 是键盘注入,只给可信插件)。
+
+**验证结果**(dev 8091):create→reply sessionId ✓;write/resize/dispose/list
+路由+权限 ✓;subscribe 通道 ✓;**js 任务全链路**:terminal.create({cmd:
+"examples/hello.js", type:"js"}) → term.data 推送收到 "hello from a wanix js
+worker" + 任务 dump → term.exit code 0 ✓(数据泵+退出检测端到端通)。
+**gojs 交互 bash 在此 CDP 后台 tab 不产数据**(gojs worker 不 spawn,连 shell
+自带终端同病;生产需前台验证)。**坑**:MessageEvent 没有 id 字段,handler 里
+回包必须用 gear.id(曾用 event.id → 回包 id:undefined → iframe 匹配不上 → 8s
+超时)。

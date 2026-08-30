@@ -461,6 +461,13 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
         "events.on",
         "events.off",
         "config.getShell",
+        // The iframe terminal data bridge: create a kernel session and
+        // stream bytes (the iframe renders xterm itself). Only add these
+        // to plugins you trust — terminal.write is keyboard injection.
+        "terminal.create",
+        "terminal.write",
+        "terminal.resize",
+        "terminal.dispose",
       ],
     },
   },

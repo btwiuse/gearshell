@@ -20,6 +20,7 @@ import { createScopedApi, permitsPath } from "./plugins-scope.js";
 import { workspaceApi } from "./workspace-api.js";
 import { listPluginIframes } from "./plugins.js";
 import { on as onEvent, off as offEvent } from "./workspace-events.js";
+import { dispatchTerminalCall } from "./workspace-terminal-bridge.js";
 
 // origin|topic -> unsubscribe fn (from workspace-events on())
 const subscriptions = new Map();
@@ -178,6 +179,13 @@ export function handleGearMessage(event) {
   }
   if (gear.method === "unsubscribe") {
     return handleUnsubscribe(event, gear.id, gear.args);
+  }
+  // Terminal data methods are iframe-only by design (they need the
+  // event context to stream output back to the creating iframe; the
+  // in-page terminal.embed is DOM-based and cannot cross postMessage).
+  // Permission checking happens inside the terminal bridge.
+  if (gear.method.startsWith("terminal.")) {
+    return dispatchTerminalCall(event, gear, plugin);
   }
   handleCall(event, gear, plugin);
 }

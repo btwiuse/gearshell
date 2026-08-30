@@ -91,14 +91,14 @@ export function createTerminalSession(
   return session;
 }
 
-// Poll the kernel exit file (task/repl-<id>/exit) for a repl/embed
+// Poll the kernel exit file (#task/repl-<id>/exit) for a repl/embed
 // terminal session and write a VS Code-style notice once the process is
 // gone. The poll is cheap (small ramfs file) and stops on the first
 // non-empty exit value. The notice lands after the last output line
 // (writeAtContentEnd); the kernel homes the cursor on process exit, so a
 // bare writeln would overwrite the first line.
 function startReplExitPolling(session) {
-  const path = `task/repl-${session.id}/exit`;
+  const path = `#task/repl-${session.id}/exit`;
   const poll = async () => {
     if (!terminalSessions.has(session.id)) return;
     let text;
@@ -224,6 +224,35 @@ function appendExtraBinds(task, profile) {
 
 export function getTerminalSession(id, profile) {
   return terminalSessions.get(id) || createTerminalSession(id, profile);
+}
+
+// Headless terminal session for the iframe bridge (workspace-terminal-
+// bridge.js): the same wanix-task (kernel task + term device at
+// #task/repl-<id>/term) as a panel terminal, but WITHOUT the wanix-term
+// DOM renderer — the iframe owns the xterm and the bridge pumps the
+// data path itself. session.term stays null; wakeTerminalSession must
+// NOT be used on these (it dereferences session.term).
+export function createHeadlessTerminalSession(
+  id,
+  profile = getDefaultTerminalProfile(),
+) {
+  const task = createTaskElement(id, profile);
+  const wrapper = html`<div className="terminal-session">${task}</div>`;
+  terminalLayer?.appendChild(wrapper);
+  const session = {
+    id,
+    wrapper,
+    task,
+    term: null,
+    anchor: null,
+    layout: null,
+    started: false,
+    profile,
+    waitsForSystemReady: !systemReady,
+    autoActivates: false,
+  };
+  terminalSessions.set(id, session);
+  return session;
 }
 
 export function destroyTerminalSession(id) {

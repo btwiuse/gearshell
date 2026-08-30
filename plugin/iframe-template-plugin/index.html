@@ -74,6 +74,17 @@ body {
   max-height: 240px;
   overflow: auto;
 }
+
+.ift-term {
+  height: 220px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  padding: 6px;
+  background: #10131a;
+  overflow: hidden;
+}
+
+.ift-term .xterm { height: 100%; }
 </style>
 </head>
 <body>
@@ -137,6 +148,17 @@ the shell replies "permission denied: files.open".</pre>
     </section>
 
     <section class="ift-card">
+      <h2>Live terminal (vscode.Terminal-style bridge)</h2>
+      <div class="ift-actions">
+        <button id="btn-term-start">start terminal</button>
+        <button id="btn-term-stop">stop terminal</button>
+      </div>
+      <div id="term-host" class="ift-term"></div>
+      <pre id="out-term" class="ift-out">idle — terminal.create() gives you a real wanix kernel session;
+the iframe renders xterm and streams bytes over the bridge.</pre>
+    </section>
+
+    <section class="ift-card">
       <h2>Manifest for this plugin</h2>
       <pre class="ift-out">{
   id: "iframe-template",
@@ -152,6 +174,8 @@ the shell replies "permission denied: files.open".</pre>
       "music.nowPlaying", "music.play", "music.pause",
       "tasks.create", "events.on", "events.off",
       "config.getShell",
+      "terminal.create", "terminal.write",
+      "terminal.resize", "terminal.dispose",
     ],
   },
 }</pre>
@@ -247,6 +271,127 @@ the shell replies "permission denied: files.open".</pre>
             out($("out-subscribe"), { error: error.message });
           });
       });
+
+      // --- Live terminal (vscode.Terminal-style bridge) ---
+      // The iframe renders xterm; the SHELL owns the kernel session.
+      //   create  -> shell allocates #task/repl-<id>/term
+      //   term.data push -> kernel output bytes (Uint8Array)
+      //   xterm.onData -> terminal.write(sessionId, bytes)
+      //   FitAddon resize -> terminal.resize(sessionId, cols, rows)
+      // xterm ships from the CDN at the same version the wanix kernel
+      // bundles; self-host it under this plugin dir for offline use.
+      var termState = { sessionId: null, xterm: null, fit: null, disposed: true };
+
+      function logTerm(text) {
+        var pre = $("out-term");
+        pre.textContent = (typeof text === "string" ? text : JSON.stringify(text, null, 2)) +
+          "\n" + (pre.textContent === "idle — terminal.create() gives you a real wanix kernel session;\nthe iframe renders xterm and streams bytes over the bridge." ? "" : pre.textContent);
+      }
+
+      function termWrite(sessionId, data) {
+        GearShell.terminal.write(sessionId, new TextEncoder().encode(data))
+          .catch(function (error) { logTerm("write error: " + error.message); });
+      }
+
+      function termResize() {
+        if (!termState.xterm || !termState.sessionId) return;
+        GearShell.terminal.resize(
+          termState.sessionId,
+          termState.xterm.cols,
+          termState.xterm.rows,
+        ).catch(function () { /* shell may be gone */ });
+      }
+
+      function wireTermEvents() {
+        // Output channel: kernel -> iframe.
+        GearShell.on("term.data", function (payload) {
+          if (payload.sessionId !== termState.sessionId) return;
+          if (termState.xterm) {
+            termState.xterm.write(new TextDecoder().decode(payload.data));
+          }
+        });
+        GearShell.on("term.exit", function (payload) {
+          if (payload.sessionId !== termState.sessionId) return;
+          logTerm("term.exit code=" + (payload.code ?? "?") +
+            (payload.error ? " error=" + payload.error : ""));
+          stopTerminal();
+        });
+        return GearShell.subscribe("term.data")
+          .then(function () { return GearShell.subscribe("term.exit"); });
+      }
+
+      function stopTerminal() {
+        if (termState.sessionId) {
+          GearShell.terminal.dispose(termState.sessionId)
+            .catch(function () { /* already gone */ });
+          GearShell.unsubscribe("term.data").catch(function () {});
+          GearShell.unsubscribe("term.exit").catch(function () {});
+        }
+        if (termState.xterm) {
+          termState.xterm.dispose();
+          termState.xterm = null;
+          termState.fit = null;
+          $("term-host").innerHTML = "";
+        }
+        termState.sessionId = null;
+        termState.disposed = true;
+      }
+
+      $("btn-term-start").addEventListener("click", function () {
+        if (!termState.disposed) return;
+        stopTerminal(); // clear any half-open state
+        termState.disposed = false;
+        logTerm("creating kernel terminal session…");
+        Promise.resolve()
+          .then(function () {
+            // xterm loads lazily on first use (self-host for offline).
+            return import("https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/lib/xterm.mjs")
+              .then(function (mod) {
+                var fitMod = import(
+                  "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.300/lib/addon-fit.mjs"
+                );
+                return Promise.all([mod, fitMod]);
+              });
+          })
+          .then(function (mods) {
+            var xtermCss = document.createElement("link");
+            xtermCss.rel = "stylesheet";
+            xtermCss.href =
+              "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/css/xterm.css";
+            document.head.appendChild(xtermCss);
+            var host = $("term-host");
+            host.innerHTML = "";
+            termState.xterm = new mods[0].Terminal({
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              convertEol: true,
+              cursorBlink: true,
+            });
+            termState.fit = new mods[1].FitAddon();
+            termState.xterm.loadAddon(termState.fit);
+            termState.xterm.open(host);
+            termState.fit.fit();
+            termState.xterm.onData(function (data) {
+              termWrite(termState.sessionId, data);
+            });
+            termState.xterm.onResize(function () { termResize(); });
+            return wireTermEvents();
+          })
+          .then(function () {
+            return GearShell.terminal.create({});
+          })
+          .then(function (result) {
+            if (result.ok === false) throw new Error(result.error || "create failed");
+            termState.sessionId = result.sessionId;
+            logTerm("session " + termState.sessionId + " created — type in the terminal");
+            termResize();
+          })
+          .catch(function (error) {
+            logTerm("start failed: " + error.message);
+            stopTerminal();
+          });
+      });
+
+      $("btn-term-stop").addEventListener("click", stopTerminal);
     })();
   </script>
 </body>
