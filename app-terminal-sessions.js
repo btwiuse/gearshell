@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.140";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.99";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.140";
+} from "./app-terminal-profiles.js?v=20260826.141";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.100";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.141";
 import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
 import { html } from "./dom-html.js?v=20260830.3";
 

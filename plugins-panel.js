@@ -7,7 +7,7 @@
 
 import React from "react";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { PluginsPage } from "./plugins-page.js?v=20260829.77";
+import { PluginsPage } from "./plugins-page.js?v=20260829.78";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

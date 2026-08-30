@@ -42,6 +42,35 @@ function has(marker) {
   return corpus.includes(marker) || corpus.includes(marker.replace(/'/g, '"'));
 }
 
+// Every plugin stylesheet must be declared in the matching DEFAULT_PLUGINS
+// css field, or it silently never loads (the loader only fetches what the
+// manifest declares). Check both directions: files on disk -> declared,
+// declared -> exists.
+const manifestsSrc = readFileSync(
+  new URL("app-plugin-manifests.js", root),
+  "utf8",
+);
+for (const entry of readdirSync(new URL("plugin/", root), { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue;
+  const dir = new URL(`plugin/${entry.name}/`, root);
+  for (const f of readdirSync(dir)) {
+    if (!f.endsWith(".css")) continue;
+    const path = `/plugin/${entry.name}/${f}`;
+    if (!manifestsSrc.includes(`"${path}"`)) {
+      throw new Error(
+        `Plugin stylesheet ${path} is not declared in DEFAULT_PLUGINS css`,
+      );
+    }
+  }
+}
+for (const m of manifestsSrc.matchAll(/"(\/plugin\/[^"]+\.css)"/g)) {
+  try {
+    readFileSync(new URL(`.${m[1]}`, root), "utf8");
+  } catch {
+    throw new Error(`DEFAULT_PLUGINS css declares ${m[1]} but the file is missing`);
+  }
+}
+
 const syntax = spawnSync(process.execPath, ["--input-type=module", "--check"], {
   input: app,
   encoding: "utf8",
@@ -267,7 +296,7 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.190")) {
+if (!has("app.js?v=20260828.191")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

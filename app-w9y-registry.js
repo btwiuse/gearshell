@@ -10,7 +10,7 @@
 // after each orchestrated operation, and on demand via w9y.refresh.
 
 import { pushEvent } from "./workspace-events.js?v=20260828.4";
-import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.125";
+import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.126";
 
 const REGISTRY_OPFS = ["wanix", "w9y-registry.json"];
 const INSTALL_PREFIX = "/opfs/wanix";

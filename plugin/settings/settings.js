@@ -4,5 +4,5 @@ export { initSettings, settingsDep } from "./settings-deps.js?v=20260826.3";
 export {
   addSettingsPanel,
   SettingsPanel,
-} from "./settings-panel.js?v=20260826.133";
+} from "./settings-panel.js?v=20260826.134";
 export { TerminalPresetIconPicker } from "./settings-icons.js?v=20260826.6";
