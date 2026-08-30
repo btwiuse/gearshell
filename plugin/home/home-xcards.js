@@ -105,8 +105,8 @@ export function HomeFieldXCard() {
           ariaLabel="Open original post on X"
         />
         <p className="mkt-x-body">If you’re building agents, either for internal tools or as part of your product, where are you hosting them?</p>
-        ${FieldPoll()}
-        ${FieldReply()}
+        <${FieldPoll}/>
+        <${FieldReply}/>
       </article>
     </section>
   `;

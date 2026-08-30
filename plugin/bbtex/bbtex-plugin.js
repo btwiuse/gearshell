@@ -9,7 +9,7 @@
 // open example with profile.cmd = /opfs/wanix/examples/<id> (pager starts
 // with wd=/preset where the artichoke.md preset lands).
 
-import { BbtexPlayground } from "./bbtex.js?v=20260830.50";
+import { BbtexPlayground } from "./bbtex.js?v=20260830.51";
 
 export const plugin = {
   register(ctx) {

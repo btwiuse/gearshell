@@ -12,9 +12,9 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.149";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.108";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.149";
+} from "./app-terminal-profiles.js?v=20260826.150";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.109";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.150";
 import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
 import { html } from "./dom-html.js?v=20260830.4";
 
@@ -255,4 +255,4 @@ export function wakeTerminalSession(session) {
 export {
   attachOverlayTerminalSession,
   attachTerminalSession,
-} from "./app-terminal-overlay.js?v=20260830.3";
+} from "./app-terminal-overlay.js?v=20260830.4";

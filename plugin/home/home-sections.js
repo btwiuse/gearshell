@@ -173,8 +173,8 @@ export function HomeDemo() {
             onClick: () => setLive(true),
           }}
       >
-        ${DemoBar()}
-        ${live ? LiveTerminal() : DemoTerminal()}
+        <${DemoBar}/>
+        ${live ? html`<${LiveTerminal}/>` : html`<${DemoTerminal}/>`}
       </${live ? "div" : "button"}>
       <p className="mkt-demo-caption">Real terminal, real Claude Code, zero installs.</p>
     </section>

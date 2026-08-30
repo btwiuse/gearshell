@@ -8,10 +8,10 @@ import {
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.108";
-import { normalizeTask } from "./app-normalize.js?v=20260828.150";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.149";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.149";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.109";
+import { normalizeTask } from "./app-normalize.js?v=20260828.151";
+import { buildEnv } from "./app-terminal-profiles.js?v=20260826.150";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.150";
 import { html } from "./dom-html.js?v=20260830.4";
 
 export function createBindElement(bind) {

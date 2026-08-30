@@ -25,8 +25,8 @@ import {
   HomeLocalFirst,
   HomeNav,
   HomeQuotes,
-} from "./home-sections.js?v=20260828.8";
-import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.4";
+} from "./home-sections.js?v=20260828.9";
+import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.5";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
