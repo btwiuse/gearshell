@@ -6,6 +6,7 @@
 // app-plugin-manifests-examples.js (500-line split).
 
 import { EXAMPLES_PLUGIN } from "./app-plugin-manifests-examples.js";
+import { BBTEX_PLUGIN } from "./app-plugin-manifests-bbtex.js";
 
 // --- Shell toolset (the per-task tool binds) ---
 // The bash/w9y/gear binaries and the shell rc file ship as the
@@ -227,6 +228,35 @@ export const DEFAULT_PLUGINS = [
       src: "https://codigo.dev",
     },
   },
+  // A full-bleed terminal as an iframe plugin: the page renders xterm
+  // itself inside a window-style frame (traffic lights + monospace title
+  // bar, mimicking the Home demo frame) and drives a real wanix kernel
+  // session through the terminal data bridge (workspace-terminal-bridge).
+  // Iframe plugins load their own stylesheet — no css: entry (that would
+  // inject the page's full-screen rules into the shell chrome).
+  {
+    id: "terminal-frame",
+    name: "Terminal",
+    version: "1.0.0",
+    icon: "SquareTerminal",
+    iframe: {
+      src: "/plugin/terminal-frame/index.html",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+    permissions: {
+      api: [
+        "terminal.create",
+        "terminal.write",
+        "terminal.resize",
+        "terminal.dispose",
+        "panels.list",
+        "events.on",
+        "events.off",
+        "config.getShell",
+      ],
+    },
+  },
   {
     id: "crush",
     name: "Crush",
@@ -265,97 +295,6 @@ export const DEFAULT_PLUGINS = [
     version: "1.0.0",
     icon: "MessageSquare",
     entry: "/plugin/widgetbot/widgetbot-plugin.js",
-  },
-  // Bubble Tea playground: w9y-installed examples from the bbtex manifest
-  // (https://w9y.io/manifest/bbtex@v2.0.12/). The examples are a w9y mod
-  // dependency, NOT plugin-declared wasm mounts: on boot/install the shell
-  // runs `w9y mod apply bbtex@v2.0.12` and each example lands at
-  // /opfs/wanix/examples/<id>, readable by every task through the lazy
-  // /opfs projection (zero-copy, offline). pager additionally reads
-  // artichoke.md from its CWD, so that file ships as a preset on /preset
-  // and the pager profile starts with wd=/preset. Upgrade by bumping the
-  // version below (and the panel list in plugin/bbtex/bbtex.js).
-  {
-    id: "bbtex",
-    name: "Bubble Tea Playground",
-    version: "1.0.0",
-    icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js",
-    css: ["/plugin/bbtex/bbtex.css"],
-    permissions: { api: ["terminal.embed"] },
-    w9y: { mod: "bbtex", version: "v2.0.12" },
-    preset: [
-        { id: "pager-artichoke", dst: "preset/artichoke.md", content: `
-Glow
-====
-
-A casual introduction. 你好世界!
-
-## Let’s talk about artichokes
-
-The _artichoke_ is mentioned as a garden plant in the 8th century BC by Homer
-**and** Hesiod. The naturally occurring variant of the artichoke, the cardoon,
-which is native to the Mediterranean area, also has records of use as a food
-among the ancient Greeks and Romans. Pliny the Elder mentioned growing of
-_carduus_ in Carthage and Cordoba.
-
-> He holds him with a skinny hand,
-> ‘There was a ship,’ quoth he.
-> ‘Hold off! unhand me, grey-beard loon!’
-> An artichoke, dropt he.
-
---Samuel Taylor Coleridge, [The Rime of the Ancient Mariner][rime]
-
-[rime]: https://poetryfoundation.org/poems/43997/
-
-## Other foods worth mentioning
-
-1. Carrots
-1. Celery
-1. Tacos
-    * Soft
-    * Hard
-1. Cucumber
-
-## Things to eat today
-
-* [x] Carrots
-* [x] Ramen
-* [ ] Currywurst
-
-### Power levels of the aforementioned foods
-
-| Name       | Power | Comment          |
-| ---        | ---   | ---              |
-| Carrots    | 9001  | It’s over 9000?! |
-| Ramen      | 9002  | Also over 9000?! |
-| Currywurst | 10000 | What?!           |
-
-## Currying Artichokes
-
-Here’s a bit of code in [Haskell](https://haskell.org), because we are fancy.
-Remember that to compile Haskell you’ll need \`ghc\`.
-
-\`\`\`haskell
-module Main where
-
-import Data.Function ( (&) )
-import Data.List ( intercalculate )
-
-hello :: String -> String
-hello s =
-    "Hello, " ++ s ++ "."
-
-main :: IO ()
-main =
-    map hello [ "artichoke", "alcachofa" ] & intercalculate "\\n" & putStrLn
-\`\`\`
-
-***
-
-_Alcachofa_, if you were wondering, is artichoke in Spanish.
-` },
-      ],
   },
   // The per-task shell toolset. Required: disabling it would leave every
   // task without bash/w9y/gear, so the config API refuses to disable or
@@ -473,7 +412,8 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
   },
 ];
 
-// The examples bind provider is data, not logic: pushed after the array
-// literal so DEFAULT_PLUGINS stays one flat list (see
-// app-plugin-manifests-examples.js).
+// The examples + bbtex bind providers are data, not logic: pushed after
+// the array literal so DEFAULT_PLUGINS stays one flat list (see
+// app-plugin-manifests-examples.js / app-plugin-manifests-bbtex.js).
 DEFAULT_PLUGINS.push(EXAMPLES_PLUGIN);
+DEFAULT_PLUGINS.push(BBTEX_PLUGIN);

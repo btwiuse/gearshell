@@ -45,17 +45,33 @@ function has(marker) {
 // Every plugin stylesheet must be declared in the matching DEFAULT_PLUGINS
 // css field, or it silently never loads (the loader only fetches what the
 // manifest declares). Check both directions: files on disk -> declared,
-// declared -> exists.
-const manifestsSrc = readFileSync(
-  new URL("app-plugin-manifests.js", root),
-  "utf8",
-);
+// declared -> exists. Manifest modules are split (500-line rule), so the
+// corpus is every app-plugin-manifests*.js concatenated.
+const manifestsSrc = readdirSync(root, { withFileTypes: true })
+  .filter((entry) =>
+    entry.isFile() && /^app-plugin-manifests(-[a-z-]+)?\.js$/.test(entry.name)
+  )
+  .map((entry) => readFileSync(new URL(entry.name, root), "utf8"))
+  .join("\n");
 for (const entry of readdirSync(new URL("plugin/", root), { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   const dir = new URL(`plugin/${entry.name}/`, root);
+  // Iframe plugins are self-contained apps: the page links its own
+  // stylesheet, so a manifest css: entry is neither needed nor wanted
+  // (it would inject the page's body-level rules into the SHELL chrome).
+  // Detect them by whether the plugin's manifest block declares iframe:.
+  const idStart = manifestsSrc.indexOf(`id: "${entry.name}"`);
+  const idEnd = idStart < 0
+    ? -1
+    : manifestsSrc.indexOf(`\n  {\n`, idStart + 6);
+  const block = idStart < 0
+    ? ""
+    : manifestsSrc.slice(idStart, idEnd < 0 ? undefined : idEnd);
+  const isIframePlugin = block.includes("iframe: {");
   for (const f of readdirSync(dir)) {
     if (!f.endsWith(".css")) continue;
     const path = `/plugin/${entry.name}/${f}`;
+    if (isIframePlugin) continue;
     if (!manifestsSrc.includes(`"${path}"`)) {
       throw new Error(
         `Plugin stylesheet ${path} is not declared in DEFAULT_PLUGINS css`,

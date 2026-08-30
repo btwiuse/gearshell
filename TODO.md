@@ -1028,3 +1028,37 @@ worker" + 任务 dump → term.exit code 0 ✓(数据泵+退出检测端到端�
 自带终端同病;生产需前台验证)。**坑**:MessageEvent 没有 id 字段,handler 里
 回包必须用 gear.id(曾用 event.id → 回包 id:undefined → iframe 匹配不上 → 8s
 超时)。
+
+### §二十九 Terminal 插件发布 + gojs/bash 排查(2026-08-31)
+
+**`plugin/terminal-frame/`(独立插件,默认 enabled)**:全屏 iframe 终端,四周
+窗口 chrome 仿 mkt-demo-frame — 红绿灯标题栏(gear@gear: ~)、圆角边框 + 阴影。
+打开面板即自动 terminal.create + xterm(jsdelivr 同内核版本),onData→write、
+fit→resize、term.data/term.exit 推送;状态机 connecting→connected→waiting
+(8s 无输出提示)/exited;失败 banner + ↻ 重启按钮。manifest permissions:
+terminal.* + panels.list + events + config.getShell。manifest 声明无 css
+(iframe 页自加载,防注入 shell —— verify-static 新增 iframe 插件豁免)。
+
+**gojs bash 不显示的根因(排查结论)**:
+- 症状:bash 终端任务 kind=gojs、cmd 正确、exit 空(任务"运行"但无输出、无
+  worker、无 "gojs worker started" 日志)。Worker 构造从未发生
+  (patch window.Worker 实测 log 为空)。
+- 对照:wasi hello.wasm(166B)全链路通(Worker 创建 + "hello from WASI!" +
+  exit 0);js hello.js 也通。两者与 gojs 走相同路径(Open→ReadAll→
+  GetOrCompile→StartTaskWorker)。
+- 差异:bash = hush gojs wasm **25MB**;hello.wasm 166B。内核侧读 bin/bash
+  25MB 只要 339ms(非 ReadAll 问题);页面侧 compile 25MB 成功。**卡在
+  GetOrCompile 的内核侧 WebAssembly.compile(25MB)** — 在受限/后台 tab 的
+  事件循环下 promise 不 settle → TinyGo select 死锁。
+- 佐证:calc.js 例子的 gojs bash 子任务(`bin/bash -c '...'`,同一 25MB 二进制)
+  在 production 前台环境全通("✅ all three workers agree: 42")。→ **环境
+  相关**(前台用户浏览器正常;CDP 后台 tab / 受限环境卡),非 shell/桥 bug。
+- 产品侧缓解:terminal-frame 的 waiting 状态 + banner 提示,不再死屏。
+- 若要在受限环境可用,方向:wanix fork 里 gojs driver 改流式编译
+  (WebAssembly.instantiateStreaming 直接给 URL/stream,不经内核内存)或
+  减小 hush 体积。
+
+**拆文件**:app-plugin-manifests.js 再次超 500 行 → bbtex 移到
+`app-plugin-manifests-bbtex.js`(push 合并,同 examples)。verify-static 改为
+拼接所有 app-plugin-manifests*.js 检查;新增 iframe 插件 css 豁免(manifest
+块含 `iframe: {` 的插件,其 css 文件不必在 css: 声明)。
