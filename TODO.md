@@ -856,3 +856,85 @@ iframe 形式承载大部分插件。研究结论见 memory/iframe-plugins.md。
 (同源 iframe)先接桥实测 → ③ codigo/crush 跨源走 postMessage 全链路 →
 ④ 按需 async 文件 API。存量组件插件暂不 iframe 化(重写成本高),新插件
 优先 iframe + 桥。
+
+### §二十九 执行计划(压缩后可独立开工)
+
+**目标**:iframe 插件能通过 `window.GearShell`(桥代理)调 shell API——
+窗口(panels.*)、音乐(music.*)、打开资源(browser.open/files.open)、
+终端(terminal.embed)、任务(tasks.*)、事件(events)、包管理(w9y.list)。
+校验 = origin 白名单 + 复用 createScopedApi 的 permissions.api。
+
+**STEP 1 新建 iframe 侧桥 `gear-bridge.js`(仓库根,同源托管 `/gear-bridge.js`)**
+- 顶部守卫:`if (window.top === window.self) { /* 顶层页直接用真实
+  GearShell,不装代理 */ return; }`(workspace-api.js 已设 window.GearShell)。
+- `window.GearShell = new Proxy(target, get)`:取 `key`,若当前路径已有值
+  且为函数 → 返回 `(...args) => invoke(path, args)`;否则返回子 Proxy
+  (路径拼接 ".")。`invoke(path, args)`:自增 id,`parent.postMessage(
+  { gear: { id, method: path, args } }, "*")`,存 pending Map,Promise
+  等回包 `{ gear: { id, ok, result } }`(超时 ~8s reject)。
+- 事件订阅(必做,见坑 2):`GearShell.subscribe(topic)` → invoke
+  `__subscribe`(shell 特殊通道),shell 推送 `{ gear: { event: { topic,
+  payload } } }`;桥内维护 listener 表 + on/off 语义。
+- 与现有调用方的兼容:页面自身加载 bridge 时若顶层已有 GearShell 直接透传。
+
+**STEP 2 新建 shell 侧桥 `plugins-iframe-api.js`**
+- 导出 `initIframePluginApi()`,在 app.js 中 `initWorkspaceApi()` 之后调用。
+- `window.addEventListener("message", handler)`:
+  1. `const g = event.data && event.data.gear; if (!g || !g.id || !g.method) return;`
+  2. **origin 白名单**:由 `plugins.js` 新增导出
+     `getIframePluginForOrigin(origin)`(遍历 pluginIframes,`src` 相对路径
+     → `new URL(src, location.href).origin`;绝对 URL → `new URL(src).origin`;
+     返回 `{ component, manifest }` 或 null)。
+  3. **权限校验**:`createScopedApi(window.GearShell, entry.manifest.
+     permissions?.api || [])`,沿 method 点分路径取函数,不存在/denied →
+     回 `{ ok: false, error: "denied: <path>" }`。
+  4. 调用 `fn(...args)`,回 `event.source.postMessage({ gear: { id, ok,
+     result } }, event.origin)`(结果 JSON 可序列化;GearShell 方法已
+     safe() 包成 {ok,...})。
+  5. `method === "__subscribe"` → 注册真实 `events.on(topic, cb)`,把
+     pushEvent 的 payload 转发给该 iframe(`event.source.postMessage(
+     { gear: { event: { topic, payload } } }, origin)`),记录
+     iframe→topic→off 表,页面 unload 清理。
+- 注意:**只允许 JSON 可序列化参数/返回**(函数参数直接拒绝返回错误)。
+
+**STEP 3 manifest + 接线**
+- `app-plugin-manifests.js`:给 iframe 插件加 `permissions: { api: [...] }`
+  (默认无 = 全拒)。演示集:
+  - bonsai:`["panels.list", "music.nowPlaying", "music.play", "music.pause"]`
+  - browser:`["panels.open", "browser.open", "files.open", "events.on",
+    "events.off", "tasks.create", "tasks.output", "config.getShell"]`
+- `app.js`:import + 调 `initIframePluginApi()`。
+- `app-normalize-plugins.js`:确认 entry-less iframe 插件的 `permissions`
+  字段在 normalize 后保留(不丢)。
+
+**STEP 4 测试(Go dev server 8091,先同源)**
+- 新建演示插件 `plugin/iframe-api-demo/`(manifest 挂 iframe src
+  `/plugin/iframe-api-demo/index.html` + permissions.api 含
+  `panels.list`、`music.nowPlaying`、一个未授权方法做反面):
+  - index.html 引 `<script src="/gear-bridge.js">`,页面按钮
+    `GearShell.panels.list()` / `GearShell.music.nowPlaying()` 显示结果。
+- 浏览器:开面板 → 调用成功返回 JSON;未授权方法返回 denied;console
+  无异常;dev server 无报错。
+- 权限反面:临时把 demo 的 permissions 留空 → 全部 denied。
+- 跨源(codigo/crush)同一协议,STEP 4 只验同源;跨源留 STEP 5。
+
+**STEP 5 跨源验证(可选,独立任务)**
+- codigo.dev 的 index.html 加 `<script src="https://gear.sh/gear-bridge.js">`
+  (btwiuse/vscode 仓库,vercel 部署),shell 侧给 codigo 声明
+  permissions.api(如 `["config.getShell", "panels.list"]`),验证
+  postMessage 全链路(codigo.dev 已带 COEP: require-corp,不影响)。
+
+**坑(必读)**
+1. **GearShell 全同步**(safe() 包装,jsfs 约束),但桥是异步的——iframe 侧
+   收到的是 Promise;不要假设返回同步值。
+2. **回调无法跨 postMessage**:`events.on(topic, cb)` 的 cb 不能序列化。
+   必须走 `__subscribe` 通道(shell 侧注册真实监听 → 事件推送 iframe),
+   bridge 暴露 on/off;其他带函数参数的 API 直接拒绝。
+3. **回复必须用 `event.source.postMessage(..., event.origin)`**,不能用
+   `window.parent.postMessage(..., "*")` 之外的乱目标。
+4. `createScopedApi` 的 `then` 键返回 undefined(Proxy thenable 安全),
+   桥不要假定遍历会看到函数之外的东西;method 不存在时给出明确错误。
+5. 500 行/50 行规则:新模块保持小;`plugins.js` 只加一个导出函数,
+   别把桥逻辑塞进去。
+6. 提交前:`node --input-type=module --check < file` + `verify-static.mjs`
+   + `fn-length-audit.mjs`;迭代用 Go dev server(no-store),无 ?v=。
