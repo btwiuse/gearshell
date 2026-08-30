@@ -12,8 +12,11 @@
 // wd=/preset (the file ships as a plugin preset at preset/artichoke.md).
 
 import React, { useEffect, useRef, useState } from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import { X } from "lucide-react";
-import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.134";
+import { getDefaultTerminalProfile } from "../../app-terminal-profiles.js?v=20260826.136";
 
 // Every example in the w9y bbtex@v2.0.12 manifest, grouped by theme. Each
 // id maps to /opfs/wanix/examples/<id> (where `w9y mod apply bbtex` puts
@@ -233,53 +236,39 @@ function ExampleTerminal({ example, onClose }) {
       }
     };
   }, [example.id]);
-  return React.createElement(
-    "div",
-    { className: "bbtex-term" },
-    React.createElement(
-      "div",
-      { className: "bbtex-term-head" },
-      React.createElement("span", { className: "bbtex-term-name" }, example.label),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "bbtex-term-close",
-          title: "Close terminal",
-          onClick: onClose,
-        },
-        React.createElement(X, { size: 12, "aria-hidden": true }),
-      ),
-    ),
-    React.createElement("div", { className: "bbtex-term-body", ref: anchorRef }),
-  );
+  return html`
+    <div className="bbtex-term">
+      <div className="bbtex-term-head">
+        <span className="bbtex-term-name">${example.label}</span>
+        <button
+          type="button"
+          className="bbtex-term-close"
+          title="Close terminal"
+          onClick=${onClose}
+        >
+          <${X} size=${12} aria-hidden=${true}/>
+        </button>
+      </div>
+      <div className="bbtex-term-body" ref=${anchorRef}></div>
+    </div>
+  `;
 }
 
 // The left sidebar: every example grouped by theme, with the open ones
 // highlighted, a per-group count, and the open-total cap.
 function ExampleList({ open, onToggle, atCap }) {
   const isOpen = (example) => open.some((item) => item.id === example.id);
-  return React.createElement(
-    "div",
-    { className: "bbtex-sidebar" },
-    React.createElement(
-      "h3",
-      { className: "bbtex-title" },
-      `Examples (${open.length}/${MAX_OPEN_EXAMPLES})`,
-    ),
-    atCap
-      ? React.createElement(
-          "div",
-          { className: "bbtex-cap-hint" },
-          `Close a terminal first (max ${MAX_OPEN_EXAMPLES} open)`,
-        )
-      : null,
-    React.createElement(
-      "div",
-      { className: "bbtex-examples" },
-      BTEX_GROUPS.map((group) => renderExampleGroup(group, isOpen, onToggle)),
-    ),
-  );
+  return html`
+    <div className="bbtex-sidebar">
+      <h3 className="bbtex-title">Examples (${open.length}/${MAX_OPEN_EXAMPLES})</h3>
+      ${atCap
+        ? html`<div className="bbtex-cap-hint">Close a terminal first (max ${MAX_OPEN_EXAMPLES} open)</div>`
+        : null}
+      <div className="bbtex-examples">
+        ${BTEX_GROUPS.map((group) => renderExampleGroup(group, isOpen, onToggle))}
+      </div>
+    </div>
+  `;
 }
 
 // One theme group: header with count, then a button per example.
@@ -288,67 +277,45 @@ function renderExampleGroup(group, isOpen, onToggle) {
     example.group === group
   );
   if (items.length === 0) return null;
-  return React.createElement(
-    "div",
-    { key: group, className: "bbtex-group" },
-    React.createElement(
-      "div",
-      { className: "bbtex-group-head" },
-      React.createElement("span", null, group),
-      React.createElement(
-        "span",
-        { className: "bbtex-group-count" },
-        items.length,
-      ),
-    ),
-    items.map((example) =>
-      React.createElement(
-        "button",
-        {
-          key: example.id,
-          type: "button",
-          className: "bbtex-example" + (isOpen(example) ? " is-open" : ""),
-          onClick: () => onToggle(example),
-        },
-        React.createElement(
-          "span",
-          { className: "bbtex-example-name" },
-          example.label,
-        ),
-        React.createElement(
-          "span",
-          { className: "bbtex-example-blurb" },
-          example.blurb,
-        ),
-      )
-    ),
-  );
+  return html`
+    <div key=${group} className="bbtex-group">
+      <div className="bbtex-group-head">
+        <span>${group}</span>
+        <span className="bbtex-group-count">${items.length}</span>
+      </div>
+      ${items.map((example) =>
+        html`
+          <button
+            key=${example.id}
+            type="button"
+            className=${"bbtex-example" + (isOpen(example) ? " is-open" : "")}
+            onClick=${() => onToggle(example)}
+          >
+            <span className="bbtex-example-name">${example.label}</span>
+            <span className="bbtex-example-blurb">${example.blurb}</span>
+          </button>
+        `,
+      )}
+    </div>
+  `;
 }
 
 // The right stage: one embedded terminal per open example, or a hint.
 function PlaygroundStage({ open, onClose }) {
   if (open.length === 0) {
-    return React.createElement(
-      "div",
-      { className: "bbtex-stage" },
-      React.createElement(
-        "div",
-        { className: "bbtex-empty" },
-        "Pick an example to run it in a live terminal",
-      ),
-    );
+    return html`
+      <div className="bbtex-stage">
+        <div className="bbtex-empty">Pick an example to run it in a live terminal</div>
+      </div>
+    `;
   }
-  return React.createElement(
-    "div",
-    { className: "bbtex-stage" },
-    open.map((example) =>
-      React.createElement(ExampleTerminal, {
-        key: example.id,
-        example,
-        onClose: () => onClose(example),
-      })
-    ),
-  );
+  return html`
+    <div className="bbtex-stage">
+      ${open.map((example) =>
+        html`<${ExampleTerminal} key=${example.id} example=${example} onClose=${() => onClose(example)}/>`,
+      )}
+    </div>
+  `;
 }
 
 export function BbtexPlayground() {
@@ -385,17 +352,13 @@ export function BbtexPlayground() {
         : [...prev, example]
     );
   };
-  return React.createElement(
-    "div",
-    { className: "bbtex-playground" },
-    w9yMissing
-      ? React.createElement(
-          "div",
-          { className: "bbtex-w9y-hint" },
-          "bbtex is not installed — examples will fail until `w9y mod apply bbtex@v2.0.12` runs (the shell installs it automatically on boot/plugin install).",
-        )
-      : null,
-    React.createElement(ExampleList, { open, onToggle: toggle, atCap }),
-    React.createElement(PlaygroundStage, { open, onClose: toggle }),
-  );
+  return html`
+    <div className="bbtex-playground">
+      ${w9yMissing
+        ? html`<div className="bbtex-w9y-hint">bbtex is not installed — examples will fail until \`w9y mod apply bbtex@v2.0.12\` runs (the shell installs it automatically on boot/plugin install).</div>`
+        : null}
+      <${ExampleList} open=${open} onToggle=${toggle} atCap=${atCap}/>
+      <${PlaygroundStage} open=${open} onClose=${toggle}/>
+    </div>
+  `;
 }

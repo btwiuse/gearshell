@@ -5,11 +5,14 @@
 // the plugin now (one concern per directory).
 
 import React from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 export function GroupPanel() {
-  return React.createElement(
-    "div",
-    { className: "group-panel panel-content" },
-    React.createElement("img", { src: "group.png", alt: "Gear Shell group" }),
-  );
+  return html`
+    <div className="group-panel panel-content">
+      <img src="group.png" alt="Gear Shell group"/>
+    </div>
+  `;
 }

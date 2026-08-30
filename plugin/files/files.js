@@ -18,11 +18,12 @@
 // and the wanix filesystem root accessor.
 
 import React, { useCallback, useEffect, useRef } from "react";
+import htm from "htm";
 
 import { useFilesEditor } from "./files-editor.js?v=20260826.44";
 import { useFilesSelection } from "./files-context-menu.js?v=20260826.44";
 import { useFavorites } from "./files-favorites.js?v=20260826.38";
-import { useFilesTree } from "./files-tree.js?v=20260826.41";
+import { useFilesTree } from "./files-tree.js?v=20260826.42";
 import { useFilesSidebarResize } from "./files-resize.js?v=20260826.29";
 import {
   useFilesMediaLayout,
@@ -34,19 +35,21 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.133";
+} from "./files-panel-hooks.js?v=20260826.135";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
   FilesPanelSidebar,
   FilesPanelTopbar,
-} from "./files-panel-sections.js?v=20260826.52";
-import { FilesResizer } from "./files-parts.js?v=20260826.50";
+} from "./files-panel-sections.js?v=20260826.53";
+import { FilesResizer } from "./files-parts.js?v=20260826.51";
 import {
   filesystemPathParent,
   normalizeFilesystemPath,
 } from "../files-path.js?v=20260826.71";
-import { filesDep } from "./files-registry.js?v=20260826.100";
+import { filesDep } from "./files-registry.js?v=20260826.102";
+
+const html = htm.bind(React.createElement);
 
 // === External open bridge ===
 // `GearShell.files.open(path)` (gear open) lands here: while the panel is
@@ -223,30 +226,30 @@ function useFilesOpenBridge(panel) {
 }
 
 function renderFilesPanel(panel, filesPanelRef) {
-  return React.createElement(
-    "div",
-    {
-      ref: filesPanelRef,
-      className: "files-panel panel-content",
-      style: {
+  return html`
+    <div
+      ref=${filesPanelRef}
+      className="files-panel panel-content"
+      style=${{
         "--files-sidebar-width": `${panel.sidebarWidth}px`,
         "--files-sidebar-height": `${panel.sidebarHeight}px`,
-      },
-    },
-    React.createElement(FilesPanelTopbar, { panel }),
-    React.createElement(FilesPanelSidebar, { panel }),
-    React.createElement(FilesResizer, {
-      stackedLayout: panel.stackedLayout,
-      sidebarWidth: panel.sidebarWidth,
-      sidebarHeight: panel.sidebarHeight,
-      onResizeStart: panel.startSidebarResize,
-      onResizeMove: panel.resizeSidebar,
-      onResizeStop: panel.stopSidebarResize,
-      onResizeBy: panel.resizeSidebarBy,
-    }),
-    React.createElement(FilesPanelContextMenu, { panel }),
-    React.createElement(FilesPanelRightPane, { panel }),
-  );
+      }}
+    >
+      <${FilesPanelTopbar} panel=${panel}/>
+      <${FilesPanelSidebar} panel=${panel}/>
+      <${FilesResizer}
+        stackedLayout=${panel.stackedLayout}
+        sidebarWidth=${panel.sidebarWidth}
+        sidebarHeight=${panel.sidebarHeight}
+        onResizeStart=${panel.startSidebarResize}
+        onResizeMove=${panel.resizeSidebar}
+        onResizeStop=${panel.stopSidebarResize}
+        onResizeBy=${panel.resizeSidebarBy}
+      />
+      <${FilesPanelContextMenu} panel=${panel}/>
+      <${FilesPanelRightPane} panel=${panel}/>
+    </div>
+  `;
 }
 
 function FilesPanel() {

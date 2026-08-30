@@ -14,17 +14,20 @@
 // crush-runner.js / files.js / runtime.js / deck.js / launcher.js.
 
 import React, { useEffect, useRef, useState } from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import { Play, Terminal } from "lucide-react";
 import { DockviewDefaultTab } from "dockview-react";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.87";
+} from "./panels-task.js?v=20260828.89";
 import {
   getPluginIframeConfig,
   openPluginPanel,
-} from "./plugins.js?v=20260829.98";
+} from "./plugins.js?v=20260829.100";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -86,10 +89,7 @@ function TerminalPanel({ api, params }) {
     return panelsDep("attachTerminalSession")(id, params.profile, wrapper, api);
   }, [id, params.profile]);
 
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
+  return html`<div ref=${wrapperRef} className="panel-content"></div>`;
 }
 
 // === IframePanel ===
@@ -107,10 +107,7 @@ function IframePanel({ api, params }) {
     );
   }, [api, params.iframeId]);
 
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
+  return html`<div ref=${wrapperRef} className="panel-content"></div>`;
 }
 
 // === PanelTab ===
@@ -118,16 +115,12 @@ function PanelTab(props) {
   const Icon = props.params.panelType === "terminal"
     ? panelsDep("getTerminalPresetIcon")(props.params.profile)
     : getPanelIcons()[props.params.panelType] || Terminal;
-  return React.createElement(
-    "div",
-    { className: "panel-tab" },
-    React.createElement(Icon, {
-      className: "panel-tab-icon",
-      size: 14,
-      "aria-hidden": true,
-    }),
-    React.createElement(DockviewDefaultTab, props),
-  );
+  return html`
+    <div className="panel-tab">
+      <${Icon} className="panel-tab-icon" size=${14} aria-hidden=${true}/>
+      <${DockviewDefaultTab} ...${props}/>
+    </div>
+  `;
 }
 
 // === addTerminalPanel ===

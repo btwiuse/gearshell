@@ -4,17 +4,20 @@
 
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
 import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.16";
-import { setupConfigForm } from "./settings-config.js?v=20260826.12";
-import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.6";
+import { setupConfigForm } from "./settings-config.js?v=20260826.13";
+import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.7";
 import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.3";
 import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.3";
 import { setupSystemForm } from "./settings-system.js?v=20260826.3";
 import { setupBindForm } from "./settings-binds.js?v=20260826.3";
 import { setupTaskForm } from "./settings-task.js?v=20260826.3";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.110";
-import { listSettingsSections } from "../../plugins.js?v=20260829.98";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.112";
+import { listSettingsSections } from "../../plugins.js?v=20260829.100";
 
 // Mount plugin-registered settings sections (ctx.registerSettingsSection)
 // after the built-in template content. Each section gets a <details>
@@ -79,10 +82,7 @@ export function SettingsPanel({ containerApi }) {
     };
   }, [containerApi]);
 
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
+  return html`<div ref=${wrapperRef} className="panel-content"></div>`;
 }
 
 // Register a new Settings panel with dockview. Called from app.js's

@@ -10,6 +10,9 @@
 // feed entries so the effect is visible.
 
 import React, { useEffect, useState } from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 const FEED_LIMIT = 100;
 const RING_EVENT_PREFIX = "gear-shell:";
@@ -19,12 +22,12 @@ function api() {
 }
 
 function Field({ label, children }) {
-  return React.createElement(
-    "label",
-    { className: "playground-arg" },
-    React.createElement("span", { className: "playground-arg-label" }, label),
-    children,
-  );
+  return html`
+    <label className="playground-arg">
+      <span className="playground-arg-label">${label}</span>
+      ${children}
+    </label>
+  `;
 }
 
 function composeEmit(topic, payload, setError, onEmit) {
@@ -45,17 +48,17 @@ function composeEmit(topic, payload, setError, onEmit) {
 }
 
 function PayloadField({ payload, onChange }) {
-  return React.createElement(
-    Field,
-    { label: "Payload (JSON)" },
-    React.createElement("textarea", {
-      className: "playground-json-input",
-      rows: 4,
-      value: payload,
-      spellCheck: false,
-      onChange,
-    }),
-  );
+  return html`
+    <${Field} label="Payload (JSON)">
+      <textarea
+        className="playground-json-input"
+        rows=${4}
+        value=${payload}
+        spellCheck=${false}
+        onChange=${onChange}
+      ></textarea>
+    </${Field}>
+  `;
 }
 
 function EmitForm({ onEmit }) {
@@ -65,82 +68,51 @@ function EmitForm({ onEmit }) {
   );
   const [error, setError] = useState("");
   const emit = () => composeEmit(topic, payload, setError, onEmit);
-  return React.createElement(
-    "div",
-    { className: "playground-events-emit" },
-    React.createElement(
-      Field,
-      { label: "Topic" },
-      React.createElement("input", {
-        type: "text",
-        className: "playground-text-input",
-        value: topic,
-        onChange: (event) => setTopic(event.target.value),
-      }),
-    ),
-    React.createElement(PayloadField, {
-      payload,
-      onChange: (event) => setPayload(event.target.value),
-    }),
-    error && React.createElement("p", { className: "playground-error" }, error),
-    React.createElement(
-      "div",
-      { className: "playground-actions" },
-      React.createElement(
-        "button",
-        { type: "button", className: "playground-run", onClick: emit },
-        "Emit",
-      ),
-    ),
-  );
+  return html`
+    <div className="playground-events-emit">
+      <${Field} label="Topic">
+        <input
+          type="text"
+          className="playground-text-input"
+          value=${topic}
+          onChange=${(event) => setTopic(event.target.value)}
+        />
+      </${Field}>
+      <${PayloadField} payload=${payload} onChange=${(event) => setPayload(event.target.value)}/>
+      ${error && html`<p className="playground-error">${error}</p>`}
+      <div className="playground-actions">
+        <button type="button" className="playground-run" onClick=${emit}>Emit</button>
+      </div>
+    </div>
+  `;
 }
 
 function FeedItem({ item }) {
   const title = item.type === "ring.drain" ? "ring drain" : item.type;
-  return React.createElement(
-    "div",
-    { className: "playground-events-item" },
-    React.createElement(
-      "div",
-      { className: "playground-events-item-head" },
-      React.createElement(
-        "span",
-        { className: "playground-events-type" },
-        title,
-      ),
-      React.createElement(
-        "span",
-        { className: "playground-history-time" },
-        new Date(item.ts).toLocaleTimeString(),
-      ),
-    ),
-    React.createElement(
-      "pre",
-      { className: "playground-json playground-events-payload" },
-      JSON.stringify(item.detail, null, 2),
-    ),
-  );
+  return html`
+    <div className="playground-events-item">
+      <div className="playground-events-item-head">
+        <span className="playground-events-type">${title}</span>
+        <span className="playground-history-time">${new Date(item.ts).toLocaleTimeString()}</span>
+      </div>
+      <pre className="playground-json playground-events-payload">${JSON.stringify(item.detail, null, 2)}</pre>
+    </div>
+  `;
 }
 
 function EventsFeed({ feed }) {
   if (feed.length === 0) {
-    return React.createElement(
-      "p",
-      { className: "playground-hint" },
-      "No events yet — run an Explorer call (e.g. config.updateShell) " +
-        "or emit one above.",
-    );
+    return html`
+      <p className="playground-hint">No events yet — run an Explorer call (e.g. config.updateShell) or emit one above.</p>
+    `;
   }
-  return React.createElement(
-    "div",
-    { className: "playground-events-feed" },
-    feed.map((item, index) =>
-      React.createElement(FeedItem, {
-        key: `${item.ts}-${index}`,
-        item,
-      })
-    ),
-  );
+  return html`
+    <div className="playground-events-feed">
+      ${feed.map((item, index) =>
+        html`<${FeedItem} key=${`${item.ts}-${index}`} item=${item}/>`,
+      )}
+    </div>
+  `;
 }
 
 // Observe every CustomEvent dispatch (emit() publishes each topic as a
@@ -225,46 +197,22 @@ function useEventFeed() {
 
 export function EventsView() {
   const { feed, pending, status, drain, clearFeed, onEmit } = useEventFeed();
-  return React.createElement(
-    "div",
-    { className: "playground-events" },
-    React.createElement(
-      "div",
-      { className: "playground-events-head" },
-      React.createElement(
-        "div",
-        null,
-        React.createElement("h3", null, "Events"),
-        React.createElement(
-          "p",
-          { className: "playground-hint" },
-          "Live feed of gear-shell:* CustomEvents. The agent ring buffer " +
-            "is only drained when you press Drain — observing never " +
-            "consumes events an agent is waiting for.",
-        ),
-      ),
-      React.createElement(
-        "div",
-        { className: "playground-actions" },
-        React.createElement(
-          "span",
-          { className: "playground-pending" },
-          `${pending} pending`,
-        ),
-        React.createElement(
-          "button",
-          { type: "button", className: "playground-run", onClick: drain },
-          "Drain",
-        ),
-        React.createElement(
-          "button",
-          { type: "button", className: "playground-copy", onClick: clearFeed },
-          "Clear feed",
-        ),
-      ),
-    ),
-    status && React.createElement("p", { className: "playground-ok" }, status),
-    React.createElement(EmitForm, { onEmit }),
-    React.createElement(EventsFeed, { feed }),
-  );
+  return html`
+    <div className="playground-events">
+      <div className="playground-events-head">
+        <div>
+          <h3>Events</h3>
+          <p className="playground-hint">Live feed of gear-shell:* CustomEvents. The agent ring buffer is only drained when you press Drain — observing never consumes events an agent is waiting for.</p>
+        </div>
+        <div className="playground-actions">
+          <span className="playground-pending">${pending} pending</span>
+          <button type="button" className="playground-run" onClick=${drain}>Drain</button>
+          <button type="button" className="playground-copy" onClick=${clearFeed}>Clear feed</button>
+        </div>
+      </div>
+      ${status && html`<p className="playground-ok">${status}</p>`}
+      <${EmitForm} onEmit=${onEmit}/>
+      <${EventsFeed} feed=${feed}/>
+    </div>
+  `;
 }

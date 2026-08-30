@@ -15,9 +15,12 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { loadConfig } from "../../app-workspace.js?v=20260826.134";
-import { configApi } from "../../workspace-config-api.js?v=20260828.119";
-import { WORKSPACE_CHANGED_EVENT } from "../../app-constants.js?v=20260828.93";
+import { loadConfig } from "../../app-workspace.js?v=20260826.136";
+import { configApi } from "../../workspace-config-api.js?v=20260828.121";
+import { WORKSPACE_CHANGED_EVENT } from "../../app-constants.js?v=20260828.95";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 function blankDraft() {
   return {
@@ -57,86 +60,43 @@ function readProviders() {
 }
 
 function ProviderBadges({ provider }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(
-      "span",
-      {
-        className: "playground-provider-badge" +
-          (provider.enabled ? " on" : ""),
-      },
-      provider.enabled ? "enabled" : "disabled",
-    ),
-    React.createElement(
-      "span",
-      {
-        className: "playground-provider-badge" +
-          (provider.apiKey ? " key" : ""),
-      },
-      provider.apiKey ? "api key set" : "no api key",
-    ),
-  );
+  return html`
+    <${React.Fragment}>
+      <span className=${"playground-provider-badge" + (provider.enabled ? " on" : "")}>${provider.enabled ? "enabled" : "disabled"}</span>
+      <span className=${"playground-provider-badge" + (provider.apiKey ? " key" : "")}>${provider.apiKey ? "api key set" : "no api key"}</span>
+    </${React.Fragment}>
+  `;
 }
 
 function ProviderMeta({ provider }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(
-      "div",
-      { className: "playground-provider-meta" },
-      React.createElement("code", null, provider.id),
-      provider.baseURL &&
-        React.createElement("code", null, provider.baseURL),
-    ),
-    (provider.models || []).length > 0 &&
-      React.createElement(
-        "div",
-        { className: "playground-provider-models" },
-        provider.models.join(", "),
-      ),
-  );
+  return html`
+    <${React.Fragment}>
+      <div className="playground-provider-meta">
+        <code>${provider.id}</code>
+        ${provider.baseURL && html`<code>${provider.baseURL}</code>`}
+      </div>
+      ${(provider.models || []).length > 0 &&
+        html`<div className="playground-provider-models">${provider.models.join(", ")}</div>`}
+    </${React.Fragment}>
+  `;
 }
 
 function ProviderRow({ provider, onEdit, onDelete }) {
-  return React.createElement(
-    "div",
-    { className: "playground-provider-row" },
-    React.createElement(
-      "div",
-      { className: "playground-provider-main" },
-      React.createElement(
-        "div",
-        { className: "playground-provider-title" },
-        React.createElement(
-          "span",
-          { className: "playground-provider-name" },
-          provider.name || provider.id,
-        ),
-        React.createElement(ProviderBadges, { provider }),
-      ),
-      React.createElement(ProviderMeta, { provider }),
-    ),
-    React.createElement(
-      "div",
-      { className: "playground-provider-actions" },
-      React.createElement(
-        "button",
-        { type: "button", onClick: () => onEdit(provider) },
-        "Edit",
-      ),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "danger",
-          onClick: () => onDelete(provider),
-        },
-        "Delete",
-      ),
-    ),
-  );
+  return html`
+    <div className="playground-provider-row">
+      <div className="playground-provider-main">
+        <div className="playground-provider-title">
+          <span className="playground-provider-name">${provider.name || provider.id}</span>
+          <${ProviderBadges} provider=${provider}/>
+        </div>
+        <${ProviderMeta} provider=${provider}/>
+      </div>
+      <div className="playground-provider-actions">
+        <button type="button" onClick=${() => onEdit(provider)}>Edit</button>
+        <button type="button" className="danger" onClick=${() => onDelete(provider)}>Delete</button>
+      </div>
+    </div>
+  `;
 }
 
 const PROVIDER_TEXT_FIELDS = [
@@ -155,93 +115,70 @@ const PROVIDER_TEXT_FIELDS = [
 ];
 
 function ProviderTextField({ field, value, onChange }) {
-  return React.createElement(
-    "label",
-    { className: "playground-arg" },
-    React.createElement(
-      "span",
-      { className: "playground-arg-label" },
-      field.label,
-    ),
-    React.createElement("input", {
-      type: field.type || "text",
-      className: "playground-text-input",
-      value,
-      placeholder: field.placeholder,
-      onChange,
-    }),
-  );
+  return html`
+    <label className="playground-arg">
+      <span className="playground-arg-label">${field.label}</span>
+      <input
+        type=${field.type || "text"}
+        className="playground-text-input"
+        value=${value}
+        placeholder=${field.placeholder}
+        onChange=${onChange}
+      />
+    </label>
+  `;
 }
 
 // The editor's special fields: the password key field, the models
 // textarea and the enabled toggle (text fields render via the map in
 // ProviderFields).
 function ProviderSpecialFields({ local, set, isNew }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(
-      "label",
-      { className: "playground-arg" },
-      React.createElement(
-        "span",
-        { className: "playground-arg-label" },
-        "API key",
-      ),
-      React.createElement("input", {
-        type: "password",
-        className: "playground-text-input",
-        value: local.apiKey,
-        placeholder: isNew ? "sk-…" : "leave empty to keep the stored key",
-        onChange: set("apiKey"),
-        autoComplete: "off",
-      }),
-    ),
-    React.createElement(
-      "label",
-      { className: "playground-arg" },
-      React.createElement(
-        "span",
-        { className: "playground-arg-label" },
-        "Models (one per line)",
-      ),
-      React.createElement("textarea", {
-        className: "playground-json-input",
-        rows: 4,
-        value: local.modelsText,
-        placeholder: "gpt-4o\ngpt-4o-mini",
-        spellCheck: false,
-        onChange: set("modelsText"),
-      }),
-    ),
-    React.createElement(
-      "label",
-      { className: "playground-arg playground-arg-check" },
-      React.createElement("input", {
-        type: "checkbox",
-        checked: local.enabled,
-        onChange: set("enabled"),
-      }),
-      React.createElement("span", null, "Enabled"),
-    ),
-  );
+  return html`
+    <${React.Fragment}>
+      <label className="playground-arg">
+        <span className="playground-arg-label">API key</span>
+        <input
+          type="password"
+          className="playground-text-input"
+          value=${local.apiKey}
+          placeholder=${isNew ? "sk-…" : "leave empty to keep the stored key"}
+          onChange=${set("apiKey")}
+          autoComplete="off"
+        />
+      </label>
+      <label className="playground-arg">
+        <span className="playground-arg-label">Models (one per line)</span>
+        <textarea
+          className="playground-json-input"
+          rows=${4}
+          value=${local.modelsText}
+          placeholder=${"gpt-4o\ngpt-4o-mini"}
+          spellCheck=${false}
+          onChange=${set("modelsText")}
+        ></textarea>
+      </label>
+      <label className="playground-arg playground-arg-check">
+        <input
+          type="checkbox"
+          checked=${local.enabled}
+          onChange=${set("enabled")}
+        />
+        <span>Enabled</span>
+      </label>
+    </${React.Fragment}>
+  `;
 }
 
 // The editor field block: text fields plus the special fields.
 function ProviderFields({ local, set, isNew }) {
-  return React.createElement(
-    "div",
-    { className: "playground-provider-fields" },
-    PROVIDER_TEXT_FIELDS.map((field) =>
-      React.createElement(ProviderTextField, {
-        key: field.key,
-        field,
-        value: local[field.key],
-        onChange: set(field.key),
-      })
-    ),
-    React.createElement(ProviderSpecialFields, { local, set, isNew }),
-  );
+  return html`
+    <div className="playground-provider-fields">
+      ${PROVIDER_TEXT_FIELDS.map((field) =>
+        html`<${ProviderTextField} key=${field.key} field=${field} value=${local[field.key]} onChange=${set(field.key)}/>`,
+      )}
+      <${ProviderSpecialFields} local=${local} set=${set} isNew=${isNew}/>
+    </div>
+  `;
 }
 
 function ProviderEditor({ draft, onSave, onCancel, isNew }) {
@@ -274,26 +211,16 @@ function ProviderEditor({ draft, onSave, onCancel, isNew }) {
       enabled: local.enabled,
     });
   };
-  return React.createElement(
-    "div",
-    { className: "playground-provider-editor" },
-    React.createElement(ProviderFields, { local, set, isNew }),
-    error && React.createElement("p", { className: "playground-error" }, error),
-    React.createElement(
-      "div",
-      { className: "playground-actions" },
-      React.createElement(
-        "button",
-        { type: "button", className: "playground-run", onClick: save },
-        isNew ? "Add provider" : "Save changes",
-      ),
-      React.createElement(
-        "button",
-        { type: "button", className: "playground-copy", onClick: onCancel },
-        "Cancel",
-      ),
-    ),
-  );
+  return html`
+    <div className="playground-provider-editor">
+      <${ProviderFields} local=${local} set=${set} isNew=${isNew}/>
+      ${error && html`<p className="playground-error">${error}</p>`}
+      <div className="playground-actions">
+        <button type="button" className="playground-run" onClick=${save}>${isNew ? "Add provider" : "Save changes"}</button>
+        <button type="button" className="playground-copy" onClick=${onCancel}>Cancel</button>
+      </div>
+    </div>
+  `;
 }
 
 function saveProviderDraft(provider, setStatus, setDraft, refresh, setError) {
@@ -378,77 +305,43 @@ function useProvidersState() {
 }
 
 function ProvidersHead({ adding, onAdd }) {
-  return React.createElement(
-    "div",
-    { className: "playground-providers-head" },
-    React.createElement(
-      "div",
-      null,
-      React.createElement("h3", null, "Model providers"),
-      React.createElement(
-        "p",
-        { className: "playground-hint" },
-        "Stored in the shell config and exposed to agents via " +
-          "config.providers.* (gear). API keys are never shown back " +
-          "through the agent channel.",
-      ),
-    ),
-    !adding &&
-      React.createElement(
-        "button",
-        { type: "button", className: "playground-run", onClick: onAdd },
-        React.createElement(Plus, { size: 14, "aria-hidden": true }),
-        " Add provider",
-      ),
-  );
+  return html`
+    <div className="playground-providers-head">
+      <div>
+        <h3>Model providers</h3>
+        <p className="playground-hint">Stored in the shell config and exposed to agents via config.providers.* (gear). API keys are never shown back through the agent channel.</p>
+      </div>
+      ${!adding &&
+        html`<button type="button" className="playground-run" onClick=${onAdd}>
+          <${Plus} size=${14} aria-hidden=${true}/>
+          Add provider
+        </button>`}
+    </div>
+  `;
 }
 
 function ProviderList({ providers, onEdit, onDelete }) {
-  return React.createElement(
-    "div",
-    { className: "playground-provider-list" },
-    providers.length === 0
-      ? React.createElement(
-        "p",
-        { className: "playground-hint" },
-        "No providers configured yet. Add one to start pointing " +
-          "chat / image / video tools at a model API.",
-      )
-      : providers.map((provider) =>
-        React.createElement(ProviderRow, {
-          key: provider.id,
-          provider,
-          onEdit,
-          onDelete,
-        })
-      ),
-  );
+  return html`
+    <div className="playground-provider-list">
+      ${providers.length === 0
+        ? html`<p className="playground-hint">No providers configured yet. Add one to start pointing chat / image / video tools at a model API.</p>`
+        : providers.map((provider) =>
+          html`<${ProviderRow} key=${provider.id} provider=${provider} onEdit=${onEdit} onDelete=${onDelete}/>`,
+        )}
+    </div>
+  `;
 }
 
 export function ProvidersView() {
   const state = useProvidersState();
-  return React.createElement(
-    "div",
-    { className: "playground-providers" },
-    React.createElement(ProvidersHead, {
-      adding: !!state.draft,
-      onAdd: state.startAdd,
-    }),
-    state.draft &&
-      React.createElement(ProviderEditor, {
-        draft: state.draft,
-        isNew: state.isNew,
-        onSave: state.save,
-        onCancel: state.cancel,
-      }),
-    state.status &&
-      React.createElement("p", { className: "playground-ok" }, state.status),
-    state.error &&
-      React.createElement("p", { className: "playground-error" }, state.error),
-    React.createElement(ProviderList, {
-      providers: state.providers,
-      onEdit: state.startEdit,
-      onDelete: state.remove,
-    }),
-  );
+  return html`
+    <div className="playground-providers">
+      <${ProvidersHead} adding=${!!state.draft} onAdd=${state.startAdd}/>
+      ${state.draft &&
+        html`<${ProviderEditor} draft=${state.draft} isNew=${state.isNew} onSave=${state.save} onCancel=${state.cancel}/>`}
+      ${state.status && html`<p className="playground-ok">${state.status}</p>`}
+      ${state.error && html`<p className="playground-error">${state.error}</p>`}
+      <${ProviderList} providers=${state.providers} onEdit=${state.startEdit} onDelete=${state.remove}/>
+    </div>
+  `;
 }

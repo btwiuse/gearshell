@@ -10,28 +10,27 @@ import {
   crushRunnerDep,
   nextCrushRunnerId,
 } from "./crush-deps.js?v=20260828.4";
-import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.134";
-import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.4";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.136";
+import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.5";
 import {
   CrushCtaRow,
   CrushEditorToggle,
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "./crush-runner-parts.js?v=20260828.134";
+} from "./crush-runner-parts.js?v=20260828.136";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 function CrushHero({ children }) {
-  return React.createElement(
-    "header",
-    { className: "crush-runner-hero" },
-    React.createElement("h1", null, "Crush, in your browser."),
-    React.createElement(
-      "p",
-      { className: "crush-runner-lede" },
-      "Edit any field below, then Launch to open a Crush session in a new tab. Switch presets to compare configurations, or save the current form as a new preset.",
-    ),
-    children,
-  );
+  return html`
+    <header className="crush-runner-hero">
+      <h1>Crush, in your browser.</h1>
+      <p className="crush-runner-lede">Edit any field below, then Launch to open a Crush session in a new tab. Switch presets to compare configurations, or save the current form as a new preset.</p>
+      ${children}
+    </header>
+  `;
 }
 
 function CrushInstalledSection(props) {
@@ -45,28 +44,13 @@ function CrushInstalledSection(props) {
     formExpanded,
     setFormExpanded,
   } = props;
-  return React.createElement(
-    React.Fragment,
-    null,
-    // Preset switcher: a grid of square icon tiles that mirrors
-    // the settings panel's icon picker; clicking a tile activates
-    // that preset, the New slot saves the form as a new preset.
-    React.createElement(CrushPresetBar, {
-      presets,
-      activePreset,
-      isDirty,
-      activatePreset,
-      saveAsNewPreset,
-    }),
-    // Editor toggle: the configuration section starts hidden so
-    // the default view reads as "ready to launch". The toggle
-    // alone controls formExpanded.
-    React.createElement(CrushEditorToggle, {
-      formExpanded,
-      setFormExpanded,
-    }),
-    React.createElement(CrushConfigSection, { ctl }),
-  );
+  return html`
+    <${React.Fragment}>
+      <${CrushPresetBar} presets=${presets} activePreset=${activePreset} isDirty=${isDirty} activatePreset=${activatePreset} saveAsNewPreset=${saveAsNewPreset}/>
+      <${CrushEditorToggle} formExpanded=${formExpanded} setFormExpanded=${setFormExpanded}/>
+      <${CrushConfigSection} ctl=${ctl}/>
+    </${React.Fragment}>
+  `;
 }
 
 function installBannerProps(ctl) {
@@ -114,44 +98,22 @@ function ctaRowProps(ctl) {
 
 export function CrushRunnerPanel({ api, params, containerApi }) {
   const ctl = useCrushRunnerPanelController({ api, params, containerApi });
-  return React.createElement(
-    "div",
-    { className: "crush-runner-panel panel-content" },
-    React.createElement(
-      "div",
-      { className: "crush-runner-shell" },
-      // Hero mirrors the landing page so launching Crush feels like pressing
-      // the Open Terminal CTA: kicker, headline, lede, then the install
-      // banner. The banner lives inside the hero so its bottom border
-      // closes the section below the diagnostic, as before the split.
-      React.createElement(
-        CrushHero,
-        null,
-        // Per-session dismiss: hide the whole banner when the user
-        // clicks the close glyph. The state lives in a useState hook
-        // so a page reload restores the banner without any
-        // persistent storage side effects.
-        !ctl.installBannerDismissed &&
-          React.createElement(CrushInstallBanner, installBannerProps(ctl)),
-      ),
-      // Below the install banner we only show configuration controls when
-      // Crush is actually installed. While the install probe is in flight
-      // (null) or the binary is missing (false) we hide the rest of the
-      // panel so the user focuses on resolving the install first.
-      ctl.crushInstalled === true &&
-        React.createElement(CrushInstalledSection, installedSectionProps(ctl)),
-      // CTA row pinned to the bottom of the panel so launching Crush is
-      // the last thing the user reaches. Hidden entirely while install
-      // detection is in flight so the page focuses on the banner above.
-      ctl.crushInstalled === null
-        ? null
-        : React.createElement(CrushCtaRow, ctaRowProps(ctl)),
-      // Status banner sits under the CTA row so a "Saved updates" or
-      // "Reset profile fields" message appears right next to the button
-      // that triggered it.
-      React.createElement(CrushRunnerStatus, { status: ctl.status }),
-    ),
-  );
+  return html`
+    <div className="crush-runner-panel panel-content">
+      <div className="crush-runner-shell">
+        <${CrushHero}>
+          ${!ctl.installBannerDismissed &&
+            html`<${CrushInstallBanner} ...${installBannerProps(ctl)}/>`}
+        </${CrushHero}>
+        ${ctl.crushInstalled === true &&
+          html`<${CrushInstalledSection} ...${installedSectionProps(ctl)}/>`}
+        ${ctl.crushInstalled === null
+          ? null
+          : html`<${CrushCtaRow} ...${ctaRowProps(ctl)}/>`}
+        <${CrushRunnerStatus} status=${ctl.status}/>
+      </div>
+    </div>
+  `;
 }
 
 // Register a new CrushRunner panel with dockview. Called from app.js's

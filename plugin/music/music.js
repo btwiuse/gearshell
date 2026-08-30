@@ -35,7 +35,10 @@ import {
   musicSetShuffle,
   musicStop,
 } from "../../music-engine.js?v=20260829.11";
-import { isAudioFilePath, VfsFilePicker } from "./vfs-picker.js?v=20260829.11";
+import { isAudioFilePath, VfsFilePicker } from "./vfs-picker.js?v=20260829.12";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import {
   MusicSeekBar,
   renderControls,
@@ -43,11 +46,11 @@ import {
   renderLyricsSection,
   renderNowPlaying,
   renderUrlRow,
-} from "./music-panel-parts.js?v=20260829.12";
+} from "./music-panel-parts.js?v=20260829.13";
 import {
   MusicQueueList,
   PlaylistToolbar,
-} from "./music-playlist-ui.js?v=20260829.12";
+} from "./music-playlist-ui.js?v=20260829.13";
 
 const LOOP_CYCLE = ["off", "all", "one"];
 
@@ -57,46 +60,38 @@ function entryToTrack(entry) {
 
 function renderMusicPanel(state, time, url, setUrl, handlers) {
   const current = state?.current || null;
-  return React.createElement(
-    "div",
-    { className: "music-panel panel-content" },
-    React.createElement(
-      "div",
-      { className: "music-header" },
-      React.createElement(Music2, { size: 18, "aria-hidden": true }),
-      React.createElement("h2", null, "Music"),
-    ),
-    React.createElement(
-      "div",
-      { className: "music-now" },
-      renderNowPlaying(current),
-      React.createElement(MusicSeekBar, {
-        current,
-        time,
-        onSeek: handlers.seek,
-      }),
-    ),
-    renderControls(state, handlers),
-    renderUrlRow(url, setUrl, handlers.playUrl, handlers.browse),
-    renderLyricsSection(current?.lyrics, time),
-    React.createElement(PlaylistToolbar, {
-      playlists: state?.playlists || [],
-      selectedId: handlers.playlistSelectedId,
-      onSelect: handlers.playlistSelect,
-      onSave: handlers.playlistSave,
-      onRename: handlers.playlistRename,
-      onDelete: handlers.playlistDelete,
-    }),
-    React.createElement(MusicQueueList, {
-      queue: state?.queue || [],
-      queueIndex: state?.queueIndex ?? -1,
-      onPickAt: handlers.pickQueue,
-      onRemoveAt: handlers.removeAt,
-      onClear: handlers.clearQueue,
-      onReorder: handlers.reorderQueue,
-    }),
-    renderHistory(state?.history, handlers.pickHistory),
-  );
+  return html`
+    <div className="music-panel panel-content">
+      <div className="music-header">
+        <${Music2} size=${18} aria-hidden=${true}/>
+        <h2>Music</h2>
+      </div>
+      <div className="music-now">
+        ${renderNowPlaying(current)}
+        <${MusicSeekBar} current=${current} time=${time} onSeek=${handlers.seek}/>
+      </div>
+      ${renderControls(state, handlers)}
+      ${renderUrlRow(url, setUrl, handlers.playUrl, handlers.browse)}
+      ${renderLyricsSection(current?.lyrics, time)}
+      <${PlaylistToolbar}
+        playlists=${state?.playlists || []}
+        selectedId=${handlers.playlistSelectedId}
+        onSelect=${handlers.playlistSelect}
+        onSave=${handlers.playlistSave}
+        onRename=${handlers.playlistRename}
+        onDelete=${handlers.playlistDelete}
+      />
+      <${MusicQueueList}
+        queue=${state?.queue || []}
+        queueIndex=${state?.queueIndex ?? -1}
+        onPickAt=${handlers.pickQueue}
+        onRemoveAt=${handlers.removeAt}
+        onClear=${handlers.clearQueue}
+        onReorder=${handlers.reorderQueue}
+      />
+      ${renderHistory(state?.history, handlers.pickHistory)}
+    </div>
+  `;
 }
 
 // Engine state + lyric-clock subscriptions, kept in one hook so the
@@ -218,25 +213,27 @@ function renderMusicPicker(
   { pickerOpen, onClose, playSingle, playAll, enqueueAll },
 ) {
   if (!pickerOpen) return null;
-  return React.createElement(VfsFilePicker, {
-    title: "Pick audio from the filesystem",
-    startPath: ".",
-    filter: isAudioFilePath,
-    mode: "multi",
-    onClose,
-    onPlaySingle: playSingle,
-    actions: [
-      {
-        label: (count) => `Play ${count}`,
-        primary: true,
-        onPick: playAll,
-      },
-      {
-        label: (count) => `Add ${count} to playlist`,
-        onPick: enqueueAll,
-      },
-    ],
-  });
+  return html`
+    <${VfsFilePicker}
+      title="Pick audio from the filesystem"
+      startPath="."
+      filter=${isAudioFilePath}
+      mode="multi"
+      onClose=${onClose}
+      onPlaySingle=${playSingle}
+      actions=${[
+        {
+          label: (count) => `Play ${count}`,
+          primary: true,
+          onPick: playAll,
+        },
+        {
+          label: (count) => `Add ${count} to playlist`,
+          onPick: enqueueAll,
+        },
+      ]}
+    />
+  `;
 }
 
 export function MusicPanel() {
@@ -274,16 +271,16 @@ export function MusicPanel() {
     ...makePlaylistHandlers(refreshState, setPlaylistSelected),
   };
 
-  return React.createElement(
-    React.Fragment,
-    null,
-    renderMusicPanel(state, time, url, setUrl, handlers),
-    renderMusicPicker({
-      pickerOpen,
-      onClose: () => setPickerOpen(false),
-      playSingle,
-      playAll,
-      enqueueAll,
-    }),
-  );
+  return html`
+    <${React.Fragment}>
+      ${renderMusicPanel(state, time, url, setUrl, handlers)}
+      ${renderMusicPicker({
+        pickerOpen,
+        onClose: () => setPickerOpen(false),
+        playSingle,
+        playAll,
+        enqueueAll,
+      })}
+    </${React.Fragment}>
+  `;
 }

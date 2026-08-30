@@ -17,67 +17,58 @@ import {
   TerminalProfileItem,
   TerminalProfileRuntimeFields,
 } from "./settings-terminal-fields.js?v=20260828.3";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 function renderProfileItem(profile, index, ctx) {
-  return React.createElement(TerminalProfileItem, {
-    key: profile.id,
-    profile,
-    index,
-    count: ctx.profiles.length,
-    isDefault: ctx.editor.config.defaultTerminalProfileId === profile.id,
-    draggedId: ctx.editor.draggedId,
-    dropTarget: ctx.editor.dropTarget,
-    onSetDefault: () => ctx.setDefault(profile),
-    onEdit: () => ctx.editor.editProfile(profile),
-    onMove: (direction) => ctx.order.move(profile.id, direction),
-    onRemove: () => ctx.save.removeProfile(profile),
-    onDrop: ctx.order.drop,
-    setDraggedId: ctx.editor.setDraggedId,
-    setDropTarget: ctx.editor.setDropTarget,
-  });
+  return html`<${TerminalProfileItem}
+    key=${profile.id}
+    profile=${profile}
+    index=${index}
+    count=${ctx.profiles.length}
+    isDefault=${ctx.editor.config.defaultTerminalProfileId === profile.id}
+    draggedId=${ctx.editor.draggedId}
+    dropTarget=${ctx.editor.dropTarget}
+    onSetDefault=${() => ctx.setDefault(profile)}
+    onEdit=${() => ctx.editor.editProfile(profile)}
+    onMove=${(direction) => ctx.order.move(profile.id, direction)}
+    onRemove=${() => ctx.save.removeProfile(profile)}
+    onDrop=${ctx.order.drop}
+    setDraggedId=${ctx.editor.setDraggedId}
+    setDropTarget=${ctx.editor.setDropTarget}
+  />`;
 }
 
 function PresetEditorControls({ editor, save }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(
-      "div",
-      { className: "terminal-profile-fields" },
-      React.createElement(TerminalProfileBasicFields, {
-        draft: editor.draft,
-        updateDraft: editor.updateDraft,
-      }),
-      React.createElement(TerminalProfileRuntimeFields, {
-        draft: editor.draft,
-        updateDraft: editor.updateDraft,
-      }),
-    ),
-    React.createElement(
-      "div",
-      { className: "workspace-actions" },
-      React.createElement(
-        "button",
-        { type: "button", onClick: save.saveDraft },
-        editor.editingProfileId
-          ? "Save terminal preset"
-          : "Add terminal preset",
-      ),
-      editor.editingProfileId && React.createElement("button", {
-        type: "button",
-        onClick: () => {
-          editor.resetDraft();
-          editor.setStatus({ message: "Edit cancelled.", isError: false });
-        },
-      }, "Cancel edit"),
-    ),
-    React.createElement("div", {
-      className: "hint terminal-profile-status",
-      role: "status",
-      "aria-live": "polite",
-      "data-error": editor.status.isError || undefined,
-    }, editor.status.message),
-  );
+  return html`
+    <${React.Fragment}>
+      <div className="terminal-profile-fields">
+        <${TerminalProfileBasicFields} draft=${editor.draft} updateDraft=${editor.updateDraft}/>
+        <${TerminalProfileRuntimeFields} draft=${editor.draft} updateDraft=${editor.updateDraft}/>
+      </div>
+      <div className="workspace-actions">
+        <button type="button" onClick=${save.saveDraft}>
+          ${editor.editingProfileId
+            ? "Save terminal preset"
+            : "Add terminal preset"}
+        </button>
+        ${editor.editingProfileId && html`<button
+          type="button"
+          onClick=${() => {
+            editor.resetDraft();
+            editor.setStatus({ message: "Edit cancelled.", isError: false });
+          }}
+        >Cancel edit</button>`}
+      </div>
+      <div
+        className="hint terminal-profile-status"
+        role="status"
+        aria-live="polite"
+        data-error=${editor.status.isError || undefined}
+      >${editor.status.message}</div>
+    </${React.Fragment}>
+  `;
 }
 
 export function TerminalPresetEditor() {
@@ -111,24 +102,18 @@ export function TerminalPresetEditor() {
   };
   const ctx = { profiles, editor, order, save, setDefault };
 
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(
-      "p",
-      { className: "hint" },
-      "Drag presets to reorder Terminal menus. Choose an icon from the GearShell Lucide set, then add a command with its startup arguments.",
-    ),
-    React.createElement(
-      "div",
-      {
-        className: "terminal-profile-list",
-        "aria-label": "Terminal preset order",
-      },
-      profiles.map((profile, index) => renderProfileItem(profile, index, ctx)),
-    ),
-    React.createElement(PresetEditorControls, { editor, save }),
-  );
+  return html`
+    <${React.Fragment}>
+      <p className="hint">Drag presets to reorder Terminal menus. Choose an icon from the GearShell Lucide set, then add a command with its startup arguments.</p>
+      <div
+        className="terminal-profile-list"
+        aria-label="Terminal preset order"
+      >
+        ${profiles.map((profile, index) => renderProfileItem(profile, index, ctx))}
+      </div>
+      <${PresetEditorControls} editor=${editor} save=${save}/>
+    </${React.Fragment}>
+  `;
 }
 
 export function setupTerminalProfileForm(settingsContent) {
@@ -137,6 +122,6 @@ export function setupTerminalProfileForm(settingsContent) {
   );
   if (!editor) return undefined;
   const root = createRoot(editor);
-  root.render(React.createElement(TerminalPresetEditor));
+  root.render(html`<${TerminalPresetEditor}/>`);
   return () => root.unmount();
 }

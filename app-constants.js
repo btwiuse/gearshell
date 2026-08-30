@@ -13,7 +13,7 @@ import {
   isLegacyHushBinaryUrl,
   SHELL_PROFILE_CONTENT,
   W9Y_BINARY_VERSION,
-} from "./app-plugin-manifests.js?v=20260829.148";
+} from "./app-plugin-manifests.js?v=20260829.150";
 
 // Built-in plugin manifests + the shell toolset constants live in
 // app-plugin-manifests.js; re-exported so every existing importer

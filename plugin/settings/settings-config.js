@@ -1,9 +1,12 @@
 // Settings "Behavior" / "Wanix tools" form wiring.
 
 import React from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import { createRoot } from "react-dom/client";
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
-import { LauncherOrderEditor } from "./settings-launcher.js?v=20260826.4";
+import { LauncherOrderEditor } from "./settings-launcher.js?v=20260826.5";
 // `setupConfigForm` wires the "Behavior" / "Wanix tools" <details>
 // blocks under the Settings panel: restore-tabs toggle, Wagi-Dog
 // toggle, workbench/vm URL inputs, and the launcher ordering editor.
@@ -119,7 +122,7 @@ export function setupConfigForm(settingsContent) {
   const launcherOrderRoot = els.launcherOrderList
     ? createRoot(els.launcherOrderList)
     : null;
-  launcherOrderRoot?.render(React.createElement(LauncherOrderEditor));
+  launcherOrderRoot?.render(html`<${LauncherOrderEditor}/>`);
   const populate = () => {
     fillConfigFields(els, settingsDep("loadConfig")());
   };

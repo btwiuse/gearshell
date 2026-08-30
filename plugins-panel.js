@@ -7,7 +7,10 @@
 
 import React from "react";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { PluginsPage } from "./plugins-page.js?v=20260829.71";
+import { PluginsPage } from "./plugins-page.js?v=20260829.73";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 let __pluginsPanelDeps = null;
 export function initPluginsPanel(dependencies) {
@@ -27,11 +30,11 @@ function pluginsPanelDep(name) {
 }
 
 export function PluginsPanel() {
-  return React.createElement(
-    "div",
-    { className: "plugins-panel panel-content" },
-    React.createElement(PluginsPage, null),
-  );
+  return html`
+    <div className="plugins-panel panel-content">
+      <${PluginsPage}/>
+    </div>
+  `;
 }
 
 // === Panel registration ===

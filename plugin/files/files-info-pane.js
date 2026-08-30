@@ -2,14 +2,17 @@
 // shell). The body renderers live in files-info-pane-body.js and the
 // pure formatting/sorting helpers in files-info.js (500-line splits).
 import React from "react";
-import { sortFilesEntries } from "./files-info.js?v=20260826.42";
+import htm from "htm";
+import { sortFilesEntries } from "./files-info.js?v=20260826.43";
 import {
   entryTypeLabel,
   makeChildInteraction,
   renderInfoFooter,
   renderPreviewBody,
   renderViewToolbar,
-} from "./files-info-pane-body.js?v=20260826.42";
+} from "./files-info-pane-body.js?v=20260826.43";
+
+const html = htm.bind(React.createElement);
 
 // Selection is in-pane: single click highlights a tile and shows its
 // details in the footer; the grid stays put so a double click reliably
@@ -61,28 +64,26 @@ export function FilesInfoPane({
     columnWidths,
     onColumnWidthChange,
   };
-  return React.createElement(
-    "div",
-    {
-      className: "files-info",
-      style: {
+  return html`
+    <div
+      className="files-info"
+      style=${{
         "--files-col-size": `${columnWidths.size}px`,
         "--files-col-mtime": `${columnWidths.mtime}px`,
-      },
-    },
-    showChildren &&
-      renderViewToolbar({ viewMode, sort, onViewModeChange, onSortChange }),
-    React.createElement(
-      "div",
-      { className: "files-info-body" },
-      renderPreviewBody({
-        info: previewInfo,
-        isGrid: viewMode === "grid",
-        makeInteraction,
-        selectedChild,
-        showChildren,
-      }),
-    ),
-    renderInfoFooter({ info, selectedChild, basePathText, typeLabel }),
-  );
+      }}
+    >
+      ${showChildren &&
+        renderViewToolbar({ viewMode, sort, onViewModeChange, onSortChange })}
+      <div className="files-info-body">
+        ${renderPreviewBody({
+          info: previewInfo,
+          isGrid: viewMode === "grid",
+          makeInteraction,
+          selectedChild,
+          showChildren,
+        })}
+      </div>
+      ${renderInfoFooter({ info, selectedChild, basePathText, typeLabel })}
+    </div>
+  `;
 }

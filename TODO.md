@@ -725,6 +725,8 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   可用;函数属性(onClick/onChange/ref)正常,测试里"丢了"是 JSON.stringify 隐藏函数值;
   Fragment 用 `<${React.Fragment}>...</>`(htm 无 `<></>`);DOM 标签勿自闭合+紧跟文本
   (`<span/>x` 解析器崩),组件自闭合 `<${Icon} .../>` 安全。
+- **python `\n` 是真换行**:匹配源码里的字面 `\n`(如 `join("\n")`)必须写 `\\\\n`;含 `\n` 的替换改用 edit 工具(无转义层)。
+- **htm 模板内反引号要转义**(`` \`cmd\` ``),否则终止模板字面量。
 - **web-pet 循环陷阱逃生**:cascade-bump 的 SKIP_DIRS 含 `web-pet` → plugin/web-pet/
   是盲区,每轮级联 web-pet 的 panels 引用都落后一档。修完 web-pet 若再级联又会推
   panels +1 → 死循环。逃生 = 版本号只需"从未被服务过":(1) 先 sed web-pet 的 panels

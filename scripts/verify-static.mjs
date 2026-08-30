@@ -146,7 +146,7 @@ if (!has("wagiDogEnabled: config?.wagiDogEnabled === true")) {
 if (!has('data-config="wagi-dog-enabled"')) {
   throw new Error("Settings must expose the Wagi Dog toggle.");
 }
-if (!has("'aria-checked': wagiDogEnabled")) {
+if (!has("aria-checked=${wagiDogEnabled}")) {
   throw new Error("The panel menu must expose the Wagi Dog toggle.");
 }
 if (!has("TERMINAL_PRESET_ICON_OPTIONS")) {
@@ -215,7 +215,7 @@ if (!has("FavoritesSidebar") || !has("defaultFavorites")) {
 if (!has("useFilesTree") || !has("TREE_ROOT") || !has("files-tree-node")) {
   throw new Error("Files panel must provide an expandable hierarchy tree.");
 }
-if (!has('preview.kind === "pdf"') || !has('React.createElement("iframe"')) {
+if (!has('preview.kind === "pdf"') || !has('title="PDF preview"')) {
   throw new Error("PDF preview must render in an iframe, never as a video.");
 }
 if (
@@ -267,7 +267,7 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.184")) {
+if (!has("app.js?v=20260828.186")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

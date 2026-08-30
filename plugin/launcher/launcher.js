@@ -18,6 +18,9 @@
 import React, { useEffect, useState } from "react";
 import { ChevronDown, Ellipsis, Star } from "lucide-react";
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 let __launcherDeps = null;
 export function initLauncher(dependencies) {
@@ -40,43 +43,43 @@ export function launcherDep(name) {
 function TerminalLaunchPrimary({ iconSize, menuRole, onLaunch }) {
   const defaultProfile = launcherDep("getDefaultTerminalProfile")();
   const DefaultIcon = launcherDep("getTerminalPresetIcon")(defaultProfile);
-  return React.createElement(
-    "button",
-    {
-      className: "terminal-launch-primary",
-      type: "button",
-      role: menuRole,
-      title: launcherDep("terminalCommand")(defaultProfile),
-      onClick: () => onLaunch(defaultProfile),
-    },
-    React.createElement(DefaultIcon, { size: iconSize, "aria-hidden": true }),
-    React.createElement("span", null, "Terminal"),
-  );
+  return html`
+    <button
+      className="terminal-launch-primary"
+      type="button"
+      role=${menuRole}
+      title=${launcherDep("terminalCommand")(defaultProfile)}
+      onClick=${() => onLaunch(defaultProfile)}
+    >
+      <${DefaultIcon} size=${iconSize} aria-hidden=${true}/>
+      <span>Terminal</span>
+    </button>
+  `;
 }
 
 function TerminalProfileOptions({ iconSize, menuRole, onLaunch }) {
-  return React.createElement(
-    "div",
-    {
-      className: "terminal-launch-options",
-      role: menuRole ? "menu" : undefined,
-    },
-    ...launcherDep("getTerminalProfiles")().map((profile) => {
-      const Icon = launcherDep("getTerminalPresetIcon")(profile);
-      return React.createElement(
-        "button",
-        {
-          key: profile.id,
-          type: "button",
-          role: menuRole,
-          title: launcherDep("terminalCommand")(profile),
-          onClick: () => onLaunch(profile),
-        },
-        React.createElement(Icon, { size: iconSize, "aria-hidden": true }),
-        React.createElement("span", null, profile.name),
-      );
-    }),
-  );
+  return html`
+    <div
+      className="terminal-launch-options"
+      role=${menuRole ? "menu" : undefined}
+    >
+      ${launcherDep("getTerminalProfiles")().map((profile) => {
+        const Icon = launcherDep("getTerminalPresetIcon")(profile);
+        return html`
+          <button
+            key=${profile.id}
+            type="button"
+            role=${menuRole}
+            title=${launcherDep("terminalCommand")(profile)}
+            onClick=${() => onLaunch(profile)}
+          >
+            <${Icon} size=${iconSize} aria-hidden=${true}/>
+            <span>${profile.name}</span>
+          </button>
+        `;
+      })}
+    </div>
+  `;
 }
 
 function TerminalLaunchPicker(
@@ -85,44 +88,32 @@ function TerminalLaunchPicker(
   const [expanded, setExpanded] = useState(false);
   const menuRole = inMenu ? "menuitem" : undefined;
 
-  return React.createElement(
-    "div",
-    { className: `terminal-launch-picker ${className}` },
-    React.createElement(
-      "div",
-      { className: "terminal-launch-row" },
-      React.createElement(TerminalLaunchPrimary, {
-        iconSize,
-        menuRole,
-        onLaunch,
-      }),
-      React.createElement(
-        "button",
-        {
-          className: "terminal-launch-toggle",
-          type: "button",
-          "aria-label": expanded
+  return html`
+    <div className=${`terminal-launch-picker ${className}`}>
+      <div className="terminal-launch-row">
+        <${TerminalLaunchPrimary} iconSize=${iconSize} menuRole=${menuRole} onLaunch=${onLaunch}/>
+        <button
+          className="terminal-launch-toggle"
+          type="button"
+          aria-label=${expanded
             ? "Hide terminal presets"
-            : "Show terminal presets",
-          "aria-expanded": expanded,
-          onClick: () => setExpanded((open) => !open),
-        },
-        React.createElement(ChevronDown, {
-          className: expanded
-            ? "terminal-launch-chevron open"
-            : "terminal-launch-chevron",
-          size: 14,
-          "aria-hidden": true,
-        }),
-      ),
-    ),
-    expanded &&
-      React.createElement(TerminalProfileOptions, {
-        iconSize,
-        menuRole,
-        onLaunch,
-      }),
-  );
+            : "Show terminal presets"}
+          aria-expanded=${expanded}
+          onClick=${() => setExpanded((open) => !open)}
+        >
+          <${ChevronDown}
+            className=${expanded
+              ? "terminal-launch-chevron open"
+              : "terminal-launch-chevron"}
+            size=${14}
+            aria-hidden=${true}
+          />
+        </button>
+      </div>
+      ${expanded &&
+        html`<${TerminalProfileOptions} iconSize=${iconSize} menuRole=${menuRole} onLaunch=${onLaunch}/>`}
+    </div>
+  `;
 }
 
 // Fallback launcher body for FallbackPage:
@@ -157,63 +148,57 @@ function renderLauncherRow(
   { option, containerApi, addPanel, pinned, onTogglePin },
 ) {
   const control = option.component === "terminal"
-    ? React.createElement(TerminalLaunchPicker, {
-      key: option.component,
-      className: "empty-terminal-launch",
-      iconSize: 18,
-      onLaunch: (profile) =>
+    ? html`<${TerminalLaunchPicker}
+      key=${option.component}
+      className="empty-terminal-launch"
+      iconSize=${18}
+      onLaunch=${(profile) =>
         containerApi &&
-        launcherDep("addTerminalPanel")(containerApi, undefined, profile),
-    })
-    : React.createElement(
-      "button",
-      {
-        key: option.component,
-        type: "button",
-        onClick: () => addPanel(option.component),
-      },
-      React.createElement(option.icon, { size: 18, "aria-hidden": true }),
-      React.createElement("span", null, option.label),
-    );
-  return React.createElement(
-    "div",
-    { key: option.component, className: "launcher-row" },
-    React.createElement("div", { className: "launcher-row-control" }, control),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "launcher-pin",
-        "aria-pressed": pinned,
-        title: pinned
+        launcherDep("addTerminalPanel")(containerApi, undefined, profile)}
+    />`
+    : html`
+      <button
+        key=${option.component}
+        type="button"
+        onClick=${() => addPanel(option.component)}
+      >
+        <${option.icon} size=${18} aria-hidden=${true}/>
+        <span>${option.label}</span>
+      </button>
+    `;
+  return html`
+    <div key=${option.component} className="launcher-row">
+      <div className="launcher-row-control">${control}</div>
+      <button
+        type="button"
+        className="launcher-pin"
+        aria-pressed=${pinned}
+        title=${pinned
           ? `Unpin ${option.label}`
-          : `Pin ${option.label} to the top`,
-        "aria-label": pinned
+          : `Pin ${option.label} to the top`}
+        aria-label=${pinned
           ? `Unpin ${option.label}`
-          : `Pin ${option.label} to the top`,
-        onClick: () => onTogglePin(option.component),
-      },
-      React.createElement(Star, {
-        size: 15,
-        className: "launcher-pin-star",
-        "aria-hidden": true,
-      }),
-    ),
-  );
+          : `Pin ${option.label} to the top`}
+        onClick=${() => onTogglePin(option.component)}
+      >
+        <${Star} size=${15} className="launcher-pin-star" aria-hidden=${true}/>
+      </button>
+    </div>
+  `;
 }
 
 function LauncherMoreToggle({ showMore, setShowMore }) {
-  return React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "launcher-more-toggle",
-      "aria-expanded": showMore,
-      onClick: () => setShowMore((expanded) => !expanded),
-    },
-    React.createElement(Ellipsis, { size: 18, "aria-hidden": true }),
-    React.createElement("span", null, showMore ? "Less" : "More"),
-  );
+  return html`
+    <button
+      type="button"
+      className="launcher-more-toggle"
+      aria-expanded=${showMore}
+      onClick=${() => setShowMore((expanded) => !expanded)}
+    >
+      <${Ellipsis} size=${18} aria-hidden=${true}/>
+      <span>${showMore ? "Less" : "More"}</span>
+    </button>
+  `;
 }
 
 // Pinned apps: the launcherOrder override list (pinnedLauncherItems in the
@@ -311,28 +296,22 @@ function LauncherActions(
 ) {
   if (matches) {
     if (matches.length === 0) {
-      return React.createElement(
-        "p",
-        { className: "launcher-empty-match" },
-        `No apps match "${query}"`,
-      );
+      return html`
+        <p className="launcher-empty-match">No apps match "${query}"</p>
+      `;
     }
     return matches.map(rowFor);
   }
   return [
     ...primaryOptions.map(rowFor),
     moreOptions.length > 0 &&
-    React.createElement(LauncherMoreToggle, {
-      key: "more",
-      showMore,
-      setShowMore,
-    }),
+    html`<${LauncherMoreToggle} key="more" showMore=${showMore} setShowMore=${setShowMore}/>`,
     showMore &&
-    React.createElement(
-      "div",
-      { key: "more-options", className: "launcher-more-options" },
-      moreOptions.map(rowFor),
-    ),
+    html`
+      <div key="more-options" className="launcher-more-options">
+        ${moreOptions.map(rowFor)}
+      </div>
+    `,
   ];
 }
 
@@ -364,18 +343,18 @@ function FallbackPage({ containerApi, className }) {
       option.component.includes(q)
     )
     : null;
-  return React.createElement(LauncherCard, {
-    className,
-    query,
-    setQuery,
-    rowFor,
-    matches,
-    primaryOptions,
-    moreOptions,
-    showMore,
-    setShowMore,
-    q,
-  });
+  return html`<${LauncherCard}
+    className=${className}
+    query=${query}
+    setQuery=${setQuery}
+    rowFor=${rowFor}
+    matches=${matches}
+    primaryOptions=${primaryOptions}
+    moreOptions=${moreOptions}
+    showMore=${showMore}
+    setShowMore=${setShowMore}
+    q=${q}
+  />`;
 }
 
 // The launcher card shell: title, search box and the action list.
@@ -393,44 +372,29 @@ function LauncherCard(
     q,
   },
 ) {
-  return React.createElement(
-    "div",
-    { className },
-    React.createElement(
-      "div",
-      { className: "empty-workspace-card" },
-      React.createElement("p", null, "Task Launcher"),
-      React.createElement("input", {
-        className: "launcher-search",
-        type: "search",
-        placeholder: "Search apps…",
-        "aria-label": "Search apps",
-        value: query,
-        onChange: (event) => setQuery(event.target.value),
-      }),
-      React.createElement(
-        "div",
-        { className: "empty-workspace-actions" },
-        React.createElement(LauncherActions, {
-          matches,
-          primaryOptions,
-          moreOptions,
-          rowFor,
-          showMore,
-          setShowMore,
-          query: q,
-        }),
-      ),
-    ),
-  );
+  return html`
+    <div className=${className}>
+      <div className="empty-workspace-card">
+        <p>Task Launcher</p>
+        <input
+          className="launcher-search"
+          type="search"
+          placeholder="Search apps…"
+          aria-label="Search apps"
+          value=${query}
+          onChange=${(event) => setQuery(event.target.value)}
+        />
+        <div className="empty-workspace-actions">
+          <${LauncherActions} matches=${matches} primaryOptions=${primaryOptions} moreOptions=${moreOptions} rowFor=${rowFor} showMore=${showMore} setShowMore=${setShowMore} query=${q}/>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // Fallback launcher body for FallbackPanel:
 function FallbackPanel({ containerApi }) {
-  return React.createElement(FallbackPage, {
-    containerApi,
-    className: "fallback-panel panel-content",
-  });
+  return html`<${FallbackPage} containerApi=${containerApi} className="fallback-panel panel-content"/>`;
 }
 
 // === Panel registration ===
@@ -459,6 +423,6 @@ export function addFallbackPanel(api, group) {
 // The "+" Add control + all-apps menu live in launcher-menu.js (500-line
 // split); re-export so existing importers (app.js, app-shell.js) keep
 // importing AddTerminalButton from this module.
-export { AddTerminalButton } from "./launcher-menu.js?v=20260829.10";
+export { AddTerminalButton } from "./launcher-menu.js?v=20260829.11";
 
 export { FallbackPage, FallbackPanel, TerminalLaunchPicker };

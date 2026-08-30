@@ -21,6 +21,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import { getWanixRoot } from "../../app-state.js?v=20260826.2";
 import {
   filesystemPathJoin,
@@ -31,7 +34,7 @@ import {
   PickerBody,
   PickerFooter,
   PickerToolbar,
-} from "./vfs-picker-parts.js?v=20260829.98";
+} from "./vfs-picker-parts.js?v=20260829.99";
 
 export const AUDIO_EXTENSION_RE =
   /\.(mp3|m4a|aac|ogg|oga|opus|flac|wav|webm)$/i;
@@ -184,35 +187,29 @@ function usePickerKeys(
 
 // Backdrop + dialog shell with the title bar; children fill the body.
 function VfsPickerDialog({ title, onClose, children }) {
-  return React.createElement(
-    "div",
-    {
-      className: "vfs-picker-backdrop",
-      onClick: (event) => {
+  return html`
+    <div
+      className="vfs-picker-backdrop"
+      onClick=${(event) => {
         if (event.target === event.currentTarget) onClose();
-      },
-    },
-    React.createElement(
-      "div",
-      { className: "vfs-picker", role: "dialog", "aria-label": title },
-      React.createElement(
-        "div",
-        { className: "vfs-picker-header" },
-        React.createElement("h3", null, title),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "vfs-picker-close",
-            "aria-label": "Close",
-            onClick: onClose,
-          },
-          React.createElement(X, { size: 15, "aria-hidden": true }),
-        ),
-      ),
-      ...children,
-    ),
-  );
+      }}
+    >
+      <div className="vfs-picker" role="dialog" aria-label=${title}>
+        <div className="vfs-picker-header">
+          <h3>${title}</h3>
+          <button
+            type="button"
+            className="vfs-picker-close"
+            aria-label="Close"
+            onClick=${onClose}
+          >
+            <${X} size=${15} aria-hidden=${true}/>
+          </button>
+        </div>
+        ${children}
+      </div>
+    </div>
+  `;
 }
 
 // Modal browser; mount it conditionally (render only while open) so the
@@ -276,7 +273,7 @@ export function VfsFilePicker({
     actions,
     markedEntries,
   });
-  return React.createElement(VfsPickerDialog, { title, onClose, children });
+  return html`<${VfsPickerDialog} title=${title} onClose=${onClose}>${children}</${VfsPickerDialog}>`;
 }
 
 function buildPickerChildren({
@@ -299,35 +296,25 @@ function buildPickerChildren({
   markedEntries,
 }) {
   return [
-    React.createElement(PickerToolbar, {
-      path,
-      draft,
-      setDraft,
-      submitPath,
-      goUp,
-      navigate,
-    }),
-    React.createElement(
-      "div",
-      { className: "vfs-picker-body" },
-      React.createElement(PickerBody, {
-        loading,
-        error,
-        entries,
-        mode,
-        marked,
-        selectedIndex,
-        navigate,
-        pickSingle,
-        toggleMark,
-        onPlaySingle: onPlaySingle ||
-          ((entry) => actions[0]?.onPick([entry])),
-      }),
-    ),
+    html`<${PickerToolbar} path=${path} draft=${draft} setDraft=${setDraft} submitPath=${submitPath} goUp=${goUp} navigate=${navigate}/>`,
+    html`
+      <div className="vfs-picker-body">
+        <${PickerBody}
+          loading=${loading}
+          error=${error}
+          entries=${entries}
+          mode=${mode}
+          marked=${marked}
+          selectedIndex=${selectedIndex}
+          navigate=${navigate}
+          pickSingle=${pickSingle}
+          toggleMark=${toggleMark}
+          onPlaySingle=${onPlaySingle ||
+            ((entry) => actions[0]?.onPick([entry]))}
+        />
+      </div>
+    `,
     mode === "multi" &&
-    React.createElement(PickerFooter, {
-      marked: markedEntries,
-      actions,
-    }),
+    html`<${PickerFooter} marked=${markedEntries} actions=${actions}/>`,
   ];
 }

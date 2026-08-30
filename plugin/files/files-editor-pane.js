@@ -14,7 +14,10 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { FilesInfoPane } from "./files-info.js?v=20260826.42";
+import { FilesInfoPane } from "./files-info.js?v=20260826.43";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 function buildMarkdownHtml(source) {
   if (typeof window.marked?.parse !== "function") return null;
@@ -23,84 +26,61 @@ function buildMarkdownHtml(source) {
 }
 
 function ToolButton({ title, onClick, disabled, icon: Icon }) {
-  return React.createElement("button", {
-    type: "button",
-    title,
-    "aria-label": title,
-    disabled,
-    onClick,
-  }, React.createElement(Icon, { size: 15, "aria-hidden": true }));
+  return html`
+    <button
+      type="button"
+      title=${title}
+      aria-label=${title}
+      disabled=${disabled}
+      onClick=${onClick}
+    >
+      <${Icon} size=${15} aria-hidden=${true}/>
+    </button>
+  `;
 }
 
 function ActionBar({ children }) {
-  return React.createElement(
-    "div",
-    { className: "files-editor-toolbar" },
-    React.createElement(
-      "div",
-      { className: "files-toolbar-actions" },
-      children,
-    ),
-  );
+  return html`
+    <div className="files-editor-toolbar">
+      <div className="files-toolbar-actions">${children}</div>
+    </div>
+  `;
 }
 
 function VideoPreview({ url, videoRef }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement("video", {
-      ref: videoRef,
-      src: url,
-      controls: true,
-      preload: "metadata",
-    }),
-    document.pictureInPictureEnabled &&
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "files-pip-button",
-          title: "Picture-in-picture",
-          "aria-label": "Picture-in-picture",
-          onClick: () => videoRef.current?.requestPictureInPicture?.(),
-        },
-        React.createElement(PictureInPicture2, {
-          size: 15,
-          "aria-hidden": true,
-        }),
-      ),
-  );
+  return html`
+    <${React.Fragment}>
+      <video ref=${videoRef} src=${url} controls=${true} preload="metadata"></video>
+      ${document.pictureInPictureEnabled &&
+        html`
+          <button
+            type="button"
+            className="files-pip-button"
+            title="Picture-in-picture"
+            aria-label="Picture-in-picture"
+            onClick=${() => videoRef.current?.requestPictureInPicture?.()}
+          >
+            <${PictureInPicture2} size=${15} aria-hidden=${true}/>
+          </button>
+        `}
+    </${React.Fragment}>
+  `;
 }
 
 function MediaPreview({ preview, selectedPath, videoRef }) {
-  return React.createElement(
-    "div",
-    { className: `files-media-preview ${preview.kind}` },
-    preview.kind === "image"
-      ? React.createElement("img", {
-        src: preview.url,
-        alt: selectedPath.split("/").pop() || "Image preview",
-      })
-      : preview.kind === "audio"
-      ? React.createElement("audio", {
-        src: preview.url,
-        controls: true,
-        autoPlay: true,
-        preload: "metadata",
-      })
-      : preview.kind === "video"
-      ? VideoPreview({ url: preview.url, videoRef })
-      : preview.kind === "pdf"
-      ? React.createElement("iframe", {
-        src: preview.url,
-        title: "PDF preview",
-      })
-      : React.createElement(
-        "p",
-        { className: "files-media-unsupported" },
-        "Preview is not available for this file type. Use Download to open it.",
-      ),
-  );
+  return html`
+    <div className=${`files-media-preview ${preview.kind}`}>
+      ${preview.kind === "image"
+        ? html`<img src=${preview.url} alt=${selectedPath.split("/").pop() || "Image preview"}/>`
+        : preview.kind === "audio"
+        ? html`<audio src=${preview.url} controls=${true} autoPlay=${true} preload="metadata"></audio>`
+        : preview.kind === "video"
+        ? VideoPreview({ url: preview.url, videoRef })
+        : preview.kind === "pdf"
+        ? html`<iframe src=${preview.url} title="PDF preview"></iframe>`
+        : html`<p className="files-media-unsupported">Preview is not available for this file type. Use Download to open it.</p>`}
+    </div>
+  `;
 }
 
 function EditorPreviewPane({
@@ -111,42 +91,37 @@ function EditorPreviewPane({
   onRename,
   onDelete,
 }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    ActionBar({
-      children: [
-        ToolButton({
-          title: "Download file",
-          onClick: onDownload,
-          icon: Download,
-        }),
-        ToolButton({ title: "Rename file", onClick: onRename, icon: Pencil }),
-        ToolButton({ title: "Delete file", onClick: onDelete, icon: Trash2 }),
-      ],
-    }),
-    MediaPreview({ preview, selectedPath, videoRef }),
-  );
+  return html`
+    <${React.Fragment}>
+      ${ActionBar({
+        children: [
+          ToolButton({
+            title: "Download file",
+            onClick: onDownload,
+            icon: Download,
+          }),
+          ToolButton({ title: "Rename file", onClick: onRename, icon: Pencil }),
+          ToolButton({ title: "Delete file", onClick: onDelete, icon: Trash2 }),
+        ],
+      })}
+      ${MediaPreview({ preview, selectedPath, videoRef })}
+    </${React.Fragment}>
+  `;
 }
 
 function BinaryHint() {
-  return React.createElement(
-    "div",
-    { className: "files-editor-empty" },
-    React.createElement(FileCode2, { size: 28, "aria-hidden": true }),
-    React.createElement(
-      "p",
-      { className: "files-binary-hint" },
-      "Binary file — preview is not available. Use Download to open it.",
-    ),
-  );
+  return html`
+    <div className="files-editor-empty">
+      <${FileCode2} size=${28} aria-hidden=${true}/>
+      <p className="files-binary-hint">Binary file — preview is not available. Use Download to open it.</p>
+    </div>
+  `;
 }
 
 function MarkdownPreview({ html }) {
-  return React.createElement("div", {
-    className: "files-md-preview",
-    dangerouslySetInnerHTML: { __html: html },
-  });
+  return html`
+    <div className="files-md-preview" dangerouslySetInnerHTML=${{ __html: html }}></div>
+  `;
 }
 
 function TextBody(
@@ -156,12 +131,14 @@ function TextBody(
   if (mdPreview && markdownHtml !== null) {
     return MarkdownPreview({ html: markdownHtml });
   }
-  return React.createElement("textarea", {
-    value: contents,
-    spellCheck: false,
-    "aria-label": `Contents of ${selectedPath}`,
-    onChange: (event) => onChange(event.target.value),
-  });
+  return html`
+    <textarea
+      value=${contents}
+      spellCheck=${false}
+      aria-label=${`Contents of ${selectedPath}`}
+      onChange=${(event) => onChange(event.target.value)}
+    ></textarea>
+  `;
 }
 
 function TextEditorPane({
@@ -179,58 +156,55 @@ function TextEditorPane({
   onDelete,
   onChange,
 }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    ActionBar({
-      children: [
-        !binary && isMarkdown &&
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            title: mdPreview ? "Show source" : "Render preview",
-            "aria-label": mdPreview ? "Show source" : "Render preview",
-            "aria-pressed": mdPreview,
-            onClick: () => setMdPreview((value) => !value),
-          },
-          React.createElement(
-            mdPreview ? EyeOff : Eye,
-            { size: 15, "aria-hidden": true },
-          ),
-        ),
-        ToolButton({
-          title: "Save file",
-          onClick: onSave,
-          disabled: !dirty,
-          icon: Save,
-        }),
-        ToolButton({
-          title: "Download file",
-          onClick: onDownload,
-          icon: Download,
-        }),
-        ToolButton({ title: "Rename file", onClick: onRename, icon: Pencil }),
-        ToolButton({ title: "Delete file", onClick: onDelete, icon: Trash2 }),
-      ],
-    }),
-    TextBody({
-      binary,
-      mdPreview,
-      markdownHtml,
-      contents,
-      selectedPath,
-      onChange,
-    }),
-  );
+  return html`
+    <${React.Fragment}>
+      ${ActionBar({
+        children: [
+          !binary && isMarkdown &&
+          html`
+            <button
+              type="button"
+              title=${mdPreview ? "Show source" : "Render preview"}
+              aria-label=${mdPreview ? "Show source" : "Render preview"}
+              aria-pressed=${mdPreview}
+              onClick=${() => setMdPreview((value) => !value)}
+            >
+              <${mdPreview ? EyeOff : Eye} size=${15} aria-hidden=${true}/>
+            </button>
+          `,
+          ToolButton({
+            title: "Save file",
+            onClick: onSave,
+            disabled: !dirty,
+            icon: Save,
+          }),
+          ToolButton({
+            title: "Download file",
+            onClick: onDownload,
+            icon: Download,
+          }),
+          ToolButton({ title: "Rename file", onClick: onRename, icon: Pencil }),
+          ToolButton({ title: "Delete file", onClick: onDelete, icon: Trash2 }),
+        ],
+      })}
+      ${TextBody({
+        binary,
+        mdPreview,
+        markdownHtml,
+        contents,
+        selectedPath,
+        onChange,
+      })}
+    </${React.Fragment}>
+  `;
 }
 
 function EmptyPane() {
-  return React.createElement(
-    "div",
-    { className: "files-editor-empty" },
-    React.createElement(FileCode2, { size: 28, "aria-hidden": true }),
-  );
+  return html`
+    <div className="files-editor-empty">
+      <${FileCode2} size=${28} aria-hidden=${true}/>
+    </div>
+  `;
 }
 
 function renderInfoPane(
@@ -247,18 +221,20 @@ function renderInfoPane(
     onColumnWidthChange,
   },
 ) {
-  return React.createElement(FilesInfoPane, {
-    info,
-    onOpenChild,
-    onSelectChild,
-    finePointer,
-    viewMode,
-    onViewModeChange,
-    sort,
-    onSortChange,
-    columnWidths,
-    onColumnWidthChange,
-  });
+  return html`
+    <${FilesInfoPane}
+      info=${info}
+      onOpenChild=${onOpenChild}
+      onSelectChild=${onSelectChild}
+      finePointer=${finePointer}
+      viewMode=${viewMode}
+      onViewModeChange=${onViewModeChange}
+      sort=${sort}
+      onSortChange=${onSortChange}
+      columnWidths=${columnWidths}
+      onColumnWidthChange=${onColumnWidthChange}
+    />
+  `;
 }
 
 function renderEditorBody({
@@ -344,15 +320,11 @@ export function FilesEditorPane(props) {
     markdownHtml,
     videoRef,
   });
-  return React.createElement(
-    "section",
-    { className: "files-editor" },
-    body,
-    status &&
-      React.createElement(
-        "div",
-        { className: "files-status", role: "status" },
-        status,
-      ),
-  );
+  return html`
+    <section className="files-editor">
+      ${body}
+      ${status &&
+        html`<div className="files-status" role="status">${status}</div>`}
+    </section>
+  `;
 }

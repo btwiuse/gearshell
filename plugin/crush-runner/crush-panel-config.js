@@ -11,7 +11,10 @@ import {
   CrushEnvTab,
   CrushJsonTab,
   CrushProfileTab,
-} from "./crush-panel-tabs.js?v=20260828.2";
+} from "./crush-panel-tabs.js?v=20260828.3";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 function tabArrowKeyNav(event, tabs, activeTab, setActiveTab) {
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -31,73 +34,68 @@ function buildTabs(ctl) {
       label: "Profile",
       Icon: User,
       dirty: ctl.profileDirty,
-      render: () => React.createElement(CrushProfileTab, { ctl }),
+      render: () => html`<${CrushProfileTab} ctl=${ctl}/>`,
     },
     {
       id: "config",
       label: "crushrc",
       Icon: FileCode,
       dirty: ctl.configDirty,
-      render: () => React.createElement(CrushCrushrcTab, { ctl }),
+      render: () => html`<${CrushCrushrcTab} ctl=${ctl}/>`,
     },
     {
       id: "env",
       label: "Env",
       Icon: KeyRound,
       dirty: ctl.envDirty,
-      render: () => React.createElement(CrushEnvTab, { ctl }),
+      render: () => html`<${CrushEnvTab} ctl=${ctl}/>`,
     },
     {
       id: "json",
       label: "JSON",
       Icon: Braces,
       dirty: ctl.jsonDraftDirty,
-      render: () => React.createElement(CrushJsonTab, { ctl }),
+      render: () => html`<${CrushJsonTab} ctl=${ctl}/>`,
     },
   ];
 }
 
 function CrushTabBar({ tabs, activeTab, setActiveTab }) {
-  return React.createElement(
-    "div",
-    {
-      className: "crush-runner-tabs",
-      role: "tablist",
-      "aria-label": "Crush configuration",
-    },
-    tabs.map((tab) => {
-      const isActive = tab.id === activeTab;
-      return React.createElement(
-        "button",
-        {
-          key: tab.id,
-          type: "button",
-          role: "tab",
-          id: `crush-runner-tab-${tab.id}`,
-          "aria-selected": isActive,
-          "aria-controls": "crush-runner-tab-panel",
-          tabIndex: isActive ? 0 : -1,
-          className: `crush-runner-tab${isActive ? " active" : ""}`,
-          onClick: () => setActiveTab(tab.id),
-          onKeyDown: (event) =>
-            tabArrowKeyNav(event, tabs, activeTab, setActiveTab),
-        },
-        tab.Icon && React.createElement(tab.Icon, {
-          size: 14,
-          "aria-hidden": true,
-        }),
-        React.createElement("span", {
-          className: "crush-runner-tab-label",
-        }, tab.label),
-        tab.dirty &&
-          React.createElement("span", {
-            className: "crush-runner-tab-dirty",
-            "aria-label": "Unsaved changes",
-            title: "Unsaved changes",
-          }, "*"),
-      );
-    }),
-  );
+  return html`
+    <div
+      className="crush-runner-tabs"
+      role="tablist"
+      aria-label="Crush configuration"
+    >
+      ${tabs.map((tab) => {
+        const isActive = tab.id === activeTab;
+        return html`
+          <button
+            key=${tab.id}
+            type="button"
+            role="tab"
+            id=${`crush-runner-tab-${tab.id}`}
+            aria-selected=${isActive}
+            aria-controls="crush-runner-tab-panel"
+            tabIndex=${isActive ? 0 : -1}
+            className=${`crush-runner-tab${isActive ? " active" : ""}`}
+            onClick=${() => setActiveTab(tab.id)}
+            onKeyDown=${(event) =>
+              tabArrowKeyNav(event, tabs, activeTab, setActiveTab)}
+          >
+            ${tab.Icon && html`<${tab.Icon} size=${14} aria-hidden=${true}/>`}
+            <span className="crush-runner-tab-label">${tab.label}</span>
+            ${tab.dirty &&
+              html`<span
+                className="crush-runner-tab-dirty"
+                aria-label="Unsaved changes"
+                title="Unsaved changes"
+              >*</span>`}
+          </button>
+        `;
+      })}
+    </div>
+  `;
 }
 
 export function CrushConfigSection({ ctl }) {
@@ -110,31 +108,20 @@ export function CrushConfigSection({ ctl }) {
   const activeEntry = tabs.find((tab) => tab.id === activeTab) ||
     tabs[0];
 
-  return React.createElement(
-    "section",
-    {
-      className: "crush-runner-config",
-      id: "crush-runner-config",
-    },
-    React.createElement(CrushTabBar, { tabs, activeTab, setActiveTab }),
-    React.createElement("div", {
-      className: "crush-runner-section crush-runner-tab-section",
-      role: "tabpanel",
-      id: "crush-runner-tab-panel",
-      "aria-labelledby": `crush-runner-tab-${activeEntry.id}`,
-    }, activeEntry.render()),
-    // The dedicated Terminal preview section was redundant with the
-    // Launch / Restart CTAs in the hero: every preview path opens a
-    // Crush session in a real dockview tab, so collapsing the inline
-    // overlay left no UI to render here. The "Copy profile JSON"
-    // action moved down to the crushrc tab footer next to the
-    // reset button so debugging tools stay next to the data they dump.
-    React.createElement(
-      "p",
-      { className: "crush-runner-footer" },
-      `Profile last refreshed ${
-        savedMarker === 0 ? "on first load" : "after the most recent save"
-      }. Changes live in this panel until you press “Save as default”.`,
-    ),
-  );
+  return html`
+    <section className="crush-runner-config" id="crush-runner-config">
+      <${CrushTabBar} tabs=${tabs} activeTab=${activeTab} setActiveTab=${setActiveTab}/>
+      <div
+        className="crush-runner-section crush-runner-tab-section"
+        role="tabpanel"
+        id="crush-runner-tab-panel"
+        aria-labelledby=${`crush-runner-tab-${activeEntry.id}`}
+      >${activeEntry.render()}</div>
+      <p className="crush-runner-footer">
+        Profile last refreshed ${
+          savedMarker === 0 ? "on first load" : "after the most recent save"
+        }. Changes live in this panel until you press “Save as default”.
+      </p>
+    </section>
+  `;
 }

@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 function useLauncherState() {
   const [config, setConfig] = useState(() => settingsDep("loadConfig")());
@@ -128,41 +131,40 @@ function LauncherOrderItemActions(props) {
     onToggleCollapsed,
     onMove,
   } = props;
-  return React.createElement(
-    "div",
-    { className: "launcher-order-actions" },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        title: isCollapsed
+  return html`
+    <div className="launcher-order-actions">
+      <button
+        type="button"
+        title=${isCollapsed
           ? `Uncollapse ${option.label}`
-          : `Collapse ${option.label}`,
-        "aria-label": isCollapsed
+          : `Collapse ${option.label}`}
+        aria-label=${isCollapsed
           ? `Uncollapse ${option.label}`
-          : `Collapse ${option.label}`,
-        onClick: onToggleCollapsed,
-      },
-      React.createElement(isCollapsed ? EyeOff : Eye, {
-        size: 15,
-        "aria-hidden": true,
-      }),
-    ),
-    React.createElement("button", {
-      type: "button",
-      title: `Move ${option.label} up`,
-      "aria-label": `Move ${option.label} up`,
-      disabled: index === 0,
-      onClick: () => onMove(-1),
-    }, React.createElement(ArrowUp, { size: 15, "aria-hidden": true })),
-    React.createElement("button", {
-      type: "button",
-      title: `Move ${option.label} down`,
-      "aria-label": `Move ${option.label} down`,
-      disabled: index === sectionLength - 1,
-      onClick: () => onMove(1),
-    }, React.createElement(ArrowDown, { size: 15, "aria-hidden": true })),
-  );
+          : `Collapse ${option.label}`}
+        onClick=${onToggleCollapsed}
+      >
+        <${isCollapsed ? EyeOff : Eye} size=${15} aria-hidden=${true}/>
+      </button>
+      <button
+        type="button"
+        title=${`Move ${option.label} up`}
+        aria-label=${`Move ${option.label} up`}
+        disabled=${index === 0}
+        onClick=${() => onMove(-1)}
+      >
+        <${ArrowUp} size=${15} aria-hidden=${true}/>
+      </button>
+      <button
+        type="button"
+        title=${`Move ${option.label} down`}
+        aria-label=${`Move ${option.label} down`}
+        disabled=${index === sectionLength - 1}
+        onClick=${() => onMove(1)}
+      >
+        <${ArrowDown} size=${15} aria-hidden=${true}/>
+      </button>
+    </div>
+  `;
 }
 
 function launcherItemDragHandlers({
@@ -208,30 +210,20 @@ function launcherItemDragHandlers({
 
 function renderOrderItemBody({ option, isOpenByDefault, onToggleStartup }) {
   const Icon = option.icon;
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(Icon, {
-      className: "launcher-order-icon",
-      size: 16,
-      "aria-hidden": true,
-    }),
-    React.createElement(
-      "span",
-      { className: "launcher-order-label" },
-      option.label,
-    ),
-    React.createElement(
-      "label",
-      { className: "launcher-order-startup" },
-      React.createElement("input", {
-        type: "checkbox",
-        checked: isOpenByDefault,
-        onChange: onToggleStartup,
-      }),
-      React.createElement("span", null, "Open by default"),
-    ),
-  );
+  return html`
+    <${React.Fragment}>
+      <${Icon} className="launcher-order-icon" size=${16} aria-hidden=${true}/>
+      <span className="launcher-order-label">${option.label}</span>
+      <label className="launcher-order-startup">
+        <input
+          type="checkbox"
+          checked=${isOpenByDefault}
+          onChange=${onToggleStartup}
+        />
+        <span>Open by default</span>
+      </label>
+    </${React.Fragment}>
+  `;
 }
 
 function launcherOrderRowProps({
@@ -280,9 +272,8 @@ function LauncherOrderItem(props) {
     setDraggedComponent,
     setDropTarget,
   } = props;
-  return React.createElement(
-    "div",
-    launcherOrderRowProps({
+  return html`
+    <div ...${launcherOrderRowProps({
       component,
       isCollapsed,
       draggedComponent,
@@ -290,88 +281,67 @@ function LauncherOrderItem(props) {
       onPlace,
       setDraggedComponent,
       setDropTarget,
-    }),
-    React.createElement(GripVertical, {
-      className: "launcher-order-handle",
-      size: 16,
-      "aria-hidden": true,
-    }),
-    renderOrderItemBody({ option, isOpenByDefault, onToggleStartup }),
-    React.createElement(LauncherOrderItemActions, {
-      option,
-      isCollapsed,
-      index,
-      sectionLength,
-      onToggleCollapsed,
-      onMove,
-    }),
-  );
+    })}>
+      <${GripVertical} className="launcher-order-handle" size=${16} aria-hidden=${true}/>
+      ${renderOrderItemBody({ option, isOpenByDefault, onToggleStartup })}
+      <${LauncherOrderItemActions} option=${option} isCollapsed=${isCollapsed} index=${index} sectionLength=${sectionLength} onToggleCollapsed=${onToggleCollapsed} onMove=${onMove}/>
+    </div>
+  `;
 }
 
 function LauncherOrderSection(props) {
   const { title, items, isCollapsed, draggedComponent, renderItem, onPlace } =
     props;
-  return React.createElement(
-    "section",
-    {
-      className: `launcher-order-section${isCollapsed ? " collapsed" : ""}`,
-      onDragOver: (event) => {
+  return html`
+    <section
+      className=${`launcher-order-section${isCollapsed ? " collapsed" : ""}`}
+      onDragOver=${(event) => {
         if (!draggedComponent) return;
         event.preventDefault();
         if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-      },
-      onDrop: (event) => {
+      }}
+      onDrop=${(event) => {
         if (event.target !== event.currentTarget) return;
         event.preventDefault();
         onPlace(null, isCollapsed);
-      },
-    },
-    React.createElement(
-      "div",
-      { className: "launcher-order-section-heading" },
-      React.createElement(isCollapsed ? EyeOff : Eye, {
-        size: 15,
-        "aria-hidden": true,
-      }),
-      React.createElement("span", null, title),
-    ),
-    React.createElement(
-      "div",
-      { className: "launcher-order-section-items" },
-      items.length > 0
-        ? items.map((component, index) =>
-          renderItem(component, isCollapsed, index, items.length)
-        )
-        : React.createElement(
-          "div",
-          { className: "launcher-order-empty" },
-          "Drop items here",
-        ),
-    ),
-  );
+      }}
+    >
+      <div className="launcher-order-section-heading">
+        <${isCollapsed ? EyeOff : Eye} size=${15} aria-hidden=${true}/>
+        <span>${title}</span>
+      </div>
+      <div className="launcher-order-section-items">
+        ${items.length > 0
+          ? items.map((component, index) =>
+            renderItem(component, isCollapsed, index, items.length),
+          )
+          : html`<div className="launcher-order-empty">Drop items here</div>`}
+      </div>
+    </section>
+  `;
 }
 
 function makeItemRenderer(state, actions) {
   return (component, isCollapsed, index, sectionLength) => {
     const option = state.optionFor(component);
     if (!option) return null;
-    return React.createElement(LauncherOrderItem, {
-      component,
-      option,
-      isCollapsed,
-      index,
-      sectionLength,
-      draggedComponent: state.draggedComponent,
-      dropTarget: state.dropTarget,
-      isOpenByDefault: state.config.startupPanels.includes(component),
-      onToggleStartup: () => actions.toggleStartup(component),
-      onToggleCollapsed: () => actions.setCollapsed(component, !isCollapsed),
-      onMove: (direction) =>
-        actions.moveWithinSection(component, isCollapsed, direction),
-      onPlace: actions.placeDragged,
-      setDraggedComponent: state.setDraggedComponent,
-      setDropTarget: state.setDropTarget,
-    });
+    return html`<${LauncherOrderItem}
+      component=${component}
+      option=${option}
+      isCollapsed=${isCollapsed}
+      index=${index}
+      sectionLength=${sectionLength}
+      draggedComponent=${state.draggedComponent}
+      dropTarget=${state.dropTarget}
+      isOpenByDefault=${state.config.startupPanels.includes(component)}
+      onToggleStartup=${() => actions.toggleStartup(component)}
+      onToggleCollapsed=${() => actions.setCollapsed(component, !isCollapsed)}
+      onMove=${(direction) =>
+        actions.moveWithinSection(component, isCollapsed, direction)}
+      onPlace=${actions.placeDragged}
+      setDraggedComponent=${state.setDraggedComponent}
+      setDropTarget=${state.setDropTarget}
+    />`;
   };
 }
 
@@ -392,29 +362,11 @@ export function LauncherOrderEditor() {
   });
   const renderItem = makeItemRenderer(state, actions);
 
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(
-      "p",
-      { className: "hint launcher-order-hint" },
-      "Drag items to reorder them. Changes to visibility and default startup save immediately.",
-    ),
-    React.createElement(LauncherOrderSection, {
-      title: "Visible",
-      items: state.visible,
-      isCollapsed: false,
-      draggedComponent: state.draggedComponent,
-      renderItem,
-      onPlace: actions.placeDragged,
-    }),
-    React.createElement(LauncherOrderSection, {
-      title: "Collapsed",
-      items: state.collapsed,
-      isCollapsed: true,
-      draggedComponent: state.draggedComponent,
-      renderItem,
-      onPlace: actions.placeDragged,
-    }),
-  );
+  return html`
+    <${React.Fragment}>
+      <p className="hint launcher-order-hint">Drag items to reorder them. Changes to visibility and default startup save immediately.</p>
+      <${LauncherOrderSection} title="Visible" items=${state.visible} isCollapsed=${false} draggedComponent=${state.draggedComponent} renderItem=${renderItem} onPlace=${actions.placeDragged}/>
+      <${LauncherOrderSection} title="Collapsed" items=${state.collapsed} isCollapsed=${true} draggedComponent=${state.draggedComponent} renderItem=${renderItem} onPlace=${actions.placeDragged}/>
+    </${React.Fragment}>
+  `;
 }

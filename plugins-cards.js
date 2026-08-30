@@ -5,6 +5,9 @@
 import React from "react";
 import { icons as LucideIcons } from "lucide-react";
 import { AlertTriangle, Pencil, Power, Trash2 } from "lucide-react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 export function iconOf(name) {
   return LucideIcons[name] || LucideIcons.Wrench;
@@ -25,111 +28,89 @@ export function badgeClass(tag) {
 }
 
 export function PluginBadges({ plugin }) {
-  return React.createElement(
-    "div",
-    { className: "plugin-card-badges" },
-    badgeTags(plugin).map((tag) =>
-      React.createElement(
-        "span",
-        { key: tag, className: badgeClass(tag) },
-        tag,
-      )
-    ),
-  );
+  return html`
+    <div className="plugin-card-badges">
+      ${badgeTags(plugin).map((tag) =>
+        html`<span key=${tag} className=${badgeClass(tag)}>${tag}</span>`,
+      )}
+    </div>
+  `;
 }
 
 function CardTop({ plugin, onToggle }) {
   const Icon = iconOf(plugin.icon);
-  return React.createElement(
-    "div",
-    { className: "plugin-card-top" },
-    React.createElement(
-      "div",
-      { className: "plugin-card-avatar" },
-      React.createElement(Icon, { size: 18, "aria-hidden": true }),
-    ),
-    React.createElement(
-      "div",
-      { className: "plugin-card-head" },
-      React.createElement(
-        "div",
-        { className: "plugin-card-name" },
-        plugin.name || plugin.id,
-      ),
-      React.createElement(
-        "div",
-        { className: "plugin-card-id" },
-        `${plugin.id} · v${plugin.version}`,
-      ),
-    ),
-    React.createElement(
-      "label",
-      {
-        className: "plugin-switch",
-        title: plugin.enabled ? "Disable plugin" : "Enable plugin",
-      },
-      React.createElement("input", {
-        type: "checkbox",
-        checked: plugin.enabled,
-        disabled: plugin.required,
-        onChange: () => onToggle(plugin),
-      }),
-      React.createElement("span", { className: "plugin-switch-slider" }),
-    ),
-  );
+  return html`
+    <div className="plugin-card-top">
+      <div className="plugin-card-avatar">
+        <${Icon} size=${18} aria-hidden=${true}/>
+      </div>
+      <div className="plugin-card-head">
+        <div className="plugin-card-name">${plugin.name || plugin.id}</div>
+        <div className="plugin-card-id">${plugin.id} · v${plugin.version}</div>
+      </div>
+      <label
+        className="plugin-switch"
+        title=${plugin.enabled ? "Disable plugin" : "Enable plugin"}
+      >
+        <input
+          type="checkbox"
+          checked=${plugin.enabled}
+          disabled=${plugin.required}
+          onChange=${() => onToggle(plugin)}
+        />
+        <span className="plugin-switch-slider"></span>
+      </label>
+    </div>
+  `;
 }
 
 function CardPanels({ plugin }) {
   if (!plugin.panels?.length) return null;
-  return React.createElement(
-    "div",
-    { className: "plugin-card-panels" },
-    React.createElement(Power, { size: 12, "aria-hidden": true }),
-    plugin.panels.join(", "),
-  );
+  return html`
+    <div className="plugin-card-panels">
+      <${Power} size=${12} aria-hidden=${true}/>
+      ${plugin.panels.join(", ")}
+    </div>
+  `;
 }
 
 function CardError({ plugin }) {
   if (!plugin.loadError) return null;
-  return React.createElement(
-    "div",
-    { className: "plugin-card-error" },
-    React.createElement(AlertTriangle, { size: 13, "aria-hidden": true }),
-    React.createElement("span", null, plugin.loadError),
-  );
+  return html`
+    <div className="plugin-card-error">
+      <${AlertTriangle} size=${13} aria-hidden=${true}/>
+      <span>${plugin.loadError}</span>
+    </div>
+  `;
 }
 
 function CardActions({ plugin, onEdit, onRemove }) {
-  return React.createElement(
-    "div",
-    { className: "plugin-card-actions" },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "plugin-action-btn",
-        disabled: plugin.required,
-        title: plugin.required
+  return html`
+    <div className="plugin-card-actions">
+      <button
+        type="button"
+        className="plugin-action-btn"
+        disabled=${plugin.required}
+        title=${plugin.required
           ? "Required plugins are managed by the kernel"
-          : "",
-        onClick: () => onEdit(plugin),
-      },
-      React.createElement(Pencil, { size: 13, "aria-hidden": true }),
-      "Edit",
-    ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "plugin-action-btn danger",
-        disabled: plugin.builtin,
-        title: plugin.builtin ? "Built-in plugins can only be disabled" : "",
-        onClick: () => onRemove(plugin),
-      },
-      React.createElement(Trash2, { size: 13, "aria-hidden": true }),
-      "Remove",
-    ),
-  );
+          : ""}
+        onClick=${() => onEdit(plugin)}
+      >
+        <${Pencil} size=${13} aria-hidden=${true}/>
+        Edit
+      </button>
+      <button
+        type="button"
+        className="plugin-action-btn danger"
+        disabled=${plugin.builtin}
+        title=${plugin.builtin ? "Built-in plugins can only be disabled" : ""}
+        onClick=${() => onRemove(plugin)}
+      >
+        <${Trash2} size=${13} aria-hidden=${true}/>
+        Remove
+      </button>
+    </div>
+  `;
 }
 
 export function PluginCard({ plugin, onToggle, onEdit, onRemove }) {
@@ -138,13 +119,13 @@ export function PluginCard({ plugin, onToggle, onEdit, onRemove }) {
     plugin.enabled ? "" : "is-disabled",
     plugin.loadError ? "has-error" : "",
   ].filter(Boolean).join(" ");
-  return React.createElement(
-    "article",
-    { className: classes },
-    React.createElement(CardTop, { plugin, onToggle }),
-    React.createElement(PluginBadges, { plugin }),
-    React.createElement(CardPanels, { plugin }),
-    React.createElement(CardError, { plugin }),
-    React.createElement(CardActions, { plugin, onEdit, onRemove }),
-  );
+  return html`
+    <article className=${classes}>
+      <${CardTop} plugin=${plugin} onToggle=${onToggle}/>
+      <${PluginBadges} plugin=${plugin}/>
+      <${CardPanels} plugin=${plugin}/>
+      <${CardError} plugin=${plugin}/>
+      <${CardActions} plugin=${plugin} onEdit=${onEdit} onRemove=${onRemove}/>
+    </article>
+  `;
 }

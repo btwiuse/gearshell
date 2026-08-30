@@ -5,57 +5,60 @@
 // to panel events.
 
 import React, { useCallback, useEffect, useState } from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import { DockviewReact } from "dockview-react";
-import { PluginsPanel } from "./plugins-panel.js?v=20260829.71";
-import { AddTerminalButton } from "./plugin/launcher/launcher.js?v=20260812.47";
+import { PluginsPanel } from "./plugins-panel.js?v=20260829.73";
+import { AddTerminalButton } from "./plugin/launcher/launcher.js?v=20260812.48";
 import {
   IframePanel,
   PanelTab,
   TerminalPanel,
   WorkspaceTaskPanel,
-} from "./panels.js?v=20260812.122";
+} from "./panels.js?v=20260812.124";
 import {
   forgetOpenPanel,
   rememberOpenPanel,
   setDockviewApi,
-} from "./app-panels-store.js?v=20260826.134";
+} from "./app-panels-store.js?v=20260826.136";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
 import {
   getPluginBootPromise,
   listOverlays,
   PLUGIN_CHANGED_EVENT,
-} from "./plugins.js?v=20260829.98";
+} from "./plugins.js?v=20260829.100";
 import {
   destroyTerminalSession,
   hideTerminalLayer,
   restoreTerminalLayer,
-} from "./app-terminal-sessions.js?v=20260826.134";
+} from "./app-terminal-sessions.js?v=20260826.136";
 import {
   destroyIframeSession,
   destroyVmSession,
   destroyWorkbenchSession,
-} from "./app-sessions.js?v=20260828.138";
-import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.140";
+} from "./app-sessions.js?v=20260828.140";
+import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js?v=20260828.142";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
   whenWanixReady,
-} from "./app-panels.js?v=20260826.135";
+} from "./app-panels.js?v=20260826.137";
 import {
   loadActiveWorkspace,
   loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.134";
-import { addPanelByComponent } from "./panels.js?v=20260812.122";
+} from "./app-workspace.js?v=20260826.136";
+import { addPanelByComponent } from "./panels.js?v=20260812.124";
 import {
   restoreSavedLayout,
   wireLayoutPersistence,
-} from "./app-layout.js?v=20260828.163";
+} from "./app-layout.js?v=20260828.165";
 import {
   gcWorkspaceTasks,
   wirePanelEvents,
-} from "./workspace-api.js?v=20260828.150";
+} from "./workspace-api.js?v=20260828.152";
 
 function handlePanelRemoved(api, panel) {
   const match = /^terminal-(\d+)$/.exec(panel.id);
@@ -247,12 +250,12 @@ function App() {
     });
   }, []);
 
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(DockviewReact, dockviewOptions(onReady)),
-    React.createElement(PluginOverlays),
-  );
+  return html`
+    <${React.Fragment}>
+      <${DockviewReact} ...${dockviewOptions(onReady)}/>
+      <${PluginOverlays}/>
+    </${React.Fragment}>
+  `;
 }
 
 // Ambient shell chrome from plugins (Wagi Dog pet, Discord widget, or
@@ -268,13 +271,13 @@ function PluginOverlays() {
       window.removeEventListener(PLUGIN_CHANGED_EVENT, onPluginsChanged);
     };
   }, []);
-  return React.createElement(
-    React.Fragment,
-    null,
-    listOverlays().map(({ id, render }) =>
-      React.createElement(render, { key: id })
-    ),
-  );
+  return html`
+    <${React.Fragment}>
+      ${listOverlays().map(({ id, render }) =>
+        html`<${render} key=${id}/>`,
+      )}
+    </${React.Fragment}>
+  `;
 }
 
 export { App, handlePanelRemoved, trackActivePanel };

@@ -4,6 +4,9 @@
 
 import React from "react";
 import { ArrowUp, ChevronRight, File, Folder, Play } from "lucide-react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 export function PickerRow({
   entry,
@@ -16,118 +19,95 @@ export function PickerRow({
 }) {
   const Icon = entry.isDirectory ? Folder : File;
   const label = entry.isDirectory ? "Open directory" : "Pick file";
-  return React.createElement(
-    "div",
-    {
-      className:
-        `vfs-picker-row ${entry.isDirectory ? "vfs-picker-row-dir" : ""}` +
-        (selected ? " vfs-picker-row-selected" : ""),
-      role: "button",
-      tabIndex: 0,
-      title: label,
-      onClick: () => (entry.isDirectory ? onOpen() : onToggle(entry)),
-      onKeyDown: (event) => {
+  return html`
+    <div
+      className=${`vfs-picker-row ${entry.isDirectory ? "vfs-picker-row-dir" : ""}` +
+        (selected ? " vfs-picker-row-selected" : "")}
+      role="button"
+      tabIndex=${0}
+      title=${label}
+      onClick=${() => (entry.isDirectory ? onOpen() : onToggle(entry))}
+      onKeyDown=${(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           if (entry.isDirectory) onOpen();
           else onToggle(entry);
         }
-      },
-    },
-    React.createElement(Icon, {
-      size: 15,
-      className: "vfs-picker-row-icon",
-      "aria-hidden": true,
-    }),
-    React.createElement(
-      "span",
-      { className: "vfs-picker-row-name" },
-      entry.name,
-    ),
-    !entry.isDirectory && mode === "multi" &&
-      React.createElement(Play, {
-        size: 14,
-        className: "vfs-picker-row-play",
-        "aria-label": "Play now",
-        onClick: (event) => {
-          event.stopPropagation();
-          onPlaySingle(entry);
-        },
-      }),
-    !entry.isDirectory && mode === "multi" && checked &&
-      React.createElement("span", { className: "vfs-picker-row-check" }, "✓"),
-  );
+      }}
+    >
+      <${Icon} size=${15} className="vfs-picker-row-icon" aria-hidden=${true}/>
+      <span className="vfs-picker-row-name">${entry.name}</span>
+      ${!entry.isDirectory && mode === "multi" &&
+        html`<${Play}
+          size=${14}
+          className="vfs-picker-row-play"
+          aria-label="Play now"
+          onClick=${(event) => {
+            event.stopPropagation();
+            onPlaySingle(entry);
+          }}
+        />`}
+      ${!entry.isDirectory && mode === "multi" && checked &&
+        html`<span className="vfs-picker-row-check">✓</span>`}
+    </div>
+  `;
 }
 
 export function PickerCrumbs({ path, navigate }) {
   const segments = path === "." ? [] : path.split("/");
-  return React.createElement(
-    "div",
-    { className: "vfs-picker-crumbs" },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "vfs-picker-crumb",
-        onClick: () => navigate("."),
-      },
-      "/",
-    ),
-    segments.map((segment, index) =>
-      React.createElement(
-        "span",
-        { key: index, className: "vfs-picker-crumb-wrap" },
-        React.createElement(ChevronRight, {
-          size: 12,
-          className: "vfs-picker-crumb-sep",
-          "aria-hidden": true,
-        }),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "vfs-picker-crumb",
-            onClick: () => navigate(segments.slice(0, index + 1).join("/")),
-          },
-          segment,
-        ),
-      )
-    ),
-  );
+  return html`
+    <div className="vfs-picker-crumbs">
+      <button
+        type="button"
+        className="vfs-picker-crumb"
+        onClick=${() => navigate(".")}
+      >/</button>
+      ${segments.map((segment, index) =>
+        html`
+          <span key=${index} className="vfs-picker-crumb-wrap">
+            <${ChevronRight} size=${12} className="vfs-picker-crumb-sep" aria-hidden=${true}/>
+            <button
+              type="button"
+              className="vfs-picker-crumb"
+              onClick=${() => navigate(segments.slice(0, index + 1).join("/"))}
+            >${segment}</button>
+          </span>
+        `,
+      )}
+    </div>
+  `;
 }
 
 export function PickerToolbar({ path, draft, setDraft, submitPath, goUp, navigate }) {
-  return React.createElement(
-    "div",
-    { className: "vfs-picker-toolbar" },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "vfs-picker-up",
-        title: "Up one directory",
-        "aria-label": "Up one directory",
-        disabled: path === ".",
-        onClick: goUp,
-      },
-      React.createElement(ArrowUp, { size: 14, "aria-hidden": true }),
-    ),
-    React.createElement(PickerCrumbs, { path, navigate }),
-    React.createElement("input", {
-      className: "vfs-picker-path",
-      type: "text",
-      spellCheck: false,
-      value: draft,
-      "aria-label": "Path",
-      onChange: (event) => setDraft(event.target.value),
-      onKeyDown: (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          submitPath();
-        }
-      },
-    }),
-  );
+  return html`
+    <div className="vfs-picker-toolbar">
+      <button
+        type="button"
+        className="vfs-picker-up"
+        title="Up one directory"
+        aria-label="Up one directory"
+        disabled=${path === "."}
+        onClick=${goUp}
+      >
+        <${ArrowUp} size=${14} aria-hidden=${true}/>
+      </button>
+      <${PickerCrumbs} path=${path} navigate=${navigate}/>
+      <input
+        className="vfs-picker-path"
+        type="text"
+        spellCheck=${false}
+        value=${draft}
+        aria-label="Path"
+        onChange=${(event) => setDraft(event.target.value)}
+        onKeyDown=${(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            submitPath();
+          }
+        }}
+      />
+    </div>
+  `;
 }
 
 export function PickerBody({
@@ -143,66 +123,50 @@ export function PickerBody({
   onPlaySingle,
 }) {
   if (loading) {
-    return React.createElement(
-      "p",
-      { className: "vfs-picker-status" },
-      "Loading…",
-    );
+    return html`<p className="vfs-picker-status">Loading…</p>`;
   }
   if (error) {
-    return React.createElement("p", { className: "vfs-picker-error" }, error);
+    return html`<p className="vfs-picker-error">${error}</p>`;
   }
   if (entries.length === 0) {
-    return React.createElement(
-      "p",
-      { className: "vfs-picker-status" },
-      "Empty directory",
-    );
+    return html`<p className="vfs-picker-status">Empty directory</p>`;
   }
   return entries.map((entry, index) =>
-    React.createElement(PickerRow, {
-      key: entry.path,
-      entry,
-      mode,
-      checked: marked.has(entry.path),
-      selected: index === selectedIndex,
-      onOpen: () => navigate(entry.path),
-      onToggle: (target) =>
-        mode === "single" ? pickSingle(target) : toggleMark(target),
-      onPlaySingle,
-    })
+    html`<${PickerRow}
+      key=${entry.path}
+      entry=${entry}
+      mode=${mode}
+      checked=${marked.has(entry.path)}
+      selected=${index === selectedIndex}
+      onOpen=${() => navigate(entry.path)}
+      onToggle=${(target) =>
+        mode === "single" ? pickSingle(target) : toggleMark(target)}
+      onPlaySingle=${onPlaySingle}
+    />`,
   );
 }
 
 export function PickerFooter({ marked, actions }) {
-  return React.createElement(
-    "div",
-    { className: "vfs-picker-footer" },
-    React.createElement(
-      "span",
-      { className: "vfs-picker-count" },
-      marked.length === 0 ? "No files selected" : `${marked.length} selected`,
-    ),
-    React.createElement(
-      "div",
-      { className: "vfs-picker-actions" },
-      actions.map((action, index) =>
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            key: index,
-            className: `vfs-picker-btn ${
-              action.primary ? "vfs-picker-btn-primary" : ""
-            }`,
-            disabled: marked.length === 0,
-            onClick: () => action.onPick(marked),
-          },
-          typeof action.label === "function"
-            ? action.label(marked.length)
-            : action.label,
-        )
-      ),
-    ),
-  );
+  return html`
+    <div className="vfs-picker-footer">
+      <span className="vfs-picker-count">${marked.length === 0 ? "No files selected" : `${marked.length} selected`}</span>
+      <div className="vfs-picker-actions">
+        ${actions.map((action, index) =>
+          html`
+            <button
+              type="button"
+              key=${index}
+              className=${`vfs-picker-btn ${
+                action.primary ? "vfs-picker-btn-primary" : ""
+              }`}
+              disabled=${marked.length === 0}
+              onClick=${() => action.onPick(marked)}
+            >${typeof action.label === "function"
+              ? action.label(marked.length)
+              : action.label}</button>
+          `,
+        )}
+      </div>
+    </div>
+  `;
 }

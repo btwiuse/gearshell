@@ -2,6 +2,7 @@
 // persisted shortcuts to directories and files the user pinned. Split
 // out of files-ui.js when that module crossed the 500-line rule.
 import React from "react";
+import htm from "htm";
 import {
   Box,
   ChevronRight,
@@ -10,7 +11,10 @@ import {
   Home,
   X,
 } from "lucide-react";
-import { getEntryIcon } from "./files-ui.js?v=20260826.39";
+import { getEntryIcon } from "./files-ui.js?v=20260826.40";
+
+const html = htm.bind(React.createElement);
+
 // File favorites get their extension icon; directories keep the special
 // id-based icons (Home / root / mounts) or a plain folder.
 export function getFavoriteIcon(favorite) {
@@ -25,26 +29,18 @@ export function getFavoriteIcon(favorite) {
 }
 
 function renderFavoritesHeader({ collapsed, onToggle }) {
-  return React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "files-sidebar-toggle files-section-header",
-      onClick: onToggle,
-      "aria-expanded": !collapsed,
-      title: collapsed ? "Expand Favorites" : "Collapse Favorites",
-    },
-    React.createElement(ChevronRight, {
-      size: 13,
-      className: collapsed ? "" : "open",
-      "aria-hidden": true,
-    }),
-    React.createElement(
-      "span",
-      { className: "files-volumes-title" },
-      "Favorites",
-    ),
-  );
+  return html`
+    <button
+      type="button"
+      className="files-sidebar-toggle files-section-header"
+      onClick=${onToggle}
+      aria-expanded=${!collapsed}
+      title=${collapsed ? "Expand Favorites" : "Collapse Favorites"}
+    >
+      <${ChevronRight} size=${13} className=${collapsed ? "" : "open"} aria-hidden=${true}/>
+      <span className="files-volumes-title">Favorites</span>
+    </button>
+  `;
 }
 
 // Favorite paths may carry a leading slash while the panel's current
@@ -61,34 +57,31 @@ function isFavoriteActive(favorite, currentPath) {
 function renderFavoriteRow({ favorite, currentPath, onOpen, onRemove }) {
   const FavoriteIcon = getFavoriteIcon(favorite);
   const active = isFavoriteActive(favorite, currentPath);
-  return React.createElement(
-    "div",
-    {
-      key: favorite.id,
-      className: `files-favorite${active ? " files-favorite-active" : ""}`,
-    },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "files-favorite-name",
-        title: favorite.path === "." ? "Go to root" : `/${favorite.path}`,
-        onClick: () => onOpen(favorite),
-      },
-      React.createElement(FavoriteIcon, {
-        size: 14,
-        "aria-hidden": true,
-      }),
-      React.createElement("span", null, favorite.label),
-    ),
-    React.createElement("button", {
-      type: "button",
-      className: "files-favorite-remove",
-      title: `Remove ${favorite.label} from favorites`,
-      "aria-label": `Remove ${favorite.label} from favorites`,
-      onClick: () => onRemove(favorite.id),
-    }, React.createElement(X, { size: 12, "aria-hidden": true })),
-  );
+  return html`
+    <div
+      key=${favorite.id}
+      className=${`files-favorite${active ? " files-favorite-active" : ""}`}
+    >
+      <button
+        type="button"
+        className="files-favorite-name"
+        title=${favorite.path === "." ? "Go to root" : `/${favorite.path}`}
+        onClick=${() => onOpen(favorite)}
+      >
+        <${FavoriteIcon} size=${14} aria-hidden=${true}/>
+        <span>${favorite.label}</span>
+      </button>
+      <button
+        type="button"
+        className="files-favorite-remove"
+        title=${`Remove ${favorite.label} from favorites`}
+        aria-label=${`Remove ${favorite.label} from favorites`}
+        onClick=${() => onRemove(favorite.id)}
+      >
+        <${X} size=${12} aria-hidden=${true}/>
+      </button>
+    </div>
+  `;
 }
 
 export function FavoritesSidebar({
@@ -99,23 +92,19 @@ export function FavoritesSidebar({
   collapsed = false,
   onToggle,
 }) {
-  return React.createElement(
-    "div",
-    { className: "files-section" },
-    renderFavoritesHeader({ collapsed, onToggle }),
-    !collapsed &&
-      (favorites.length === 0
-        ? React.createElement(
-          "p",
-          { className: "files-volumes-empty" },
-          "No favorites.",
-        )
-        : React.createElement(
-          "div",
-          { className: "files-favorites-list" },
-          favorites.map((favorite) =>
-            renderFavoriteRow({ favorite, currentPath, onOpen, onRemove })
-          ),
-        )),
-  );
+  return html`
+    <div className="files-section">
+      ${renderFavoritesHeader({ collapsed, onToggle })}
+      ${!collapsed &&
+        (favorites.length === 0
+          ? html`<p className="files-volumes-empty">No favorites.</p>`
+          : html`
+              <div className="files-favorites-list">
+                ${favorites.map((favorite) =>
+                  renderFavoriteRow({ favorite, currentPath, onOpen, onRemove }),
+                )}
+              </div>
+            `)}
+    </div>
+  `;
 }

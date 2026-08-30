@@ -6,67 +6,58 @@
 // (500-line rule).
 
 import React from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 export function TabBar({ tabs, active, onSelect }) {
-  return React.createElement(
-    "div",
-    { className: "playground-tabs", role: "tablist" },
-    tabs.map(({ id, label }) =>
-      React.createElement(
-        "button",
-        {
-          key: id,
-          type: "button",
-          role: "tab",
-          className: "playground-tab" + (id === active ? " active" : ""),
-          onClick: () => onSelect(id),
-          "aria-selected": id === active,
-        },
-        label,
-      )
-    ),
-  );
+  return html`
+    <div className="playground-tabs" role="tablist">
+      ${tabs.map(({ id, label }) =>
+        html`<button
+          key=${id}
+          type="button"
+          role="tab"
+          className=${"playground-tab" + (id === active ? " active" : "")}
+          onClick=${() => onSelect(id)}
+          aria-selected=${id === active}
+        >${label}</button>`,
+      )}
+    </div>
+  `;
 }
 
 export function MethodList({ groups, filter, selected, onSelect }) {
   const needle = filter.trim().toLowerCase();
-  return React.createElement(
-    "div",
-    { className: "playground-method-list" },
-    groups.map((group) => {
-      const methods = group.methods.filter((method) =>
-        !needle ||
-        (group.namespace ? `${group.namespace}.${method.name}` : method.name)
-          .toLowerCase().includes(needle)
-      );
-      if (methods.length === 0) return null;
-      return React.createElement(
-        "div",
-        { key: group.title, className: "playground-method-group" },
-        React.createElement(
-          "h3",
-          { className: "playground-method-group-title" },
-          group.title,
-        ),
-        methods.map((method) => {
-          const id = group.namespace
-            ? `${group.namespace}.${method.name}`
-            : method.name;
-          return React.createElement(
-            "button",
-            {
-              key: id,
-              type: "button",
-              className: "playground-method" +
-                (id === selected ? " active" : ""),
-              onClick: () => onSelect(id),
-            },
-            id,
-          );
-        }),
-      );
-    }),
-  );
+  return html`
+    <div className="playground-method-list">
+      ${groups.map((group) => {
+        const methods = group.methods.filter((method) =>
+          !needle ||
+          (group.namespace ? `${group.namespace}.${method.name}` : method.name)
+            .toLowerCase().includes(needle)
+        );
+        if (methods.length === 0) return null;
+        return html`
+          <div key=${group.title} className="playground-method-group">
+            <h3 className="playground-method-group-title">${group.title}</h3>
+            ${methods.map((method) => {
+              const id = group.namespace
+                ? `${group.namespace}.${method.name}`
+                : method.name;
+              return html`<button
+                key=${id}
+                type="button"
+                className=${"playground-method" +
+                  (id === selected ? " active" : "")}
+                onClick=${() => onSelect(id)}
+              >${id}</button>`;
+            })}
+          </div>
+        `;
+      })}
+    </div>
+  `;
 }
 
 export function JsonArgField({ arg, value, onChange }) {
@@ -74,69 +65,57 @@ export function JsonArgField({ arg, value, onChange }) {
     8,
     1 + String(value ?? arg.default ?? "").split("\n").length,
   );
-  return React.createElement(
-    "label",
-    { className: "playground-arg" },
-    React.createElement(
-      "span",
-      { className: "playground-arg-label" },
-      arg.label,
-    ),
-    React.createElement("textarea", {
-      className: "playground-json-input",
-      rows,
-      value: value ?? arg.default ?? "",
-      placeholder: arg.placeholder,
-      spellCheck: false,
-      onChange: (event) => onChange(arg.key, event.target.value),
-    }),
-  );
+  return html`
+    <label className="playground-arg">
+      <span className="playground-arg-label">${arg.label}</span>
+      <textarea
+        className="playground-json-input"
+        rows=${rows}
+        value=${value ?? arg.default ?? ""}
+        placeholder=${arg.placeholder}
+        spellCheck=${false}
+        onChange=${(event) => onChange(arg.key, event.target.value)}
+      ></textarea>
+    </label>
+  `;
 }
 
 export function ArgField({ arg, value, onChange }) {
   if (arg.type === "handler") {
-    return React.createElement(
-      "div",
-      { className: "playground-arg playground-arg-handler" },
-      React.createElement("span", null, arg.label),
-      React.createElement(
-        "code",
-        { className: "playground-hint-text" },
-        "in-page function (no JSON representation)",
-      ),
-    );
+    return html`
+      <div className="playground-arg playground-arg-handler">
+        <span>${arg.label}</span>
+        <code className="playground-hint-text">in-page function (no JSON representation)</code>
+      </div>
+    `;
   }
   if (arg.type === "boolean") {
-    return React.createElement(
-      "label",
-      { className: "playground-arg playground-arg-check" },
-      React.createElement("input", {
-        type: "checkbox",
-        checked: value === true || value === "true",
-        onChange: (event) => onChange(arg.key, event.target.checked),
-      }),
-      React.createElement("span", null, arg.label),
-    );
+    return html`
+      <label className="playground-arg playground-arg-check">
+        <input
+          type="checkbox"
+          checked=${value === true || value === "true"}
+          onChange=${(event) => onChange(arg.key, event.target.checked)}
+        />
+        <span>${arg.label}</span>
+      </label>
+    `;
   }
   if (arg.type === "json") {
-    return React.createElement(JsonArgField, { arg, value, onChange });
+    return html`<${JsonArgField} arg=${arg} value=${value} onChange=${onChange}/>`;
   }
-  return React.createElement(
-    "label",
-    { className: "playground-arg" },
-    React.createElement(
-      "span",
-      { className: "playground-arg-label" },
-      arg.label + (arg.optional ? " (optional)" : ""),
-    ),
-    React.createElement("input", {
-      type: arg.type === "number" ? "number" : "text",
-      className: "playground-text-input",
-      value: value ?? arg.default ?? "",
-      placeholder: arg.placeholder,
-      onChange: (event) => onChange(arg.key, event.target.value),
-    }),
-  );
+  return html`
+    <label className="playground-arg">
+      <span className="playground-arg-label">${arg.label + (arg.optional ? " (optional)" : "")}</span>
+      <input
+        type=${arg.type === "number" ? "number" : "text"}
+        className="playground-text-input"
+        value=${value ?? arg.default ?? ""}
+        placeholder=${arg.placeholder}
+        onChange=${(event) => onChange(arg.key, event.target.value)}
+      />
+    </label>
+  `;
 }
 
 // Pretty-print a JSON value; redact nothing here (callers pass already
@@ -148,73 +127,48 @@ export function JsonBlock({ data, className }) {
   } catch {
     text = String(data);
   }
-  return React.createElement("pre", {
-    className: className || "playground-json",
-  }, text);
+  return html`<pre className=${className || "playground-json"}>${text}</pre>`;
 }
 
 export function ResultView({ result }) {
   if (result == null) {
-    return React.createElement(
-      "p",
-      { className: "playground-hint" },
-      "Run the method to see its JSON result here.",
-    );
+    return html`
+      <p className="playground-hint">Run the method to see its JSON result here.</p>
+    `;
   }
   const ok = result.ok !== false;
-  return React.createElement(
-    "div",
-    { className: "playground-result" },
-    React.createElement(
-      "div",
-      {
-        className: "playground-result-status " +
-          (ok ? "ok" : "error"),
-      },
-      ok ? "ok" : "error",
-    ),
-    React.createElement(JsonBlock, { data: result }),
-  );
+  return html`
+    <div className="playground-result">
+      <div className=${"playground-result-status " + (ok ? "ok" : "error")}>${ok ? "ok" : "error"}</div>
+      <${JsonBlock} data=${result}/>
+    </div>
+  `;
 }
 
 export function HistoryList({ history, onPick }) {
   if (history.length === 0) {
-    return React.createElement(
-      "p",
-      { className: "playground-hint" },
-      "No calls yet. Run a method and it shows up here.",
-    );
+    return html`
+      <p className="playground-hint">No calls yet. Run a method and it shows up here.</p>
+    `;
   }
-  return React.createElement(
-    "div",
-    { className: "playground-history" },
-    history.map((item, index) => {
-      const ok = item.result?.ok !== false;
-      return React.createElement(
-        "button",
-        {
-          key: `${item.ts}-${index}`,
-          type: "button",
-          className: "playground-history-row " + (ok ? "ok" : "error"),
-          onClick: () => onPick(item),
-          title: item.method,
-        },
-        React.createElement(
-          "span",
-          { className: "playground-history-method" },
-          item.method,
-        ),
-        React.createElement(
-          "span",
-          { className: "playground-history-args" },
-          item.argsJson,
-        ),
-        React.createElement(
-          "span",
-          { className: "playground-history-time" },
-          new Date(item.ts).toLocaleTimeString(),
-        ),
-      );
-    }),
-  );
+  return html`
+    <div className="playground-history">
+      ${history.map((item, index) => {
+        const ok = item.result?.ok !== false;
+        return html`
+          <button
+            key=${`${item.ts}-${index}`}
+            type="button"
+            className=${"playground-history-row " + (ok ? "ok" : "error")}
+            onClick=${() => onPick(item)}
+            title=${item.method}
+          >
+            <span className="playground-history-method">${item.method}</span>
+            <span className="playground-history-args">${item.argsJson}</span>
+            <span className="playground-history-time">${new Date(item.ts).toLocaleTimeString()}</span>
+          </button>
+        `;
+      })}
+    </div>
+  `;
 }

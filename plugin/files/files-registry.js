@@ -5,7 +5,7 @@
 // app.js calls `initFiles(dependencies)` from the bottom of its module
 // body, populating a small lookup table that the panel modules read
 // lazily via `filesDep(name)`.
-import { WORKSPACE_CHANGED_EVENT } from "../../app-constants.js?v=20260828.93";
+import { WORKSPACE_CHANGED_EVENT } from "../../app-constants.js?v=20260828.95";
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
 
 let __filesDeps = null;

@@ -15,10 +15,13 @@
 
 import React, { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
-import { ExplorerView } from "./playground-explorer.js?v=20260829.22";
-import { ProvidersView } from "./playground-providers.js?v=20260829.93";
-import { EventsView } from "./playground-events-view.js?v=20260829.16";
-import { TabBar } from "./playground-parts.js?v=20260829.15";
+import { ExplorerView } from "./playground-explorer.js?v=20260829.23";
+import { ProvidersView } from "./playground-providers.js?v=20260829.95";
+import { EventsView } from "./playground-events-view.js?v=20260829.17";
+import { TabBar } from "./playground-parts.js?v=20260829.16";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 const TABS = [
   { id: "explorer", label: "Explorer" },
@@ -28,27 +31,19 @@ const TABS = [
 
 export function PlaygroundPanel() {
   const [tab, setTab] = useState("explorer");
-  return React.createElement(
-    "div",
-    { className: "playground-panel panel-content" },
-    React.createElement(
-      "div",
-      { className: "playground-header" },
-      React.createElement(SlidersHorizontal, { size: 16, "aria-hidden": true }),
-      React.createElement("h2", null, "GearShell API Playground"),
-      React.createElement(
-        "span",
-        { className: "playground-header-note" },
-        "the same window.GearShell surface agents reach through gear",
-      ),
-    ),
-    React.createElement(TabBar, { tabs: TABS, active: tab, onSelect: setTab }),
-    React.createElement(
-      "div",
-      { className: "playground-body" },
-      tab === "explorer" && React.createElement(ExplorerView, null),
-      tab === "providers" && React.createElement(ProvidersView, null),
-      tab === "events" && React.createElement(EventsView, null),
-    ),
-  );
+  return html`
+    <div className="playground-panel panel-content">
+      <div className="playground-header">
+        <${SlidersHorizontal} size=${16} aria-hidden=${true}/>
+        <h2>GearShell API Playground</h2>
+        <span className="playground-header-note">the same window.GearShell surface agents reach through gear</span>
+      </div>
+      <${TabBar} tabs=${TABS} active=${tab} onSelect=${setTab}/>
+      <div className="playground-body">
+        ${tab === "explorer" && html`<${ExplorerView}/>`}
+        ${tab === "providers" && html`<${ProvidersView}/>`}
+        ${tab === "events" && html`<${EventsView}/>`}
+      </div>
+    </div>
+  `;
 }

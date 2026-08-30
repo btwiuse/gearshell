@@ -4,8 +4,11 @@
 // injection table as panels.js via the exported `panelsDep`.
 
 import React, { useEffect, useRef, useState } from "react";
-import { panelsDep } from "./panels.js?v=20260812.122";
+import { panelsDep } from "./panels.js?v=20260812.124";
 import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 // Per-workspace-task id minting so multiple task panels can coexist.
 
@@ -64,60 +67,29 @@ export function WorkspaceTaskPanel({ api, params }) {
   );
 
   if (!params.task.term) {
-    return React.createElement(HeadlessTaskPanel, {
-      ref: wrapperRef,
-      task: params.task,
-      status: taskStatus,
-    });
+    return html`<${HeadlessTaskPanel} ref=${wrapperRef} task=${params.task} status=${taskStatus}/>`;
   }
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
+  return html`<div ref=${wrapperRef} className="panel-content"></div>`;
 }
 
 // === HeadlessTaskPanel ===
 function HeadlessTaskInfo({ task, envLines }) {
-  return React.createElement(
-    "div",
-    null,
-    React.createElement(
-      "div",
-      { className: "task-headless-command" },
-      React.createElement("span", {
-        className: "task-headless-prompt",
-      }, "$"),
-      React.createElement(
-        "code",
-        null,
-        task.cmd || "(no command)",
-      ),
-    ),
-    React.createElement(
-      "div",
-      { className: "task-headless-wd" },
-      React.createElement(
-        "span",
-        { className: "task-headless-wd-label" },
-        "workdir",
-      ),
-      React.createElement(
-        "code",
-        null,
-        task.wd || "/",
-      ),
-    ),
-    React.createElement(
-      "details",
-      { className: "task-headless-env" },
-      React.createElement("summary", null, `env (${envLines.length})`),
-      React.createElement(
-        "pre",
-        null,
-        envLines.join("\n"),
-      ),
-    ),
-  );
+  return html`
+    <div>
+      <div className="task-headless-command">
+        <span className="task-headless-prompt">$</span>
+        <code>${task.cmd || "(no command)"}</code>
+      </div>
+      <div className="task-headless-wd">
+        <span className="task-headless-wd-label">workdir</span>
+        <code>${task.wd || "/"}</code>
+      </div>
+      <details className="task-headless-env">
+        <summary>env (${envLines.length})</summary>
+        <pre>${envLines.join("\n")}</pre>
+      </details>
+    </div>
+  `;
 }
 
 const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
@@ -125,26 +97,22 @@ const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
   ref,
 ) {
   const envLines = panelsDep("taskEnvLines")(task);
-  return React.createElement(
-    "div",
-    { ref, className: "task-headless panel-content" },
-    React.createElement("h2", null, task.name),
-    React.createElement(
-      "p",
-      null,
-      status.status === "failed"
-        ? status.error?.message || "Task failed to start."
-        : status.status === "succeeded"
-        ? "Task finished."
-        : status.status === "starting"
-        ? "Starting task…"
-        : "Headless task: no terminal. Output is captured to a per-task log; read it with gear tasks.output <id> (live with wanix v0.4.20).",
-    ),
-    React.createElement(HeadlessTaskInfo, { task, envLines }),
-    React.createElement("span", {
-      className: `task-headless-status ${status.status}`,
-    }, status.status),
-  );
+  return html`
+    <div ref=${ref} className="task-headless panel-content">
+      <h2>${task.name}</h2>
+      <p>
+        ${status.status === "failed"
+          ? status.error?.message || "Task failed to start."
+          : status.status === "succeeded"
+          ? "Task finished."
+          : status.status === "starting"
+          ? "Starting task…"
+          : "Headless task: no terminal. Output is captured to a per-task log; read it with gear tasks.output <id> (live with wanix v0.4.20)."}
+      </p>
+      <${HeadlessTaskInfo} task=${task} envLines=${envLines}/>
+      <span className=${`task-headless-status ${status.status}`}>${status.status}</span>
+    </div>
+  `;
 });
 
 export function addWorkspaceTaskPanel(

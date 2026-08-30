@@ -20,11 +20,14 @@ import {
   PackageOpen,
   Plus,
 } from "lucide-react";
-import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.98";
-import { configApi } from "./workspace-config-api.js?v=20260828.119";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.93";
-import { PluginCard } from "./plugins-cards.js?v=20260829.3";
-import { PluginModal } from "./plugins-modal.js?v=20260829.2";
+import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.100";
+import { configApi } from "./workspace-config-api.js?v=20260828.121";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.95";
+import { PluginCard } from "./plugins-cards.js?v=20260829.4";
+import { PluginModal } from "./plugins-modal.js?v=20260829.3";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 // Manifest assembly from the modal form (module vs iframe kind).
 function manifestFromModal(values, kind) {
@@ -137,140 +140,107 @@ function usePluginsState() {
 
 // --- Page chrome ---
 function PluginsHeader({ count, enabled, onAdd }) {
-  return React.createElement(
-    "header",
-    { className: "plugins-header" },
-    React.createElement(
-      "div",
-      { className: "plugins-header-title" },
-      React.createElement(Package, { size: 18, "aria-hidden": true }),
-      React.createElement("h2", null, "Plugins"),
-      React.createElement(
-        "span",
-        { className: "plugins-header-note" },
-        `${count} installed · ${enabled} enabled`,
-      ),
-    ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "plugin-action-btn primary",
-        onClick: onAdd,
-      },
-      React.createElement(Plus, { size: 14, "aria-hidden": true }),
-      "Add plugin",
-    ),
-  );
+  return html`
+    <header className="plugins-header">
+      <div className="plugins-header-title">
+        <${Package} size=${18} aria-hidden=${true}/>
+        <h2>Plugins</h2>
+        <span className="plugins-header-note">${count} installed · ${enabled} enabled</span>
+      </div>
+      <button
+        type="button"
+        className="plugin-action-btn primary"
+        onClick=${onAdd}
+      >
+        <${Plus} size=${14} aria-hidden=${true}/>
+        Add plugin
+      </button>
+    </header>
+  `;
 }
 
 function PluginsNotice({ notice, onDismiss }) {
   if (!notice) return null;
   const ok = notice.kind === "ok";
-  return React.createElement(
-    "div",
-    {
-      className: "plugins-notice " + (ok ? "ok" : "error"),
-      role: "status",
-      onClick: onDismiss,
-    },
-    ok
-      ? React.createElement(Check, { size: 14, "aria-hidden": true })
-      : React.createElement(AlertTriangle, { size: 14, "aria-hidden": true }),
-    React.createElement("span", null, notice.text),
-  );
+  return html`
+    <div
+      className=${"plugins-notice " + (ok ? "ok" : "error")}
+      role="status"
+      onClick=${onDismiss}
+    >
+      ${ok
+        ? html`<${Check} size=${14} aria-hidden=${true}/>`
+        : html`<${AlertTriangle} size=${14} aria-hidden=${true}/>`}
+      <span>${notice.text}</span>
+    </div>
+  `;
 }
 
 function PluginsGrid({ plugins, onToggle, onEdit, onRemove }) {
-  return React.createElement(
-    "div",
-    { className: "plugins-grid" },
-    plugins.map((plugin) =>
-      React.createElement(PluginCard, {
-        key: plugin.id,
-        plugin,
-        onToggle,
-        onEdit,
-        onRemove,
-      })
-    ),
-  );
+  return html`
+    <div className="plugins-grid">
+      ${plugins.map((plugin) =>
+        html`<${PluginCard} key=${plugin.id} plugin=${plugin} onToggle=${onToggle} onEdit=${onEdit} onRemove=${onRemove}/>`,
+      )}
+    </div>
+  `;
 }
 
 function PluginsEmpty({ onAdd }) {
-  return React.createElement(
-    "div",
-    { className: "plugins-empty" },
-    React.createElement(PackageOpen, { size: 28, "aria-hidden": true }),
-    React.createElement("p", null, "No plugins installed yet."),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "plugin-action-btn primary",
-        onClick: onAdd,
-      },
-      "Install your first plugin",
-    ),
-  );
+  return html`
+    <div className="plugins-empty">
+      <${PackageOpen} size=${28} aria-hidden=${true}/>
+      <p>No plugins installed yet.</p>
+      <button
+        type="button"
+        className="plugin-action-btn primary"
+        onClick=${onAdd}
+      >Install your first plugin</button>
+    </div>
+  `;
 }
 
 function PluginsFooter() {
-  return React.createElement(
-    "footer",
-    { className: "plugins-footer" },
-    React.createElement(PackageOpen, { size: 13, "aria-hidden": true }),
-    React.createElement(
-      "span",
-      null,
-      "A plugin is a manifest with an ES-module entry (component panels) or an iframe src (sandboxed apps). ",
-    ),
-    React.createElement(
-      "a",
-      {
-        href: "https://github.com/btwiuse/gearshell/wiki",
-        target: "_blank",
-        rel: "noreferrer",
-      },
-      "Plugin guide",
-      React.createElement(ExternalLink, { size: 11, "aria-hidden": true }),
-    ),
-  );
+  return html`
+    <footer className="plugins-footer">
+      <${PackageOpen} size=${13} aria-hidden=${true}/>
+      <span>A plugin is a manifest with an ES-module entry (component panels) or an iframe src (sandboxed apps). </span>
+      <a
+        href="https://github.com/btwiuse/gearshell/wiki"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Plugin guide
+        <${ExternalLink} size=${11} aria-hidden=${true}/>
+      </a>
+    </footer>
+  `;
 }
 
 export function PluginsPage() {
   const state = usePluginsState();
   const enabledCount = state.plugins.filter((plugin) => plugin.enabled).length;
   const editing = state.modal?.mode === "edit" ? state.modal.plugin : null;
-  return React.createElement(
-    "div",
-    { className: "plugins-page" },
-    React.createElement(PluginsHeader, {
-      count: state.plugins.length,
-      enabled: enabledCount,
-      onAdd: () => state.setModal({ mode: "add" }),
-    }),
-    React.createElement(PluginsNotice, {
-      notice: state.notice,
-      onDismiss: state.dismissNotice,
-    }),
-    React.createElement(PluginsGrid, {
-      plugins: state.plugins,
-      onToggle: state.togglePlugin,
-      onEdit: (plugin) => state.setModal({ mode: "edit", plugin }),
-      onRemove: state.removePlugin,
-    }),
-    state.plugins.length === 0 &&
-      React.createElement(PluginsEmpty, {
-        onAdd: () => state.setModal({ mode: "add" }),
-      }),
-    React.createElement(PluginsFooter, null),
-    state.modal &&
-      React.createElement(PluginModal, {
-        mode: state.modal.mode,
-        plugin: editing,
-        onCancel: () => state.setModal(null),
-        onSubmit: state.submit,
-      }),
-  );
+  return html`
+    <div className="plugins-page">
+      <${PluginsHeader} count=${state.plugins.length} enabled=${enabledCount} onAdd=${() => state.setModal({ mode: "add" })}/>
+      <${PluginsNotice} notice=${state.notice} onDismiss=${state.dismissNotice}/>
+      <${PluginsGrid}
+        plugins=${state.plugins}
+        onToggle=${state.togglePlugin}
+        onEdit=${(plugin) => state.setModal({ mode: "edit", plugin })}
+        onRemove=${state.removePlugin}
+      />
+      ${state.plugins.length === 0 &&
+        html`<${PluginsEmpty} onAdd=${() => state.setModal({ mode: "add" })}/>`}
+      <${PluginsFooter}/>
+      ${state.modal &&
+        html`<${PluginModal}
+          mode=${state.modal.mode}
+          plugin=${editing}
+          onCancel=${() => state.setModal(null)}
+          onSubmit=${state.submit}
+        />`}
+    </div>
+  `;
 }

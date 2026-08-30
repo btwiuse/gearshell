@@ -5,7 +5,10 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Check, Dog, Keyboard, Plus } from "lucide-react";
-import { launcherDep, TerminalLaunchPicker } from "./launcher.js?v=20260812.47";
+import { launcherDep, TerminalLaunchPicker } from "./launcher.js?v=20260812.48";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 // === Plus button: tap creates a terminal, long-press opens the
 // extensions menu. Renders the panel-action-menu next to the dockview
@@ -103,36 +106,31 @@ function useWagiDogSync() {
 }
 
 function renderWagiDogItem({ wagiDogEnabled }) {
-  return React.createElement(
-    "button",
-    {
-      type: "button",
-      role: "menuitemcheckbox",
-      "aria-checked": wagiDogEnabled,
-      onClick: () => launcherDep("setWagiDogEnabled")(!wagiDogEnabled),
-    },
-    React.createElement(Dog, { size: 16, "aria-hidden": true }),
-    React.createElement("span", null, "Wagi Dog"),
-    wagiDogEnabled &&
-      React.createElement(Check, {
-        className: "panel-action-menu-check",
-        size: 15,
-        "aria-label": "Enabled",
-      }),
-  );
+  return html`
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked=${wagiDogEnabled}
+      onClick=${() => launcherDep("setWagiDogEnabled")(!wagiDogEnabled)}
+    >
+      <${Dog} size=${16} aria-hidden=${true}/>
+      <span>Wagi Dog</span>
+      ${wagiDogEnabled &&
+        html`<${Check} className="panel-action-menu-check" size=${15} aria-label="Enabled"/>`}
+    </button>
+  `;
 }
 
 function renderPanelOptionItems({ containerApi, group, setMenuOpen }) {
   return launcherDep("PANEL_CREATION_OPTIONS").filter((option) =>
     option.component !== "terminal"
   ).map((option) =>
-    React.createElement(
-      "button",
-      {
-        key: option.component,
-        type: "button",
-        role: "menuitem",
-        onClick: (event) => {
+    html`
+      <button
+        key=${option.component}
+        type="button"
+        role="menuitem"
+        onClick=${(event) => {
           setMenuOpen(false);
           launcherDep("addPanelByComponent")(
             containerApi,
@@ -140,11 +138,12 @@ function renderPanelOptionItems({ containerApi, group, setMenuOpen }) {
             group,
             event.shiftKey ? { direction: "right" } : undefined,
           );
-        },
-      },
-      React.createElement(option.icon, { size: 16, "aria-hidden": true }),
-      React.createElement("span", null, option.label),
-    )
+        }}
+      >
+        <${option.icon} size=${16} aria-hidden=${true}/>
+        <span>${option.label}</span>
+      </button>
+    `,
   );
 }
 
@@ -158,78 +157,61 @@ function ShortcutsHelp() {
     ["Long-press / right-click +", "Open the all-apps menu"],
     ["Arrow keys", "Navigate this menu"],
   ];
-  return React.createElement(
-    "div",
-    null,
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        role: "menuitem",
-        "aria-expanded": open,
-        onClick: () => setOpen((value) => !value),
-      },
-      React.createElement(Keyboard, { size: 16, "aria-hidden": true }),
-      React.createElement("span", null, "Keyboard shortcuts"),
-    ),
-    open &&
-      React.createElement(
-        "div",
-        { className: "panel-action-menu-shortcuts" },
-        rows.map(([kbd, label]) =>
-          React.createElement(
-            "div",
-            { key: kbd, className: "panel-action-menu-shortcuts-row" },
-            React.createElement("kbd", null, kbd),
-            " ",
-            label,
-          )
-        ),
-      ),
-  );
+  return html`
+    <div>
+      <button
+        type="button"
+        role="menuitem"
+        aria-expanded=${open}
+        onClick=${() => setOpen((value) => !value)}
+      >
+        <${Keyboard} size=${16} aria-hidden=${true}/>
+        <span>Keyboard shortcuts</span>
+      </button>
+      ${open &&
+        html`
+          <div className="panel-action-menu-shortcuts">
+            ${rows.map(([kbd, label]) =>
+              html`
+                <div key=${kbd} className="panel-action-menu-shortcuts-row">
+                  <kbd>${kbd}</kbd>
+                  ${label}
+                </div>
+              `,
+            )}
+          </div>
+        `}
+    </div>
+  `;
 }
 
 function renderPanelActionMenu(
   { containerApi, group, setMenuOpen, wagiDogEnabled, menuRef },
 ) {
-  return React.createElement(
-    "div",
-    { className: "panel-action-menu", role: "menu", ref: menuRef },
-    React.createElement(TerminalLaunchPicker, {
-      className: "panel-action-terminal-launch",
-      iconSize: 16,
-      inMenu: true,
-      onLaunch: (profile) => {
-        setMenuOpen(false);
-        launcherDep("addTerminalPanel")(containerApi, group, profile);
-      },
-    }),
-    React.createElement("div", {
-      className: "panel-action-menu-divider",
-      role: "separator",
-    }),
-    renderWagiDogItem({ wagiDogEnabled }),
-    renderPanelOptionItems({ containerApi, group, setMenuOpen }),
-    React.createElement("div", {
-      className: "panel-action-menu-divider",
-      role: "separator",
-    }),
-    React.createElement(ShortcutsHelp, null),
-    React.createElement(
-      "div",
-      { className: "panel-action-menu-hint" },
-      React.createElement("span", null, "Shift+click: open in a new pane"),
-    ),
-    React.createElement(
-      "div",
-      { className: "panel-action-menu-hint" },
-      React.createElement(
-        "span",
-        null,
-        "Tip: long-press or right-click + for all apps",
-      ),
-    ),
-  );
+  return html`
+    <div className="panel-action-menu" role="menu" ref=${menuRef}>
+      <${TerminalLaunchPicker}
+        className="panel-action-terminal-launch"
+        iconSize=${16}
+        inMenu=${true}
+        onLaunch=${(profile) => {
+          setMenuOpen(false);
+          launcherDep("addTerminalPanel")(containerApi, group, profile);
+        }}
+      />
+      <div className="panel-action-menu-divider" role="separator"></div>
+      ${renderWagiDogItem({ wagiDogEnabled })}
+      ${renderPanelOptionItems({ containerApi, group, setMenuOpen })}
+      <div className="panel-action-menu-divider" role="separator"></div>
+      <${ShortcutsHelp}/>
+      <div className="panel-action-menu-hint">
+        <span>Shift+click: open in a new pane</span>
+      </div>
+      <div className="panel-action-menu-hint">
+        <span>Tip: long-press or right-click + for all apps</span>
+      </div>
+    </div>
+  `;
 }
 
 // Menu keyboard pattern (P3): opening focuses the first item; arrows move
@@ -278,32 +260,36 @@ function useMenuKeyboardNav(menuOpen, setMenuOpen, controlRef, menuRef) {
 function AddPanelButton(
   { pressing, menuOpen, startPress, clearPressTimer, openMenu, createTerminal },
 ) {
-  return React.createElement("button", {
-    className: "panel-action-button" +
-      (pressing || menuOpen ? " pressing" : ""),
-    type: "button",
-    title: "Add panel — long-press or right-click for all apps",
-    "aria-label": "Add panel",
-    "aria-haspopup": "menu",
-    "aria-expanded": menuOpen,
-    onPointerDown: startPress,
-    onPointerUp: clearPressTimer,
-    onPointerCancel: clearPressTimer,
-    onPointerLeave: clearPressTimer,
-    onKeyDown: (event) => {
-      // Keyboard entry into the menu (right-click/long-press are pointer
-      // gestures; arrows give keyboard users the same path).
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+  return html`
+    <button
+      className=${"panel-action-button" +
+        (pressing || menuOpen ? " pressing" : "")}
+      type="button"
+      title="Add panel — long-press or right-click for all apps"
+      aria-label="Add panel"
+      aria-haspopup="menu"
+      aria-expanded=${menuOpen}
+      onPointerDown=${startPress}
+      onPointerUp=${clearPressTimer}
+      onPointerCancel=${clearPressTimer}
+      onPointerLeave=${clearPressTimer}
+      onKeyDown=${(event) => {
+        // Keyboard entry into the menu (right-click/long-press are pointer
+        // gestures; arrows give keyboard users the same path).
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          openMenu();
+        }
+      }}
+      onContextMenu=${(event) => {
         event.preventDefault();
         openMenu();
-      }
-    },
-    onContextMenu: (event) => {
-      event.preventDefault();
-      openMenu();
-    },
-    onClick: createTerminal,
-  }, React.createElement(Plus, { size: 18, "aria-hidden": true }));
+      }}
+      onClick=${createTerminal}
+    >
+      <${Plus} size=${18} aria-hidden=${true}/>
+    </button>
+  `;
 }
 
 function AddTerminalButton({ containerApi, group }) {
@@ -330,26 +316,19 @@ function AddTerminalButton({ containerApi, group }) {
     launcherDep("addTerminalPanel")(containerApi, group);
   };
 
-  return React.createElement(
-    "div",
-    { ref: controlRef, className: "panel-actions" },
-    React.createElement(AddPanelButton, {
-      pressing,
-      menuOpen,
-      startPress,
-      clearPressTimer,
-      openMenu,
-      createTerminal,
-    }),
-    menuOpen &&
-      renderPanelActionMenu({
-        containerApi,
-        group,
-        setMenuOpen,
-        wagiDogEnabled,
-        menuRef,
-      }),
-  );
+  return html`
+    <div ref=${controlRef} className="panel-actions">
+      <${AddPanelButton} pressing=${pressing} menuOpen=${menuOpen} startPress=${startPress} clearPressTimer=${clearPressTimer} openMenu=${openMenu} createTerminal=${createTerminal}/>
+      ${menuOpen &&
+        renderPanelActionMenu({
+          containerApi,
+          group,
+          setMenuOpen,
+          wagiDogEnabled,
+          menuRef,
+        })}
+    </div>
+  `;
 }
 
 export { AddTerminalButton };

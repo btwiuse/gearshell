@@ -5,6 +5,9 @@
 
 import React, { useState } from "react";
 import { Check, Code2, Globe2, X } from "lucide-react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 // Form state helpers (pure, shared by the modal and its submit path).
 export function initialValues(plugin) {
@@ -50,49 +53,49 @@ export function manifestFromValues(values, kind) {
 }
 
 function PluginField({ id, label, children }) {
-  return React.createElement(
-    "label",
-    { className: "plugin-field", htmlFor: id },
-    React.createElement("span", { className: "plugin-field-label" }, label),
-    children,
-  );
+  return html`
+    <label className="plugin-field" htmlFor=${id}>
+      <span className="plugin-field-label">${label}</span>
+      ${children}
+    </label>
+  `;
 }
 
 function KindToggle({ kind, onKind }) {
   const btn = (value, icon, text) =>
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "plugin-kind-btn" + (kind === value ? " active" : ""),
-        onClick: () => onKind(value),
-      },
-      React.createElement(icon, { size: 13, "aria-hidden": true }),
-      text,
-    );
-  return React.createElement(
-    "div",
-    { className: "plugin-kind-toggle" },
-    btn("module", Code2, "Module"),
-    btn("iframe", Globe2, "Iframe app"),
-  );
+    html`
+      <button
+        type="button"
+        className=${"plugin-kind-btn" + (kind === value ? " active" : "")}
+        onClick=${() => onKind(value)}
+      >
+        <${icon} size=${13} aria-hidden=${true}/>
+        ${text}
+      </button>
+    `;
+  return html`
+    <div className="plugin-kind-toggle">
+      ${btn("module", Code2, "Module")}
+      ${btn("iframe", Globe2, "Iframe app")}
+    </div>
+  `;
 }
 
 function identityFields(values, set, editMode) {
   const field = (id, label, key, extra = {}) =>
-    React.createElement(
-      PluginField,
-      { id, label },
-      React.createElement("input", {
-        id,
-        type: "text",
-        value: values[key],
-        spellCheck: false,
-        disabled: editMode && key === "id",
-        onChange: (event) => set({ ...values, [key]: event.target.value }),
-        ...extra,
-      }),
-    );
+    html`
+      <${PluginField} id=${id} label=${label}>
+        <input
+          id=${id}
+          type="text"
+          value=${values[key]}
+          spellCheck=${false}
+          disabled=${editMode && key === "id"}
+          onChange=${(event) => set({ ...values, [key]: event.target.value })}
+          ...${extra}
+        />
+      </${PluginField}>
+    `;
   return [
     field("plugins-id", "Id", "id", { placeholder: "my-app" }),
     field("plugins-name", "Name", "name", { placeholder: "My App" }),
@@ -102,125 +105,103 @@ function identityFields(values, set, editMode) {
 }
 
 function moduleFields(values, set) {
-  return React.createElement(
-    "div",
-    { className: "plugin-fields-grid" },
-    React.createElement(
-      PluginField,
-      { id: "plugins-entry", label: "Entry URL / VFS path" },
-      React.createElement("input", {
-        id: "plugins-entry",
-        type: "text",
-        value: values.entry,
-        placeholder: "https://cdn.example.com/my-app.js",
-        spellCheck: false,
-        onChange: (event) => set({ ...values, entry: event.target.value }),
-      }),
-    ),
-    React.createElement(
-      PluginField,
-      { id: "plugins-permissions", label: "API permissions (one per line)" },
-      React.createElement("textarea", {
-        id: "plugins-permissions",
-        value: values.permissions,
-        placeholder: "panels.*\nconfig.providers.list",
-        spellCheck: false,
-        onChange: (event) =>
-          set({ ...values, permissions: event.target.value }),
-      }),
-    ),
-  );
+  return html`
+    <div className="plugin-fields-grid">
+      <${PluginField} id="plugins-entry" label="Entry URL / VFS path">
+        <input
+          id="plugins-entry"
+          type="text"
+          value=${values.entry}
+          placeholder="https://cdn.example.com/my-app.js"
+          spellCheck=${false}
+          onChange=${(event) => set({ ...values, entry: event.target.value })}
+        />
+      </${PluginField}>
+      <${PluginField} id="plugins-permissions" label="API permissions (one per line)">
+        <textarea
+          id="plugins-permissions"
+          value=${values.permissions}
+          placeholder=${"panels.*\nconfig.providers.list"}
+          spellCheck=${false}
+          onChange=${(event) =>
+            set({ ...values, permissions: event.target.value })}
+        ></textarea>
+      </${PluginField}>
+    </div>
+  `;
 }
 
 function iframeFields(values, set) {
-  return React.createElement(
-    "div",
-    { className: "plugin-fields-grid" },
-    React.createElement(
-      PluginField,
-      { id: "plugins-src", label: "Iframe src" },
-      React.createElement("input", {
-        id: "plugins-src",
-        type: "url",
-        value: values.src,
-        placeholder: "https://example.com/app",
-        spellCheck: false,
-        onChange: (event) => set({ ...values, src: event.target.value }),
-      }),
-    ),
-    React.createElement(
-      PluginField,
-      { id: "plugins-allow", label: "Permissions policy (allow)" },
-      React.createElement("input", {
-        id: "plugins-allow",
-        type: "text",
-        value: values.allow,
-        placeholder: "clipboard-read; clipboard-write; fullscreen",
-        spellCheck: false,
-        onChange: (event) => set({ ...values, allow: event.target.value }),
-      }),
-    ),
-    React.createElement(
-      "label",
-      { className: "plugin-check" },
-      React.createElement("input", {
-        type: "checkbox",
-        checked: values.allowFullscreen,
-        onChange: (event) =>
-          set({ ...values, allowFullscreen: event.target.checked }),
-      }),
-      "Allow fullscreen",
-    ),
-  );
+  return html`
+    <div className="plugin-fields-grid">
+      <${PluginField} id="plugins-src" label="Iframe src">
+        <input
+          id="plugins-src"
+          type="url"
+          value=${values.src}
+          placeholder="https://example.com/app"
+          spellCheck=${false}
+          onChange=${(event) => set({ ...values, src: event.target.value })}
+        />
+      </${PluginField}>
+      <${PluginField} id="plugins-allow" label="Permissions policy (allow)">
+        <input
+          id="plugins-allow"
+          type="text"
+          value=${values.allow}
+          placeholder="clipboard-read; clipboard-write; fullscreen"
+          spellCheck=${false}
+          onChange=${(event) => set({ ...values, allow: event.target.value })}
+        />
+      </${PluginField}>
+      <label className="plugin-check">
+        <input
+          type="checkbox"
+          checked=${values.allowFullscreen}
+          onChange=${(event) =>
+            set({ ...values, allowFullscreen: event.target.checked })}
+        />
+        Allow fullscreen
+      </label>
+    </div>
+  `;
 }
 
 function ModalShell({ title, onCancel, footer, children }) {
-  return React.createElement(
-    "div",
-    { className: "plugin-modal-overlay", onClick: onCancel },
-    React.createElement(
-      "div",
-      {
-        className: "plugin-modal",
-        onClick: (event) => event.stopPropagation(),
-      },
-      React.createElement(
-        "header",
-        { className: "plugin-modal-header" },
-        React.createElement("h3", null, title),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "plugin-modal-close",
-            "aria-label": "Close",
-            onClick: onCancel,
-          },
-          React.createElement(X, { size: 16, "aria-hidden": true }),
-        ),
-      ),
-      React.createElement("div", { className: "plugin-modal-body" }, children),
-      React.createElement(
-        "footer",
-        { className: "plugin-modal-footer" },
-        footer,
-      ),
-    ),
-  );
+  return html`
+    <div className="plugin-modal-overlay" onClick=${onCancel}>
+      <div
+        className="plugin-modal"
+        onClick=${(event) => event.stopPropagation()}
+      >
+        <header className="plugin-modal-header">
+          <h3>${title}</h3>
+          <button
+            type="button"
+            className="plugin-modal-close"
+            aria-label="Close"
+            onClick=${onCancel}
+          >
+            <${X} size=${16} aria-hidden=${true}/>
+          </button>
+        </header>
+        <div className="plugin-modal-body">${children}</div>
+        <footer className="plugin-modal-footer">${footer}</footer>
+      </div>
+    </div>
+  `;
 }
 
 function ModalBody({ values, set, kind, setKind, editMode }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(KindToggle, { kind, onKind: setKind }),
-    React.createElement(
-      "div",
-      { className: "plugin-fields-grid" },
-      ...identityFields(values, set, editMode),
-    ),
-    kind === "module" ? moduleFields(values, set) : iframeFields(values, set),
-  );
+  return html`
+    <${React.Fragment}>
+      <${KindToggle} kind=${kind} onKind=${setKind}/>
+      <div className="plugin-fields-grid">
+        ${identityFields(values, set, editMode)}
+      </div>
+      ${kind === "module" ? moduleFields(values, set) : iframeFields(values, set)}
+    </${React.Fragment}>
+  `;
 }
 
 export function PluginModal({ mode, plugin, onCancel, onSubmit }) {
@@ -230,31 +211,19 @@ export function PluginModal({ mode, plugin, onCancel, onSubmit }) {
   );
   const title = mode === "edit" ? `Edit ${plugin.name}` : "Add plugin";
   const footer = [
-    React.createElement(
-      "button",
-      { type: "button", className: "plugin-action-btn", onClick: onCancel },
-      "Cancel",
-    ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "plugin-action-btn primary",
-        onClick: () => onSubmit(values, kind),
-      },
-      React.createElement(Check, { size: 13, "aria-hidden": true }),
-      mode === "edit" ? "Save plugin" : "Install plugin",
-    ),
+    html`<button type="button" className="plugin-action-btn" onClick=${onCancel}>Cancel</button>`,
+    html`<button
+      type="button"
+      className="plugin-action-btn primary"
+      onClick=${() => onSubmit(values, kind)}
+    >
+      <${Check} size=${13} aria-hidden=${true}/>
+      ${mode === "edit" ? "Save plugin" : "Install plugin"}
+    </button>`,
   ];
-  return React.createElement(
-    ModalShell,
-    { title, onCancel, footer },
-    React.createElement(ModalBody, {
-      values,
-      set: setValues,
-      kind,
-      setKind,
-      editMode: mode === "edit",
-    }),
-  );
+  return html`
+    <${ModalShell} title=${title} onCancel=${onCancel} footer=${footer}>
+      <${ModalBody} values=${values} set=${setValues} kind=${kind} setKind=${setKind} editMode=${mode === "edit"}/>
+    </${ModalShell}>
+  `;
 }

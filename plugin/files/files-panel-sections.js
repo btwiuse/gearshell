@@ -6,19 +6,22 @@
 // sibling module.
 
 import React from "react";
+import htm from "htm";
 
 import {
   FilesResizer,
   FilesRightPane,
   FilesSidebar,
-} from "./files-parts.js?v=20260826.50";
-import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.40";
+} from "./files-parts.js?v=20260826.51";
+import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.41";
 import {
   filesystemPathJoin,
   filesystemPathParent,
 } from "../files-path.js?v=20260826.71";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.42";
-import { FilesTree } from "./files-tree.js?v=20260826.41";
+import { FilesTopbar } from "./files-topbar.js?v=20260826.43";
+import { FilesTree } from "./files-tree.js?v=20260826.42";
+
+const html = htm.bind(React.createElement);
 
 function FilesPanelTopbar({ panel }) {
   const {
@@ -35,39 +38,41 @@ function FilesPanelTopbar({ panel }) {
     setEntryName,
     removeDirectory,
   } = panel;
-  return React.createElement(FilesTopbar, {
-    path,
-    displayPath,
-    pathDraft,
-    loading,
-    onPathDraftChange: setPathDraft,
-    // Sync the draft from the breadcrumb's display path when entering edit
-    // mode: the breadcrumb may show the selected entry's path (e.g.
-    // /opfs/home) while `path` (and the stale draft) still point at the
-    // current directory (/opfs).
-    onStartEdit: () => {
-      const target = displayPath;
-      setPathDraft(target === "." ? "/" : `/${target.replace(/^\/+/, "")}`);
-    },
-    onNavigate: navigateToPath,
-    onBreadcrumbNavigate: navigateTo,
-    onParent: () => navigateTo(filesystemPathParent(path)),
-    onRefresh: refresh,
-    onUpload: () => fileInputRef.current?.click(),
-    onNewFile: () => {
-      setCreating("file");
-      setEntryName("");
-    },
-    onNewFolder: () => {
-      setCreating("folder");
-      setEntryName("");
-    },
-    onRenameFolder: () => {
-      setCreating("rename-folder");
-      setEntryName(path.split("/").pop() || "");
-    },
-    onDeleteFolder: removeDirectory,
-  });
+  return html`
+    <${FilesTopbar}
+      path=${path}
+      displayPath=${displayPath}
+      pathDraft=${pathDraft}
+      loading=${loading}
+      onPathDraftChange=${setPathDraft}
+      onStartEdit=${() => {
+        // Sync the draft from the breadcrumb's display path when entering edit
+        // mode: the breadcrumb may show the selected entry's path (e.g.
+        // /opfs/home) while `path` (and the stale draft) still point at the
+        // current directory (/opfs).
+        const target = displayPath;
+        setPathDraft(target === "." ? "/" : `/${target.replace(/^\/+/, "")}`);
+      }}
+      onNavigate=${navigateToPath}
+      onBreadcrumbNavigate=${navigateTo}
+      onParent=${() => navigateTo(filesystemPathParent(path))}
+      onRefresh=${refresh}
+      onUpload=${() => fileInputRef.current?.click()}
+      onNewFile=${() => {
+        setCreating("file");
+        setEntryName("");
+      }}
+      onNewFolder=${() => {
+        setCreating("folder");
+        setEntryName("");
+      }}
+      onRenameFolder=${() => {
+        setCreating("rename-folder");
+        setEntryName(path.split("/").pop() || "");
+      }}
+      onDeleteFolder=${removeDirectory}
+    />
+  `;
 }
 
 function FilesPanelTree({ panel }) {
@@ -81,28 +86,30 @@ function FilesPanelTree({ panel }) {
     openEditorEntry,
     setContextMenu,
   } = panel;
-  return React.createElement(FilesTree, {
-    tree,
-    path,
-    selectedPath: highlighted,
-    finePointer,
-    onToggle: tree.toggleDir,
-    onSelect: (entry) => {
-      // Selecting a file shows its preview, closing any open editor.
-      clearFileSelection();
-      selectEntry(entry, filesystemPathParent(entry.path));
-    },
-    onOpen: (entry) => openEditorEntry(entry, filesystemPathParent(entry.path)),
-    onContextMenu: finePointer
-      ? (entry, x, y) => {
-        setContextMenu({
-          x: Math.max(4, Math.min(x, window.innerWidth - 180)),
-          y: Math.max(4, Math.min(y, window.innerHeight - 220)),
-          entry: { ...entry, path: entry.path },
-        });
-      }
-      : null,
-  });
+  return html`
+    <${FilesTree}
+      tree=${tree}
+      path=${path}
+      selectedPath=${highlighted}
+      finePointer=${finePointer}
+      onToggle=${tree.toggleDir}
+      onSelect=${(entry) => {
+        // Selecting a file shows its preview, closing any open editor.
+        clearFileSelection();
+        selectEntry(entry, filesystemPathParent(entry.path));
+      }}
+      onOpen=${(entry) => openEditorEntry(entry, filesystemPathParent(entry.path))}
+      onContextMenu=${finePointer
+        ? (entry, x, y) => {
+          setContextMenu({
+            x: Math.max(4, Math.min(x, window.innerWidth - 180)),
+            y: Math.max(4, Math.min(y, window.innerHeight - 220)),
+            entry: { ...entry, path: entry.path },
+          });
+        }
+        : null}
+    />
+  `;
 }
 
 function sidebarProps(panel) {
@@ -141,11 +148,11 @@ function sidebarProps(panel) {
 }
 
 function FilesPanelSidebar({ panel }) {
-  return React.createElement(
-    FilesSidebar,
-    sidebarProps(panel),
-    React.createElement(FilesPanelTree, { panel }),
-  );
+  return html`
+    <${FilesSidebar} ...${sidebarProps(panel)}>
+      <${FilesPanelTree} panel=${panel}/>
+    </${FilesSidebar}>
+  `;
 }
 
 function FilesPanelContextMenu({ panel }) {
@@ -161,21 +168,23 @@ function FilesPanelContextMenu({ panel }) {
     setContextMenu,
     isFavoritePath,
   } = panel;
-  return React.createElement(FilesContextMenu, {
-    menu: contextMenu,
-    menuRef,
-    onOpen: openEntryFromMenu,
-    onNewFile: (entry) => createInFolder(entry, "file"),
-    onNewFolder: (entry) => createInFolder(entry, "folder"),
-    onDownload: downloadEntry,
-    onRename: startRenameEntry,
-    onDelete: deleteEntry,
-    onAddFavorite: (entry) => {
-      addFavorite(entry);
-      setContextMenu(null);
-    },
-    isFavorite: contextMenu ? isFavoritePath(contextMenu.entry.path) : false,
-  });
+  return html`
+    <${FilesContextMenu}
+      menu=${contextMenu}
+      menuRef=${menuRef}
+      onOpen=${openEntryFromMenu}
+      onNewFile=${(entry) => createInFolder(entry, "file")}
+      onNewFolder=${(entry) => createInFolder(entry, "folder")}
+      onDownload=${downloadEntry}
+      onRename=${startRenameEntry}
+      onDelete=${deleteEntry}
+      onAddFavorite=${(entry) => {
+        addFavorite(entry);
+        setContextMenu(null);
+      }}
+      isFavorite=${contextMenu ? isFavoritePath(contextMenu.entry.path) : false}
+    />
+  `;
 }
 
 function rightPaneProps(panel) {
@@ -223,7 +232,7 @@ function rightPaneProps(panel) {
 }
 
 function FilesPanelRightPane({ panel }) {
-  return React.createElement(FilesRightPane, rightPaneProps(panel));
+  return html`<${FilesRightPane} ...${rightPaneProps(panel)}/>`;
 }
 
 export {

@@ -4,6 +4,7 @@
 // context menu grew this module past the 500-line rule and moved to
 // files-info.js / files-favorites-ui.js / files-context-menu-ui.js.
 import React from "react";
+import htm from "htm";
 import {
   File,
   FileArchive,
@@ -15,6 +16,8 @@ import {
   FolderOpen,
   Image,
 } from "lucide-react";
+
+const html = htm.bind(React.createElement);
 
 // === Entry icons (per file extension) ===
 
@@ -32,7 +35,6 @@ const FILE_EXTENSION_ICONS = {
   ogg: FileAudio,
   flac: FileAudio,
   m4a: FileAudio,
-  aac: FileAudio,
   mp4: FileVideo,
   webm: FileVideo,
   mov: FileVideo,
@@ -100,37 +102,22 @@ export function FilesBreadcrumb({ path, onNavigate }) {
     acc = acc ? `${acc}/${part}` : part;
     segments.push({ label: part, target: acc });
   }
-  return React.createElement(
-    "div",
-    { className: "files-breadcrumb", "aria-label": "Current path" },
-    segments.map((segment, index) =>
-      React.createElement(
-        React.Fragment,
-        { key: `${index}:${segment.target}` },
-        index > 1 &&
-          React.createElement(
-            "span",
-            { className: "files-breadcrumb-sep", "aria-hidden": true },
-            "/",
-          ),
-        index === segments.length - 1
-          ? React.createElement(
-            "span",
-            { className: "files-breadcrumb-current" },
-            segment.label,
-          )
-          : React.createElement(
-            "button",
-            {
-              type: "button",
-              title: segment.target === "."
-                ? "Go to root"
-                : `Go to /${segment.target}`,
-              onClick: () => onNavigate(segment.target),
-            },
-            segment.label,
-          ),
-      )
-    ),
-  );
+  return html`
+    <div className="files-breadcrumb" aria-label="Current path">
+      ${segments.map((segment, index) =>
+        html`
+          <${React.Fragment} key=${`${index}:${segment.target}`}>
+            ${index > 1 && html`<span className="files-breadcrumb-sep" aria-hidden=${true}>/</span>`}
+            ${index === segments.length - 1
+              ? html`<span className="files-breadcrumb-current">${segment.label}</span>`
+              : html`<button
+                  type="button"
+                  title=${segment.target === "." ? "Go to root" : `Go to /${segment.target}`}
+                  onClick=${() => onNavigate(segment.target)}
+                >${segment.label}</button>`}
+          </${React.Fragment}>
+        `,
+      )}
+    </div>
+  `;
 }

@@ -5,6 +5,9 @@
 // 500-line rule; files.js owns the panel, this module owns the mounts.
 import React, { useCallback, useRef, useState } from "react";
 import { ChevronRight, Disc3, FolderInput, X } from "lucide-react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 // --- IndexedDB persistence + wanix kernel bridge ---
 
@@ -267,66 +270,58 @@ export function useLocalDirMounts(props) {
 // --- Volumes sidebar (macOS-style mount list) ---
 
 function renderVolumesHeader({ collapsed, onToggle, onMount }) {
-  return React.createElement(
-    "div",
-    { className: "files-volumes-header" },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "files-sidebar-toggle files-section-header",
-        onClick: onToggle,
-        "aria-expanded": !collapsed,
-        title: collapsed ? "Expand Volumes" : "Collapse Volumes",
-      },
-      React.createElement(ChevronRight, {
-        size: 13,
-        className: collapsed ? "" : "open",
-        "aria-hidden": true,
-      }),
-      React.createElement(
-        "span",
-        { className: "files-volumes-title" },
-        "Volumes",
-      ),
-    ),
-    React.createElement("button", {
-      type: "button",
-      title: "Mount local directory",
-      "aria-label": "Mount local directory",
-      onClick: onMount,
-    }, React.createElement(FolderInput, { size: 13, "aria-hidden": true })),
-  );
+  return html`
+    <div className="files-volumes-header">
+      <button
+        type="button"
+        className="files-sidebar-toggle files-section-header"
+        onClick=${onToggle}
+        aria-expanded=${!collapsed}
+        title=${collapsed ? "Expand Volumes" : "Collapse Volumes"}
+      >
+        <${ChevronRight} size=${13} className=${collapsed ? "" : "open"} aria-hidden=${true}/>
+        <span className="files-volumes-title">Volumes</span>
+      </button>
+      <button
+        type="button"
+        title="Mount local directory"
+        aria-label="Mount local directory"
+        onClick=${onMount}
+      >
+        <${FolderInput} size=${13} aria-hidden=${true}/>
+      </button>
+    </div>
+  `;
 }
 
 function renderVolumeRow(mount, onOpen, onUnmount) {
-  return React.createElement(
-    "div",
-    {
-      key: mount.id,
-      className: `files-volume${mount.mounted ? "" : " files-volume-off"}`,
-    },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "files-volume-name",
-        title: mount.mounted
+  return html`
+    <div
+      key=${mount.id}
+      className=${`files-volume${mount.mounted ? "" : " files-volume-off"}`}
+    >
+      <button
+        type="button"
+        className="files-volume-name"
+        title=${mount.mounted
           ? `Open /${mount.dst}`
-          : "Directory not accessible, click to reconnect",
-        onClick: () => onOpen(mount),
-      },
-      React.createElement(Disc3, { size: 14, "aria-hidden": true }),
-      React.createElement("span", null, mount.name),
-    ),
-    React.createElement("button", {
-      type: "button",
-      className: "files-volume-eject",
-      title: mount.mounted ? "Unmount" : "Remove",
-      "aria-label": `Unmount ${mount.name}`,
-      onClick: () => onUnmount(mount),
-    }, React.createElement(X, { size: 12, "aria-hidden": true })),
-  );
+          : "Directory not accessible, click to reconnect"}
+        onClick=${() => onOpen(mount)}
+      >
+        <${Disc3} size=${14} aria-hidden=${true}/>
+        <span>${mount.name}</span>
+      </button>
+      <button
+        type="button"
+        className="files-volume-eject"
+        title=${mount.mounted ? "Unmount" : "Remove"}
+        aria-label=${`Unmount ${mount.name}`}
+        onClick=${() => onUnmount(mount)}
+      >
+        <${X} size=${12} aria-hidden=${true}/>
+      </button>
+    </div>
+  `;
 }
 
 export function VolumesSidebar({
@@ -337,21 +332,17 @@ export function VolumesSidebar({
   collapsed = false,
   onToggle,
 }) {
-  return React.createElement(
-    "div",
-    { className: "files-section" },
-    renderVolumesHeader({ collapsed, onToggle, onMount }),
-    !collapsed &&
-      (mounts.length === 0
-        ? React.createElement(
-          "p",
-          { className: "files-volumes-empty" },
-          "No mounted volumes.",
-        )
-        : React.createElement(
-          "div",
-          { className: "files-volumes-list" },
-          mounts.map((mount) => renderVolumeRow(mount, onOpen, onUnmount)),
-        )),
-  );
+  return html`
+    <div className="files-section">
+      ${renderVolumesHeader({ collapsed, onToggle, onMount })}
+      ${!collapsed &&
+        (mounts.length === 0
+          ? html`<p className="files-volumes-empty">No mounted volumes.</p>`
+          : html`
+              <div className="files-volumes-list">
+                ${mounts.map((mount) => renderVolumeRow(mount, onOpen, onUnmount))}
+              </div>
+            `)}
+    </div>
+  `;
 }

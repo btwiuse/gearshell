@@ -2,7 +2,7 @@
 // pane. The pane's React tree lives in files-info-pane.js (component)
 // and files-info-pane-body.js (renderers); this module re-exports the
 // pane so files-editor-pane.js keeps a single stable surface.
-export { FilesInfoPane } from "./files-info-pane.js?v=20260826.42";
+export { FilesInfoPane } from "./files-info-pane.js?v=20260826.43";
 
 export function formatFileSize(bytes) {
   if (bytes == null) return "—";

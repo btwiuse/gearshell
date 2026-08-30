@@ -22,7 +22,10 @@ import {
   HistoryList,
   MethodList,
   ResultView,
-} from "./playground-parts.js?v=20260829.15";
+} from "./playground-parts.js?v=20260829.16";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 // Resolve a dotted method name (config.providers.save) against a
 // namespace (config) inside the GearShell api object.
@@ -222,137 +225,80 @@ function useExplorerState() {
 }
 
 function ExplorerSidebar({ filter, setFilter, selected, onSelect }) {
-  return React.createElement(
-    "aside",
-    { className: "playground-sidebar" },
-    React.createElement("input", {
-      type: "search",
-      className: "playground-search",
-      placeholder: "Filter methods…",
-      value: filter,
-      onChange: (event) => setFilter(event.target.value),
-    }),
-    React.createElement(MethodList, {
-      groups: PLAYGROUND_CATALOG,
-      filter,
-      selected,
-      onSelect,
-    }),
-  );
+  return html`
+    <aside className="playground-sidebar">
+      <input
+        type="search"
+        className="playground-search"
+        placeholder="Filter methods…"
+        value=${filter}
+        onChange=${(event) => setFilter(event.target.value)}
+      />
+      <${MethodList} groups=${PLAYGROUND_CATALOG} filter=${filter} selected=${selected} onSelect=${onSelect}/>
+    </aside>
+  `;
 }
 
 function DetailHeader({ id, hint }) {
-  return React.createElement(
-    "header",
-    { className: "playground-detail-head" },
-    React.createElement("h3", null, `GearShell.${id}`),
-    hint &&
-      React.createElement("p", { className: "playground-hint" }, hint),
-  );
+  return html`
+    <header className="playground-detail-head">
+      <h3>GearShell.${id}</h3>
+      ${hint && html`<p className="playground-hint">${hint}</p>`}
+    </header>
+  `;
 }
 
 function DetailArgs({ args, values, onChange }) {
-  return React.createElement(
-    "div",
-    { className: "playground-args" },
-    args.map((arg) =>
-      React.createElement(ArgField, {
-        key: arg.key,
-        arg,
-        value: values[arg.key],
-        onChange,
-      })
-    ),
-    args.length === 0 &&
-      React.createElement(
-        "p",
-        { className: "playground-hint" },
-        "No arguments.",
-      ),
-  );
+  return html`
+    <div className="playground-args">
+      ${args.map((arg) =>
+        html`<${ArgField} key=${arg.key} arg=${arg} value=${values[arg.key]} onChange=${onChange}/>`,
+      )}
+      ${args.length === 0 &&
+        html`<p className="playground-hint">No arguments.</p>`}
+    </div>
+  `;
 }
 
 function DetailActions({ onRun, onCopy }) {
-  return React.createElement(
-    "div",
-    { className: "playground-actions" },
-    React.createElement(
-      "button",
-      { type: "button", className: "playground-run", onClick: onRun },
-      "Run",
-    ),
-    React.createElement(
-      "button",
-      { type: "button", className: "playground-copy", onClick: onCopy },
-      "Copy gear line",
-    ),
-  );
+  return html`
+    <div className="playground-actions">
+      <button type="button" className="playground-run" onClick=${onRun}>Run</button>
+      <button type="button" className="playground-copy" onClick=${onCopy}>Copy gear line</button>
+    </div>
+  `;
 }
 
 function ExplorerDetail({ state }) {
   const { method } = state;
-  return React.createElement(
-    "section",
-    { className: "playground-detail" },
-    !apiReady() &&
-      React.createElement(
-        "div",
-        { className: "playground-banner" },
-        "window.GearShell is not ready yet — the workspace API boots with the shell.",
-      ),
-    method
-      ? React.createElement(
-        React.Fragment,
-        null,
-        React.createElement(DetailHeader, {
-          id: state.selectedId,
-          hint: method.hint,
-        }),
-        React.createElement(DetailArgs, {
-          args: method.args,
-          values: state.argValues,
-          onChange: state.setArg,
-        }),
-        React.createElement(DetailActions, {
-          onRun: state.run,
-          onCopy: state.copyGctl,
-        }),
-        state.notice &&
-          React.createElement(
-            "p",
-            { className: "playground-notice" },
-            state.notice,
-          ),
-        React.createElement(ResultView, { result: state.response }),
-        React.createElement(
-          "h4",
-          { className: "playground-section-title" },
-          "Request log",
-        ),
-        React.createElement(HistoryList, {
-          history: state.history,
-          onPick: state.pickHistory,
-        }),
-      )
-      : React.createElement(
-        "p",
-        { className: "playground-hint" },
-        "Pick a method from the catalog.",
-      ),
-  );
+  return html`
+    <section className="playground-detail">
+      ${!apiReady() &&
+        html`<div className="playground-banner">window.GearShell is not ready yet — the workspace API boots with the shell.</div>`}
+      ${method
+        ? html`
+            <${React.Fragment}>
+              <${DetailHeader} id=${state.selectedId} hint=${method.hint}/>
+              <${DetailArgs} args=${method.args} values=${state.argValues} onChange=${state.setArg}/>
+              <${DetailActions} onRun=${state.run} onCopy=${state.copyGctl}/>
+              ${state.notice &&
+                html`<p className="playground-notice">${state.notice}</p>`}
+              <${ResultView} result=${state.response}/>
+              <h4 className="playground-section-title">Request log</h4>
+              <${HistoryList} history=${state.history} onPick=${state.pickHistory}/>
+            </${React.Fragment}>
+          `
+        : html`<p className="playground-hint">Pick a method from the catalog.</p>`}
+    </section>
+  `;
 }
 
 export function ExplorerView() {
   const state = useExplorerState();
-  return React.createElement(
-    "div",
-    { className: "playground-explorer" },
-    React.createElement(ExplorerSidebar, {
-      filter: state.filter,
-      setFilter: state.setFilter,
-      selected: state.selectedId,
-      onSelect: state.select,
-    }),
-    React.createElement(ExplorerDetail, { state }),
-  );
+  return html`
+    <div className="playground-explorer">
+      <${ExplorerSidebar} filter=${state.filter} setFilter=${state.setFilter} selected=${state.selectedId} onSelect=${state.select}/>
+      <${ExplorerDetail} state=${state}/>
+    </div>
+  `;
 }

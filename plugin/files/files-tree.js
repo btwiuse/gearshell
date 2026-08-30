@@ -9,7 +9,10 @@ import {
   filesystemPathJoin,
   normalizeFilesystemPath,
 } from "../files-path.js?v=20260826.71";
-import { getEntryIcon } from "./files-ui.js?v=20260826.39";
+import { getEntryIcon } from "./files-ui.js?v=20260826.40";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 export const TREE_ROOT = ".";
 
@@ -189,35 +192,27 @@ function treeNodeHandlers({
 }
 
 function renderTwistie({ isDir, isLoading, isExpanded, node, onToggle }) {
-  return React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "files-tree-twistie",
-      "aria-label": isDir
+  return html`
+    <button
+      type="button"
+      className="files-tree-twistie"
+      aria-label=${isDir
         ? `${isExpanded ? "Collapse" : "Expand"} ${node.name}`
-        : undefined,
-      tabIndex: isDir ? 0 : -1,
-      onClick: (event) => {
+        : undefined}
+      tabIndex=${isDir ? 0 : -1}
+      onClick=${(event) => {
         if (!isDir) return;
         event.stopPropagation();
         onToggle(node.path);
-      },
-    },
-    isDir
-      ? isLoading
-        ? React.createElement(Loader2, {
-          size: 12,
-          className: "files-spinning",
-          "aria-hidden": true,
-        })
-        : React.createElement(ChevronRight, {
-          size: 12,
-          className: isExpanded ? "open" : "",
-          "aria-hidden": true,
-        })
-      : null,
-  );
+      }}
+    >
+      ${isDir
+        ? isLoading
+          ? html`<${Loader2} size=${12} className="files-spinning" aria-hidden=${true}/>`
+          : html`<${ChevronRight} size=${12} className=${isExpanded ? "open" : ""} aria-hidden=${true}/>`
+        : null}
+    </button>
+  `;
 }
 
 function nodeRowClass(node, isCurrent, isSelected) {
@@ -245,22 +240,19 @@ function renderTreeChildren(
   },
 ) {
   return children.map((child) =>
-    React.createElement(TreeNode, {
-      key: child.name,
-      node: {
-        ...child,
-        path: filesystemPathJoin(nodePath, child.name),
-      },
-      depth: depth + 1,
-      path,
-      selectedPath,
-      finePointer,
-      tree,
-      onToggle,
-      onOpen,
-      onSelect,
-      onContextMenu,
-    })
+    html`<${TreeNode}
+      key=${child.name}
+      node=${{ ...child, path: filesystemPathJoin(nodePath, child.name) }}
+      depth=${depth + 1}
+      path=${path}
+      selectedPath=${selectedPath}
+      finePointer=${finePointer}
+      tree=${tree}
+      onToggle=${onToggle}
+      onOpen=${onOpen}
+      onSelect=${onSelect}
+      onContextMenu=${onContextMenu}
+    />`,
   );
 }
 
@@ -279,16 +271,15 @@ function renderTreeNodeRow({
   onSelect,
   onContextMenu,
 }) {
-  return React.createElement(
-    "div",
-    {
-      role: "treeitem",
-      "aria-expanded": isDir ? isExpanded : undefined,
-      "aria-selected": isSelected || undefined,
-      className: nodeRowClass(node, isCurrent, isSelected),
-      style: { "--tree-depth": depth },
-      title: isDir ? `${node.name}/` : node.name,
-      ...treeNodeHandlers({
+  return html`
+    <div
+      role="treeitem"
+      aria-expanded=${isDir ? isExpanded : undefined}
+      aria-selected=${isSelected || undefined}
+      className=${nodeRowClass(node, isCurrent, isSelected)}
+      style=${{ "--tree-depth": depth }}
+      title=${isDir ? `${node.name}/` : node.name}
+      ...${treeNodeHandlers({
         isDir,
         isCurrent,
         finePointer,
@@ -297,16 +288,13 @@ function renderTreeNodeRow({
         onOpen,
         onSelect,
         onContextMenu,
-      }),
-    },
-    renderTwistie({ isDir, isLoading, isExpanded, node, onToggle }),
-    React.createElement(Icon, { size: 15, "aria-hidden": true }),
-    React.createElement(
-      "span",
-      { className: "files-tree-label" },
-      node.name,
-    ),
-  );
+      })}
+    >
+      ${renderTwistie({ isDir, isLoading, isExpanded, node, onToggle })}
+      <${Icon} size=${15} aria-hidden=${true}/>
+      <span className="files-tree-label">${node.name}</span>
+    </div>
+  `;
 }
 
 function TreeNode({
@@ -332,38 +320,38 @@ function TreeNode({
   const children = isDir && isExpanded && !isLoading
     ? (tree.childrenMap.get(nodePath)?.children || [])
     : [];
-  return React.createElement(
-    React.Fragment,
-    null,
-    renderTreeNodeRow({
-      node,
-      isDir,
-      isExpanded,
-      isCurrent,
-      isSelected,
-      isLoading,
-      depth,
-      Icon,
-      finePointer,
-      onToggle,
-      onOpen,
-      onSelect,
-      onContextMenu,
-    }),
-    renderTreeChildren({
-      children,
-      nodePath,
-      depth,
-      path,
-      selectedPath,
-      finePointer,
-      tree,
-      onToggle,
-      onOpen,
-      onSelect,
-      onContextMenu,
-    }),
-  );
+  return html`
+    <${React.Fragment}>
+      ${renderTreeNodeRow({
+        node,
+        isDir,
+        isExpanded,
+        isCurrent,
+        isSelected,
+        isLoading,
+        depth,
+        Icon,
+        finePointer,
+        onToggle,
+        onOpen,
+        onSelect,
+        onContextMenu,
+      })}
+      ${renderTreeChildren({
+        children,
+        nodePath,
+        depth,
+        path,
+        selectedPath,
+        finePointer,
+        tree,
+        onToggle,
+        onOpen,
+        onSelect,
+        onContextMenu,
+      })}
+    </${React.Fragment}>
+  `;
 }
 
 export function FilesTree({
@@ -392,33 +380,29 @@ export function FilesTree({
 
   const rootChildren = tree.childrenMap.get(TREE_ROOT)?.children;
   if (!rootChildren) {
-    return React.createElement(
-      "div",
-      { className: "files-tree" },
-      React.createElement(
-        "p",
-        { className: "files-tree-loading" },
-        "Loading…",
-      ),
-    );
+    return html`
+      <div className="files-tree">
+        <p className="files-tree-loading">Loading…</p>
+      </div>
+    `;
   }
-  return React.createElement(
-    "div",
-    { ref: treeRef, className: "files-tree", role: "tree" },
-    rootChildren.map((child) =>
-      React.createElement(TreeNode, {
-        key: child.name,
-        node: { ...child, path: child.name },
-        depth: 0,
-        path,
-        selectedPath,
-        finePointer,
-        tree,
-        onToggle,
-        onOpen,
-        onSelect,
-        onContextMenu,
-      })
-    ),
-  );
+  return html`
+    <div ref=${treeRef} className="files-tree" role="tree">
+      ${rootChildren.map((child) =>
+        html`<${TreeNode}
+          key=${child.name}
+          node=${{ ...child, path: child.name }}
+          depth=${0}
+          path=${path}
+          selectedPath=${selectedPath}
+          finePointer=${finePointer}
+          tree=${tree}
+          onToggle=${onToggle}
+          onOpen=${onOpen}
+          onSelect=${onSelect}
+          onContextMenu=${onContextMenu}
+        />`,
+      )}
+    </div>
+  `;
 }

@@ -16,7 +16,10 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Activity, RefreshCw } from "lucide-react";
-import { loadStoredMounts } from "../files-mounts.js?v=20260826.44";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
+import { loadStoredMounts } from "../files-mounts.js?v=20260826.45";
 
 let __runtimeDeps = null;
 export function initRuntime(dependencies) {
@@ -37,34 +40,23 @@ function runtimeDep(name) {
 
 function BindRow({ bind }) {
   const src = bind.src || (bind.type === "file" ? "(inline)" : "—");
-  return React.createElement(
-    "div",
-    {
-      className: "runtime-bind",
-      title: bind.type === "file" ? (bind.content || "").slice(0, 200) : src,
-    },
-    React.createElement("span", { className: "runtime-bind-type" }, bind.type),
-    React.createElement("code", { className: "runtime-bind-dst" }, bind.dst),
-    React.createElement("span", {
-      className: "runtime-bind-arrow",
-      "aria-hidden": true,
-    }, "→"),
-    React.createElement("code", { className: "runtime-bind-src" }, src),
-    bind.mode
-      ? React.createElement(
-        "span",
-        { className: "runtime-bind-mode" },
-        bind.mode,
-      )
-      : null,
-    bind.union && bind.union !== "after"
-      ? React.createElement(
-        "span",
-        { className: "runtime-bind-union" },
-        bind.union,
-      )
-      : null,
-  );
+  return html`
+    <div
+      className="runtime-bind"
+      title=${bind.type === "file" ? (bind.content || "").slice(0, 200) : src}
+    >
+      <span className="runtime-bind-type">${bind.type}</span>
+      <code className="runtime-bind-dst">${bind.dst}</code>
+      <span className="runtime-bind-arrow" aria-hidden=${true}>→</span>
+      <code className="runtime-bind-src">${src}</code>
+      ${bind.mode
+        ? html`<span className="runtime-bind-mode">${bind.mode}</span>`
+        : null}
+      ${bind.union && bind.union !== "after"
+        ? html`<span className="runtime-bind-union">${bind.union}</span>`
+        : null}
+    </div>
+  `;
 }
 
 async function buildRuntimeSnapshot() {
@@ -121,80 +113,61 @@ function runtimeItems(snapshot) {
 }
 
 function RuntimeBindSection({ title, count, binds, empty }) {
-  return React.createElement(
-    "section",
-    { className: "runtime-binds" },
-    React.createElement("h3", null, `${title} (${count})`),
-    binds.length === 0
-      ? React.createElement("p", { className: "runtime-binds-empty" }, empty)
-      : binds.map((bind) =>
-        React.createElement(BindRow, { key: bind.id, bind })
-      ),
-  );
+  return html`
+    <section className="runtime-binds">
+      <h3>${title} (${count})</h3>
+      ${binds.length === 0
+        ? html`<p className="runtime-binds-empty">${empty}</p>`
+        : binds.map((bind) =>
+          html`<${BindRow} key=${bind.id} bind=${bind}/>`,
+        )}
+    </section>
+  `;
 }
 
 function RuntimeBindSections({ snapshot }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(RuntimeBindSection, {
-      title: "System mounts",
-      count: snapshot.systemMounts,
-      binds: snapshot.systemBinds,
-      empty: "No system mounts.",
-    }),
-    React.createElement(RuntimeBindSection, {
-      title: "Task mounts",
-      count: snapshot.taskMounts,
-      binds: snapshot.taskBinds,
-      empty: "No task-level mounts.",
-    }),
-    React.createElement(RuntimeBindSection, {
-      title: "Local directory mounts",
-      count: snapshot.fsaMounts.length,
-      binds: snapshot.fsaMounts.map((mount) => ({
-        id: mount.id,
-        type: "fsa",
-        dst: mount.dst,
-        src: mount.name || mount.dst,
-      })),
-      empty:
-        "No local directory (fsa) mounts. Add one from the Files panel Volumes list.",
-    }),
-  );
+  return html`
+    <${React.Fragment}>
+      <${RuntimeBindSection} title="System mounts" count=${snapshot.systemMounts} binds=${snapshot.systemBinds} empty="No system mounts."/>
+      <${RuntimeBindSection} title="Task mounts" count=${snapshot.taskMounts} binds=${snapshot.taskBinds} empty="No task-level mounts."/>
+      <${RuntimeBindSection}
+        title="Local directory mounts"
+        count=${snapshot.fsaMounts.length}
+        binds=${snapshot.fsaMounts.map((mount) => ({
+          id: mount.id,
+          type: "fsa",
+          dst: mount.dst,
+          src: mount.name || mount.dst,
+        }))}
+        empty="No local directory (fsa) mounts. Add one from the Files panel Volumes list."
+      />
+    </${React.Fragment}>
+  `;
 }
 
 function renderRuntimeGrid(items, ready) {
-  return React.createElement(
-    "dl",
-    { className: "runtime-grid" },
-    items.flatMap(([label, value]) => [
-      React.createElement("dt", { key: `${label}-label` }, label),
-      React.createElement("dd", {
-        key: `${label}-value`,
-        className: label === "System" && ready ? "ready" : "",
-      }, value),
-    ]),
-  );
+  return html`
+    <dl className="runtime-grid">
+      ${items.flatMap(([label, value]) => [
+        html`<dt key=${`${label}-label`}>${label}</dt>`,
+        html`<dd
+          key=${`${label}-value`}
+          className=${label === "System" && ready ? "ready" : ""}
+        >${value}</dd>`,
+      ])}
+    </dl>
+  `;
 }
 
 function renderRuntimeSource({ snapshot }) {
-  return React.createElement(
-    "section",
-    { className: "runtime-source" },
-    React.createElement("span", null, "Runtime module"),
-    React.createElement(
-      "code",
-      { title: snapshot.moduleUrl },
-      snapshot.moduleUrl,
-    ),
-    React.createElement("span", null, "Wasm module"),
-    React.createElement(
-      "code",
-      { title: snapshot.wasmUrl },
-      snapshot.wasmUrl,
-    ),
-  );
+  return html`
+    <section className="runtime-source">
+      <span>Runtime module</span>
+      <code title=${snapshot.moduleUrl}>${snapshot.moduleUrl}</code>
+      <span>Wasm module</span>
+      <code title=${snapshot.wasmUrl}>${snapshot.wasmUrl}</code>
+    </section>
+  `;
 }
 
 function RuntimePanel() {
@@ -216,25 +189,25 @@ function RuntimePanel() {
   }, [refresh]);
   if (!snapshot) return null;
   const items = runtimeItems(snapshot);
-  return React.createElement(
-    "div",
-    { className: "runtime-panel panel-content" },
-    React.createElement(
-      "div",
-      { className: "runtime-header" },
-      React.createElement(Activity, { size: 20, "aria-hidden": true }),
-      React.createElement("h2", null, "Runtime diagnostics"),
-      React.createElement("button", {
-        type: "button",
-        title: "Refresh diagnostics",
-        "aria-label": "Refresh diagnostics",
-        onClick: refresh,
-      }, React.createElement(RefreshCw, { size: 15, "aria-hidden": true })),
-    ),
-    renderRuntimeGrid(items, snapshot.ready),
-    React.createElement(RuntimeBindSections, { snapshot }),
-    renderRuntimeSource({ snapshot }),
-  );
+  return html`
+    <div className="runtime-panel panel-content">
+      <div className="runtime-header">
+        <${Activity} size=${20} aria-hidden=${true}/>
+        <h2>Runtime diagnostics</h2>
+        <button
+          type="button"
+          title="Refresh diagnostics"
+          aria-label="Refresh diagnostics"
+          onClick=${refresh}
+        >
+          <${RefreshCw} size=${15} aria-hidden=${true}/>
+        </button>
+      </div>
+      ${renderRuntimeGrid(items, snapshot.ready)}
+      <${RuntimeBindSections} snapshot=${snapshot}/>
+      ${renderRuntimeSource({ snapshot })}
+    </div>
+  `;
 }
 
 // Registered as a plugin panel (see runtime-plugin.js); panel opener

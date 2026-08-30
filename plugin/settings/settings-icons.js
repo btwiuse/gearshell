@@ -3,6 +3,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 // === Terminal preset icon picker ===
 // `TerminalPresetIconPicker` is a 300+-icon Lucide catalog browser
 // used by the terminal preset editor's icon field. It uses the
@@ -88,129 +91,113 @@ function matchesIconQuery(query, option) {
 
 function renderIconTrigger({ open, selected, setOpen }) {
   const SelectedIcon = selected.icon;
-  return React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "terminal-profile-icon-trigger",
-      "aria-expanded": open,
-      "aria-controls": "terminal-preset-icon-catalog",
-      onClick: () => setOpen((visible) => !visible),
-    },
-    React.createElement(SelectedIcon, { size: 18, "aria-hidden": true }),
-    React.createElement("span", {
-      className: "terminal-profile-icon-trigger-label",
-    }, selected.label),
-    React.createElement(ChevronDown, {
-      size: 16,
-      "aria-hidden": true,
-      style: open ? { transform: "rotate(180deg)" } : undefined,
-    }),
-  );
+  return html`
+    <button
+      type="button"
+      className="terminal-profile-icon-trigger"
+      aria-expanded=${open}
+      aria-controls="terminal-preset-icon-catalog"
+      onClick=${() => setOpen((visible) => !visible)}
+    >
+      <${SelectedIcon} size=${18} aria-hidden=${true}/>
+      <span className="terminal-profile-icon-trigger-label">${selected.label}</span>
+      <${ChevronDown}
+        size=${16}
+        aria-hidden=${true}
+        style=${open ? { transform: "rotate(180deg)" } : undefined}
+      />
+    </button>
+  `;
 }
 
 function renderCatalogToolbar({ query, setQuery, count, total }) {
-  return React.createElement(
-    "div",
-    { className: "terminal-profile-icon-catalog-toolbar" },
-    React.createElement("input", {
-      type: "search",
-      value: query,
-      placeholder: `Search ${total} icons…`,
-      "aria-label": "Search icons",
-      autoComplete: "off",
-      autoFocus: true,
-      onChange: (event) => setQuery(event.target.value),
-    }),
-    React.createElement("span", {
-      className: "terminal-profile-icon-result-count",
-    }, `${count}${count === 1 ? " icon" : " icons"}`),
-  );
+  return html`
+    <div className="terminal-profile-icon-catalog-toolbar">
+      <input
+        type="search"
+        value=${query}
+        placeholder=${`Search ${total} icons…`}
+        aria-label="Search icons"
+        autoComplete="off"
+        autoFocus=${true}
+        onChange=${(event) => setQuery(event.target.value)}
+      />
+      <span className="terminal-profile-icon-result-count">${count}${count === 1 ? " icon" : " icons"}</span>
+    </div>
+  `;
 }
 
 function renderCategories({ categories, category, setCategory }) {
-  return React.createElement(
-    "div",
-    { className: "terminal-profile-icon-categories", role: "tablist" },
-    categories.map((c) =>
-      React.createElement("button", {
-        key: c.id,
-        type: "button",
-        role: "tab",
-        "aria-selected": category === c.id,
-        className: `terminal-profile-icon-category${
-          category === c.id ? " selected" : ""
-        }`,
-        onClick: () => setCategory(c.id),
-      }, c.label)
-    ),
-  );
+  return html`
+    <div className="terminal-profile-icon-categories" role="tablist">
+      ${categories.map((c) =>
+        html`<button
+          key=${c.id}
+          type="button"
+          role="tab"
+          aria-selected=${category === c.id}
+          className=${`terminal-profile-icon-category${
+            category === c.id ? " selected" : ""
+          }`}
+          onClick=${() => setCategory(c.id)}
+        >${c.label}</button>`,
+      )}
+    </div>
+  `;
 }
 
 function renderIconOption({ option, value, choose, size, showLabel }) {
   const Icon = option.icon;
   const isSelected = value === option.id;
-  return React.createElement(
-    "button",
-    {
-      key: option.id,
-      type: "button",
-      className: `terminal-profile-icon-option${isSelected ? " selected" : ""}`,
-      "data-icon-id": option.id,
-      "data-selected": isSelected,
-      title: option.label,
-      "aria-label": option.label,
-      "aria-pressed": isSelected,
-      onClick: () => choose(option.id),
-    },
-    React.createElement(Icon, { size, "aria-hidden": true }),
-    showLabel ? React.createElement("span", null, option.label) : null,
-  );
+  return html`
+    <button
+      key=${option.id}
+      type="button"
+      className=${`terminal-profile-icon-option${isSelected ? " selected" : ""}`}
+      data-icon-id=${option.id}
+      data-selected=${isSelected}
+      title=${option.label}
+      aria-label=${option.label}
+      aria-pressed=${isSelected}
+      onClick=${() => choose(option.id)}
+    >
+      <${Icon} size=${size} aria-hidden=${true}/>
+      ${showLabel ? html`<span>${option.label}</span>` : null}
+    </button>
+  `;
 }
 
 function renderRecentGrid({ recents, value, choose }) {
   return recents.length > 0 &&
-    React.createElement(
-      "div",
-      { className: "terminal-profile-icon-recent" },
-      React.createElement("span", {
-        className: "terminal-profile-icon-section-label",
-      }, "Recent"),
-      React.createElement(
-        "div",
-        { className: "terminal-profile-icon-recent-grid" },
-        recents.map((option) =>
-          renderIconOption({
-            option,
-            value,
-            choose,
-            size: 22,
-            showLabel: false,
-          })
-        ),
-      ),
-    );
+    html`
+      <div className="terminal-profile-icon-recent">
+        <span className="terminal-profile-icon-section-label">Recent</span>
+        <div className="terminal-profile-icon-recent-grid">
+          ${recents.map((option) =>
+            renderIconOption({ option, value, choose, size: 22, showLabel: false }),
+          )}
+        </div>
+      </div>
+    `;
 }
 
 function renderResultsGrid({ filtered, value, choose, gridRef }) {
   return filtered.length > 0
-    ? React.createElement(
-      "div",
-      {
-        ref: gridRef,
-        className: "terminal-profile-icon-grid",
-        role: "group",
-        "aria-label": "Icon results",
-      },
-      filtered.map((option) =>
-        renderIconOption({ option, value, choose, size: 26, showLabel: true })
-      ),
-    )
-    : React.createElement(
-      "p",
-      { className: "terminal-profile-icon-empty" },
-      "No icons match. Try fewer letters or a different category.",
-    );
+    ? html`
+      <div
+        ref=${gridRef}
+        className="terminal-profile-icon-grid"
+        role="group"
+        aria-label="Icon results"
+      >
+        ${filtered.map((option) =>
+          renderIconOption({ option, value, choose, size: 26, showLabel: true }),
+        )}
+      </div>
+    `
+    : html`
+      <p className="terminal-profile-icon-empty">No icons match. Try fewer letters or a different category.</p>
+    `;
 }
 
 function handleCatalogKeyDown({ event, gridRef, onChange, choose }) {
@@ -260,27 +247,21 @@ function renderCatalog({
   choose,
   gridRef,
 }) {
-  return open && React.createElement(
-    "div",
-    {
-      ref: catalogRef,
-      id: "terminal-preset-icon-catalog",
-      className: "terminal-profile-icon-catalog",
-    },
-    renderCatalogToolbar({ query, setQuery, count: filtered.length, total }),
-    renderCategories({ categories: ICON_CATEGORIES, category, setCategory }),
-    renderRecentGrid({ recents: recentOptions, value, choose }),
-    renderResultsGrid({ filtered, value, choose, gridRef }),
-    React.createElement(
-      "div",
-      { className: "terminal-profile-icon-footer" },
-      React.createElement(
-        "span",
-        null,
-        "↑↓←→ to browse · Enter to apply · Esc to close",
-      ),
-    ),
-  );
+  return open && html`
+    <div
+      ref=${catalogRef}
+      id="terminal-preset-icon-catalog"
+      className="terminal-profile-icon-catalog"
+    >
+      ${renderCatalogToolbar({ query, setQuery, count: filtered.length, total })}
+      ${renderCategories({ categories: ICON_CATEGORIES, category, setCategory })}
+      ${renderRecentGrid({ recents: recentOptions, value, choose })}
+      ${renderResultsGrid({ filtered, value, choose, gridRef })}
+      <div className="terminal-profile-icon-footer">
+        <span>↑↓←→ to browse · Enter to apply · Esc to close</span>
+      </div>
+    </div>
+  `;
 }
 
 function makeIconChooser({ onChange, setRecents, setOpen }) {
@@ -361,26 +342,23 @@ export function TerminalPresetIconPicker({ value, onChange }) {
     normalizedQuery,
     category,
   ]);
-  return React.createElement(
-    "div",
-    {
-      className: "terminal-profile-icon-picker",
-      onKeyDown,
-    },
-    renderIconTrigger({ open, selected, setOpen }),
-    renderCatalog({
-      open,
-      catalogRef,
-      query,
-      setQuery,
-      filtered,
-      total: ALL_OPTIONS.length,
-      category,
-      setCategory,
-      recentOptions,
-      value,
-      choose,
-      gridRef,
-    }),
-  );
+  return html`
+    <div className="terminal-profile-icon-picker" onKeyDown=${onKeyDown}>
+      ${renderIconTrigger({ open, selected, setOpen })}
+      ${renderCatalog({
+        open,
+        catalogRef,
+        query,
+        setQuery,
+        filtered,
+        total: ALL_OPTIONS.length,
+        category,
+        setCategory,
+        recentOptions,
+        value,
+        choose,
+        gridRef,
+      })}
+    </div>
+  `;
 }

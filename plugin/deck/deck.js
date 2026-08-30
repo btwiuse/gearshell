@@ -18,6 +18,9 @@
 // <script> tags, not ES modules).
 
 import React, { useEffect, useRef } from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
 
 let __deckDeps = null;
@@ -190,10 +193,7 @@ function DeckPanel({ api }) {
     };
   }, [api]);
 
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
+  return html`<div ref=${wrapperRef} className="panel-content"></div>`;
 }
 
 // === Panel registration ===

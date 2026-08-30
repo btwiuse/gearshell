@@ -25,8 +25,11 @@ import {
   HomeLocalFirst,
   HomeNav,
   HomeQuotes,
-} from "./home-sections.js?v=20260828.6";
-import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.3";
+} from "./home-sections.js?v=20260828.7";
+import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.4";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 let __homeDeps = null;
 export function initHome(dependencies) {
@@ -68,29 +71,22 @@ export function LandingPanel({ containerApi }) {
     }
   };
 
-  return React.createElement(
-    "div",
-    { className: "landing-panel panel-content" },
-    React.createElement(
-      "div",
-      { className: "mkt-page" },
-      React.createElement(HomeNav, { scrollToId, GH }),
-      React.createElement(HomeHero, {
-        openPanel,
-        openExternal,
-        scrollToId,
-        GH,
-      }),
-    ),
-    React.createElement(HomeFeatures, { features }),
-    React.createElement(HomeDemo),
-    React.createElement(HomeLocalFirst),
-    React.createElement(HomeHow, { steps }),
-    React.createElement(HomeQuotes, { quotes }),
-    React.createElement(HomeGapXCard),
-    React.createElement(HomeFieldXCard),
-    React.createElement(HomeFooter, { openPanel, scrollToId, GH }),
-  );
+  return html`
+    <div className="landing-panel panel-content">
+      <div className="mkt-page">
+        <${HomeNav} scrollToId=${scrollToId} GH=${GH}/>
+        <${HomeHero} openPanel=${openPanel} openExternal=${openExternal} scrollToId=${scrollToId} GH=${GH}/>
+      </div>
+      <${HomeFeatures} features=${features}/>
+      <${HomeDemo}/>
+      <${HomeLocalFirst}/>
+      <${HomeHow} steps=${steps}/>
+      <${HomeQuotes} quotes=${quotes}/>
+      <${HomeGapXCard}/>
+      <${HomeFieldXCard}/>
+      <${HomeFooter} openPanel=${openPanel} scrollToId=${scrollToId} GH=${GH}/>
+    </div>
+  `;
 }
 
 // Register a new Home panel with dockview. Called from app.js's
