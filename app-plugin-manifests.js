@@ -118,7 +118,7 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js?v=20260829.66",
+    entry: "/plugin/group/group-plugin.js?v=20260829.67",
   },
   {
     id: "runtime",
@@ -133,7 +133,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.130",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.131",
     css: ["/plugin/playground/playground.css"],
   },
   {
@@ -141,7 +141,7 @@ export const DEFAULT_PLUGINS = [
     name: "Home",
     version: "1.0.0",
     icon: "House",
-    entry: "/plugin/home/home-plugin.js?v=20260829.69",
+    entry: "/plugin/home/home-plugin.js?v=20260829.70",
     css: ["/plugin/home/home.css"],
     permissions: {
       api: ["terminal.embed"],
@@ -152,7 +152,7 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.138",
+    entry: "/plugin/files/files-plugin.js?v=20260829.139",
     css: ["/plugin/files/files.css"],
   },
   {
@@ -160,21 +160,21 @@ export const DEFAULT_PLUGINS = [
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.139",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.140",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.140",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.141",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.144",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.145",
     css: ["/plugin/settings/settings.css"],
   },
   {
@@ -190,7 +190,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.145",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.146",
     css: ["/plugin/crush-runner/crush-runner.css"],
   },
   {
@@ -277,7 +277,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.47",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.48",
     css: ["/plugin/bbtex/bbtex.css"],
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },

@@ -15,9 +15,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { loadConfig } from "../../app-workspace.js?v=20260826.146";
-import { configApi } from "../../workspace-config-api.js?v=20260828.131";
-import { WORKSPACE_CHANGED_EVENT } from "../../app-constants.js?v=20260828.105";
+import { loadConfig } from "../../app-workspace.js?v=20260826.147";
+import { configApi } from "../../workspace-config-api.js?v=20260828.132";
+import { WORKSPACE_CHANGED_EVENT } from "../../app-constants.js?v=20260828.106";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

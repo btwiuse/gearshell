@@ -14,7 +14,7 @@ export function HomeNav({ scrollToId, GH }) {
   return html`
     <nav className="mkt-nav">
       <div className="mkt-nav-brand">
-        <img src="logo-banner-logo.png" alt="GearShell"/>
+        <img src=${new URL("logo-banner-logo.png", import.meta.url).href} alt="GearShell"/>
         <span>GEARSHELL</span>
       </div>
       <div className="mkt-nav-links">

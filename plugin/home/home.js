@@ -25,7 +25,7 @@ import {
   HomeLocalFirst,
   HomeNav,
   HomeQuotes,
-} from "./home-sections.js?v=20260828.7";
+} from "./home-sections.js?v=20260828.8";
 import { HomeFieldXCard, HomeGapXCard } from "./home-xcards.js?v=20260828.4";
 import htm from "htm";
 

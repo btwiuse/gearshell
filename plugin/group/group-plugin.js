@@ -4,7 +4,7 @@
 // lives with the plugin (group-panel.js). Disabling the group plugin in
 // Settings hides the panel type from the launcher.
 
-import { GroupPanel } from "./group-panel.js?v=20260830.3";
+import { GroupPanel } from "./group-panel.js?v=20260830.4";
 
 export const plugin = {
   register(ctx) {

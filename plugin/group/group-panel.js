@@ -12,7 +12,7 @@ const html = htm.bind(React.createElement);
 export function GroupPanel() {
   return html`
     <div className="group-panel panel-content">
-      <img src="group.png" alt="Gear Shell group"/>
+      <img src=${new URL("group.png", import.meta.url).href} alt="Gear Shell group"/>
     </div>
   `;
 }
