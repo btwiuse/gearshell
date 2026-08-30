@@ -1181,15 +1181,24 @@ iframe-template(演示)、browser/bonsai/codigo/crush/rickroll(外部 src)。
 
 ## 三十二、VM 终端尺寸修复 + bbtex iframe 收尾(2026-08-31)
 
-**VM stty size 修复**(wanix `9131462`/`b91697e`/`eb5162d`,extras 重打,gearshell
-待推):
+**VM stty size 修复**(wanix 已 squash 为单 commit `b22ae59` + 重写 message,
+extras 重打,gearshell 待推):
 - 根因两层:①v86 驱动硬编码 100x100;②libv86 SendWindowSize 写 (c,b) 序而
   Linux 读第一个为 cols → 参数对调(对称默认值掩盖)。
 - 修:驱动转发 winch 时驱动侧交换为 [rows,cols];不动 vendored libv86。
-- 实测:84x35 ↔ stty "35 84";宽度 1000→1600 列 84→107、行 35→30 ✓
+- **SIGWINCH 语义已验证(真 ptmx 行为)**:guest 走 virtio-console RESIZE 控制
+  消息 → 内核 tty_do_resize(唯一改 tty->winsize 的路径,stty size 读它)→
+  kill_pgrp(fg pgrp, SIGWINCH)。实测:①stty 跟随 80x35→105x38→121x38→138x38
+  ✓;②前台 `sh -c 'trap ... WINCH'` 在 resize 时收到 SIGWINCH(trap 必须装在
+  前台 job 里;装在 shell 里没用——job control 下 fg job 是独立 pgrp)✓;
+  ③busybox top 每轮 refresh 用 get_terminal_width_height 重读尺寸,resize 后
+  自动按新宽度重排(48 列时表头截到 "CPU %CPU CO")✓。
 - ⬜ **发布链(等用户)**:`npm publish wanix-extras`(bump)→ gearshell
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
+- 注:libv86 resize handler 还写 config-space this.cols=e[0](收 [rows,cols] 时
+  config 里 cols/rows 是反的);guest 只走控制消息路径不用 config,故无害,
+  但别再依赖 config 空间。
 
 **本轮经验**(详见 memory/plugins.md round 45):
 - 对称默认值掩盖参数序 bug;修"恒值"后必须方向性验证。

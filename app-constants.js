@@ -114,7 +114,7 @@ export const DEFAULT_WORKBENCH_ASSETS_URL = "/wanix-workbench";
 export const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL =
   "https://wanix.dev/workbench";
 export const DEFAULT_VM_BACKEND_URL =
-  "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/v86.tgz";
+  "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc3/v86.tgz";
 export const DEFAULT_VM_LINUX_URL =
   "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
 export const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = [
