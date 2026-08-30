@@ -1123,10 +1123,10 @@ runtime wasmUrl 指向本地)→ 开 terminal-frame 面板 → bash 出提示符
   fix);gearshell `app-constants.js` WANIX_RUNTIME wasmUrl/moduleUrl →
   v0.4.29。dev workspace 的 runtime 覆盖(local debug wasm + debug flag)
   已清理,新端口 8092 全新 origin 验证:bash 出提示符 + 输入回显 + 输出流动 ✓
-- ✅ **gojs worker 二次读 25MB(wanix `be25895`,v0.4.30 候选)**:worker.js 无
-  条件 `readFile(argv[0])` 再经 9p 读一遍,即使 payload 已带 wasmModule;
-  后台/受限 tab 卡这里。修:wasmModule 存在则跳过。本地 debug wasm 已按
-  v0.4.30-rc1 重编。**未 tag/push,等用户决定 v0.4.30**。
+- ✅ **gojs worker 二次读 25MB(wanix `be25895` = v0.4.30,已 tag+push)**:worker.js
+  无条件 `readFile(argv[0])` 再经 9p 读一遍,即使 payload 已带 wasmModule;
+  后台/受限 tab 卡这里。修:wasmModule 存在则跳过。w9y.io + jsdelivr v0.4.30
+  均已 200;gearshell app-constants 已 bump v0.4.30。
 - ✅ **winch 不更新修复(gearshell,本轮)**:根因 = `root.writeFile` 写 winch
   后 chmod,`*signal.FS` 拒绝 chmod → 每次 resize 静默失败(壳层 wanix-term 用
   openWritable 才不受影响)。桥改 openWritable+writer(wakeTask 就绪门 + 真实
@@ -1134,6 +1134,5 @@ runtime wasmUrl 指向本地)→ 开 terminal-frame 面板 → bash 出提示符
   帧 146 28 1251 587**(term-host 真实像素)✓
 - ✅ **状态机修正**:8s 定时器只在 sawData=false 时置 waiting;收到 term.data
   后置回 connected(之前数据已流动仍卡 "waiting for output…")。
-- ⬜ 回归 calc.js(wasi+gojs+js 三 driver 对 v0.4.29 内核)
-- ⬜ 用户确认后:推 wanix be25895 + tag v0.4.30;gearshell bump v0.4.30;
-  推 gearshell 本轮提交(winch 修复 + v0.4.29 bump)→ Vercel 部署验证
+- ⬜ 回归 calc.js(wasi+gojs+js 三 driver 对 v0.4.30 内核)
+- ⬜ 用户确认后:推 gearshell 本轮提交(winch 修复 + v0.4.30 bump)→ Vercel 部署验证
