@@ -20,9 +20,9 @@ import {
   PackageOpen,
   Plus,
 } from "lucide-react";
-import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.114";
-import { configApi } from "./workspace-config-api.js?v=20260828.135";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.109";
+import { PLUGIN_CHANGED_EVENT } from "./plugins.js?v=20260829.129";
+import { configApi } from "./workspace-config-api.js?v=20260828.150";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.124";
 import { PluginCard } from "./plugins-cards.js?v=20260829.4";
 import { PluginModal } from "./plugins-modal.js?v=20260829.3";
 import htm from "htm";
@@ -85,10 +85,11 @@ function makePluginActions(flash, setModal, setNotice) {
       return;
     }
     if (!manifest.entry && !manifest.iframe?.src &&
-        !manifest.wasm?.length && !manifest.preset?.length) {
+        !manifest.wasm?.length && !manifest.preset?.length &&
+        !manifest.files?.length && !manifest.systemFiles?.length) {
       setNotice({
         kind: "error",
-        text: "Provide an entry URL / VFS path, an iframe src, or wasm/preset tools.",
+        text: "Provide an entry URL / VFS path, an iframe src, or wasm/preset/files tools.",
       });
       return;
     }

@@ -6,8 +6,8 @@
 // saved-tab restore path (app-panels addRestoredPanel) calls it
 // directly.
 
-import { addWorkbenchPanel } from "../../panels.js?v=20260812.138";
-import { WorkbenchPanel } from "./workbench-panel.js?v=20260830.23";
+import { addWorkbenchPanel } from "../../panels.js?v=20260812.153";
+import { WorkbenchPanel } from "./workbench-panel.js?v=20260830.38";
 
 export const plugin = {
   register(ctx) {

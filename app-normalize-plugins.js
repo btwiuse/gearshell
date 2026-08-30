@@ -52,6 +52,45 @@ function normalizePresetList(list) {
   return out;
 }
 
+// files: [{ id, dst, src, perm }] — a fetched resource mounted into every
+// task namespace as a fetch bind (e.g. dst "examples/hello.js" pointing at
+// a same-origin URL). Like wasm, but for non-binary resources: no /bin
+// parent mount, default perm 0666.
+function normalizeFilesList(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const raw of list) {
+    const src = String(raw?.src || "").trim();
+    const dst = normalizeDst(raw?.dst);
+    if (!src || !dst) continue;
+    out.push({
+      id: String(raw?.id || dst).trim() || dst,
+      dst,
+      src,
+      perm: String(raw?.perm || "0666").trim(),
+    });
+  }
+  return out;
+}
+
+// Dual-mode w9y dependency: { mod, version? } declares that the package
+// comes from a `w9y mod apply` install (read via the /opfs projection)
+// instead of per-task fetch binds. Preserved so the dependency sync can
+// re-apply on version bumps.
+function normalizeW9yDependency(plugin) {
+  if (!plugin.w9y || typeof plugin.w9y.mod !== "string" || !plugin.w9y.mod) {
+    return null;
+  }
+  return {
+    w9y: {
+      mod: plugin.w9y.mod,
+      ...(plugin.w9y.version
+        ? { version: String(plugin.w9y.version).trim() }
+        : {}),
+    },
+  };
+}
+
 export function normalizePlugin(plugin = {}) {
   const id = String(plugin.id || "").trim();
   if (!id) return null;
@@ -59,6 +98,8 @@ export function normalizePlugin(plugin = {}) {
   const iframeSrc = String(iframe?.src || "").trim();
   const wasm = normalizeWasmList(plugin?.wasm);
   const preset = normalizePresetList(plugin?.preset);
+  const files = normalizeFilesList(plugin?.files);
+  const systemFiles = normalizeFilesList(plugin?.systemFiles);
   const css = normalizeStringList(plugin?.css);
   return {
     id,
@@ -85,20 +126,14 @@ export function normalizePlugin(plugin = {}) {
       : {}),
     ...(wasm.length ? { wasm } : {}),
     ...(preset.length ? { preset } : {}),
-    // Dual-mode w9y dependency: { mod, version? } declares that the
-    // package comes from a `w9y mod apply` install (read via the /opfs
-    // projection) instead of per-task fetch binds. Preserved so the
-    // dependency sync can re-apply on version bumps.
-    ...(plugin.w9y && typeof plugin.w9y.mod === "string" && plugin.w9y.mod
-      ? {
-        w9y: {
-          mod: plugin.w9y.mod,
-          ...(plugin.w9y.version
-            ? { version: String(plugin.w9y.version).trim() }
-            : {}),
-        },
-      }
-      : {}),
+    ...(files.length ? { files } : {}),
+    // systemFiles: fetched resources mounted into the SYSTEM root
+    // namespace, not the per-task namespace. The kernel's js driver reads
+    // worker scripts from the root (not the task ns), so js workers must
+    // ship here; the wasi/gojs drivers read the task ns, which clones the
+    // root, so system mounts are visible to them as well.
+    ...(systemFiles.length ? { systemFiles } : {}),
+    ...(normalizeW9yDependency(plugin) || {}),
     // Plugin stylesheet paths (same-origin, no version: the loader appends
     // the entry's ?v= so cascade bumps keep CSS and JS in sync).
     ...(css.length ? { css } : {}),
@@ -111,9 +146,10 @@ export function normalizePlugin(plugin = {}) {
 // version bumps) and their wasm/preset declarations (package content,
 // e.g. the bbtex manifest) are refreshed to the current default, so
 // saved workspaces pick up plugin updates without a manual reinstall.
-// wasm is REPLACED even when the default no longer declares any (the
-// dual-mode switch moved bbtex's 63 binaries to a w9y mod dependency),
-// so stale per-task fetch binds from older saves are pruned here.
+// wasm/files/systemFiles are REPLACED even when the default no longer
+// declares any (the dual-mode switch moved bbtex's 63 binaries to a w9y
+// mod dependency), so stale per-task fetch binds from older saves are
+// pruned here.
 export function normalizePlugins(list, defaults) {
   const defaultsById = new Map(
     (Array.isArray(defaults) ? defaults : [])
@@ -129,10 +165,20 @@ export function normalizePlugins(list, defaults) {
       if (!def) return item;
       return {
         ...item,
+        // Content version rides the same refresh as content: the OPFS
+        // bind cache keys on <pluginId>@<version>, so a manifest version
+        // bump must land in the saved config or the cache keeps serving
+        // stale bytes under the old key.
+        version: def.version || item.version,
         entry: def.entry || item.entry,
         ...(def.iframe ? { iframe: def.iframe } : {}),
         wasm: def.wasm || [],
         ...(def.preset ? { preset: def.preset } : {}),
+        // files/systemFiles are REPLACED even when the default no longer
+        // declares any (mirroring wasm): stale per-task or system fetch
+        // binds from older saves are pruned by the reconcile pass.
+        files: def.files || [],
+        systemFiles: def.systemFiles || [],
         ...(def.w9y ? { w9y: def.w9y } : {}),
         ...(def.css ? { css: def.css } : {}),
       };

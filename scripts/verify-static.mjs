@@ -71,6 +71,18 @@ for (const m of manifestsSrc.matchAll(/"(\/plugin\/[^"]+\.css)"/g)) {
   }
 }
 
+// Plugin `files` declarations (js-worker scripts, wasi modules, any fetched
+// resource mounted into task namespaces) must point at files that exist.
+for (const m of manifestsSrc.matchAll(/src:\s*"(\/[^"]+)"/g)) {
+  const src = m[1];
+  if (!src.startsWith("/examples/") && !src.startsWith("/plugin/")) continue;
+  try {
+    readFileSync(new URL(`.${src}`, root), "utf8");
+  } catch {
+    throw new Error(`DEFAULT_PLUGINS files declares ${src} but the file is missing`);
+  }
+}
+
 const syntax = spawnSync(process.execPath, ["--input-type=module", "--check"], {
   input: app,
   encoding: "utf8",
@@ -296,7 +308,7 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.200")) {
+if (!has("app.js?v=20260828.215")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

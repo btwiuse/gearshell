@@ -1,15 +1,21 @@
 // Wanix system bootstrap elements: wanix-bind element builder and the
 // wanix-namespace system root (500-line rule split).
 
-import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.109";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.150";
+import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.124";
+import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.4";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.165";
 import { html } from "./dom-html.js?v=20260830.4";
 
 export function createWanixBindElement(bind) {
+  // Fetch binds prefer the OPFS-cached copy (a session blob URL) when
+  // priming already downloaded it; otherwise keep the origin src.
+  const cached = bind.src && bind.type === "fetch"
+    ? cachedBlobUrl(bind.src)
+    : null;
   return html`<wanix-bind
     type=${bind.type && bind.type !== "ns" ? bind.type : null}
     dst=${bind.dst}
-    src=${bind.src || null}
+    src=${(bind.src && (cached || bind.src)) || null}
     perm=${bind.mode || null}
     union=${bind.union || null}
   >${bind.content || null}</wanix-bind>`;

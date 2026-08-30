@@ -1,6 +1,7 @@
 // app-plugin-cache.js — plugin bind content cache (OPFS-backed).
 //
-// Every plugin-declared wasm binary is downloaded once into
+// Every plugin-declared wasm binary and files resource (js-worker scripts,
+// wasi modules, ...) is downloaded once into
 // opfs/cache/plugin/<pluginId>@<pluginVersion>/<dst basename>; a sidecar
 // <file>.src records the source URL it was fetched from, so a bumped pin
 // (same plugin version, new src) re-downloads automatically.
@@ -45,21 +46,22 @@ async function versionedDir(plugin) {
   });
 }
 
-// Cache one wasm entry when missing or stale; returns a session blob URL.
-async function cacheOne(plugin, wasm) {
-  if (!wasm?.src) return null;
+// Cache one bind-content entry (wasm or files) when missing or stale;
+// returns a session blob URL so task binds mount synchronously.
+async function cacheOne(plugin, entry) {
+  if (!entry?.src) return null;
   try {
     const dir = await versionedDir(plugin);
-    const name = String(wasm.dst).split("/").pop() || "bin";
+    const name = String(entry.dst).split("/").pop() || "bin";
     let fresh = false;
     try {
       const srcHandle = await dir.getFileHandle(`${name}.src`);
-      fresh = (await (await srcHandle.getFile()).text()) === wasm.src;
+      fresh = (await (await srcHandle.getFile()).text()) === entry.src;
     } catch {
       fresh = false;
     }
     if (!fresh) {
-      const response = await fetch(wasm.src);
+      const response = await fetch(entry.src);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const writable = await dir
         .getFileHandle(name, { create: true })
@@ -69,26 +71,28 @@ async function cacheOne(plugin, wasm) {
       const srcWritable = await dir
         .getFileHandle(`${name}.src`, { create: true })
         .then((handle) => handle.createWritable());
-      await srcWritable.write(wasm.src);
+      await srcWritable.write(entry.src);
       await srcWritable.close();
     }
     const file = await dir.getFileHandle(name);
     return URL.createObjectURL(await file.getFile());
   } catch (error) {
-    console.error(`plugin cache: ${plugin.id} ${wasm.dst} failed`, error);
+    console.error(`plugin cache: ${plugin.id} ${entry.dst} failed`, error);
     return null;
   }
 }
 
-// Download every enabled plugin's wasm deps into OPFS (bounded
-// concurrency) and build the src -> blob URL map for this session.
-// Fire-and-forget from boot: a task booting before priming finishes
-// falls back to the origin src, which is fine.
+// Download every enabled plugin's wasm deps and files resources into OPFS
+// (bounded concurrency) and build the src -> blob URL map for this
+// session. Fire-and-forget from boot: a task booting before priming
+// finishes falls back to the origin src, which is fine.
 export function primePluginContentCache(plugins) {
   const jobs = [];
   for (const plugin of Array.isArray(plugins) ? plugins : []) {
     if (!plugin?.enabled) continue;
-    for (const wasm of plugin.wasm || []) jobs.push({ plugin, wasm });
+    for (const wasm of plugin.wasm || []) jobs.push({ plugin, entry: wasm });
+    for (const file of plugin.files || []) jobs.push({ plugin, entry: file });
+    for (const file of plugin.systemFiles || []) jobs.push({ plugin, entry: file });
   }
   if (jobs.length === 0) return Promise.resolve();
   let index = 0;
@@ -96,9 +100,9 @@ export function primePluginContentCache(plugins) {
     { length: Math.min(CONCURRENCY, jobs.length) },
     async () => {
       while (index < jobs.length) {
-        const { plugin, wasm } = jobs[index++];
-        const blobUrl = await cacheOne(plugin, wasm);
-        if (blobUrl) blobBySrc.set(wasm.src, blobUrl);
+        const { plugin, entry } = jobs[index++];
+        const blobUrl = await cacheOne(plugin, entry);
+        if (blobUrl) blobBySrc.set(entry.src, blobUrl);
       }
     },
   );

@@ -8,10 +8,10 @@ import {
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.109";
-import { normalizeTask } from "./app-normalize.js?v=20260828.151";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.150";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.150";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.124";
+import { normalizeTask } from "./app-normalize.js?v=20260828.166";
+import { buildEnv } from "./app-terminal-profiles.js?v=20260826.165";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.165";
 import { html } from "./dom-html.js?v=20260830.4";
 
 export function createBindElement(bind) {
@@ -112,16 +112,43 @@ function wrapTermCmd(def) {
   return `bash -c '${escaped}'`;
 }
 
+// A js/wasi task's cmd names a script or module (its first token is a
+// path, e.g. `examples/hello.js`), and the kernel's js/wasi drivers exec
+// that first token directly (readFile(args[0]) from the root/task ns).
+// Wrapping such a cmd in `bash -c` would make the first token "bash" and
+// break the driver; only bare-word / compound cmds (gojs shell grammar)
+// get the bash wrap, mirroring wrapUnknownShellCmd on the REPL path.
+function isDirectExecCmd(cmd) {
+  const text = String(cmd || "").trim();
+  if (!text) return false;
+  return text.split(/\s+/)[0].includes("/");
+}
+
 function createWorkspaceTaskElement(id, def, workspace) {
+  const headless = !def.term;
+  const direct = isDirectExecCmd(def.cmd);
+  // The kernel's js/wasi drivers exec the first token of cmd directly, so
+  // a path cmd must reach its driver unwrapped; gojs shell cmds keep the
+  // bash wrap (compound grammar + headless log redirect).
+  const cmd = direct ? def.cmd : headless ? wrapHeadlessCmd(def) : wrapTermCmd(def);
+  // Headless direct-exec (js/wasi) tasks have no bash to redirect stdout
+  // into the log; bind the task's fd/1 and fd/2 to the log file through
+  // the kernel's stdout/stderr attributes (paths inside the task ns) so
+  // the page-side output poller still finds the bytes.
+  const log = headless && direct
+    ? `tmp/${def.id || "task"}.log`
+    : null;
   const task = html`<wanix-task
     id=${`workspace-task-${id}`}
-    cmd=${def.term ? wrapTermCmd(def) : wrapHeadlessCmd(def)}
+    cmd=${cmd}
     type=${def.type}
     start=""
     for="wanix-system"
     wd=${def.wd || null}
     env=${taskEnvAttribute(def)}
     term=${def.term ? "" : null}
+    stdout=${log}
+    stderr=${log}
   >
     ${workspace.binds.map(createBindElement)}
   </wanix-task>`;

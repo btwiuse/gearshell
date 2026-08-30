@@ -16,7 +16,7 @@
 import React, { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { ExplorerView } from "./playground-explorer.js?v=20260829.23";
-import { ProvidersView } from "./playground-providers.js?v=20260829.109";
+import { ProvidersView } from "./playground-providers.js?v=20260829.124";
 import { EventsView } from "./playground-events-view.js?v=20260829.17";
 import { TabBar } from "./playground-parts.js?v=20260829.16";
 import htm from "htm";

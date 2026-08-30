@@ -133,7 +133,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.134",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.149",
     css: ["/plugin/playground/playground.css"],
   },
   {
@@ -152,7 +152,7 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.142",
+    entry: "/plugin/files/files-plugin.js?v=20260829.157",
     css: ["/plugin/files/files.css"],
   },
   {
@@ -160,21 +160,21 @@ export const DEFAULT_PLUGINS = [
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.143",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.158",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.144",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.159",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.148",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.163",
     css: ["/plugin/settings/settings.css"],
   },
   {
@@ -190,7 +190,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.149",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.164",
     css: ["/plugin/crush-runner/crush-runner.css"],
   },
   {
@@ -254,7 +254,7 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.42",
+    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.57",
   },
   {
     id: "widgetbot",
@@ -277,7 +277,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.51",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.66",
     css: ["/plugin/bbtex/bbtex.css"],
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
@@ -390,6 +390,10 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
   // Other manifest fields you can declare:
   //   wasm:   [{ id, dst, src }]              binaries mounted into every
   //                                           task namespace at dst
+  //   files:  [{ id, dst, src }]              fetched resources (any kind,
+  //                                           e.g. js worker scripts or
+  //                                           wasi modules) mounted into
+  //                                           every task namespace at dst
   //   preset: [{ id, dst, content, perm }]    inline files on /preset
   //   w9y:    { mod, version? }               a package the w9y CLI
   //                                           installs (dual-mode deps)
@@ -421,5 +425,45 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
         "panels.open",
       ],
     },
+  },
+  // Runnable js-worker and wasi-worker examples, mounted into every task
+  // namespace under examples/ so any terminal can launch them. Ships
+  // DISABLED like the template: enable it from the Plugins page to get
+  // the files, then try, from a terminal with the matching runtime:
+  //
+  //   js   runtime:  examples/hello.js            (plain js worker)
+  //   js   runtime:  examples/fs-demo.js arg      (fs API + spawn)
+  //   wasi runtime:  examples/hello.wasm          (WASI hello world)
+  //   wasi runtime:  examples/args.wasm a b c     (argv/env via WASI ABI)
+  //   wasi runtime:  examples/cat.wasm FILE       (read a file via preopen)
+  //
+  // Sources and the full tutorial live in examples/ (wat sources for the
+  // wasm files, the worker protocol docs in examples/js/wanix.js).
+  {
+    id: "examples",
+    name: "Examples",
+    // Bump the version whenever example content changes: the OPFS bind
+    // cache keys on <pluginId>@<version> + src URL, so a same-version
+    // content edit would keep serving the stale cached copy.
+    version: "1.0.6",
+    icon: "Lightbulb",
+    // No entry module: purely a bind provider. Mounts the examples into
+    // the SYSTEM root namespace (systemFiles) instead of per-task binds:
+    // the kernel's js driver reads worker scripts from the root namespace,
+    // so js workers must live there; task namespaces clone the root, so
+    // the wasi/gojs drivers see them too.
+    enabled: false,
+    systemFiles: [
+      { id: "hello-js", dst: "examples/hello.js", src: "/examples/js/hello.js" },
+      { id: "fs-demo-js", dst: "examples/fs-demo.js", src: "/examples/js/fs-demo.js" },
+      { id: "hello-wasm", dst: "examples/hello.wasm", src: "/examples/wasi/hello.wasm" },
+      { id: "args-wasm", dst: "examples/args.wasm", src: "/examples/wasi/args.wasm" },
+      { id: "cat-wasm", dst: "examples/cat.wasm", src: "/examples/wasi/cat.wasm" },
+      // The .wat sources are bound too, so cat.wasm (and any task) can
+      // read them from the namespace, not just fetch them over HTTP.
+      { id: "hello-wat", dst: "examples/hello.wat", src: "/examples/wasi/hello.wat" },
+      { id: "args-wat", dst: "examples/args.wat", src: "/examples/wasi/args.wat" },
+      { id: "cat-wat", dst: "examples/cat.wat", src: "/examples/wasi/cat.wat" },
+    ],
   },
 ];

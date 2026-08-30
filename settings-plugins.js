@@ -14,8 +14,8 @@
 import {
   PLUGIN_CHANGED_EVENT,
   registerSettingsSection,
-} from "./plugins.js?v=20260829.114";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.109";
+} from "./plugins.js?v=20260829.129";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.124";
 import { html } from "./dom-html.js?v=20260830.4";
 
 const BUILTIN_PLUGINS_SECTION = {

@@ -6,15 +6,15 @@ import {
   DEFAULT_VM_BACKEND_URL,
   DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
-} from "./app-constants.js?v=20260828.109";
+} from "./app-constants.js?v=20260828.124";
 import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmNetworkMode,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.151";
-import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260828.109";
-import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.150";
+} from "./app-normalize.js?v=20260828.166";
+import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260828.124";
+import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.165";
 
 export function getTerminalProfiles(config = loadConfig()) {
   const shell = {
@@ -90,9 +90,12 @@ function wrapUnknownShellCmd(cmd) {
   if (!text) return cmd;
   const first = text.split(/\s+/)[0];
   if (first === "bash" || first === "gear" || first === "w9y") return cmd;
-  if (first.startsWith("/") || first.startsWith("./") || first.startsWith("../")) {
-    return cmd;
-  }
+  // A path is exec'd directly: the kernel's LookPath resolves absolute and
+  // relative paths alike, so a js worker (`examples/hello.js`) or wasi
+  // module (`examples/hello.wasm`) must reach its driver, not bash. Bare
+  // words still get wrapped so shell builtins and compound commands (e.g.
+  // `echo hi; sleep 2`) keep working.
+  if (first.includes("/")) return cmd;
   return `bash -c '${text.replace(/'/g, `'\''`)}'`;
 }
 
