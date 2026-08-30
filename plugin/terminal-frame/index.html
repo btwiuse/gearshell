@@ -67,6 +67,7 @@
         xterm: null,
         fit: null,
         disposed: true,
+        sawData: false,
         dataHandler: null,
         exitHandler: null,
       };
@@ -101,7 +102,13 @@
 
       function pushData(payload) {
         if (payload.sessionId !== state.sessionId) return;
+        state.sawData = true;
         writeToXterm(payload.data);
+        // First bytes prove the session is live; drop the stale
+        // "waiting for output…" state the boot timer may have set.
+        if (document.getElementById("term-status").dataset.mode === "waiting") {
+          setStatus("connected", "session " + state.sessionId);
+        }
       }
 
       function pushExit(payload) {
@@ -133,8 +140,29 @@
 
       function resizeTerminal() {
         if (!state.xterm || !state.sessionId) return;
-        GearShell.terminal.resize(state.sessionId, state.xterm.cols, state.xterm.rows)
-          .catch(function () { /* shell gone */ });
+        var host = $("term-host");
+        GearShell.terminal.resize(
+          state.sessionId,
+          state.xterm.cols,
+          state.xterm.rows,
+          host.clientWidth || 0,
+          host.clientHeight || 0,
+        ).catch(function () { /* shell gone */ });
+      }
+
+      // The shell resizes this iframe (window resize or panel drag) but
+      // xterm only learns its new size after a fit(); without this the
+      // winch file keeps the boot dims and the kernel never sees a resize.
+      // Mirrors wanix-term's _publishWinSize: fit, then send the winch
+      // frame unconditionally (pixel-only changes still matter).
+      function refitAndResize() {
+        if (!state.xterm) return;
+        try {
+          state.fit.fit();
+        } catch {
+          return;
+        }
+        resizeTerminal();
       }
 
       function teardown() {
@@ -145,6 +173,7 @@
           state.sessionId = null;
         }
         unwireEvents();
+        window.removeEventListener("resize", refitAndResize);
         if (state.xterm) {
           state.xterm.dispose();
           state.xterm = null;
@@ -165,6 +194,7 @@
         if (!state.disposed) return;
         teardown();
         state.disposed = false;
+        state.sawData = false;
         hideBanner();
         setStatus("connecting", "starting…");
         ensureXterm()
@@ -195,6 +225,7 @@
                 .catch(function () {});
             });
             state.xterm.onResize(function () { resizeTerminal(); });
+            window.addEventListener("resize", refitAndResize);
             return wireEvents();
           })
           .then(function () {
@@ -209,8 +240,10 @@
             // If the process produces nothing within a few seconds the
             // runtime is likely stalled (see the README note on large
             // gojs binaries); surface that instead of a dead black pane.
+            // The timer is a fallback: once term.data has flowed it must
+            // not override the connected state.
             setTimeout(function () {
-              if (!state.disposed && state.sessionId) {
+              if (!state.disposed && state.sessionId && !state.sawData) {
                 setStatus("waiting", "waiting for output…");
               }
             }, 8000);

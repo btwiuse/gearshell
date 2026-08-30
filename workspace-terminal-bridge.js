@@ -8,7 +8,7 @@
 //
 //   terminal.create(profile?)  -> { ok, sessionId }
 //   terminal.write(id, data)   -> send input bytes (Uint8Array)
-//   terminal.resize(id, c, r)  -> publish a winch update
+//   terminal.resize(id, c, r, xpixel?, ypixel?) -> publish a winch update
 //   terminal.dispose(id)       -> kill the session
 //   terminal.list()            -> active session ids
 //
@@ -233,6 +233,24 @@ function handleWrite(event, id, args) {
   reply(event.source, event.origin, { id: id, ok: true });
 }
 
+// The term device's winch path is a signal broadcaster whose reader
+// blocks until the first frame, so the very first winch write must land
+// or apps (cat /winch, bubbletea-style TERM_WINCH readers) hang forever.
+function writeWinch(root, sessionId, cols, rows, xpixel, ypixel) {
+  // openWritable, not writeFile: the root writeFile helper chmods after
+  // writing and the signal FS rejects chmod, silently killing every winch
+  // update (the shell's own terminals use openWritable for the same
+  // reason — elements/term.js).
+  return root
+    .openWritable(winchPath(sessionId))
+    .then((stream) => {
+      const writer = stream.getWriter();
+      return writer
+        .write(new TextEncoder().encode(`${cols} ${rows} ${xpixel} ${ypixel}\n`))
+        .then(() => writer.close());
+    });
+}
+
 function handleResize(event, id, args) {
   const sessionId = String(sessionArgs(args, 0) ?? "");
   const entry = sessions.get(sessionId);
@@ -245,8 +263,12 @@ function handleResize(event, id, args) {
   }
   const cols = Number(sessionArgs(args, 1)) || 0;
   const rows = Number(sessionArgs(args, 2)) || 0;
-  getWanixRoot()
-    .writeFile(winchPath(sessionId), `${cols} ${rows} 0 0\n`)
+  const xpixel = Number(sessionArgs(args, 3)) || 0;
+  const ypixel = Number(sessionArgs(args, 4)) || 0;
+  // The iframe resizes right after create(), which races kernel boot;
+  // wait for readiness so the initial winch frame cannot be lost.
+  wakeTask(entry)
+    .then(() => writeWinch(getWanixRoot(), sessionId, cols, rows, xpixel, ypixel))
     .then(() => reply(event.source, event.origin, { id: id, ok: true }))
     .catch((error) =>
       reply(event.source, event.origin, {
