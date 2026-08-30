@@ -191,19 +191,34 @@
 
       // === Stage / terminals ===
 
+      // Full-bleed window chrome like the terminal-frame plugin: macOS
+      // traffic lights over a monospace title bar. Each card fills the
+      // stage viewport, so with several examples open they stack and the
+      // stage scrolls between them (never a cramped grid).
       function makeCard(example, sessionId) {
         var card = el("div", "bbtex-term");
         var head = el("div", "bbtex-term-head");
-        head.appendChild(el("span", "bbtex-term-name", example.label));
-        var close = el("button", "bbtex-term-close", "×");
+        var traffic = el("div", "bbtex-term-traffic");
+        traffic.appendChild(el("span", "bbtex-term-dot bbtex-term-dot-red"));
+        traffic.appendChild(el("span", "bbtex-term-dot bbtex-term-dot-yellow"));
+        traffic.appendChild(el("span", "bbtex-term-dot bbtex-term-dot-green"));
+        head.appendChild(traffic);
+        var title = el("span", "bbtex-term-title", example.label);
+        title.title = example.id + " · " + sessionId;
+        head.appendChild(title);
+        var actions = el("div", "bbtex-term-actions");
+        var status = el("span", "bbtex-term-status", "starting…");
+        actions.appendChild(status);
+        var close = el("button", "bbtex-term-close", "✕");
         close.type = "button";
         close.title = "Close terminal";
         close.addEventListener("click", function () { closeEntry(sessionId); });
-        head.appendChild(close);
+        actions.appendChild(close);
+        head.appendChild(actions);
         var body = el("div", "bbtex-term-body");
         card.appendChild(head);
         card.appendChild(body);
-        return { card: card, head: head, body: body };
+        return { card: card, head: head, status: status, body: body };
       }
 
       function resizeEntry(entry) {
@@ -293,9 +308,11 @@
               xterm: null,
               fit: null,
               card: made.card,
+              status: made.status,
               body: made.body,
               disposed: false,
             };
+            made.status.textContent = "session " + sessionId;
             open.push(entry);
             sessionsById[sessionId] = entry;
             $("bbtex-stage").appendChild(made.card);
@@ -358,6 +375,9 @@
         } catch {
           // terminal disposed mid-write
         }
+        if (entry.status.textContent !== "connected") {
+          entry.status.textContent = "connected";
+        }
       }
 
       function onTermExit(payload) {
@@ -365,6 +385,7 @@
         if (!entry || entry.disposed) return;
         var code = payload.code ?? "?";
         var note = payload.error ? "error: " + payload.error : "exit code " + code;
+        if (entry.status) entry.status.textContent = "exited (" + code + ")";
         entry.xterm.write(
           "\r\n\x1b[33m[Process " + note + "]\x1b[0m\r\n",
         );

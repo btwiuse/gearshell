@@ -417,6 +417,7 @@ export const DEFAULT_PLUGINS = [
 // app-plugin-manifests-examples.js / app-plugin-manifests-bbtex.js).
 DEFAULT_PLUGINS.push(EXAMPLES_PLUGIN);
 DEFAULT_PLUGINS.push(BBTEX_PLUGIN);
-// iframe edition of the bbtex playground (default DISABLED — the module
-// bbtex stays the default; enable bbtex-iframe to A/B the two).
-DEFAULT_PLUGINS.push({ ...BBTEX_IFRAME_PLUGIN, enabled: false });
+// iframe edition of the bbtex playground (default enabled alongside the
+// module one — the iframe build is the reference for third-party plugin
+// layout; either can be disabled in the Plugins page).
+DEFAULT_PLUGINS.push(BBTEX_IFRAME_PLUGIN);

@@ -1136,3 +1136,45 @@ runtime wasmUrl 指向本地)→ 开 terminal-frame 面板 → bash 出提示符
   后置回 connected(之前数据已流动仍卡 "waiting for output…")。
 - ⬜ 回归 calc.js(wasi+gojs+js 三 driver 对 v0.4.30 内核)
 - ⬜ 用户确认后:推 gearshell 本轮提交(winch 修复 + v0.4.30 bump)→ Vercel 部署验证
+
+## 三十一、iframe 插件移植候选清单(2026-08-31,按难易度排序)
+
+参考实现:`plugin/terminal-frame/`(全屏终端 + 窗口 chrome + terminal 数据桥)
+与 `plugin/bbtex-iframe/`(sidebar + 全高堆叠滚动终端 + w9y.status)。iframe
+插件 = 自足 vanilla 页面 + `/plugin/gear-bridge.js` + manifest permissions.api
+白名单;前端框架与 core 解耦。**已 iframe 化**:terminal-frame、bbtex-iframe、
+iframe-template(演示)、browser/bonsai/codigo/crush/rickroll(外部 src)。
+
+**易(1-2 会话,纯自足页面,几乎无桥依赖)**
+1. **group** — 图片/组查看器:一个 `<img>` + panels 打开即显示,零 API。
+2. **widgetbot** — 现已是第三方 widget,iframe 化天然贴合。
+3. **deck** — reveal.js 演示:reveal-lib.css/theme 已 vendored,页内自载;仅
+   需要 decks 文件列表(files.* 只读目录,或 manifest 静态声明)。
+4. **playground** — GearShell API 浏览器:纯调用已白名单的 core API
+   (panels.list/tasks.create/config.*/events),playground-explorer 逻辑可平移。
+
+**中(2-3 会话,需要桥 API 补齐或 UI 重写)**
+5. **home** — 落地页 + 活终端 demo:终端走 terminal.create 数据桥(已证明),
+   静态内容自足。
+6. **web-pet** — Wagi Dog:精灵动画自足;需要 config.wagiDogEnabled 读 + 点击
+   交互(events)。
+7. **music** — 播放器:music.* 已可在桥白名单放行;注意壳层 music-engine 是
+   **同步** jsfs 实现,桥是异步——需要 shell 侧确认 music API 无副作用依赖
+   调用时序。
+8. **w9y** — 包管理器:list/status/apply/remove + w9y.changed 已全在桥能力内
+   (bbtex-iframe 已验证 w9y.status + 事件)。
+9. **launcher** — 应用网格:panels.list/open + config 读;UI 平移量中等。
+
+**难(3+ 会话,或需新增桥能力,或本就不适合)**
+10. **files** — 文件管理器:需要**字节级 async 文件 API**(readFile 返回 bytes、
+    readDir/stat/write),当前 jsfs 同步面没有;桥要新增 files.* 白名单方法
+    (getWanixRoot 包装,参考 Files 面板)。这是最大的桥能力缺口。
+11. **settings** — 配置管理:config.* CRUD 桥可用,但 Settings 有大量分区
+    (providers/runtime/system/workspace…)重写成本高。
+12. **crush-runner** — Crush 预设管理:config 读写 + 终端 + audit,中等偏重。
+13. **vm / workbench** — 依赖 wanix-vm/wanix-workbench 内核 DOM 元素与 9p
+    导出,**不适合 iframe**(壳层保留,别移植)。
+
+**建议顺序**:先做 1-4 立竿见影(都是纯展示/演示型,正好服务竞赛 demo),
+再做 5-8 交互型,9-12 看需求;13 明确不做。files 的字节 API 缺口若要做
+文件类插件,先补桥能力(单列 P1)。
