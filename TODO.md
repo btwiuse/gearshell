@@ -833,3 +833,26 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   `read_console_messages` 读不到;旧版本残留错误(.172)会留在 console 缓冲区误导
   判断,判定新版本是否生效要看 `performance.getEntriesByType('resource')` 的
   ?v= token + 重开面板后**新增**错误。
+
+## 二十九、iframe 插件 × GearShell API 桥(2026-08-30 研究完成,未实现)
+
+**背景**:plugin 化已支持同页组件插件(权限白名单注入),但 iframe 插件
+(browser/bonsai/codigo/crush/rickroll)是 entry-less,与 shell **零通信**。
+用户目标:iframe 能调 window.GearShell(文件系统/音乐/窗口管理等),并用
+iframe 形式承载大部分插件。研究结论见 memory/iframe-plugins.md。
+
+**方案**:postMessage 桥 + 复用 createScopedApi 权限系统。
+- 协议:`{ gear: { id, method: "music.play", args: [] } }` → shell 校验
+  origin(白名单=已注册 iframe 插件 src 的 origin)+ permissions.api →
+  分发 window.GearShell → 回 `{ gear: { id, ok, result } }`。
+- iframe 侧 gear-bridge.js:Proxy 封装,GearShell.music.play() → Promise。
+- manifest 给 iframe 插件加 `permissions: { api: [...] }`(默认空=全拒)。
+- 能力:panels.open/list(窗口)、music.*(音乐)、browser.open/files.open、
+  terminal.embed、tasks.* + events.on(任务)、w9y.list(包)。
+- 注意:GearShell 全同步(jsfs 约束),桥天然异步;真·文件读字节需新增
+  async API,先做 UI 级。
+
+**落地顺序**:① gear-bridge.js + shell 桥 + 白名单 + 校验 → ② bonsai/browser
+(同源 iframe)先接桥实测 → ③ codigo/crush 跨源走 postMessage 全链路 →
+④ 按需 async 文件 API。存量组件插件暂不 iframe 化(重写成本高),新插件
+优先 iframe + 桥。
