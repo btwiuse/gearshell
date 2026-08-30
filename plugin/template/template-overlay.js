@@ -7,14 +7,12 @@
 // plugin kernel changes (enable/disable/install).
 
 import React from "react";
+import htm from "htm";
+
+const html = htm.bind(React.createElement);
 
 export function TemplateOverlay() {
-  return React.createElement(
-    "div",
-    {
-      className: "template-overlay",
-      title: "Plugin Template — overlay demo (registerOverlay)",
-    },
-    "TPL",
-  );
+  return html`
+    <div className="template-overlay" title="Plugin Template — overlay demo (registerOverlay)">TPL</div>
+  `;
 }

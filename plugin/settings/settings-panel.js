@@ -7,14 +7,14 @@ import { settingsDep } from "./settings-deps.js?v=20260826.3";
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
 import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.16";
 import { setupConfigForm } from "./settings-config.js?v=20260826.12";
-import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.5";
+import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.6";
 import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.3";
 import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.3";
 import { setupSystemForm } from "./settings-system.js?v=20260826.3";
 import { setupBindForm } from "./settings-binds.js?v=20260826.3";
 import { setupTaskForm } from "./settings-task.js?v=20260826.3";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.107";
-import { listSettingsSections } from "../../plugins.js?v=20260829.95";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.110";
+import { listSettingsSections } from "../../plugins.js?v=20260829.98";
 
 // Mount plugin-registered settings sections (ctx.registerSettingsSection)
 // after the built-in template content. Each section gets a <details>

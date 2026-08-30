@@ -26,15 +26,15 @@ import {
   loadActiveWorkspace,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js?v=20260826.131";
+} from "./app-workspace.js?v=20260826.134";
 import {
   openPanelSnapshots,
   parseCrushRunnerPanelId,
   rememberOpenPanel,
-} from "./app-panels-store.js?v=20260826.131";
-import { clone } from "./app-normalize.js?v=20260828.132";
+} from "./app-panels-store.js?v=20260826.134";
+import { clone } from "./app-normalize.js?v=20260828.135";
 import { reservePanelIds } from "./app-panel-ids.js?v=20260828.76";
-import { reserveCrushRunnerIds } from "./plugin/crush-runner/crush-runner.js?v=20260826.127";
+import { reserveCrushRunnerIds } from "./plugin/crush-runner/crush-runner.js?v=20260826.130";
 
 const LAYOUT_SAVE_DELAY = 400;
 let layoutSaveTimer = null;

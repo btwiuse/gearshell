@@ -10,9 +10,17 @@
 //   panels.open       — open other panels
 // Read the comments; each demo maps to a line in the manifest's
 // permissions array.
+//
+// Rendering uses htm (importmap): htm.bind(React.createElement) yields a
+// JSX-like template tag with zero build step. Plugins only import bare
+// specifiers listed in index.html's importmap — that is how every plugin
+// shares the shell's single React instance.
 
 import React, { useEffect, useRef, useState } from "react";
+import htm from "htm";
 import { BookOpen, Play, RefreshCw, TerminalSquare } from "lucide-react";
+
+const html = htm.bind(React.createElement);
 
 const EVENT_TOPICS = ["task.status", "w9y.changed"];
 
@@ -59,37 +67,28 @@ function useTemplateState() {
 }
 
 function TemplateHeader({ manifest }) {
-  return React.createElement(
-    "div",
-    { className: "template-header" },
-    React.createElement(BookOpen, { size: 18, "aria-hidden": true }),
-    React.createElement(
-      "div",
-      { className: "template-header-text" },
-      React.createElement("h2", null, "Plugin Template"),
-      React.createElement(
-        "p",
+  const manifestJson = manifest
+    ? JSON.stringify(
+        {
+          id: manifest.id,
+          version: manifest.version,
+          entry: manifest.entry,
+          permissions: manifest.permissions,
+        },
         null,
-        "A reference plugin: panel + settings section + overlay, and the permission-scoped API. Disabled by default in the Plugins page.",
-      ),
-    ),
-    manifest
-      ? React.createElement(
-          "pre",
-          { className: "template-manifest" },
-          JSON.stringify(
-            {
-              id: manifest.id,
-              version: manifest.version,
-              entry: manifest.entry,
-              permissions: manifest.permissions,
-            },
-            null,
-            1,
-          ),
-        )
-      : null,
-  );
+        1,
+      )
+    : null;
+  return html`
+    <div className="template-header">
+      <${BookOpen} size=${18} aria-hidden=${true}/>
+      <div className="template-header-text">
+        <h2>Plugin Template</h2>
+        <p>A reference plugin: panel + settings section + overlay, and the permission-scoped API. Disabled by default in the Plugins page.</p>
+      </div>
+      ${manifest ? html`<pre className="template-manifest">${manifestJson}</pre>` : null}
+    </div>
+  `;
 }
 
 // --- Demo 1: headless tasks (tasks.create + events) ---
@@ -158,27 +157,13 @@ function TaskDemo({ onNotice }) {
     };
     setTimeout(poll, 1500);
   };
-  return React.createElement(
-    "div",
-    { className: "template-demo" },
-    React.createElement(
-      "h3",
-      null,
-      React.createElement(Play, { size: 13, "aria-hidden": true }),
-      "1. Headless task (tasks.create)",
-    ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "template-btn",
-        disabled: running,
-        onClick: run,
-      },
-      running ? "Running…" : "Run a headless task",
-    ),
-    result ? React.createElement(TaskResult, { result }) : null,
-  );
+  return html`
+    <div className="template-demo">
+      <h3><${Play} size=${13} aria-hidden=${true}/>1. Headless task (tasks.create)</h3>
+      <button type="button" className="template-btn" disabled=${running} onClick=${run}>${running ? "Running…" : "Run a headless task"}</button>
+      ${result ? html`<${TaskResult} result=${result}/>` : null}
+    </div>
+  `;
 }
 
 // Parse "exit 3" from a task error into the numeric exit code.
@@ -198,25 +183,13 @@ function TaskResult({ result }) {
     duration: (result.durationMs / 1000).toFixed(2) + "s",
     outputBytes: String(result.output || "").length,
   };
-  return React.createElement(
-    "div",
-    { className: "template-task-result" },
-    React.createElement(
-      "div",
-      { className: "template-log-head" },
-      "stdout/stderr (captured via the task log, not console)",
-    ),
-    React.createElement(
-      "pre",
-      { className: "template-output" },
-      result.output || "(no output)",
-    ),
-    React.createElement(
-      "pre",
-      { className: "template-json" },
-      JSON.stringify(meta, null, 2),
-    ),
-  );
+  return html`
+    <div className="template-task-result">
+      <div className="template-log-head">stdout/stderr (captured via the task log, not console)</div>
+      <pre className="template-output">${result.output || "(no output)"}</pre>
+      <pre className="template-json">${JSON.stringify(meta, null, 2)}</pre>
+    </div>
+  `;
 }
 
 // --- Demo 2: the w9y registry (w9y.list/status) ---
@@ -230,34 +203,21 @@ function W9yDemo({ onNotice }) {
     }
     setPackages(result.packages || []);
   };
-  return React.createElement(
-    "div",
-    { className: "template-demo" },
-    React.createElement(
-      "h3",
-      null,
-      React.createElement(RefreshCw, { size: 13, "aria-hidden": true }),
-      "2. w9y registry (w9y.list)",
-    ),
-    React.createElement(
-      "button",
-      { type: "button", className: "template-btn", onClick: refresh },
-      "List installed packages",
-    ),
-    packages
-      ? React.createElement(
-          "ul",
-          { className: "template-list" },
-          packages.map((pkg) =>
-            React.createElement(
-              "li",
-              { key: pkg.id },
-              `${pkg.id} @ ${pkg.version || "latest"} — ${pkg.entryCount} entries`,
-            )
-          ),
-        )
-      : null,
-  );
+  return html`
+    <div className="template-demo">
+      <h3><${RefreshCw} size=${13} aria-hidden=${true}/>2. w9y registry (w9y.list)</h3>
+      <button type="button" className="template-btn" onClick=${refresh}>List installed packages</button>
+      ${packages
+        ? html`
+            <ul className="template-list">
+              ${packages.map((pkg) =>
+                html`<li key=${pkg.id}>${pkg.id} @ ${pkg.version || "latest"} — ${pkg.entryCount} entries</li>`,
+              )}
+            </ul>
+          `
+        : null}
+    </div>
+  `;
 }
 
 // --- Demo 3: a live embedded terminal (terminal.embed) ---
@@ -283,78 +243,48 @@ function EmbedDemo({ onNotice }) {
     detachRef.current = null;
   };
   useEffect(() => close, []);
-  return React.createElement(
-    "div",
-    { className: "template-demo" },
-    React.createElement(
-      "h3",
-      null,
-      React.createElement(TerminalSquare, { size: 13, "aria-hidden": true }),
-      "3. Embedded terminal (terminal.embed)",
-    ),
-    React.createElement(
-      "div",
-      null,
-      React.createElement(
-        "button",
-        { type: "button", className: "template-btn", onClick: mount },
-        "Embed a terminal",
-      ),
-      React.createElement(
-        "button",
-        { type: "button", className: "template-btn", onClick: close },
-        "Close it",
-      ),
-    ),
-    React.createElement("div", { className: "template-embed", ref: anchorRef }),
-  );
+  return html`
+    <div className="template-demo">
+      <h3><${TerminalSquare} size=${13} aria-hidden=${true}/>3. Embedded terminal (terminal.embed)</h3>
+      <div>
+        <button type="button" className="template-btn" onClick=${mount}>Embed a terminal</button>
+        <button type="button" className="template-btn" onClick=${close}>Close it</button>
+      </div>
+      <div className="template-embed" ref=${anchorRef}></div>
+    </div>
+  `;
 }
 
 // --- Demo 4: live event feed (events.on/off) ---
 function EventFeed({ events }) {
-  return React.createElement(
-    "div",
-    { className: "template-demo" },
-    React.createElement(
-      "h3",
-      null,
-      "4. Event feed (events.on) — topics: " + EVENT_TOPICS.join(", "),
-    ),
-    React.createElement(
-      "ul",
-      { className: "template-list template-events" },
-      events.length === 0
-        ? React.createElement("li", null, "No events yet — run demo 1 or check w9y.")
-        : events.map((event) =>
-          React.createElement(
-            "li",
-            { key: event.id },
-            `[${event.topic}] `,
-            JSON.stringify(event.payload).slice(0, 120),
-          )
-        ),
-    ),
-  );
+  return html`
+    <div className="template-demo">
+      <h3>4. Event feed (events.on) — topics: ${EVENT_TOPICS.join(", ")}</h3>
+      <ul className="template-list template-events">
+        ${events.length === 0
+          ? html`<li>No events yet — run demo 1 or check w9y.</li>`
+          : events.map((event) =>
+              html`<li key=${event.id}>[${event.topic}] ${JSON.stringify(event.payload).slice(0, 120)}</li>`,
+            )}
+      </ul>
+    </div>
+  `;
 }
 
 export function TemplatePanel() {
   const state = useTemplateState();
   const [notice, setNotice] = useState(null);
   const flash = (text) => setNotice(text);
-  return React.createElement(
-    "div",
-    { className: "template-panel" },
-    React.createElement(TemplateHeader, { manifest: state.manifest }),
-    notice
-      ? React.createElement(
-          "div",
-          { className: "template-notice", onClick: () => setNotice(null) },
-          notice,
-        )
-      : null,
-    React.createElement(TaskDemo, { onNotice: flash }),
-    React.createElement(W9yDemo, { onNotice: flash }),
-    React.createElement(EmbedDemo, { onNotice: flash }),
-    React.createElement(EventFeed, { events: state.events }),
-  );
+  return html`
+    <div className="template-panel">
+      <${TemplateHeader} manifest=${state.manifest}/>
+      ${notice
+        ? html`<div className="template-notice" onClick=${() => setNotice(null)}>${notice}</div>`
+        : null}
+      <${TaskDemo} onNotice=${flash}/>
+      <${W9yDemo} onNotice=${flash}/>
+      <${EmbedDemo} onNotice=${flash}/>
+      <${EventFeed} events=${state.events}/>
+    </div>
+  `;
 }

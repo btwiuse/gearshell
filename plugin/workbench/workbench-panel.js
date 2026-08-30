@@ -6,7 +6,10 @@
 // addRestoredPanel) calls it directly.
 
 import React, { useEffect, useRef } from "react";
-import { panelsDep } from "../../panels.js?v=20260812.119";
+import htm from "htm";
+import { panelsDep } from "../../panels.js?v=20260812.122";
+
+const html = htm.bind(React.createElement);
 
 export function WorkbenchPanel({ api, params }) {
   const wrapperRef = useRef(null);
@@ -20,8 +23,5 @@ export function WorkbenchPanel({ api, params }) {
       api,
     );
   }, [api, params.workbenchId]);
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
+  return html`<div ref=${wrapperRef} className="panel-content"></div>`;
 }

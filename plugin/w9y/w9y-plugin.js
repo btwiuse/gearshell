@@ -7,7 +7,7 @@
 // (the thin orchestration layer in app-w9y-registry.js) and the
 // w9y.changed events it emits — the w9y CLI owns the registry file.
 
-import { W9yPackages } from "./w9y.js?v=20260830.3";
+import { W9yPackages } from "./w9y.js?v=20260830.4";
 
 export const plugin = {
   register(ctx) {

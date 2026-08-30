@@ -704,13 +704,33 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
 - w9y mod apply 的 manifest 变更后旧 entry 文件不清理(stale file,registry 记录
   正确替换;可给 mod remove/apply 加清理)。
 
-### 代码风格决策(待定,compact 后再议)
+### 代码风格决策(已定:htm,✅ 已完成首批迁移)
 
-- **React.createElement vs htm**(用户提出,想更紧凑;raw API 样板太多)。
-  选项:htm(无构建步,贴合 buildless 规则)vs 接受 JSX+构建步(架构级改动)。
-  用户会单独问看法;决定前不迁移。
+- **React.createElement vs htm**:选 htm(无构建步,贴合 buildless 规则)。已迁移
+  6 个插件文件:plugin/template/template.js + template-overlay.js、plugin/w9y/w9y.js、
+  plugin/vm/vm-panel.js、plugin/workbench/workbench-panel.js、
+  plugin/settings/settings-terminal-fields.js。htm 经 importmap 引入
+  (`"htm": "https://esm.sh/htm@3.1.1"`),`const html = htm.bind(React.createElement)`。
+  迁移使违规函数从 6 降到 4(81L→67L、77L→60L)——htm 模板更紧凑。
+- **插件依赖铁律(用户问的 importmap 问题)**:插件只能 import importmap 声明过的
+  裸标识符。URL/vfs entry 的插件模块,bare specifier 都按**文档级 importmap** 解析,
+  没声明的裸导入直接抛 "Failed to resolve module specifier";绝对 URL 导入虽能加载,
+  但破坏单 React 实例保证(dockview/hooks 双实例必炸)+ 绕过版本 pinning。新依赖
+  一律先加 index.html importmap。vfs/blob entry 单文件无相对导入,importmap 是唯一共享通道。
 
 ### compact 备忘(下一会话必读)
+
+- **htm 行为**(实测):`class` 直传不转 className,React 必须手写 `className`;
+  元素间纯空白节点被剥离,文本节点内容保留原样(含首尾空格);`...${props}` spread
+  可用;函数属性(onClick/onChange/ref)正常,测试里"丢了"是 JSON.stringify 隐藏函数值;
+  Fragment 用 `<${React.Fragment}>...</>`(htm 无 `<></>`);DOM 标签勿自闭合+紧跟文本
+  (`<span/>x` 解析器崩),组件自闭合 `<${Icon} .../>` 安全。
+- **web-pet 循环陷阱逃生**:cascade-bump 的 SKIP_DIRS 含 `web-pet` → plugin/web-pet/
+  是盲区,每轮级联 web-pet 的 panels 引用都落后一档。修完 web-pet 若再级联又会推
+  panels +1 → 死循环。逃生 = 版本号只需"从未被服务过":(1) 先 sed web-pet 的 panels
+  引用到当前值 + 手动升 web-pet.js/web-pet-plugin.js/manifest 三级;(2) 跑一次级联;
+  (3) 再 sed web-pet 到级联后的 panels 终值,【不再跑级联】(web-pet.js 的 URL 仍是
+  新鲜的)。split-audit 确认全树 panels 版本唯一。
 
 - 事件 shape:`{id, topic, payload, ts}`,字段是 **topic** 不是 name。
 - OPFS `getDirectoryHandle` 只接受单段路径(`'a/b'` 抛 "Name is not allowed")。

@@ -5,7 +5,10 @@
 // restore path (app-panels addRestoredPanel) calls it directly.
 
 import React, { useEffect, useRef } from "react";
-import { panelsDep } from "../../panels.js?v=20260812.119";
+import htm from "htm";
+import { panelsDep } from "../../panels.js?v=20260812.122";
+
+const html = htm.bind(React.createElement);
 
 export function VmPanel({ api, params }) {
   const wrapperRef = useRef(null);
@@ -19,8 +22,5 @@ export function VmPanel({ api, params }) {
       api,
     );
   }, [api, params.vmId]);
-  return React.createElement("div", {
-    ref: wrapperRef,
-    className: "panel-content",
-  });
+  return html`<div ref=${wrapperRef} className="panel-content"></div>`;
 }

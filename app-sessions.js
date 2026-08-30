@@ -10,15 +10,15 @@ import {
   vmSessions,
   workbenchSessions,
 } from "./app-state.js?v=20260826.2";
-import { HOME } from "./app-constants.js?v=20260828.90";
+import { HOME } from "./app-constants.js?v=20260828.93";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.131";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.90";
+} from "./app-terminal-profiles.js?v=20260826.134";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.93";
 import { wanixSystem } from "./app-state.js?v=20260826.2";
-import { createWanixBindElement } from "./app-wanix.js?v=20260826.131";
+import { createWanixBindElement } from "./app-wanix.js?v=20260826.134";
 
 export const DEFAULT_IFRAME_ALLOW = "clipboard-read; clipboard-write";
 

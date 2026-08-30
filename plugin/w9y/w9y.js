@@ -9,6 +9,7 @@
 // w9y.changed events, which refresh the list.
 
 import React, { useEffect, useRef, useState } from "react";
+import htm from "htm";
 import {
   ArrowUpCircle,
   Boxes,
@@ -18,6 +19,8 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
+
+const html = htm.bind(React.createElement);
 
 // Curated install catalog (the full manifest list lives on w9y.io; the
 // free-form name input covers anything not listed here).
@@ -109,47 +112,29 @@ function useW9yState() {
 function W9yNotice({ notice, onDismiss }) {
   if (!notice) return null;
   const ok = notice.kind === "ok";
-  return React.createElement(
-    "div",
-    {
-      className: "w9y-notice " + (ok ? "ok" : "error"),
-      role: "status",
-      onClick: onDismiss,
-    },
-    ok
-      ? React.createElement(Check, { size: 14, "aria-hidden": true })
-      : React.createElement(TriangleAlert, { size: 14, "aria-hidden": true }),
-    React.createElement("span", null, notice.text),
-  );
+  return html`
+    <div className="w9y-notice ${ok ? "ok" : "error"}" role="status" onClick=${onDismiss}>
+      ${ok
+        ? html`<${Check} size=${14} aria-hidden=${true}/>`
+        : html`<${TriangleAlert} size=${14} aria-hidden=${true}/>`}
+      <span>${notice.text}</span>
+    </div>
+  `;
 }
 
 function W9yHeader({ count, onRefresh }) {
-  return React.createElement(
-    "div",
-    { className: "w9y-header" },
-    React.createElement(
-      "div",
-      { className: "w9y-header-title" },
-      React.createElement(Boxes, { size: 18, "aria-hidden": true }),
-      React.createElement("h2", null, "Packages"),
-      React.createElement(
-        "span",
-        { className: "w9y-header-note" },
-        `${count} installed · registry: wanix/w9y-registry.json`,
-      ),
-    ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "w9y-btn",
-        title: "Re-read the registry file",
-        onClick: onRefresh,
-      },
-      React.createElement(RefreshCw, { size: 14, "aria-hidden": true }),
-      "Refresh",
-    ),
-  );
+  return html`
+    <div className="w9y-header">
+      <div className="w9y-header-title">
+        <${Boxes} size=${18} aria-hidden=${true}/>
+        <h2>Packages</h2>
+        <span className="w9y-header-note">${count} installed · registry: wanix/w9y-registry.json</span>
+      </div>
+      <button type="button" className="w9y-btn" title="Re-read the registry file" onClick=${onRefresh}>
+        <${RefreshCw} size=${14} aria-hidden=${true}/>Refresh
+      </button>
+    </div>
+  `;
 }
 
 // The install row: free-form "name[@version]" plus quick-install chips.
@@ -164,143 +149,97 @@ function W9yInstallBar({ onInstall, installing }) {
   };
   const quick = (mod) =>
     onInstall(mod.version ? `${mod.id}@${mod.version}` : mod.id);
-  return React.createElement(
-    "div",
-    { className: "w9y-install" },
-    React.createElement(
-      "form",
-      { className: "w9y-install-form", onSubmit: submit },
-      React.createElement(
-        "input",
-        {
-          className: "w9y-install-input",
-          placeholder: "mod[@version]  e.g. bbtex@v2.0.12",
-          value: spec,
-          onChange: (event) => setSpec(event.target.value),
-        },
-      ),
-      React.createElement(
-        "button",
-        {
-          type: "submit",
-          className: "w9y-btn primary",
-          disabled: installing !== null,
-        },
-        React.createElement(CloudDownload, { size: 14, "aria-hidden": true }),
-        installing !== null ? `Installing ${installing}…` : "Install",
-      ),
-    ),
-    React.createElement(
-      "div",
-      { className: "w9y-known" },
-      KNOWN_MODS.map((mod) =>
-        React.createElement(
-          "button",
-          {
-            key: mod.id,
-            type: "button",
-            className: "w9y-chip",
-            title: mod.note,
-            disabled: installing !== null,
-            onClick: () => quick(mod),
-          },
-          mod.id,
-        )
-      ),
-    ),
-  );
+  return html`
+    <div className="w9y-install">
+      <form className="w9y-install-form" onSubmit=${submit}>
+        <input
+          className="w9y-install-input"
+          placeholder="mod[@version]  e.g. bbtex@v2.0.12"
+          value=${spec}
+          onChange=${(event) => setSpec(event.target.value)}
+        />
+        <button type="submit" className="w9y-btn primary" disabled=${installing !== null}>
+          <${CloudDownload} size=${14} aria-hidden=${true}/>${installing !== null ? `Installing ${installing}…` : "Install"}
+        </button>
+      </form>
+      <div className="w9y-known">
+        ${KNOWN_MODS.map((mod) =>
+          html`<button
+            key=${mod.id}
+            type="button"
+            className="w9y-chip"
+            title=${mod.note}
+            disabled=${installing !== null}
+            onClick=${() => quick(mod)}
+          >${mod.id}</button>`,
+        )}
+      </div>
+    </div>
+  `;
 }
 
 function W9yDeclaredHint({ id, installed, declared }) {
   if (!declared) return null;
   if (declared === installed) {
-    return React.createElement(
-      "span",
-      { className: "w9y-declared ok", title: "Matches a plugin declaration" },
-      React.createElement(Check, { size: 11, "aria-hidden": true }),
-      "declared ",
-      declared,
-    );
+    return html`
+      <span className="w9y-declared ok" title="Matches a plugin declaration">
+        <${Check} size=${11} aria-hidden=${true}/>declared ${declared}
+      </span>
+    `;
   }
-  return React.createElement(
-    "span",
-    {
-      className: "w9y-declared stale",
-      title: "Installed version differs from a plugin declaration",
-    },
-    React.createElement(TriangleAlert, { size: 11, "aria-hidden": true }),
-    "declared ",
-    declared,
-    " · update available",
-  );
+  return html`
+    <span className="w9y-declared stale" title="Installed version differs from a plugin declaration">
+      <${TriangleAlert} size=${11} aria-hidden=${true}/>declared ${declared} · update available
+    </span>
+  `;
 }
 
 function W9yPackageRow({ pkg, declared, onRemove, onReapply, busy }) {
   const installedAt = pkg.installedAt
     ? new Date(pkg.installedAt).toLocaleString()
     : "unknown";
-  return React.createElement(
-    "div",
-    { className: "w9y-row" },
-    React.createElement(
-      "div",
-      { className: "w9y-row-main" },
-      React.createElement(
-        "div",
-        { className: "w9y-row-name" },
-        React.createElement("strong", null, pkg.id),
-        React.createElement("span", { className: "w9y-version" }, pkg.version || "latest"),
-      ),
-      React.createElement(
-        "div",
-        { className: "w9y-row-meta" },
-        `${pkg.entryCount} entries · installed ${installedAt}`,
-      ),
-      React.createElement(W9yDeclaredHint, {
-        id: pkg.id,
-        installed: pkg.version,
-        declared: declared[pkg.id] || null,
-      }),
-    ),
-    React.createElement(
-      "div",
-      { className: "w9y-row-actions" },
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "w9y-btn",
-          title: "Re-apply (refresh to the declared version)",
-          disabled: busy,
-          onClick: () => onReapply(pkg.id, declared[pkg.id] || null),
-        },
-        React.createElement(ArrowUpCircle, { size: 14, "aria-hidden": true }),
-        "Re-apply",
-      ),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "w9y-btn danger",
-          title: "Remove files + registry record",
-          disabled: busy,
-          onClick: () => onRemove(pkg.id),
-        },
-        React.createElement(Trash2, { size: 14, "aria-hidden": true }),
-        "Remove",
-      ),
-    ),
-  );
+  return html`
+    <div className="w9y-row">
+      <div className="w9y-row-main">
+        <div className="w9y-row-name">
+          <strong>${pkg.id}</strong>
+          <span className="w9y-version">${pkg.version || "latest"}</span>
+        </div>
+        <div className="w9y-row-meta">${pkg.entryCount} entries · installed ${installedAt}</div>
+        <${W9yDeclaredHint} id=${pkg.id} installed=${pkg.version} declared=${declared[pkg.id] || null}/>
+      </div>
+      <div className="w9y-row-actions">
+        <button
+          type="button"
+          className="w9y-btn"
+          title="Re-apply (refresh to the declared version)"
+          disabled=${busy}
+          onClick=${() => onReapply(pkg.id, declared[pkg.id] || null)}
+        >
+          <${ArrowUpCircle} size=${14} aria-hidden=${true}/>Re-apply
+        </button>
+        <button
+          type="button"
+          className="w9y-btn danger"
+          title="Remove files + registry record"
+          disabled=${busy}
+          onClick=${() => onRemove(pkg.id)}
+        >
+          <${Trash2} size=${14} aria-hidden=${true}/>Remove
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 function W9yEmpty() {
-  return React.createElement(
-    "div",
-    { className: "w9y-empty" },
-    React.createElement(Boxes, { size: 28, "aria-hidden": true }),
-    React.createElement("p", null, "No w9y packages installed."),
-    React.createElement("p", null, "Install one from the field above — binaries land in /opfs/wanix and every task reads them through the /opfs projection."),
-  );
+  return html`
+    <div className="w9y-empty">
+      <${Boxes} size=${28} aria-hidden=${true}/>
+      <p>No w9y packages installed.</p>
+      <p>Install one from the field above — binaries land in /opfs/wanix and every task reads them through the /opfs projection.</p>
+    </div>
+  `;
 }
 
 export function W9yPackages() {
@@ -351,34 +290,17 @@ export function W9yPackages() {
       state.clearBusy();
     }
   };
-  return React.createElement(
-    "div",
-    { className: "w9y-page" },
-    React.createElement(W9yHeader, {
-      count: state.packages.length,
-      onRefresh: state.refresh,
-    }),
-    React.createElement(W9yNotice, {
-      notice: state.notice,
-      onDismiss: () => state.setNotice(null),
-    }),
-    React.createElement(W9yInstallBar, { onInstall: install, installing: state.installing }),
-    React.createElement(
-      "div",
-      { className: "w9y-list" },
-      state.packages.map((pkg) =>
-        React.createElement(W9yPackageRow, {
-          key: pkg.id,
-          pkg,
-          declared,
-          busy,
-          onRemove: remove,
-          onReapply: reapply,
-        })
-      ),
-    ),
-    state.packages.length === 0
-      ? React.createElement(W9yEmpty, null)
-      : null,
-  );
+  return html`
+    <div className="w9y-page">
+      <${W9yHeader} count=${state.packages.length} onRefresh=${state.refresh}/>
+      <${W9yNotice} notice=${state.notice} onDismiss=${() => state.setNotice(null)}/>
+      <${W9yInstallBar} onInstall=${install} installing=${state.installing}/>
+      <div className="w9y-list">
+        ${state.packages.map((pkg) =>
+          html`<${W9yPackageRow} key=${pkg.id} pkg=${pkg} declared=${declared} busy=${busy} onRemove=${remove} onReapply=${reapply}/>`,
+        )}
+      </div>
+      ${state.packages.length === 0 ? html`<${W9yEmpty}/>` : null}
+    </div>
+  `;
 }

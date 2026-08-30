@@ -16,7 +16,7 @@ import {
   TerminalProfileBasicFields,
   TerminalProfileItem,
   TerminalProfileRuntimeFields,
-} from "./settings-terminal-fields.js?v=20260828.2";
+} from "./settings-terminal-fields.js?v=20260828.3";
 
 function renderProfileItem(profile, index, ctx) {
   return React.createElement(TerminalProfileItem, {

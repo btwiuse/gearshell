@@ -2,9 +2,9 @@
 // (split out of workspace-api.js for the 500-line rule). Each namespace
 // is a plain object of functions; the entry module wraps them with safe().
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.131";
-import { addIframePanel, addPanelByComponent } from "./panels.js?v=20260812.119";
-import { requestFilesOpen } from "./plugin/files/files.js?v=20260826.140";
+import { getDockviewApi } from "./app-panels-store.js?v=20260826.134";
+import { addIframePanel, addPanelByComponent } from "./panels.js?v=20260812.122";
+import { requestFilesOpen } from "./plugin/files/files.js?v=20260826.143";
 
 // Resolve { group, referencePanel, direction } into the group id a new
 // panel lands in. direction alone docks to the container edge; group /
