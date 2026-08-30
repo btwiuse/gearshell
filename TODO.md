@@ -791,3 +791,40 @@ namespace、headless 输出捕获+实时流、P1 临时任务+GC、P2 终端读�
   .dockview);wedge 恢复 = 关 tab → 新 tab → 新 ?v=。
 - verify-static.mjs 的 web-pet 路径检查绑定的是 `import("../../web-pet/index.js")`,
   改 web-pet 结构时要同步。
+
+## 二十八、iframe 面板崩溃修复 + CORP NOT-SET 调研(2026-08-30,已提交 57ff02f + 部署)
+
+### iframe 面板 ReferenceError 崩溃(已修 ✅)
+
+- **现象**:点开 codigo(任何 iframe 插件面板:Browser/Bonsai/Codigo/Crush/Rick Roll)
+  报 `ReferenceError: iframe is not defined`,`createIframeSession (app-sessions.js:60)`。
+- **根因**:500 行拆分 commit `0a118c0`(2026-08-26)把 iframe 元素绑定弄丢了——
+  `const session = { id, wrapper, iframe, ... }` 引用了不存在的局部变量。
+- **修复**(`57ff02f`):`terminalLayer?.appendChild(wrapper)` 后补
+  `const iframe = wrapper.querySelector("iframe")`。同文件另两个 session 工厂
+  (workbench/vm)无此问题。cascade 升 `app-sessions.js` → .172→.173,已部署
+  gear.sh,生产实测 codigo.dev 正常渲染,console 零新错误。
+- **教训**:拆分大文件时,模板字面量里创建的 DOM 元素若被 session/state 对象引用,
+  必须显式取引用(querySelector/变量),纯靠"看着像"容易漏。
+
+### COEP credentialless 下 CORP NOT-SET 提示(无需处理,纯调研 ✅)
+
+- **现象**:Network 面板里 codigo.dev 的文档请求(以及 crush/rickroll 等跨源 iframe)
+  显示 `Cross-Origin-Resource-Policy: NOT-SET` + "To use this resource from a
+  different origin..." 提示。
+- **结论(已实证)**:`credentialless` 模式下 CORP **不强制**——跨源 no-cors 资源
+  只剥离凭据,照常加载(实测:gear.sh 页面 `crossOriginIsolated=true`,w3.org 无
+  CORP/ACAO 的 favicon 正常 48px 加载;codigo.dev iframe 正常渲染)。
+  提示是 DevTools 的善意提醒,不是错误/阻断。若当初用 `require-corp`,这些请求会
+  被真阻断(这正是 vercel.json 选 credentialless 的原因)。
+- **要消掉提示只有两条路**:
+  1. 等上游(codigo.dev/justwasm.github.io/youtube)自己加
+     `Cross-Origin-Resource-Policy: cross-origin`(不可控);
+  2. **自托管 iframe 源**(同源,不触发 CORP 检查)——bonsai/browser 已是同源
+     (`src: "/bonsai/"`、`src: "/browser/"`),codigo/crush/rickroll 是跨源。
+- **可选 TODO(P2,未拍板)**:把 codigo 自托管(proxy 或 vendoring)以消提示 +
+   免依赖上游可用性。参考 `isolation/` Cloudflare Worker 的 proxy 先例。
+- **验证陷阱**(再次踩):DevTools 的 Issues/Network 提示**不在 console 消息里**,
+  `read_console_messages` 读不到;旧版本残留错误(.172)会留在 console 缓冲区误导
+  判断,判定新版本是否生效要看 `performance.getEntriesByType('resource')` 的
+  ?v= token + 重开面板后**新增**错误。
