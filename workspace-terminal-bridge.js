@@ -33,7 +33,7 @@ import {
   destroyTerminalSession,
 } from "./app-terminal-sessions.js";
 import { getDefaultTerminalProfile } from "./app-terminal-profiles.js";
-import { getWanixRoot, systemReady } from "./app-state.js";
+import { getWanixRoot } from "./app-state.js";
 
 // sessionId -> { session, reader, writer, source, origin, exitTimer }
 const sessions = new Map();
@@ -59,15 +59,33 @@ function sleep(ms) {
 // The task element self-activates via the namespace `ready` event when
 // created before boot; sessions created after boot need the explicit
 // wake (mirrors wakeTerminalSession, minus the wanix-term deref).
+// Callers racing the boot (e.g. the iframe's initial winch resize) must
+// await the SAME _awake promise, not just a started flag: the term is
+// only allocated after _awake resolves, so a resize that skips an
+// in-flight _awake writes to a winch path that does not exist yet.
+// The task element self-activates: base.js connectedCallback ->
+// _connect -> _activate -> _awake() runs allocate(+start when the task
+// has start="") as soon as the kernel is up, for sessions created after
+// boot too. Calling _awake() from here RACES that: both see rid unset
+// and allocate twice, the second _setupNamespace re-reads the
+// fetch-bound binaries' streams and the kernel panics ("Response body
+// object should not be disturbed or locked") — the intermittent
+// "terminal shows nothing" failure. So wait for the element to finish
+// allocating; fall back to an explicit wake only if it never does.
 async function wakeTask(entry) {
-  while (!systemReady) await sleep(250);
-  if (!entry.session.started) {
-    entry.session.started = true;
-    try {
-      await entry.session.task._awake?.();
-    } catch {
-      // task element failed to start; the pump's waitFor will surface it
+  const task = entry.session.task;
+  const deadline = Date.now() + 30000;
+  while (!task.rid) {
+    if (Date.now() > deadline) {
+      entry.session.started = true;
+      try {
+        await task._awake?.();
+      } catch {
+        // task element failed to start; the pump's waitFor will surface it
+      }
+      break;
     }
+    await sleep(250);
   }
 }
 

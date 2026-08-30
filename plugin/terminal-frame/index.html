@@ -68,6 +68,7 @@
         fit: null,
         disposed: true,
         sawData: false,
+        resizeObserver: null,
         dataHandler: null,
         exitHandler: null,
       };
@@ -157,12 +158,31 @@
       // frame unconditionally (pixel-only changes still matter).
       function refitAndResize() {
         if (!state.xterm) return;
+        // The shell may still be laying the panel out when the terminal
+        // boots: the host can be 0-sized at that moment, fit() yields a
+        // zero-column xterm and nothing renders until a later resize.
+        // Skip zero sizes here; fitWhenReady/ResizeObserver re-run fit
+        // once the host actually gets its real dimensions.
+        if ($("term-host").clientWidth < 8 || $("term-host").clientHeight < 8) {
+          return;
+        }
         try {
           state.fit.fit();
         } catch {
           return;
         }
         resizeTerminal();
+      }
+
+      // Retry fit until the host has real dimensions (the panel may be
+      // mid-layout when start() runs), then send the winch frame.
+      function fitWhenReady() {
+        if (!state.xterm) return;
+        if ($("term-host").clientWidth < 8 || $("term-host").clientHeight < 8) {
+          setTimeout(fitWhenReady, 200);
+          return;
+        }
+        refitAndResize();
       }
 
       function teardown() {
@@ -174,6 +194,10 @@
         }
         unwireEvents();
         window.removeEventListener("resize", refitAndResize);
+        if (state.resizeObserver) {
+          state.resizeObserver.disconnect();
+          state.resizeObserver = null;
+        }
         if (state.xterm) {
           state.xterm.dispose();
           state.xterm = null;
@@ -218,7 +242,9 @@
             state.fit = new libs.FitAddon();
             state.xterm.loadAddon(state.fit);
             state.xterm.open(host);
-            state.fit.fit();
+            // fitWhenReady (below) fits once the host has real dimensions;
+            // an eager fit() at panel-layout time would size xterm to
+            // 0 columns and the initial winch frame would be garbage.
             state.xterm.onData(function (data) {
               if (!state.sessionId) return;
               GearShell.terminal.write(state.sessionId, new TextEncoder().encode(data))
@@ -226,6 +252,14 @@
             });
             state.xterm.onResize(function () { resizeTerminal(); });
             window.addEventListener("resize", refitAndResize);
+            // Panel drags and the initial layout settle resize the host
+            // without a window resize; observe it directly (also covers
+            // the 0-sized-boot case via fitWhenReady).
+            if (typeof ResizeObserver !== "undefined") {
+              state.resizeObserver = new ResizeObserver(refitAndResize);
+              state.resizeObserver.observe($("term-host"));
+            }
+            fitWhenReady();
             return wireEvents();
           })
           .then(function () {
