@@ -13,7 +13,8 @@ import {
   isBinaryData,
   sniffWasmBytes,
   toFilesystemBytes,
-} from "./files-editor.js?v=20260826.44";
+} from "./files-editor.js?v=20260826.45";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 // === Selection metadata (single-click info panel) ===
 
@@ -217,9 +218,10 @@ async function downloadEntry(ctx, entry) {
     const blob = new Blob([toFilesystemBytes(data)], {
       type: type ? type.mime : "application/octet-stream",
     });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = entry.name;
+    const link = html`<a
+      href=${URL.createObjectURL(blob)}
+      download=${entry.name}
+    />`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 0);
   } catch (error) {

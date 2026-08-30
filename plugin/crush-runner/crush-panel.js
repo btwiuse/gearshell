@@ -10,15 +10,15 @@ import {
   crushRunnerDep,
   nextCrushRunnerId,
 } from "./crush-deps.js?v=20260828.4";
-import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.136";
-import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.5";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.137";
+import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.6";
 import {
   CrushCtaRow,
   CrushEditorToggle,
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "./crush-runner-parts.js?v=20260828.136";
+} from "./crush-runner-parts.js?v=20260828.137";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

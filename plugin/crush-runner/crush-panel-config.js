@@ -11,7 +11,7 @@ import {
   CrushEnvTab,
   CrushJsonTab,
   CrushProfileTab,
-} from "./crush-panel-tabs.js?v=20260828.3";
+} from "./crush-panel-tabs.js?v=20260828.4";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

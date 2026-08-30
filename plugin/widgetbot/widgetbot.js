@@ -7,23 +7,25 @@
 // stays the visibility switch; the plugin manifest decides availability.
 
 import React, { useEffect } from "react";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 const SERVER_ID = "967111927299969064";
 const CHANNEL_ID = "967111927740366888";
 
 function injectCrate() {
   if (document.querySelector('script[src*="widgetbot"]')) return;
-  const script = document.createElement("script");
-  script.src = "https://cdn.jsdelivr.net/npm/@widgetbot/crate@3";
-  script.async = true;
-  script.onload = () => {
-    try {
-      new Crate({
-        server: SERVER_ID,
-        channel: CHANNEL_ID,
-      });
-    } catch { /* widget init is best-effort */ }
-  };
+  const script = html`<script
+    src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3"
+    async=${true}
+    onload=${() => {
+      try {
+        new Crate({
+          server: SERVER_ID,
+          channel: CHANNEL_ID,
+        });
+      } catch { /* widget init is best-effort */ }
+    }}
+  />`;
   document.head.appendChild(script);
 }
 

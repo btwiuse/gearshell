@@ -20,8 +20,8 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import htm from "htm";
 
-import { useFilesEditor } from "./files-editor.js?v=20260826.44";
-import { useFilesSelection } from "./files-context-menu.js?v=20260826.44";
+import { useFilesEditor } from "./files-editor.js?v=20260826.45";
+import { useFilesSelection } from "./files-context-menu.js?v=20260826.45";
 import { useFavorites } from "./files-favorites.js?v=20260826.38";
 import { useFilesTree } from "./files-tree.js?v=20260826.42";
 import { useFilesSidebarResize } from "./files-resize.js?v=20260826.29";
@@ -35,7 +35,7 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.135";
+} from "./files-panel-hooks.js?v=20260826.136";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
@@ -47,7 +47,7 @@ import {
   filesystemPathParent,
   normalizeFilesystemPath,
 } from "../files-path.js?v=20260826.71";
-import { filesDep } from "./files-registry.js?v=20260826.102";
+import { filesDep } from "./files-registry.js?v=20260826.103";
 
 const html = htm.bind(React.createElement);
 

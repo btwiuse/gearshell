@@ -1,6 +1,7 @@
 // System form section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 function querySystemElements(settingsContent) {
   return {
@@ -66,26 +67,24 @@ function createBindItemButtons(
   populateBindFields,
   resetBindFields,
 ) {
-  const actions = document.createElement("div");
-  actions.className = "bind-item-actions";
-  const edit = document.createElement("button");
-  edit.type = "button";
-  edit.textContent = "Edit";
-  edit.addEventListener("click", () => {
-    populateBindFields(bind);
-    setStatus(`Editing ${bind.dst}. Save and restart to apply changes.`);
-    els.dstEl.focus();
-  });
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.textContent = "Remove";
-  remove.addEventListener("click", () => {
-    if (state.editingBindId === bind.id) resetBindFields();
-    settingsDep("removeWorkspaceSystemBind")(bind.id);
-    setStatus(`Removed ${bind.dst}. Restart to apply changes.`);
-  });
-  actions.append(edit, remove);
-  return actions;
+  return html`<div className="bind-item-actions">
+    <button
+      type="button"
+      onclick=${() => {
+        populateBindFields(bind);
+        setStatus(`Editing ${bind.dst}. Save and restart to apply changes.`);
+        els.dstEl.focus();
+      }}
+    >Edit</button>
+    <button
+      type="button"
+      onclick=${() => {
+        if (state.editingBindId === bind.id) resetBindFields();
+        settingsDep("removeWorkspaceSystemBind")(bind.id);
+        setStatus(`Removed ${bind.dst}. Restart to apply changes.`);
+      }}
+    >Remove</button>
+  </div>`;
 }
 
 function renderSystemBindItem(
@@ -96,8 +95,26 @@ function renderSystemBindItem(
   populateBindFields,
   resetBindFields,
 ) {
-  const item = document.createElement("div");
-  item.className = "bind-item";
+  const path = html`<span className="bind-item-path">${
+    `${bind.dst} ← ${bind.src || "inline content"}`
+  }</span>`;
+  path.title = path.textContent;
+  const details = html`<div>
+    ${path}
+    <span className="bind-item-meta">${
+      `${bind.type}${bind.mode ? ` · ${bind.mode}` : ""} · ${bind.union}`
+    }</span>
+  </div>`;
+  const item = html`<div className="bind-item">${
+    details
+  }${createBindItemButtons(
+    els,
+    bind,
+    state,
+    setStatus,
+    populateBindFields,
+    resetBindFields,
+  )}</div>`;
   settingsDep("makeBindItemDraggable")(item, bind, {
     list: els.list,
     getDraggedId: () => state.draggedBindId,
@@ -108,28 +125,6 @@ function renderSystemBindItem(
     onReordered: () =>
       setStatus("System mount order saved. Restart to apply changes."),
   });
-  const details = document.createElement("div");
-  const path = document.createElement("span");
-  path.className = "bind-item-path";
-  path.textContent = `${bind.dst} ← ${bind.src || "inline content"}`;
-  path.title = path.textContent;
-  const meta = document.createElement("span");
-  meta.className = "bind-item-meta";
-  meta.textContent = `${bind.type}${
-    bind.mode ? ` · ${bind.mode}` : ""
-  } · ${bind.union}`;
-  details.append(path, meta);
-  item.append(
-    details,
-    createBindItemButtons(
-      els,
-      bind,
-      state,
-      setStatus,
-      populateBindFields,
-      resetBindFields,
-    ),
-  );
   return item;
 }
 

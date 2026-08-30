@@ -19,6 +19,7 @@
 
 import React, { useEffect, useRef } from "react";
 import htm from "htm";
+import { html as domHtml } from "../../dom-html.js?v=20260830.2";
 
 const html = htm.bind(React.createElement);
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
@@ -86,9 +87,9 @@ async function prepareRevealSlides(homeContent) {
   const placeholder = homeContent.querySelector("[data-home-slides-markdown]");
   if (!placeholder) return;
 
-  const stack = document.createElement("section");
+  const stack = domHtml`<section />`;
   for (const source of (await loadSlidesMarkdown()).split(/^\s*--\s*$/m)) {
-    const slide = document.createElement("section");
+    const slide = domHtml`<section />`;
     slide.innerHTML = deckDep("marked").parse(source);
     stack.appendChild(slide);
   }
@@ -157,7 +158,7 @@ function DeckPanel({ api }) {
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    const homeContent = document.createElement("div");
+    const homeContent = domHtml`<div />`;
     homeContent.innerHTML = DECK_TEMPLATE_HTML;
     const root = homeContent.firstElementChild;
     if (!wrapper || !root) return;

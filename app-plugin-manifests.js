@@ -97,7 +97,7 @@ export const DEFAULT_PLUGINS = [
     name: "Deck",
     version: "1.0.0",
     icon: "LayoutDashboard",
-    entry: "/plugin/deck/deck-plugin.js?v=20260829.8",
+    entry: "/plugin/deck/deck-plugin.js?v=20260829.9",
   },
   {
     id: "group",
@@ -118,7 +118,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.120",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.121",
   },
   {
     id: "home",
@@ -135,28 +135,28 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.128",
+    entry: "/plugin/files/files-plugin.js?v=20260829.129",
   },
   {
     id: "workbench",
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.129",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.130",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.130",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.131",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.134",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.135",
   },
   {
     id: "launcher",
@@ -170,7 +170,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.135",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.136",
   },
   {
     id: "browser",
@@ -240,7 +240,7 @@ export const DEFAULT_PLUGINS = [
     name: "Discord Widget",
     version: "1.0.0",
     icon: "MessageSquare",
-    entry: "/plugin/widgetbot/widgetbot-plugin.js?v=20260829.7",
+    entry: "/plugin/widgetbot/widgetbot-plugin.js?v=20260829.8",
   },
   // Bubble Tea playground: w9y-installed examples from the bbtex manifest
   // (https://w9y.io/manifest/bbtex@v2.0.12/). The examples are a w9y mod
@@ -256,7 +256,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.37",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.38",
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
     preset: [

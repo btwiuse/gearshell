@@ -1,6 +1,7 @@
 // Workspace preset library section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { html } from "../../dom-html.js?v=20260830.2";
 // `setupPresetLibrary`, `setupWorkspaceForm`, and `setupSystemForm`
 // wire the Workspace / Preset library / Runtime & system <details>
 // blocks. All app.js globals they touch (the workspace store + system
@@ -60,42 +61,40 @@ function createPresetItemButtons(
   resetFields,
   startEditing,
 ) {
-  const actions = document.createElement("div");
-  actions.className = "preset-library-actions";
-  const create = document.createElement("button");
-  create.type = "button";
-  create.textContent = "Create";
-  create.addEventListener("click", () => {
-    const workspace = settingsDep("createWorkspaceFromPreset")(preset.id);
-    if (workspace) {
-      setStatus(`Created ${workspace.name} from ${preset.name}.`);
-    } else {
-      setStatus("Unable to create a workspace from this preset.", true);
-    }
-  });
-  const edit = document.createElement("button");
-  edit.type = "button";
-  edit.textContent = "Edit";
-  edit.addEventListener("click", () => {
-    const current = settingsDep("loadCustomWorkspacePreset")(preset.id);
-    if (current) startEditing(current);
-  });
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.textContent = "Remove";
-  remove.addEventListener("click", () => {
-    if (
-      !window.confirm(
-        `Remove preset ${preset.name}? Existing workspaces will not be affected.`,
-      )
-    ) return;
-    if (state.editingPresetId === preset.id) resetFields();
-    if (settingsDep("removeCustomWorkspacePreset")(preset.id)) {
-      setStatus(`Removed ${preset.name}.`);
-    } else setStatus("Unable to remove the preset.", true);
-  });
-  actions.append(create, edit, remove);
-  return actions;
+  return html`<div className="preset-library-actions">
+    <button
+      type="button"
+      onclick=${() => {
+        const workspace = settingsDep("createWorkspaceFromPreset")(preset.id);
+        if (workspace) {
+          setStatus(`Created ${workspace.name} from ${preset.name}.`);
+        } else {
+          setStatus("Unable to create a workspace from this preset.", true);
+        }
+      }}
+    >Create</button>
+    <button
+      type="button"
+      onclick=${() => {
+        const current = settingsDep("loadCustomWorkspacePreset")(preset.id);
+        if (current) startEditing(current);
+      }}
+    >Edit</button>
+    <button
+      type="button"
+      onclick=${() => {
+        if (
+          !window.confirm(
+            `Remove preset ${preset.name}? Existing workspaces will not be affected.`,
+          )
+        ) return;
+        if (state.editingPresetId === preset.id) resetFields();
+        if (settingsDep("removeCustomWorkspacePreset")(preset.id)) {
+          setStatus(`Removed ${preset.name}.`);
+        } else setStatus("Unable to remove the preset.", true);
+      }}
+    >Remove</button>
+  </div>`;
 }
 
 function renderPresetLibraryList(
@@ -110,33 +109,25 @@ function renderPresetLibraryList(
     !preset.builtin
   );
   if (presets.length === 0) {
-    const empty = document.createElement("span");
-    empty.className = "hint";
-    empty.textContent = "No custom presets yet.";
-    els.list.appendChild(empty);
+    els.list.appendChild(html`<span className="hint">No custom presets yet.</span>`);
     return;
   }
   for (const preset of presets) {
-    const item = document.createElement("div");
-    item.className = "preset-library-item";
-    const details = document.createElement("div");
-    const name = document.createElement("span");
-    name.className = "preset-library-name";
-    name.textContent = preset.name;
-    const meta = document.createElement("span");
-    meta.className = "preset-library-meta";
-    meta.textContent = preset.description || "Reusable workspace snapshot";
-    details.append(name, meta);
-    item.append(
-      details,
-      createPresetItemButtons(
+    const item = html`<div className="preset-library-item">
+      <div>
+        <span className="preset-library-name">${preset.name}</span>
+        <span className="preset-library-meta">${
+          preset.description || "Reusable workspace snapshot"
+        }</span>
+      </div>
+      ${createPresetItemButtons(
         preset,
         state,
         setStatus,
         resetFields,
         startEditing,
-      ),
-    );
+      )}
+    </div>`;
     els.list.appendChild(item);
   }
 }

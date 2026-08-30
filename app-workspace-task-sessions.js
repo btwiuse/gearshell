@@ -8,20 +8,20 @@ import {
   terminalLayer,
   workspaceTaskSessions,
 } from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.95";
-import { normalizeTask } from "./app-normalize.js?v=20260828.137";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.136";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.136";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.96";
+import { normalizeTask } from "./app-normalize.js?v=20260828.138";
+import { buildEnv } from "./app-terminal-profiles.js?v=20260826.137";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.137";
+import { html } from "./dom-html.js?v=20260830.2";
 
 export function createBindElement(bind) {
-  const element = document.createElement("wanix-bind");
-  element.setAttribute("dst", bind.dst);
-  element.setAttribute("type", bind.type);
-  element.setAttribute("perm", bind.perm);
-  element.setAttribute("union", bind.union);
-  if (bind.src) element.setAttribute("src", bind.src);
-  if (bind.content) element.textContent = bind.content;
-  return element;
+  return html`<wanix-bind
+    dst=${bind.dst}
+    type=${bind.type}
+    perm=${bind.perm}
+    union=${bind.union}
+    src=${bind.src || null}
+  >${bind.content || null}</wanix-bind>`;
 }
 
 export function taskEnvironment(env) {
@@ -113,31 +113,31 @@ function wrapTermCmd(def) {
 }
 
 function createWorkspaceTaskElement(id, def, workspace) {
-  const task = document.createElement("wanix-task");
-  task.id = `workspace-task-${id}`;
-  task.setAttribute("cmd", def.term ? wrapTermCmd(def) : wrapHeadlessCmd(def));
-  task.setAttribute("type", def.type);
-  task.setAttribute("start", "");
-  task.setAttribute("for", "wanix-system");
-  if (def.wd) task.setAttribute("wd", def.wd);
-  task.setAttribute("env", taskEnvAttribute(def));
-  if (def.term) task.setAttribute("term", "");
-  for (const bind of workspace.binds) task.appendChild(createBindElement(bind));
+  const task = html`<wanix-task
+    id=${`workspace-task-${id}`}
+    cmd=${def.term ? wrapTermCmd(def) : wrapHeadlessCmd(def)}
+    type=${def.type}
+    start=""
+    for="wanix-system"
+    wd=${def.wd || null}
+    env=${taskEnvAttribute(def)}
+    term=${def.term ? "" : null}
+  >
+    ${workspace.binds.map(createBindElement)}
+  </wanix-task>`;
   return task;
 }
 
 function createTaskTerminal(task) {
-  const winchBind = document.createElement("wanix-bind");
-  winchBind.setAttribute("dst", "winch");
-  winchBind.setAttribute("src", "#task/self/term/winch");
-  task.appendChild(winchBind);
-
-  const term = document.createElement("wanix-term");
-  term.setAttribute("raw", "");
-  term.setAttribute("no-scrollbar", "");
-  term.setAttribute("path", `#task/${task.id}/term`);
-  term.setAttribute("for", "wanix-system");
-  return term;
+  task.appendChild(
+    html`<wanix-bind dst="winch" src="#task/self/term/winch" />`,
+  );
+  return html`<wanix-term
+    raw=""
+    no-scrollbar=""
+    path=${`#task/${task.id}/term`}
+    for="wanix-system"
+  />`;
 }
 
 export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
@@ -145,18 +145,11 @@ export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
   // is safe: fields like env/wd default to "" and the session below reads
   // taskDefinition.env.trim() directly.
   const def = normalizeTask(taskDefinition);
-  const wrapper = document.createElement("div");
-  wrapper.className = "terminal-session";
-
   const task = createWorkspaceTaskElement(id, def, workspace);
 
   let term = null;
-  if (def.term) {
-    term = createTaskTerminal(task);
-    wrapper.append(task, term);
-  } else {
-    wrapper.append(task);
-  }
+  if (def.term) term = createTaskTerminal(task);
+  const wrapper = html`<div className="terminal-session">${task}${term}</div>`;
   terminalLayer?.appendChild(wrapper);
 
   const session = {

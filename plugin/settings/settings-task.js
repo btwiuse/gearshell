@@ -1,6 +1,7 @@
 // Tasks section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 function queryTaskElements(settingsContent) {
   return {
@@ -57,33 +58,28 @@ function createTaskItemButtons(
   resetFields,
   populateFields,
 ) {
-  const actions = document.createElement("div");
-  actions.className = "task-item-actions";
-  const run = document.createElement("button");
-  run.type = "button";
-  run.textContent = "Run";
-  run.addEventListener("click", () => {
-    if (!containerApi) {
-      setStatus("The task host is not available.", true);
-      return;
-    }
-    settingsDep("addWorkspaceTaskPanel")(containerApi, task, workspace);
-    setStatus(`Started ${task.name}.`);
-  });
-  const edit = document.createElement("button");
-  edit.type = "button";
-  edit.textContent = "Edit";
-  edit.addEventListener("click", () => populateFields(task));
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.textContent = "Remove";
-  remove.addEventListener("click", () => {
-    if (state.editingTaskId === task.id) resetFields();
-    settingsDep("removeWorkspaceTask")(task.id);
-    setStatus(`Removed ${task.name}.`);
-  });
-  actions.append(run, edit, remove);
-  return actions;
+  return html`<div className="task-item-actions">
+    <button
+      type="button"
+      onclick=${() => {
+        if (!containerApi) {
+          setStatus("The task host is not available.", true);
+          return;
+        }
+        settingsDep("addWorkspaceTaskPanel")(containerApi, task, workspace);
+        setStatus(`Started ${task.name}.`);
+      }}
+    >Run</button>
+    <button type="button" onclick=${() => populateFields(task)}>Edit</button>
+    <button
+      type="button"
+      onclick=${() => {
+        if (state.editingTaskId === task.id) resetFields();
+        settingsDep("removeWorkspaceTask")(task.id);
+        setStatus(`Removed ${task.name}.`);
+      }}
+    >Remove</button>
+  </div>`;
 }
 
 function renderTaskList(
@@ -97,30 +93,24 @@ function renderTaskList(
   els.list.replaceChildren();
   const workspace = settingsDep("loadActiveWorkspace")();
   if (workspace.tasks.length === 0) {
-    const empty = document.createElement("span");
-    empty.className = "hint";
-    empty.textContent = "No tasks yet.";
-    els.list.appendChild(empty);
+    els.list.appendChild(html`<span className="hint">No tasks yet.</span>`);
     return;
   }
   for (const task of workspace.tasks) {
-    const item = document.createElement("div");
-    item.className = "task-item";
-    const details = document.createElement("div");
-    const name = document.createElement("span");
-    name.className = "task-item-name";
-    name.textContent = task.name;
+    const name = html`<span className="task-item-name">${task.name}</span>`;
     name.title = task.cmd;
-    const meta = document.createElement("span");
-    meta.className = "task-item-meta";
-    meta.textContent = `${task.type} · ${task.term ? "terminal" : "headless"}${
-      task.autoStart ? " · auto-start" : ""
-    } · ${task.cmd}`;
+    const meta = html`<span className="task-item-meta">${
+      `${task.type} · ${task.term ? "terminal" : "headless"}${
+        task.autoStart ? " · auto-start" : ""
+      } · ${task.cmd}`
+    }</span>`;
     meta.title = meta.textContent;
-    details.append(name, meta);
-    item.append(
-      details,
-      createTaskItemButtons(
+    const item = html`<div className="task-item">
+      <div>
+        ${name}
+        ${meta}
+      </div>
+      ${createTaskItemButtons(
         task,
         workspace,
         containerApi,
@@ -128,8 +118,8 @@ function renderTaskList(
         setStatus,
         resetFields,
         populateFields,
-      ),
-    );
+      )}
+    </div>`;
     els.list.appendChild(item);
   }
 }

@@ -69,7 +69,7 @@ for (
     throw new Error(`Missing expected feature marker: ${marker}`);
   }
 }
-if (!has("workbench.setAttribute('raw', '')")) {
+if (!has("term=\"\"\n      raw=\"\"")) {
   throw new Error("Workbench terminals must forward raw input.");
 }
 if (!has("DEFAULT_WORKBENCH_ASSETS_URL = '/wanix-workbench'")) {
@@ -93,7 +93,7 @@ if (!has("panel.id.startsWith('workbench-')")) {
 if (!has("window.dispatchEvent(new Event('resize'))")) {
   throw new Error("Workbench panels must forward Dockview resize events.");
 }
-if (!has("vm.setAttribute('netdev', session.config.netdev)")) {
+if (!has("netdev=${session.config.netdev || null}")) {
   throw new Error("VM panels must forward their saved network configuration.");
 }
 if (!has("DEFAULT_COLLAPSED_LAUNCHER_ITEMS")) {
@@ -267,7 +267,7 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.186")) {
+if (!has("app.js?v=20260828.187")) {
   throw new Error("index.html must load the current app.js build.");
 }
 

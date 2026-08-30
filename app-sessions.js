@@ -10,50 +10,50 @@ import {
   vmSessions,
   workbenchSessions,
 } from "./app-state.js?v=20260826.2";
-import { HOME } from "./app-constants.js?v=20260828.95";
+import { HOME } from "./app-constants.js?v=20260828.96";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.136";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.95";
+} from "./app-terminal-profiles.js?v=20260826.137";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.96";
 import { wanixSystem } from "./app-state.js?v=20260826.2";
-import { createWanixBindElement } from "./app-wanix.js?v=20260826.136";
+import { createWanixBindElement } from "./app-wanix.js?v=20260826.137";
+import { html } from "./dom-html.js?v=20260830.2";
 
 export const DEFAULT_IFRAME_ALLOW = "clipboard-read; clipboard-write";
+
+const IFRAME_POPOUT_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" ' +
+  'viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M15 3h6v6"/><path d="M10 14 21 3"/>' +
+  '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
+  "</svg>";
 
 export function createIframeSession(
   id,
   { src, title, allow = DEFAULT_IFRAME_ALLOW, allowFullscreen = false },
 ) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "iframe-session";
+  const popout = html`<button
+    type="button"
+    className="iframe-session-popout"
+    title="Open in a new browser tab"
+    aria-label="Open in a new browser tab"
+    onclick=${() => window.open(src, "_blank", "noopener")}
+  />`;
+  popout.innerHTML = IFRAME_POPOUT_ICON;
 
-  const iframe = document.createElement("iframe");
-  iframe.className = "iframe-panel";
-  iframe.src = src;
-  iframe.title = title;
-  iframe.allow = allow;
-  iframe.allowFullscreen = allowFullscreen;
-
-  wrapper.appendChild(iframe);
-
-  const popout = document.createElement("button");
-  popout.type = "button";
-  popout.className = "iframe-session-popout";
-  popout.title = "Open in a new browser tab";
-  popout.setAttribute("aria-label", "Open in a new browser tab");
-  popout.addEventListener("click", () => {
-    window.open(src, "_blank", "noopener");
-  });
-  popout.innerHTML =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" ' +
-    'viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M15 3h6v6"/><path d="M10 14 21 3"/>' +
-    '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
-    "</svg>";
-  wrapper.appendChild(popout);
+  const wrapper = html`<div className="iframe-session">
+    <iframe
+      className="iframe-panel"
+      src=${src}
+      title=${title}
+      allow=${allow}
+      allowFullscreen=${allowFullscreen}
+    />
+    ${popout}
+  </div>`;
 
   terminalLayer?.appendChild(wrapper);
 
@@ -197,32 +197,38 @@ export function createOverlayAttachment(session, anchor, api) {
 }
 
 export function createWorkbenchSession(id, config) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "workbench-session";
-
-  const workbench = document.createElement("wanix-workbench");
-  workbench.setAttribute("for", "wanix-system");
-  workbench.setAttribute("assets", config.assetsUrl);
-  workbench.setAttribute("term", "");
+  const profile = getDefaultTerminalProfile();
   // Hush consumes an interactive terminal stream, including control and
   // escape sequences. Let xterm forward each key instead of line-buffering.
-  workbench.setAttribute("raw", "");
-  workbench.setAttribute("sidebar", "always");
-  const profile = getDefaultTerminalProfile();
-  const shell = document.createElement("wanix-task");
-  shell.setAttribute("role", "shell");
-  shell.setAttribute("cmd", terminalCommand(profile) || DEFAULT_CMD);
-  shell.setAttribute("type", profile.type || "gojs");
-  shell.setAttribute("env", buildEnv(profile.env));
   // Workbench creates the task through the task control filesystem instead
-  // of a wanix-task element. Its runtime requires a concrete directory, while
-  // a blank `dir` is interpreted as an invalid path.
-  shell.setAttribute("wd", profile.wd || HOME);
-  workbench.appendChild(shell);
-  wrapper.appendChild(workbench);
+  // of a wanix-task element. Its runtime requires a concrete directory,
+  // while a blank `dir` is interpreted as an invalid path.
+  const wrapper = html`<div className="workbench-session">
+    <wanix-workbench
+      for="wanix-system"
+      assets=${config.assetsUrl}
+      term=""
+      raw=""
+      sidebar="always"
+    >
+      <wanix-task
+        role="shell"
+        cmd=${terminalCommand(profile) || DEFAULT_CMD}
+        type=${profile.type || "gojs"}
+        env=${buildEnv(profile.env)}
+        wd=${profile.wd || HOME}
+      />
+    </wanix-workbench>
+  </div>`;
   terminalLayer?.appendChild(wrapper);
 
-  const session = { id, wrapper, workbench, anchor: null, layout: null };
+  const session = {
+    id,
+    wrapper,
+    workbench: wrapper.firstElementChild,
+    anchor: null,
+    layout: null,
+  };
   workbenchSessions.set(id, session);
   return session;
 }
@@ -271,8 +277,7 @@ export function ensureVmDriver(backendUrl) {
       dst: "#vm/v86",
       src: backendUrl,
     });
-    const bindings = document.createElement("div");
-    bindings.appendChild(bind);
+    const bindings = html`<div>${bind}</div>`;
     terminalLayer?.appendChild(bindings);
     try {
       await wanixSystem._kernel._setupNamespace(
@@ -290,9 +295,7 @@ export function ensureVmDriver(backendUrl) {
 }
 
 export function createVmSession(id, config) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "vm-session";
-  wrapper.textContent = "Preparing VM…";
+  const wrapper = html`<div className="vm-session">Preparing VM…</div>`;
   terminalLayer?.appendChild(wrapper);
 
   const session = {
@@ -334,27 +337,28 @@ export function startVmSession(session) {
   session.startPromise = ensureVmDriver(session.config.backendUrl).then(() => {
     if (session.destroyed) return;
     const vmId = `vm-panel-${session.id}`;
-    const vm = document.createElement("wanix-vm");
-    vm.setAttribute("for", "wanix-system");
-    vm.setAttribute("id", vmId);
-    vm.setAttribute("export", "ttyS0");
-    vm.setAttribute("mem", session.config.memory);
-    if (session.config.netdev) vm.setAttribute("netdev", session.config.netdev);
-    vm.setAttribute("term", "");
-    vm.setAttribute("start", "");
-    vm.appendChild(
-      createWanixBindElement({
+    const vm = html`<wanix-vm
+      for="wanix-system"
+      id=${vmId}
+      export="ttyS0"
+      mem=${session.config.memory}
+      netdev=${session.config.netdev || null}
+      term=""
+      start=""
+    >
+      ${createWanixBindElement({
         type: "archive",
         dst: ".",
         src: session.config.linuxUrl,
-      }),
-    );
+      })}
+    </wanix-vm>`;
 
-    const term = document.createElement("wanix-term");
-    term.setAttribute("for", "wanix-system");
-    term.setAttribute("path", `#vm/${vmId}/term`);
-    term.setAttribute("raw", "");
-    term.setAttribute("no-scrollbar", "");
+    const term = html`<wanix-term
+      for="wanix-system"
+      path=${`#vm/${vmId}/term`}
+      raw=""
+      no-scrollbar=""
+    />`;
     session.vm = vm;
     session.term = term;
     session.wrapper.replaceChildren(vm, term);

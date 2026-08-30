@@ -9,6 +9,7 @@ import {
   filesystemPathJoin,
   filesystemPathParent,
 } from "../files-path.js?v=20260826.71";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 // === File helpers (preview-type detection + byte conversion) ===
 // Shared with files-context-menu.js so both modules treat bytes and
@@ -178,11 +179,12 @@ function useFilesFileOps(
   }, [getRoot, clearFileSelection]);
   const downloadFile = useCallback(() => {
     if (!selectedPath) return;
-    const link = document.createElement("a");
     const blob = preview?.blob ||
       new Blob([contents], { type: "text/plain;charset=utf-8" });
-    link.href = URL.createObjectURL(blob);
-    link.download = selectedPath.split("/").pop() || "download";
+    const link = html`<a
+      href=${URL.createObjectURL(blob)}
+      download=${selectedPath.split("/").pop() || "download"}
+    />`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 0);
   }, [selectedPath, preview, contents]);

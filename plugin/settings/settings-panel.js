@@ -5,19 +5,20 @@
 import React, { useEffect, useRef } from "react";
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
 import htm from "htm";
+import { html as domHtml } from "../../dom-html.js?v=20260830.2";
 
 const html = htm.bind(React.createElement);
 import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
 import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.16";
 import { setupConfigForm } from "./settings-config.js?v=20260826.13";
 import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.7";
-import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.3";
-import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.3";
-import { setupSystemForm } from "./settings-system.js?v=20260826.3";
-import { setupBindForm } from "./settings-binds.js?v=20260826.3";
-import { setupTaskForm } from "./settings-task.js?v=20260826.3";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.112";
-import { listSettingsSections } from "../../plugins.js?v=20260829.100";
+import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.4";
+import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.4";
+import { setupSystemForm } from "./settings-system.js?v=20260826.4";
+import { setupBindForm } from "./settings-binds.js?v=20260826.4";
+import { setupTaskForm } from "./settings-task.js?v=20260826.4";
+import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.113";
+import { listSettingsSections } from "../../plugins.js?v=20260829.101";
 
 // Mount plugin-registered settings sections (ctx.registerSettingsSection)
 // after the built-in template content. Each section gets a <details>
@@ -27,16 +28,14 @@ function mountSettingsSections(settingsContent) {
   const sections = listSettingsSections();
   if (sections.length === 0) return null;
   const disposes = [];
-  const details = document.createElement("details");
-  details.className = "settings-section";
-  details.open = true;
-  const summary = document.createElement("summary");
-  const label = document.createElement("span");
-  label.textContent = sections.map((section) => section.label).join(" · ");
-  summary.append(label);
-  const body = document.createElement("div");
-  body.className = "body";
-  details.append(summary, body);
+  const body = domHtml`<div className="body" />`;
+  const label = domHtml`<span>${
+    sections.map((section) => section.label).join(" · ")
+  }</span>`;
+  const details = domHtml`<details className="settings-section" open=${true}>
+    <summary>${label}</summary>
+    ${body}
+  </details>`;
   settingsContent.append(details);
   for (const section of sections) {
     const dispose = section.render(body, section.ctx);

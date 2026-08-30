@@ -12,10 +12,11 @@ import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.136";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.95";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.136";
+} from "./app-terminal-profiles.js?v=20260826.137";
+import { DEFAULT_CMD } from "./app-constants.js?v=20260828.96";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.137";
 import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.2";
+import { html } from "./dom-html.js?v=20260830.2";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -55,16 +56,18 @@ export function createTerminalSession(
   id,
   profile = getDefaultTerminalProfile(),
 ) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "terminal-session";
   const task = createTaskElement(id, profile);
-  const term = document.createElement("wanix-term");
-  term.setAttribute("raw", "");
-  term.setAttribute("no-scrollbar", "");
-  term.setAttribute("path", `#task/repl-${id}/term`);
-  term.setAttribute("for", "wanix-system");
+  const term = html`<wanix-term
+    raw=""
+    no-scrollbar=""
+    path=${`#task/repl-${id}/term`}
+    for="wanix-system"
+  />`;
 
-  wrapper.append(task, term);
+  const wrapper = html`<div className="terminal-session">
+    ${task}
+    ${term}
+  </div>`;
   terminalLayer?.appendChild(wrapper);
 
   const session = {
@@ -151,20 +154,18 @@ function stopReplExitPolling(session) {
 }
 
 function createTaskElement(id, profile) {
-  const task = document.createElement("wanix-task");
-  task.id = `repl-${id}`;
-  task.setAttribute("cmd", terminalCommand(profile) || DEFAULT_CMD);
-  task.setAttribute("type", profile.type || "gojs");
-  task.setAttribute("env", buildEnv(profile.env));
-  if (profile.wd) task.setAttribute("wd", profile.wd);
-  task.setAttribute("term", "");
-  task.setAttribute("start", "");
-  task.setAttribute("for", "wanix-system");
-
-  const winchBind = document.createElement("wanix-bind");
-  winchBind.setAttribute("dst", "winch");
-  winchBind.setAttribute("src", "#task/self/term/winch");
-  task.appendChild(winchBind);
+  const task = html`<wanix-task
+    id=${`repl-${id}`}
+    cmd=${terminalCommand(profile) || DEFAULT_CMD}
+    type=${profile.type || "gojs"}
+    env=${buildEnv(profile.env)}
+    wd=${profile.wd || null}
+    term=""
+    start=""
+    for="wanix-system"
+  >
+    <wanix-bind dst="winch" src="#task/self/term/winch" />
+  </wanix-task>`;
 
   appendWorkspaceBinds(task, profile);
   appendExtraBinds(task, profile);
@@ -176,19 +177,18 @@ function createTaskElement(id, profile) {
 // `perm`, profile extraBinds use `mode`.
 function appendBindElement(task, bind, permKey) {
   if (!bind || typeof bind.dst !== "string" || !bind.dst) return;
-  const element = document.createElement("wanix-bind");
-  element.setAttribute("dst", bind.dst);
-  if (bind.type) element.setAttribute("type", bind.type);
   // Fetch binds prefer the OPFS-cached copy (a session blob URL) when
   // priming already downloaded it; otherwise keep the origin src.
-  if (bind.src) {
-    const cached = bind.type === "fetch" ? cachedBlobUrl(bind.src) : null;
-    element.setAttribute("src", cached || bind.src);
-  }
-  const perm = bind[permKey];
-  if (perm) element.setAttribute("perm", perm);
-  if (bind.union) element.setAttribute("union", bind.union);
-  if (typeof bind.content === "string") element.textContent = bind.content;
+  const cached = bind.src && bind.type === "fetch"
+    ? cachedBlobUrl(bind.src)
+    : null;
+  const element = html`<wanix-bind
+    dst=${bind.dst}
+    type=${bind.type || null}
+    src=${(bind.src && (cached || bind.src)) || null}
+    perm=${bind[permKey] || null}
+    union=${bind.union || null}
+  >${typeof bind.content === "string" ? bind.content : null}</wanix-bind>`;
   task.appendChild(element);
 }
 

@@ -4,6 +4,7 @@
 // install flows share.
 
 import { __getWanixSystem, crushRunnerDep } from "./crush-deps.js?v=20260828.4";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 // Pick a per-panel config directory under /tmp. Each CrushRunner instance
 // owns its own directory so concurrent Crush launches don't fight over a
@@ -137,18 +138,19 @@ export function spawnWanixCommand(
   { env = crushRunnerDep("buildEnv")(""), onError } = {},
 ) {
   if (!__getWanixSystem()) throw new Error("Wanix system is not available.");
-  const task = document.createElement("wanix-task");
-  task.setAttribute("cmd", cmd);
-  task.setAttribute("type", "gojs");
-  task.setAttribute("start", "");
-  task.setAttribute("for", "wanix-system");
-  task.setAttribute("wd", "/");
-  if (env) task.setAttribute("env", env);
-  task.addEventListener("error", (event) => {
-    onError?.(
-      event.detail?.error || event.detail || new Error("Task failed to start."),
-    );
-  });
+  const task = html`<wanix-task
+    cmd=${cmd}
+    type="gojs"
+    start=""
+    for="wanix-system"
+    wd="/"
+    env=${env || null}
+    onerror=${(event) => {
+      onError?.(
+        event.detail?.error || event.detail || new Error("Task failed to start."),
+      );
+    }}
+  />`;
   __getWanixSystem().appendChild(task);
   return {
     task,

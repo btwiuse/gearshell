@@ -14,8 +14,9 @@
 import {
   PLUGIN_CHANGED_EVENT,
   registerSettingsSection,
-} from "./plugins.js?v=20260829.100";
-import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.95";
+} from "./plugins.js?v=20260829.101";
+import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js?v=20260828.96";
+import { html } from "./dom-html.js?v=20260830.2";
 
 const BUILTIN_PLUGINS_SECTION = {
   id: "plugins",
@@ -27,13 +28,12 @@ const BUILTIN_PLUGINS_SECTION = {
 };
 
 function renderPluginsCard(root, ctx) {
-  const countEl = document.createElement("span");
-  countEl.className = "plugins-card-count";
-  const openBtn = document.createElement("button");
-  openBtn.type = "button";
-  openBtn.className = "plugins-card-open";
-  openBtn.textContent = "Open plugins page";
-  openBtn.addEventListener("click", () => ctx.api.panels.open("plugins"));
+  const countEl = html`<span className="plugins-card-count" />`;
+  const openBtn = html`<button
+    type="button"
+    className="plugins-card-open"
+    onclick=${() => ctx.api.panels.open("plugins")}
+  >Open plugins page</button>`;
 
   const refresh = () => {
     try {
@@ -48,14 +48,9 @@ function renderPluginsCard(root, ctx) {
     }
   };
 
-  const hint = document.createElement("p");
-  hint.className = "hint";
-  hint.textContent =
-    "Install, edit and manage the tabs and apps that extend the shell.";
+  const hint = html`<p className="hint">Install, edit and manage the tabs and apps that extend the shell.</p>`;
 
-  const footer = document.createElement("div");
-  footer.className = "plugins-card-footer";
-  footer.append(countEl, openBtn);
+  const footer = html`<div className="plugins-card-footer">${countEl}${openBtn}</div>`;
   root.append(hint, footer);
 
   refresh();

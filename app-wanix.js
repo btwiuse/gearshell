@@ -1,38 +1,33 @@
 // Wanix system bootstrap elements: wanix-bind element builder and the
 // wanix-namespace system root (500-line rule split).
 
-import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.95";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.136";
+import { WANIX_RUNTIME } from "./app-constants.js?v=20260828.96";
+import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.137";
+import { html } from "./dom-html.js?v=20260830.2";
 
 export function createWanixBindElement(bind) {
-  const element = document.createElement("wanix-bind");
-  if (bind.type && bind.type !== "ns") element.setAttribute("type", bind.type);
-  element.setAttribute("dst", bind.dst);
-  if (bind.src) element.setAttribute("src", bind.src);
-  if (bind.mode) element.setAttribute("perm", bind.mode);
-  if (bind.union) element.setAttribute("union", bind.union);
-  if (bind.content) element.textContent = bind.content;
-  return element;
+  return html`<wanix-bind
+    type=${bind.type && bind.type !== "ns" ? bind.type : null}
+    dst=${bind.dst}
+    src=${bind.src || null}
+    perm=${bind.mode || null}
+    union=${bind.union || null}
+  >${bind.content || null}</wanix-bind>`;
 }
 
 export function createWanixSystem(workspace = loadActiveWorkspace()) {
   const host = document.getElementById("wanix-host");
   if (!host) throw new Error("Unable to find the Wanix host.");
-  const system = document.createElement("wanix-namespace");
-  system.id = "wanix-system";
-  system.setAttribute(
-    "wasm",
-    workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl,
-  );
-  if (workspace.system.allowOrigins) {
-    system.setAttribute("allow-origins", workspace.system.allowOrigins);
-  }
+  const system = html`<wanix-namespace
+    id="wanix-system"
+    wasm=${workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl}
+    allow-origins=${workspace.system.allowOrigins || null}
+  />`;
 
-  const appRoot = document.createElement("div");
-  appRoot.id = "app-root";
-  const terminalLayer = document.createElement("div");
-  terminalLayer.id = "terminal-layer";
-  system.append(appRoot, terminalLayer);
+  system.append(
+    html`<div id="app-root"/>`,
+    html`<div id="terminal-layer"/>`,
+  );
   for (const bind of workspace.system.binds) {
     system.appendChild(createWanixBindElement(bind));
   }

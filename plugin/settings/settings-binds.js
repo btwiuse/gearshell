@@ -1,6 +1,7 @@
 // Task mounts (binds) section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 function queryBindElements(settingsContent) {
   return {
@@ -53,37 +54,47 @@ function createBindItemButtons(
   populateFields,
   resetFields,
 ) {
-  const actions = document.createElement("div");
-  actions.className = "bind-item-actions";
-  const edit = document.createElement("button");
-  edit.type = "button";
-  edit.textContent = "Edit";
-  edit.addEventListener("click", () => populateFields(bind));
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.textContent = "Remove";
-  remove.addEventListener("click", () => {
-    if (state.editingBindId === bind.id) resetFields();
-    settingsDep("removeWorkspaceBind")(bind.id);
-    setStatus(`Removed ${bind.dst}.`);
-  });
-  actions.append(edit, remove);
-  return actions;
+  return html`<div className="bind-item-actions">
+    <button type="button" onclick=${() => populateFields(bind)}>Edit</button>
+    <button
+      type="button"
+      onclick=${() => {
+        if (state.editingBindId === bind.id) resetFields();
+        settingsDep("removeWorkspaceBind")(bind.id);
+        setStatus(`Removed ${bind.dst}.`);
+      }}
+    >Remove</button>
+  </div>`;
 }
 
 function renderBindList(els, state, setStatus, populateFields, resetFields) {
   els.list.replaceChildren();
   const workspace = settingsDep("loadActiveWorkspace")();
   if (workspace.binds.length === 0) {
-    const empty = document.createElement("span");
-    empty.className = "hint";
-    empty.textContent = "No mounts yet.";
-    els.list.appendChild(empty);
+    els.list.appendChild(html`<span className="hint">No mounts yet.</span>`);
     return;
   }
   for (const bind of workspace.binds) {
-    const item = document.createElement("div");
-    item.className = "bind-item";
+    const path = html`<span className="bind-item-path">${
+      `${bind.dst} ← ${bind.src || "inline content"}`
+    }</span>`;
+    path.title = path.textContent;
+    const details = html`<div>
+      ${path}
+      <span className="bind-item-meta">${
+        `${bind.type} · ${bind.perm} · ${bind.union}`
+      }</span>
+    </div>`;
+    const item = html`<div className="bind-item">${
+      details
+    }${createBindItemButtons(
+      els,
+      bind,
+      state,
+      setStatus,
+      populateFields,
+      resetFields,
+    )}</div>`;
     settingsDep("makeBindItemDraggable")(item, bind, {
       list: els.list,
       getDraggedId: () => state.draggedBindId,
@@ -93,26 +104,6 @@ function renderBindList(els, state, setStatus, populateFields, resetFields) {
       reorder: settingsDep("reorderWorkspaceBinds"),
       onReordered: () => setStatus("Mount order saved."),
     });
-    const details = document.createElement("div");
-    const path = document.createElement("span");
-    path.className = "bind-item-path";
-    path.textContent = `${bind.dst} ← ${bind.src || "inline content"}`;
-    path.title = path.textContent;
-    const meta = document.createElement("span");
-    meta.className = "bind-item-meta";
-    meta.textContent = `${bind.type} · ${bind.perm} · ${bind.union}`;
-    details.append(path, meta);
-    item.append(
-      details,
-      createBindItemButtons(
-        els,
-        bind,
-        state,
-        setStatus,
-        populateFields,
-        resetFields,
-      ),
-    );
     els.list.appendChild(item);
   }
 }

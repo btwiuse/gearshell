@@ -1,6 +1,7 @@
 // Workspace form section wiring.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 function queryWorkspaceElements(settingsContent) {
   return {
@@ -56,11 +57,9 @@ function createWorkspaceJsonEditor(els, setJsonStatus) {
 }
 
 function addOption(select, value, label, selected) {
-  const option = document.createElement("option");
-  option.value = value;
-  option.textContent = label;
-  option.selected = selected;
-  select.appendChild(option);
+  select.appendChild(
+    html`<option value=${value} selected=${selected}>${label}</option>`,
+  );
 }
 
 function renderWorkspaceForm(els, state, loadCurrentJson) {
@@ -167,11 +166,12 @@ function wireWorkspaceJsonButtons(
       if (!workspace) return;
       const blob = new Blob([els.jsonEl.value], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const download = document.createElement("a");
-      download.href = url;
-      download.download = `${
-        workspace.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "workspace"
-      }.json`;
+      const download = html`<a
+        href=${url}
+        download=${`${
+          workspace.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "workspace"
+        }.json`}
+      />`;
       download.click();
       URL.revokeObjectURL(url);
       setStatus("Workspace JSON downloaded.");

@@ -5,7 +5,8 @@
 // live while the panel stays open.
 
 import { settingsDep } from "./settings-deps.js?v=20260826.3";
-import { AGENT_AUDIT_CHANGED_EVENT } from "../../workspace-audit.js?v=20260829.111";
+import { AGENT_AUDIT_CHANGED_EVENT } from "../../workspace-audit.js?v=20260829.112";
+import { html } from "../../dom-html.js?v=20260830.2";
 
 function queryElements(settingsContent) {
   return {
@@ -43,34 +44,29 @@ function changedKeys(entry) {
 }
 
 function renderEntry(entry, undo) {
-  const row = document.createElement("div");
-  row.className = "agent-activity-entry" + (entry.undone ? " undone" : "");
-  const head = document.createElement("div");
-  head.className = "agent-activity-head";
-  const label = document.createElement("span");
-  label.textContent = `${formatTime(entry.ts)} · ${entry.agent}`;
-  const keys = document.createElement("span");
-  keys.className = "agent-activity-keys";
-  keys.textContent = changedKeys(entry).join(", ") || "(no key changes)";
-  head.append(label, keys);
-  if (!entry.undone) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = "Undo";
-    button.addEventListener("click", () => undo(entry.id));
-    head.append(button);
-  }
-  const body = document.createElement("details");
-  body.className = "agent-activity-diff";
-  const summary = document.createElement("summary");
-  summary.textContent = "before / after";
-  const pre = document.createElement("pre");
-  pre.textContent = JSON.stringify(entry.prev, null, 2) +
-    "\n\n\u2192\n\n" +
-    JSON.stringify(entry.next, null, 2);
-  body.append(summary, pre);
-  row.append(head, body);
-  return row;
+  const button = entry.undone ? null : html`<button
+    type="button"
+    onclick=${() => undo(entry.id)}
+  >Undo</button>`;
+  return html`<div
+    className=${"agent-activity-entry" + (entry.undone ? " undone" : "")}
+  >
+    <div className="agent-activity-head">
+      <span>${`${formatTime(entry.ts)} · ${entry.agent}`}</span>
+      <span className="agent-activity-keys">${
+        changedKeys(entry).join(", ") || "(no key changes)"
+      }</span>
+      ${button}
+    </div>
+    <details className="agent-activity-diff">
+      <summary>before / after</summary>
+      <pre>${
+        JSON.stringify(entry.prev, null, 2) +
+        "\n\n→\n\n" +
+        JSON.stringify(entry.next, null, 2)
+      }</pre>
+    </details>
+  </div>`;
 }
 
 export function setupAgentActivity(settingsContent) {
@@ -90,10 +86,9 @@ export function setupAgentActivity(settingsContent) {
     els.list.replaceChildren();
     const all = settingsDep("auditList")();
     if (all.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "hint";
-      empty.textContent = "No agent config changes recorded yet.";
-      els.list.append(empty);
+      els.list.append(
+        html`<p className="hint">No agent config changes recorded yet.</p>`,
+      );
       return;
     }
     for (const entry of all) els.list.append(renderEntry(entry, undo));
