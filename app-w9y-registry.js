@@ -9,8 +9,8 @@
 // (window.GearShell.w9y.list/status). The mirror is refreshed at boot,
 // after each orchestrated operation, and on demand via w9y.refresh.
 
-import { pushEvent } from "./workspace-events.js?v=20260828.4";
-import { runHeadlessTask } from "./workspace-tasks-api.js?v=20260828.153";
+import { pushEvent } from "./workspace-events.js";
+import { runHeadlessTask } from "./workspace-tasks-api.js";
 
 const REGISTRY_OPFS = ["wanix", "w9y-registry.json"];
 const INSTALL_PREFIX = "/opfs/wanix";

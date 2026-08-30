@@ -1,7 +1,7 @@
 // plugins-deps.js — the plugin kernel's DI shim + change event
 // (500-line split out of plugins.js).
 
-import { pushEvent } from "./workspace-events.js?v=20260828.4";
+import { pushEvent } from "./workspace-events.js";
 
 export const PLUGIN_CHANGED_EVENT = "GearShellPluginsChanged";
 

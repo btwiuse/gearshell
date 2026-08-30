@@ -13,7 +13,7 @@ import {
   isLegacyHushBinaryUrl,
   SHELL_PROFILE_CONTENT,
   W9Y_BINARY_VERSION,
-} from "./app-plugin-manifests.js?v=20260829.182";
+} from "./app-plugin-manifests.js";
 
 // Built-in plugin manifests + the shell toolset constants live in
 // app-plugin-manifests.js; re-exported so every existing importer
@@ -151,8 +151,7 @@ export const CONFIG_KEY = "gear-shell-config";
 // Roll are entry-less iframe plugins (the manifest carries the src, so
 // they register synchronously at boot). Disabling a built-in hides its
 // panel type; built-ins cannot be removed, only disabled.
-// The entry URL carries its own ?v= token (bumped alongside the plugin
-// module's edits; the version cascade only rewrites import statements).
+// Entry URLs are unversioned (cache-bust tokens were retired).
 export const DEFAULT_CONFIG = {
   cmd: DEFAULT_CMD,
   env: "",

@@ -16,8 +16,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { crushRunnerDep } from "./crush-deps.js?v=20260828.4";
-import { detectCrushInstallation } from "./crush-install.js?v=20260828.172";
+import { crushRunnerDep } from "./crush-deps.js";
+import { detectCrushInstallation } from "./crush-install.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

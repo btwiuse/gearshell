@@ -34,8 +34,8 @@ import {
   musicSetLoop,
   musicSetShuffle,
   musicStop,
-} from "../../music-engine.js?v=20260829.11";
-import { isAudioFilePath, VfsFilePicker } from "./vfs-picker.js?v=20260829.12";
+} from "../../music-engine.js";
+import { isAudioFilePath, VfsFilePicker } from "./vfs-picker.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
@@ -46,11 +46,11 @@ import {
   renderLyricsSection,
   renderNowPlaying,
   renderUrlRow,
-} from "./music-panel-parts.js?v=20260829.13";
+} from "./music-panel-parts.js";
 import {
   MusicQueueList,
   PlaylistToolbar,
-} from "./music-playlist-ui.js?v=20260829.13";
+} from "./music-playlist-ui.js";
 
 const LOOP_CYCLE = ["off", "all", "one"];
 

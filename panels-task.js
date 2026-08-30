@@ -4,8 +4,8 @@
 // injection table as panels.js via the exported `panelsDep`.
 
 import React, { useEffect, useRef, useState } from "react";
-import { panelsDep } from "./panels.js?v=20260812.156";
-import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
+import { panelsDep } from "./panels.js";
+import { nextPanelIndex } from "./app-panel-ids.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

@@ -20,11 +20,11 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import htm from "htm";
 
-import { useFilesEditor } from "./files-editor.js?v=20260826.47";
-import { useFilesSelection } from "./files-context-menu.js?v=20260826.47";
-import { useFavorites } from "./files-favorites.js?v=20260826.38";
-import { useFilesTree } from "./files-tree.js?v=20260826.42";
-import { useFilesSidebarResize } from "./files-resize.js?v=20260826.29";
+import { useFilesEditor } from "./files-editor.js";
+import { useFilesSelection } from "./files-context-menu.js";
+import { useFavorites } from "./files-favorites.js";
+import { useFilesTree } from "./files-tree.js";
+import { useFilesSidebarResize } from "./files-resize.js";
 import {
   useFilesMediaLayout,
   useFilesNavigation,
@@ -35,19 +35,19 @@ import {
   useFilesPanelMounts,
   useFilesPanelState,
   useFilesRefresh,
-} from "./files-panel-hooks.js?v=20260826.167";
+} from "./files-panel-hooks.js";
 import {
   FilesPanelContextMenu,
   FilesPanelRightPane,
   FilesPanelSidebar,
   FilesPanelTopbar,
-} from "./files-panel-sections.js?v=20260826.53";
-import { FilesResizer } from "./files-parts.js?v=20260826.51";
+} from "./files-panel-sections.js";
+import { FilesResizer } from "./files-parts.js";
 import {
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "../files-path.js?v=20260826.71";
-import { filesDep } from "./files-registry.js?v=20260826.134";
+} from "../files-path.js";
+import { filesDep } from "./files-registry.js";
 
 const html = htm.bind(React.createElement);
 

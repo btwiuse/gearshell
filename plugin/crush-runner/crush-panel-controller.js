@@ -10,23 +10,23 @@ import {
   __getWanixSystem,
   crushRunnerDep,
   perPanelLaunchCount,
-} from "./crush-deps.js?v=20260828.4";
+} from "./crush-deps.js";
 import {
   CRUSH_RUNNER_DEFAULT_PROFILE,
   DEFAULT_CRUSHRC,
   getCrushRunnerCrushrcFor,
   getCrushRunnerDefaults,
-} from "./crush-presets.js?v=20260826.3";
+} from "./crush-presets.js";
 import {
   crushRunDirFor,
   prepareCrushLaunch,
-} from "./crush-config.js?v=20260826.6";
+} from "./crush-config.js";
 import {
   detectCrushInstallation,
   installCrushViaW9y,
-} from "./crush-install.js?v=20260828.172";
-import { useCrushJsonEdit } from "./crush-json-edit.js?v=20260826.4";
-import { useCrushPresetCrud } from "./crush-preset-crud.js?v=20260826.7";
+} from "./crush-install.js";
+import { useCrushJsonEdit } from "./crush-json-edit.js";
+import { useCrushPresetCrud } from "./crush-preset-crud.js";
 
 function makeCrushDetector(
   { setCrushInstalled, setDetectSource, applyDetectedProgram },

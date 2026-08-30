@@ -7,12 +7,12 @@ import {
   systemReady,
   terminalLayer,
   workspaceTaskSessions,
-} from "./app-state.js?v=20260826.2";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.127";
-import { normalizeTask } from "./app-normalize.js?v=20260828.169";
-import { buildEnv } from "./app-terminal-profiles.js?v=20260826.168";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js?v=20260826.168";
-import { html } from "./dom-html.js?v=20260830.4";
+} from "./app-state.js";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js";
+import { normalizeTask } from "./app-normalize.js";
+import { buildEnv } from "./app-terminal-profiles.js";
+import { attachOverlayTerminalSession } from "./app-terminal-sessions.js";
+import { html } from "./dom-html.js";
 
 export function createBindElement(bind) {
   return html`<wanix-bind

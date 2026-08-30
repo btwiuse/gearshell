@@ -3,7 +3,7 @@
 // files-info-pane.js for the 500-line rule.
 import React from "react";
 import { ArrowDown, ArrowUp, LayoutGrid, List } from "lucide-react";
-import { getEntryIcon } from "./files-ui.js?v=20260826.40";
+import { getEntryIcon } from "./files-ui.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
@@ -11,7 +11,7 @@ import {
   formatFileSize,
   formatModTime,
   formatModTimeColumn,
-} from "./files-info.js?v=20260826.43";
+} from "./files-info.js";
 
 const PREVIEW_KIND_LABELS = {
   image: "Image",

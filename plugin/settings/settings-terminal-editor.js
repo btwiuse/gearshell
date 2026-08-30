@@ -6,17 +6,17 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { settingsDep } from "./settings-deps.js";
 import {
   useTerminalPresetOrder,
   useTerminalPresetSave,
   useTerminalPresetState,
-} from "./settings-terminal-presets.js?v=20260828.3";
+} from "./settings-terminal-presets.js";
 import {
   TerminalProfileBasicFields,
   TerminalProfileItem,
   TerminalProfileRuntimeFields,
-} from "./settings-terminal-fields.js?v=20260828.3";
+} from "./settings-terminal-fields.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

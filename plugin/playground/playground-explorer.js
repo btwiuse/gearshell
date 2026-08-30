@@ -16,13 +16,13 @@ import {
   gearInvocation,
   PLAYGROUND_CATALOG,
   serializeArgs,
-} from "./playground-api-catalog.js?v=20260829.17";
+} from "./playground-api-catalog.js";
 import {
   ArgField,
   HistoryList,
   MethodList,
   ResultView,
-} from "./playground-parts.js?v=20260829.16";
+} from "./playground-parts.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

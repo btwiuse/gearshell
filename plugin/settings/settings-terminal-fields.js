@@ -13,7 +13,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { settingsDep } from "./settings-deps.js";
 
 const html = htm.bind(React.createElement);
 const Fragment = React.Fragment;

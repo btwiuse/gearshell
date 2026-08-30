@@ -8,11 +8,10 @@
 // title, render }). The panel component and engine live in the normal
 // module graph (music.js + music-*), so this file is deliberately tiny.
 //
-// Version discipline: the manifest entry URL carries its own ?v= token
-// (bumped manually alongside music.js edits — the version cascade only
-// rewrites import statements, not config data).
+// Entry module for the Music plugin: modules are unversioned (cache-bust
+// tokens were retired), so keep the manifest entry stable for consumers.
 
-import { MusicPanel } from "./music.js?v=20260829.18";
+import { MusicPanel } from "./music.js";
 
 export const plugin = {
   register(ctx) {

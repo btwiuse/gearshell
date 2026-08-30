@@ -134,8 +134,9 @@ export function normalizePlugin(plugin = {}) {
     // root, so system mounts are visible to them as well.
     ...(systemFiles.length ? { systemFiles } : {}),
     ...(normalizeW9yDependency(plugin) || {}),
-    // Plugin stylesheet paths (same-origin, no version: the loader appends
-    // the entry's ?v= so cascade bumps keep CSS and JS in sync).
+    // Plugin stylesheet paths (same-origin, unversioned like every other
+    // local module; rely on HTTP cache headers and DevTools "Disable
+    // cache" during iteration instead of cache-bust tokens).
     ...(css.length ? { css } : {}),
   };
 }

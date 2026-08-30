@@ -17,8 +17,9 @@
 // ~80 same-origin ESM imports; the import resolver runs resolve() on
 // every specifier against the filesystem and exhausts the V8 heap
 // on a buildless bundle like this one. Import hygiene is enforced
-// by the AGENTS.md "module URL consistency" rule and the manual
-// `?v=` cascade instead.
+// by the AGENTS.md "module URL consistency" rule (modules are
+// unversioned; the URL is the identity, so a version split would
+// load the module twice and break singletons).
 import js from "@eslint/js";
 import globals from "globals";
 

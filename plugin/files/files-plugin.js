@@ -6,8 +6,8 @@
 // a config change can flip them (the generic opener cannot do that).
 // initFiles stays kernel-wired for the same reason.
 
-import { FilesPanel } from "./files.js?v=20260826.177";
-import { addFilesPanel } from "./files-registry.js?v=20260826.134";
+import { FilesPanel } from "./files.js";
+import { addFilesPanel } from "./files-registry.js";
 
 export const plugin = {
   register(ctx) {

@@ -5,8 +5,8 @@ import htm from "htm";
 
 const html = htm.bind(React.createElement);
 import { createRoot } from "react-dom/client";
-import { settingsDep } from "./settings-deps.js?v=20260826.3";
-import { LauncherOrderEditor } from "./settings-launcher.js?v=20260826.5";
+import { settingsDep } from "./settings-deps.js";
+import { LauncherOrderEditor } from "./settings-launcher.js";
 // `setupConfigForm` wires the "Behavior" / "Wanix tools" <details>
 // blocks under the Settings panel: restore-tabs toggle, Wagi-Dog
 // toggle, workbench/vm URL inputs, and the launcher ordering editor.

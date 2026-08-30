@@ -18,13 +18,13 @@
 // for untrusted pages (T2 iframe bridge) is a later slice.
 //
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.168";
-import { nextPanelId } from "./app-panel-ids.js?v=20260828.76";
+import { getDockviewApi } from "./app-panels-store.js";
+import { nextPanelId } from "./app-panel-ids.js";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
-} from "./app-constants.js?v=20260828.127";
+} from "./app-constants.js";
 // Split parts (500-line rule): DI shim + change event, permission
 // scoping + icon resolution, and entry-module loading.
 import {
@@ -32,25 +32,25 @@ import {
   initPlugins,
   PLUGIN_CHANGED_EVENT,
   pluginsDep,
-} from "./plugins-deps.js?v=20260829.97";
+} from "./plugins-deps.js";
 import {
   createScopedApi,
   resolveIcon,
-} from "./plugins-scope.js?v=20260829.98";
+} from "./plugins-scope.js";
 import {
   loadEntryModule,
   registerFnOf,
-} from "./plugins-loading.js?v=20260829.99";
+} from "./plugins-loading.js";
 import {
   cssLoaded,
   injectPluginCss,
   removePluginCss,
-} from "./plugins-css.js?v=20260830.4";
+} from "./plugins-css.js";
 import {
   listOverlays,
   registerOverlay,
   removeOverlaysForPlugin,
-} from "./plugins-overlays.js?v=20260830.2";
+} from "./plugins-overlays.js";
 
 // Re-export the kernel surface importers keep reading from plugins.js.
 export { initPlugins, PLUGIN_CHANGED_EVENT, listOverlays };

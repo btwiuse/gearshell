@@ -19,10 +19,10 @@
 
 import React, { useEffect, useRef } from "react";
 import htm from "htm";
-import { html as domHtml } from "../../dom-html.js?v=20260830.4";
+import { html as domHtml } from "../../dom-html.js";
 
 const html = htm.bind(React.createElement);
-import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
+import { nextPanelIndex } from "../../app-panel-ids.js";
 
 let __deckDeps = null;
 export function initDeck(dependencies) {
@@ -67,13 +67,11 @@ let slidesMarkdownPromise = null;
 
 function loadSlidesMarkdown() {
   if (!slidesMarkdownPromise) {
-    // The deck module URL carries the cascade ?v=; reuse it as the slides
-    // cache-buster so editing slides.md bumps deck.js (cascade) instead of
-    // a frozen manual token like the old ?v=20260725.1 that served stale
-    // content forever. Resolve against import.meta.url: a bare fetch("...")
-    // would hit the page base URL, not this module.
-    const version = new URL(import.meta.url).searchParams.get("v") || "1";
-    const url = new URL(`slides.md?v=${version}`, import.meta.url).href;
+    // Resolve against import.meta.url so a bare fetch("...") cannot hit
+    // the page base URL instead of this module's directory. No cache-bust
+    // token anymore: edits surface through the host's Cache-Control
+    // (dev server no-store, production revalidation).
+    const url = new URL("slides.md", import.meta.url).href;
     slidesMarkdownPromise = fetch(url).then(
       async (response) => {
         if (!response.ok) {

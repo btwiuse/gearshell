@@ -12,14 +12,14 @@ import {
   FilesResizer,
   FilesRightPane,
   FilesSidebar,
-} from "./files-parts.js?v=20260826.51";
-import { FilesContextMenu } from "./files-context-menu-ui.js?v=20260826.41";
+} from "./files-parts.js";
+import { FilesContextMenu } from "./files-context-menu-ui.js";
 import {
   filesystemPathJoin,
   filesystemPathParent,
-} from "../files-path.js?v=20260826.71";
-import { FilesTopbar } from "./files-topbar.js?v=20260826.43";
-import { FilesTree } from "./files-tree.js?v=20260826.42";
+} from "../files-path.js";
+import { FilesTopbar } from "./files-topbar.js";
+import { FilesTree } from "./files-tree.js";
 
 const html = htm.bind(React.createElement);
 

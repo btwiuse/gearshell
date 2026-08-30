@@ -8,8 +8,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   filesystemPathJoin,
   filesystemPathParent,
-} from "../files-path.js?v=20260826.71";
-import { html } from "../../dom-html.js?v=20260830.4";
+} from "../files-path.js";
+import { html } from "../../dom-html.js";
 
 // === File helpers (preview-type detection + byte conversion) ===
 // Shared with files-context-menu.js so both modules treat bytes and

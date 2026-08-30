@@ -5,9 +5,9 @@
 import React from "react";
 import htm from "htm";
 import { Check, ChevronRight, X } from "lucide-react";
-import { FilesEditorPane } from "./files-editor-pane.js?v=20260828.8";
-import { FavoritesSidebar } from "./files-favorites-ui.js?v=20260826.46";
-import { VolumesSidebar } from "../files-mounts.js?v=20260826.45";
+import { FilesEditorPane } from "./files-editor-pane.js";
+import { FavoritesSidebar } from "./files-favorites-ui.js";
+import { VolumesSidebar } from "../files-mounts.js";
 
 const html = htm.bind(React.createElement);
 

@@ -24,11 +24,15 @@ pitch and `memory/repo-layout.md` for the structure.
   Generated code is exempt: minified bundles and build artifacts (e.g.
   `browser/*.sw.js`, which are webpack output of the `browser.js` submodule)
   must not be hand-refactored, only regenerated from their source.
-- **Module URL consistency**: every JS module must use the SAME `?v=` version
-  in all importers — browsers cache ES modules by full URL, so a version
-  split loads the module twice (two instances), breaking DI/singleton state
-  (e.g. `files-registry.js` "initFiles has not been called"). When bumping a
-  version, grep the whole tree and update every importer.
+- **No cache-bust tokens**: modules are unversioned (no `?v=` — the old
+  token cascade was retired). The URL is the module identity: browsers
+  cache ES modules by full URL, so any URL divergence (even a stray token
+  on one importer) loads the module twice, breaking DI/singleton state
+  (e.g. `files-registry.js` "initFiles has not been called"). Keep every
+  importer on the bare path. For iteration use the dev server's no-store
+  headers or DevTools Network > "Disable cache"; for production bumps rely
+  on revalidation (`Cache-Control` on the host). `scripts/verify-static.mjs`
+  fails the build if a token reappears.
 - **Verify ESM after editing modules**: `node --check file.js` uses CommonJS
   detection on .js files without a `package.json` type and misses strict-mode
   errors (duplicate declarations, top-level hooks). Use

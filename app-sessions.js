@@ -9,17 +9,17 @@ import {
   vmDriverInstallations,
   vmSessions,
   workbenchSessions,
-} from "./app-state.js?v=20260826.2";
-import { HOME } from "./app-constants.js?v=20260828.127";
+} from "./app-state.js";
+import { HOME } from "./app-constants.js";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.168";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.127";
-import { wanixSystem } from "./app-state.js?v=20260826.2";
-import { createWanixBindElement } from "./app-wanix.js?v=20260826.168";
-import { html } from "./dom-html.js?v=20260830.4";
+} from "./app-terminal-profiles.js";
+import { DEFAULT_CMD } from "./app-constants.js";
+import { wanixSystem } from "./app-state.js";
+import { createWanixBindElement } from "./app-wanix.js";
+import { html } from "./dom-html.js";
 
 export const DEFAULT_IFRAME_ALLOW = "clipboard-read; clipboard-write";
 

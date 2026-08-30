@@ -4,11 +4,11 @@
 // lifecycle (createTerminalSession / wake / destroy) stays in the main
 // module; this one only wires a session element onto a dockview anchor.
 
-import { terminalLayer } from "./app-state.js?v=20260826.2";
+import { terminalLayer } from "./app-state.js";
 import {
   getTerminalSession,
   wakeTerminalSession,
-} from "./app-terminal-sessions.js?v=20260826.168";
+} from "./app-terminal-sessions.js";
 
 export function layoutTerminalSession(session, anchor, isVisible) {
   if (!terminalLayer || !anchor || !isVisible) {

@@ -14,7 +14,7 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { FilesInfoPane } from "./files-info.js?v=20260826.43";
+import { FilesInfoPane } from "./files-info.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

@@ -3,14 +3,14 @@
 // pure formatting/sorting helpers in files-info.js (500-line splits).
 import React from "react";
 import htm from "htm";
-import { sortFilesEntries } from "./files-info.js?v=20260826.43";
+import { sortFilesEntries } from "./files-info.js";
 import {
   entryTypeLabel,
   makeChildInteraction,
   renderInfoFooter,
   renderPreviewBody,
   renderViewToolbar,
-} from "./files-info-pane-body.js?v=20260826.43";
+} from "./files-info-pane-body.js";
 
 const html = htm.bind(React.createElement);
 

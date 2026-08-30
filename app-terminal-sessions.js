@@ -7,16 +7,16 @@ import {
   systemReady,
   terminalLayer,
   terminalSessions,
-} from "./app-state.js?v=20260826.2";
+} from "./app-state.js";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   terminalCommand,
-} from "./app-terminal-profiles.js?v=20260826.168";
-import { DEFAULT_CMD } from "./app-constants.js?v=20260828.127";
-import { loadActiveWorkspace } from "./app-workspace.js?v=20260826.168";
-import { cachedBlobUrl } from "./app-plugin-cache.js?v=20260830.4";
-import { html } from "./dom-html.js?v=20260830.4";
+} from "./app-terminal-profiles.js";
+import { DEFAULT_CMD } from "./app-constants.js";
+import { loadActiveWorkspace } from "./app-workspace.js";
+import { cachedBlobUrl } from "./app-plugin-cache.js";
+import { html } from "./dom-html.js";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -255,4 +255,4 @@ export function wakeTerminalSession(session) {
 export {
   attachOverlayTerminalSession,
   attachTerminalSession,
-} from "./app-terminal-overlay.js?v=20260830.22";
+} from "./app-terminal-overlay.js";

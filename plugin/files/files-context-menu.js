@@ -7,14 +7,14 @@ import { useEffect, useRef, useState } from "react";
 import {
   enrichEntryStats,
   filesystemPathJoin,
-} from "../files-path.js?v=20260826.71";
+} from "../files-path.js";
 import {
   getFilesystemPreviewType,
   isBinaryData,
   sniffWasmBytes,
   toFilesystemBytes,
-} from "./files-editor.js?v=20260826.47";
-import { html } from "../../dom-html.js?v=20260830.4";
+} from "./files-editor.js";
+import { html } from "../../dom-html.js";
 
 // === Selection metadata (single-click info panel) ===
 

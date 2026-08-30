@@ -4,7 +4,7 @@
 // dep shim.
 
 import React, { useEffect, useState } from "react";
-import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { settingsDep } from "./settings-deps.js";
 
 function useConfigSync(setConfig) {
   useEffect(() => {

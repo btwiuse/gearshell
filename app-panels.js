@@ -1,27 +1,27 @@
 // Panel creation catalog + saved-panel restore (500-line rule split).
 
-import { systemReady, wanixSystem } from "./app-state.js?v=20260826.2";
+import { systemReady, wanixSystem } from "./app-state.js";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js?v=20260826.168";
+} from "./app-workspace.js";
 import {
   getDefaultTerminalProfile,
   getVmPanelConfig,
   getWorkbenchPanelConfig,
-} from "./app-terminal-profiles.js?v=20260826.168";
+} from "./app-terminal-profiles.js";
 import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
-} from "./app-panels-store.js?v=20260826.168";
-import { reserveCrushRunnerIds } from "./plugin/crush-runner/crush-runner.js?v=20260826.164";
+} from "./app-panels-store.js";
+import { reserveCrushRunnerIds } from "./plugin/crush-runner/crush-runner.js";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
   addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
-} from "./panels.js?v=20260812.156";
+} from "./panels.js";
 import {
   Puzzle,
   Terminal,

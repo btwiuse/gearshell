@@ -8,8 +8,8 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import {
   filesystemPathJoin,
   normalizeFilesystemPath,
-} from "../files-path.js?v=20260826.71";
-import { getEntryIcon } from "./files-ui.js?v=20260826.40";
+} from "../files-path.js";
+import { getEntryIcon } from "./files-ui.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

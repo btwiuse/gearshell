@@ -235,8 +235,8 @@ if (!has("isLegacyVmBackendUrl")) {
 if (!has("Workbench assets URL or path")) {
   throw new Error("Workbench asset settings must accept local paths.");
 }
-if (!html.match(/src="app\.js\?v=[\d.]+"/)) {
-  throw new Error("index.html must cache-bust app.js");
+if (!html.match(/src="app\.js"/)) {
+  throw new Error("index.html must load app.js");
 }
 if (!has(".files-panel") || !has(".runtime-panel")) {
   throw new Error("Missing panel styles");
@@ -308,8 +308,14 @@ if (!has("initWorkspaceApi") || !has("GEAR_BIND")) {
     "Workspace API boot hook and gear bind must exist for agent-side control.",
   );
 }
-if (!has("app.js?v=20260828.219")) {
-  throw new Error("index.html must load the current app.js build.");
+// ?v= cache-bust tokens are retired: modules are unversioned and rely
+// on HTTP cache headers / DevTools "Disable cache" during iteration.
+// Guard against reintroduction — a single stray token on one importer
+// would split the module into two instances and break DI state.
+if (corpus.includes("?v=")) {
+  throw new Error(
+    "?v= tokens are retired; remove them (rely on cache headers / Disable cache).",
+  );
 }
 
 console.log("Static verification passed.");

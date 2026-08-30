@@ -1,7 +1,7 @@
 // Workspace form section wiring.
 
-import { settingsDep } from "./settings-deps.js?v=20260826.3";
-import { html } from "../../dom-html.js?v=20260830.4";
+import { settingsDep } from "./settings-deps.js";
+import { html } from "../../dom-html.js";
 
 function queryWorkspaceElements(settingsContent) {
   return {

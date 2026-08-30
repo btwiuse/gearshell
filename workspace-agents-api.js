@@ -7,7 +7,7 @@
 import {
   terminalSessions,
   workspaceTaskSessions,
-} from "./app-state.js?v=20260826.2";
+} from "./app-state.js";
 
 function listAgents() {
   // Session ids are prefixed so terminal and workspace-task counters

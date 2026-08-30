@@ -14,9 +14,9 @@
 // component id + files, update the manifest entry URL, and register only
 // the kinds you need.
 
-import { TemplatePanel } from "./template.js?v=20260830.7";
-import { TemplateSettingsSection } from "./template-settings.js?v=20260830.2";
-import { TemplateOverlay } from "./template-overlay.js?v=20260830.3";
+import { TemplatePanel } from "./template.js";
+import { TemplateSettingsSection } from "./template-settings.js";
+import { TemplateOverlay } from "./template-overlay.js";
 
 export const plugin = {
   register(ctx) {

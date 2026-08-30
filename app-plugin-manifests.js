@@ -72,7 +72,7 @@ export const DEFAULT_PLUGINS = [
     name: "Music",
     version: "1.0.0",
     icon: "Music2",
-    entry: "/plugin/music/music-plugin.js?v=20260829.28",
+    entry: "/plugin/music/music-plugin.js",
     css: [
       "/plugin/music/music.css",
       "/plugin/music/vfs-picker.css",
@@ -90,7 +90,7 @@ export const DEFAULT_PLUGINS = [
     name: "Packages",
     version: "1.0.0",
     icon: "Boxes",
-    entry: "/plugin/w9y/w9y-plugin.js?v=20260830.5",
+    entry: "/plugin/w9y/w9y-plugin.js",
     css: ["/plugin/w9y/w9y.css"],
     required: true,
     permissions: {
@@ -102,7 +102,7 @@ export const DEFAULT_PLUGINS = [
     name: "Deck",
     version: "1.0.0",
     icon: "LayoutDashboard",
-    entry: "/plugin/deck/deck-plugin.js?v=20260829.14",
+    entry: "/plugin/deck/deck-plugin.js",
     // Reveal.js library + black theme come from the CDN (the reveal.js JS
     // is also a CDN script in index.html); deck.css / reveal.css are the
     // local overrides and must load after the library styles.
@@ -118,14 +118,14 @@ export const DEFAULT_PLUGINS = [
     name: "Group",
     version: "1.0.0",
     icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js?v=20260829.67",
+    entry: "/plugin/group/group-plugin.js",
   },
   {
     id: "runtime",
     name: "Runtime",
     version: "1.0.0",
     icon: "Activity",
-    entry: "/plugin/runtime/runtime-plugin.js?v=20260829.57",
+    entry: "/plugin/runtime/runtime-plugin.js",
     css: ["/plugin/runtime/runtime.css"],
   },
   {
@@ -133,7 +133,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.152",
+    entry: "/plugin/playground/playground-plugin.js",
     css: ["/plugin/playground/playground.css"],
   },
   {
@@ -141,7 +141,7 @@ export const DEFAULT_PLUGINS = [
     name: "Home",
     version: "1.0.0",
     icon: "House",
-    entry: "/plugin/home/home-plugin.js?v=20260829.71",
+    entry: "/plugin/home/home-plugin.js",
     css: ["/plugin/home/home.css"],
     permissions: {
       api: ["terminal.embed"],
@@ -152,7 +152,7 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.160",
+    entry: "/plugin/files/files-plugin.js",
     css: ["/plugin/files/files.css"],
   },
   {
@@ -160,21 +160,21 @@ export const DEFAULT_PLUGINS = [
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.161",
+    entry: "/plugin/workbench/workbench-plugin.js",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.162",
+    entry: "/plugin/vm/vm-plugin.js",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.166",
+    entry: "/plugin/settings/settings-plugin.js",
     css: ["/plugin/settings/settings.css"],
   },
   {
@@ -182,7 +182,7 @@ export const DEFAULT_PLUGINS = [
     name: "Launcher",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/launcher/launcher-plugin.js?v=20260829.81",
+    entry: "/plugin/launcher/launcher-plugin.js",
     css: ["/plugin/launcher/launcher.css"],
   },
   {
@@ -190,7 +190,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.167",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js",
     css: ["/plugin/crush-runner/crush-runner.css"],
   },
   {
@@ -254,14 +254,14 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.60",
+    entry: "/plugin/web-pet/web-pet-plugin.js",
   },
   {
     id: "widgetbot",
     name: "Discord Widget",
     version: "1.0.0",
     icon: "MessageSquare",
-    entry: "/plugin/widgetbot/widgetbot-plugin.js?v=20260829.10",
+    entry: "/plugin/widgetbot/widgetbot-plugin.js",
   },
   // Bubble Tea playground: w9y-installed examples from the bbtex manifest
   // (https://w9y.io/manifest/bbtex@v2.0.12/). The examples are a w9y mod
@@ -277,7 +277,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.69",
+    entry: "/plugin/bbtex/bbtex-plugin.js",
     css: ["/plugin/bbtex/bbtex.css"],
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
@@ -405,7 +405,7 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
     name: "Plugin Template",
     version: "1.0.0",
     icon: "BookOpen",
-    entry: "/plugin/template/template-plugin.js?v=20260830.7",
+    entry: "/plugin/template/template-plugin.js",
     css: ["/plugin/template/template.css"],
     // Disabled by default: the plugin shows up in the Plugins page for
     // reference but is not loaded until the user enables it.

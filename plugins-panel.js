@@ -6,8 +6,8 @@
 // The page itself lives in plugins-page.js (cards + modal split out).
 
 import React from "react";
-import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
-import { PluginsPage } from "./plugins-page.js?v=20260829.105";
+import { nextPanelIndex } from "./app-panel-ids.js";
+import { PluginsPage } from "./plugins-page.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

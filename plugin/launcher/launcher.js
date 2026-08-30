@@ -17,7 +17,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ChevronDown, Ellipsis, Star } from "lucide-react";
-import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
+import { nextPanelIndex } from "../../app-panel-ids.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
@@ -423,6 +423,6 @@ export function addFallbackPanel(api, group) {
 // The "+" Add control + all-apps menu live in launcher-menu.js (500-line
 // split); re-export so existing importers (app.js, app-shell.js) keep
 // importing AddTerminalButton from this module.
-export { AddTerminalButton } from "./launcher-menu.js?v=20260829.11";
+export { AddTerminalButton } from "./launcher-menu.js";
 
 export { FallbackPage, FallbackPanel, TerminalLaunchPicker };

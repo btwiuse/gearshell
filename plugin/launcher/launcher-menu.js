@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Check, Dog, Keyboard, Plus } from "lucide-react";
-import { launcherDep, TerminalLaunchPicker } from "./launcher.js?v=20260812.48";
+import { launcherDep, TerminalLaunchPicker } from "./launcher.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

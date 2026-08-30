@@ -6,8 +6,8 @@
 
 import React from "react";
 import { RefreshCw, Save } from "lucide-react";
-import { crushRunnerDep } from "./crush-deps.js?v=20260828.4";
-import { crushRunDirFor } from "./crush-config.js?v=20260826.6";
+import { crushRunnerDep } from "./crush-deps.js";
+import { crushRunDirFor } from "./crush-config.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

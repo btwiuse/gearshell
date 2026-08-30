@@ -15,8 +15,8 @@
 //   handler  -> not user-editable; the Explorer passes a real function
 //               (only meaningful for in-page events.on)
 
-import { shellCatalog } from "./playground-catalog-shell.js?v=20260829.95";
-import { agentCatalog } from "./playground-catalog-agent.js?v=20260829.96";
+import { shellCatalog } from "./playground-catalog-shell.js";
+import { agentCatalog } from "./playground-catalog-agent.js";
 
 // The full catalog is composed from the two data halves
 // (playground-catalog-shell.js / playground-catalog-agent.js).

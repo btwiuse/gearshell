@@ -14,15 +14,15 @@
 // and .lrc sidecars). MUSIC_TIME_EVENT carries just { time } at ~4 Hz
 // for lyric sync, so the panel does not need to re-render whole state.
 
-import { getWanixRoot } from "./app-state.js?v=20260826.2";
-import { parseAudioTags, parseLrc } from "./audio-tags.js?v=20260829.7";
+import { getWanixRoot } from "./app-state.js";
+import { parseAudioTags, parseLrc } from "./audio-tags.js";
 import {
   deletePlaylist,
   getPlaylist,
   listPlaylists,
   renamePlaylist,
   savePlaylist,
-} from "./music-playlists.js?v=20260829.9";
+} from "./music-playlists.js";
 
 export const MUSIC_STATE_EVENT = "GearShellMusicStateChanged";
 export const MUSIC_TIME_EVENT = "GearShellMusicTime";

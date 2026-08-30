@@ -4,8 +4,8 @@
 // opener addVmPanel stays in the root panels.js because the saved-tab
 // restore path (app-panels addRestoredPanel) calls it directly.
 
-import { addVmPanel } from "../../panels.js?v=20260812.156";
-import { VmPanel } from "./vm-panel.js?v=20260830.41";
+import { addVmPanel } from "../../panels.js";
+import { VmPanel } from "./vm-panel.js";
 
 export const plugin = {
   register(ctx) {

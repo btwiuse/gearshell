@@ -1,7 +1,7 @@
 // plugins-loading.js — plugin entry-module loading
 // (500-line split out of plugins.js).
 
-import { pluginsDep } from "./plugins-deps.js?v=20260829.97";
+import { pluginsDep } from "./plugins-deps.js";
 
 // --- Loading ---
 function entryUrl(entry) {
@@ -20,10 +20,11 @@ function vfsPath(entry) {
 // importmap, so plugins share the shell's React instance). VFS entries
 // become blob URLs: single-file only, no relative sub-imports.
 export async function loadEntryModule(manifest) {
-  const url = entryUrl(manifest.entry, manifest.version);
+  const url = entryUrl(manifest.entry);
   if (url) {
-    const target = url.includes("?") ? url : `${url}?v=${manifest.version}`;
-    return import(target);
+    // Entry modules are unversioned (cache-bust tokens retired); the
+    // host's Cache-Control / DevTools "Disable cache" handle freshness.
+    return import(url);
   }
   const path = vfsPath(manifest.entry);
   if (path) {

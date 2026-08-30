@@ -13,7 +13,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { FilesBreadcrumb } from "./files-ui.js?v=20260826.40";
+import { FilesBreadcrumb } from "./files-ui.js";
 
 const html = htm.bind(React.createElement);
 

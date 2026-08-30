@@ -19,7 +19,7 @@ import { Activity, RefreshCw } from "lucide-react";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
-import { loadStoredMounts } from "../files-mounts.js?v=20260826.45";
+import { loadStoredMounts } from "../files-mounts.js";
 
 let __runtimeDeps = null;
 export function initRuntime(dependencies) {

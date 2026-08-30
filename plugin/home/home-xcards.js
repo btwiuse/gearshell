@@ -3,7 +3,7 @@
 // big cards stay under 50 lines each.
 
 import React from "react";
-import { fieldPoll } from "./home-data.js?v=20260828.2";
+import { fieldPoll } from "./home-data.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

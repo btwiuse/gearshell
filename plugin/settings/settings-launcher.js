@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
-import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { settingsDep } from "./settings-deps.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

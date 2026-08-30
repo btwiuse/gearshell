@@ -24,17 +24,17 @@ import { X } from "lucide-react";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
-import { getWanixRoot } from "../../app-state.js?v=20260826.2";
+import { getWanixRoot } from "../../app-state.js";
 import {
   filesystemPathJoin,
   filesystemPathParent,
   normalizeFilesystemPath,
-} from "../files-path.js?v=20260826.71";
+} from "../files-path.js";
 import {
   PickerBody,
   PickerFooter,
   PickerToolbar,
-} from "./vfs-picker-parts.js?v=20260829.99";
+} from "./vfs-picker-parts.js";
 
 export const AUDIO_EXTENSION_RE =
   /\.(mp3|m4a|aac|ogg|oga|opus|flac|wav|webm)$/i;

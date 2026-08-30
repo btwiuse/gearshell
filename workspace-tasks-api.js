@@ -3,31 +3,31 @@
 // Split out of workspace-api.js for the 500-line rule; create() and
 // runHeadlessTask() were refactored into sub-50-line helpers.
 
-import { getDockviewApi } from "./app-panels-store.js?v=20260826.168";
+import { getDockviewApi } from "./app-panels-store.js";
 import {
   getWanixRoot,
   workspaceTaskSessions,
-} from "./app-state.js?v=20260826.2";
-import { addWorkspaceTaskPanel } from "./panels.js?v=20260812.156";
+} from "./app-state.js";
+import { addWorkspaceTaskPanel } from "./panels.js";
 import {
   addWorkspaceTask,
   loadActiveWorkspace,
-} from "./app-workspace.js?v=20260826.168";
+} from "./app-workspace.js";
 import {
   normalizeTask,
   validateTask,
-} from "./app-normalize-system.js?v=20260828.119";
+} from "./app-normalize-system.js";
 import {
   markAgentTask,
   markAgentTaskStatus,
-} from "./workspace-task-registry.js?v=20260828.153";
+} from "./workspace-task-registry.js";
 import {
   destroyWorkspaceTaskSession,
   getTaskOutput,
   taskLogKernelPath,
-} from "./app-workspace-task-sessions.js?v=20260828.174";
-import { groupFor } from "./workspace-open-api.js?v=20260828.153";
-import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js?v=20260828.127";
+} from "./app-workspace-task-sessions.js";
+import { groupFor } from "./workspace-open-api.js";
+import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js";
 
 function listTasks() {
   return [...workspaceTaskSessions.values()].map((session) => ({

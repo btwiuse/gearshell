@@ -3,22 +3,22 @@
 // addSettingsPanel).
 
 import React, { useEffect, useRef } from "react";
-import { settingsDep } from "./settings-deps.js?v=20260826.3";
+import { settingsDep } from "./settings-deps.js";
 import htm from "htm";
-import { html as domHtml } from "../../dom-html.js?v=20260830.4";
+import { html as domHtml } from "../../dom-html.js";
 
 const html = htm.bind(React.createElement);
-import { nextPanelIndex } from "../../app-panel-ids.js?v=20260828.76";
-import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js?v=20260826.16";
-import { setupConfigForm } from "./settings-config.js?v=20260826.13";
-import { setupTerminalProfileForm } from "./settings-terminal-editor.js?v=20260826.7";
-import { setupWorkspaceForm } from "./settings-workspace.js?v=20260826.6";
-import { setupPresetLibrary } from "./settings-preset-library.js?v=20260826.6";
-import { setupSystemForm } from "./settings-system.js?v=20260826.6";
-import { setupBindForm } from "./settings-binds.js?v=20260826.6";
-import { setupTaskForm } from "./settings-task.js?v=20260826.6";
-import { setupAgentActivity } from "./settings-agent-activity.js?v=20260829.144";
-import { listSettingsSections } from "../../plugins.js?v=20260829.132";
+import { nextPanelIndex } from "../../app-panel-ids.js";
+import { SETTINGS_TEMPLATE_HTML } from "./settings-template.js";
+import { setupConfigForm } from "./settings-config.js";
+import { setupTerminalProfileForm } from "./settings-terminal-editor.js";
+import { setupWorkspaceForm } from "./settings-workspace.js";
+import { setupPresetLibrary } from "./settings-preset-library.js";
+import { setupSystemForm } from "./settings-system.js";
+import { setupBindForm } from "./settings-binds.js";
+import { setupTaskForm } from "./settings-task.js";
+import { setupAgentActivity } from "./settings-agent-activity.js";
+import { listSettingsSections } from "../../plugins.js";
 
 // Mount plugin-registered settings sections (ctx.registerSettingsSection)
 // after the built-in template content. Each section gets a <details>

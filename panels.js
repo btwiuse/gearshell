@@ -19,15 +19,15 @@ import htm from "htm";
 const html = htm.bind(React.createElement);
 import { Play, Terminal } from "lucide-react";
 import { DockviewDefaultTab } from "dockview-react";
-import { nextPanelIndex } from "./app-panel-ids.js?v=20260828.76";
+import { nextPanelIndex } from "./app-panel-ids.js";
 import {
   addWorkspaceTaskPanel,
   WorkspaceTaskPanel,
-} from "./panels-task.js?v=20260828.121";
+} from "./panels-task.js";
 import {
   getPluginIframeConfig,
   openPluginPanel,
-} from "./plugins.js?v=20260829.132";
+} from "./plugins.js";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production

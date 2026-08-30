@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, BookOpen, Github, LayoutGrid, Zap } from "lucide-react";
-import { localFirstChips } from "./home-data.js?v=20260828.2";
+import { localFirstChips } from "./home-data.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

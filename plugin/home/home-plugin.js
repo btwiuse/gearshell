@@ -6,7 +6,7 @@
 // only moves the home panel TYPE registration out of the kernel —
 // exactly like the runtime / playground plugins.
 
-import { LandingPanel } from "./home.js?v=20260812.35";
+import { LandingPanel } from "./home.js";
 
 export const plugin = {
   register(ctx) {

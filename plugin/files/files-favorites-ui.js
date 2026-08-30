@@ -11,7 +11,7 @@ import {
   Home,
   X,
 } from "lucide-react";
-import { getEntryIcon } from "./files-ui.js?v=20260826.40";
+import { getEntryIcon } from "./files-ui.js";
 
 const html = htm.bind(React.createElement);
 

@@ -1,23 +1,19 @@
 // plugins-css.js — plugin stylesheet injection (500-line rule split out
-// of plugins.js). Each manifest.css path becomes a <link data-plugin-css>
-// carrying the entry's ?v= so cascade bumps keep CSS and JS cache-busted
-// together; unregisterPlugin removes them again via removePluginCss.
+// of plugins.js). Each manifest.css path becomes a <link data-plugin-css>;
+// unregisterPlugin removes them again via removePluginCss.
 
-import { html as domHtml } from "./dom-html.js?v=20260830.4";
+import { html as domHtml } from "./dom-html.js";
 
 export function injectPluginCss(manifest) {
   if (!Array.isArray(manifest.css) || manifest.css.length === 0) return [];
-  // Version only same-origin paths: remote css is pinned by its own URL
-  // (e.g. a jsdelivr reveal.js stylesheet) and needs no cache-buster.
-  const version = (manifest.entry || "").match(/[?&]v=([\w.]+)/)?.[1] || "";
+  // Same-origin paths load unversioned (cache-bust tokens retired);
+  // remote css is pinned by its own URL (e.g. a jsdelivr reveal.js
+  // stylesheet) and needs no cache-buster.
   const links = [];
   for (const path of manifest.css) {
-    const href = path.startsWith("/") && version
-      ? `${path}?v=${version}`
-      : path;
     const link = domHtml`<link
       rel="stylesheet"
-      href=${href}
+      href=${path}
       data-plugin-css=${manifest.id}
     />`;
     document.head.appendChild(link);

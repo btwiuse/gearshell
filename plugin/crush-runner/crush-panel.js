@@ -9,16 +9,16 @@ import {
   adoptCrushRunnerId,
   crushRunnerDep,
   nextCrushRunnerId,
-} from "./crush-deps.js?v=20260828.4";
-import { useCrushRunnerPanelController } from "./crush-panel-controller.js?v=20260828.168";
-import { CrushConfigSection } from "./crush-panel-config.js?v=20260826.8";
+} from "./crush-deps.js";
+import { useCrushRunnerPanelController } from "./crush-panel-controller.js";
+import { CrushConfigSection } from "./crush-panel-config.js";
 import {
   CrushCtaRow,
   CrushEditorToggle,
   CrushInstallBanner,
   CrushPresetBar,
   CrushRunnerStatus,
-} from "./crush-runner-parts.js?v=20260828.168";
+} from "./crush-runner-parts.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);

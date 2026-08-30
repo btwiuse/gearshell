@@ -3,7 +3,7 @@
 // a starting point from a preset; the interactive panel logic lives in
 // crush-panel*.js and the launch plumbing in crush-config.js.
 
-import { crushRunnerDep } from "./crush-deps.js?v=20260828.4";
+import { crushRunnerDep } from "./crush-deps.js";
 
 export const CRUSH_RUNNER_DEFAULT_PROFILE = {
   id: "crush",
