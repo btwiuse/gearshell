@@ -1178,3 +1178,22 @@ iframe-template(演示)、browser/bonsai/codigo/crush/rickroll(外部 src)。
 **建议顺序**:先做 1-4 立竿见影(都是纯展示/演示型,正好服务竞赛 demo),
 再做 5-8 交互型,9-12 看需求;13 明确不做。files 的字节 API 缺口若要做
 文件类插件,先补桥能力(单列 P1)。
+
+## 三十二、VM 终端尺寸修复 + bbtex iframe 收尾(2026-08-31)
+
+**VM stty size 修复**(wanix `9131462`/`b91697e`/`eb5162d`,extras 重打,gearshell
+待推):
+- 根因两层:①v86 驱动硬编码 100x100;②libv86 SendWindowSize 写 (c,b) 序而
+  Linux 读第一个为 cols → 参数对调(对称默认值掩盖)。
+- 修:驱动转发 winch 时驱动侧交换为 [rows,cols];不动 vendored libv86。
+- 实测:84x35 ↔ stty "35 84";宽度 1000→1600 列 84→107、行 35→30 ✓
+- ⬜ **发布链(等用户)**:`npm publish wanix-extras`(bump)→ gearshell
+  `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
+- ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
+
+**本轮经验**(详见 memory/plugins.md round 45):
+- 对称默认值掩盖参数序 bug;修"恒值"后必须方向性验证。
+- dev workspace 配置改动走 config.updateShell,别直接写 localStorage
+  (normalize 重存会冲掉)。
+- 第三方 minified 源码别打补丁,驱动侧补偿优先。
+- iframe 插件默认 enabled(否则 Plugins 页"消失")。
