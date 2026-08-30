@@ -1062,3 +1062,58 @@ terminal.* + panels.list + events + config.getShell。manifest 声明无 css
 `app-plugin-manifests-bbtex.js`(push 合并,同 examples)。verify-static 改为
 拼接所有 app-plugin-manifests*.js 检查;新增 iframe 插件 css 豁免(manifest
 块含 `iframe: {` 的插件,其 css 文件不必在 css: 声明)。
+
+## 三十、wanix instantiateStreaming 改造:大 gojs/wasi 二进制加载(2026-08-31 定案)
+
+**根因(排查闭环)**:bash 终端(hush gojs wasm 25MB)在受限/后台环境"无输出、
+exit 空、Worker 从未构造"。对照实验(patch window.Worker 记录构造):
+- gojs + 166B hello.wasm → Worker 构造 ✓
+- gojs + 18MB w9y → Worker 未构造 ✗
+- js driver + 18MB w9y → Worker 未构造 ✗(js driver 不 compile,只 ReadFile!)
+- **结论:不是 GetOrCompile,不是 gojs 特有 —— 是"内核读大 fetch bind 文件"卡住**
+- 进一步:bridge 任务命名空间里 **bin/bash 根本不存在**(stat ErrNotExist)——
+  fetch bind 在命名空间 setup 时 `io.ReadAll(NewReadableStream(binding.data))`
+  (wasm/wasm.go:308-315)逐 chunk 读 25MB stream,每个 chunk 一次 JS promise
+  往返,受限环境卡死 → 二进制没 bind 上 → driver LookPath/Open 失败 → 空转。
+- 生产前台正常(stream 推进快);wasi(166B)/小文件全过;memfs 里有完整副本
+  的任务(如旧 repl-1)能 stat 到 bash。
+
+**改造方案(用户指定 instantiateStreaming 方向)**:
+1. **wasm.go fetch bind 改一次性读**:`io.ReadAll(NewReadableStream(v))` →
+   `new Response(stream).arrayBuffer()` 一次 promise 读全(浏览器侧缓冲,
+   不经 Go 逐 chunk 事件循环)。修命名空间 setup 卡顿。
+2. **cache.go 加 GetOrCompileStreaming(url)**:`WebAssembly.compileStreaming(
+   fetch(url))`,按 URL 缓存编译后的 Module(memCache 扩展);compile 在浏览器
+   主线程进行,不经内核 Go 内存。
+3. **gojs/wasi driver 优先 URL 编译**:查 task 命名空间 bind 的 dst→src 映射,
+   命中 → GetOrCompileStreaming(src) → StartTaskWorker(wasmModule 已随 payload
+   传 worker,worker 不再 re-read 文件);未命中(非 fetch bind)→ 旧路径
+   (ReadAll + GetOrCompile)。
+4. **dst→src 映射**:wasm.go bind 时记录(全局 map,path→src;同 path 异 src
+   少见,fallback 旧路径兜底)。
+5. **wasm cache 不受影响**:memCache(GetOrCompile,path+hash)保留用于小文件/
+   非 URL 路径;URL 缓存独立条目,容量上限同 maxModules。
+
+**验证**:本地 go1.27 构建 wanix.debug.wasm → dev server 本地 serving(workspace
+runtime wasmUrl 指向本地)→ 开 terminal-frame 面板 → bash 出提示符 + echo
+回显。再回归 calc.js(wasi+gojs+js 三 worker)。
+
+**注意**:wasm memory 无 max(flags=0)= 可 grow 到 2GB(不是固定 10MB);Crush
+100MB 佐证。真正瓶颈是 stream 逐 chunk 的事件循环往返,不是内存。
+
+**§30 进展(2026-08-31 已实施,wanix commit `a834422`)**
+- wasm.go:fetch bind 改 `Response(stream).arrayBuffer()` 一次读(修 setup 卡顿)
+  — **实测 bin/bash 完整 bind 进任务命名空间(25MB)** ✓
+- cache.go:`GetOrCompileStreaming(url)` — compileStreaming 优先 + MIME 兜底
+  (blob URL 常无 application/wasm 头 → fetch+arrayBuffer+compile),按 URL
+  缓存 Module;`RegisterFetchBind/FetchBindSrc` dst→src 映射。wasm cache 不
+  受影响(GetOrCompile path+hash 路径原样保留)。
+- gojs/wasi driver:URL 命中 → streaming 编译;失败 → 旧文件路径兜底。
+- **实测**:改造前 Worker 从未构造;改造后 **gojs bash Worker 构造成功** ✓
+  (后台 CDP tab 仍受 timer 节流,rc 引导慢,输出待前台验证;生产用户实测
+  可跑)。
+- 踩坑:`resp.arrayBuffer()` 返回 ArrayBuffer,`js.CopyBytesToGo` 要
+  Uint8Array(先 `new Uint8Array(ab)` 包装),否则内核 panic
+  "CopyBytesToGo: expected src to be a Uint8Array"。
+- 待办:验证前台 bash 输出 + 回归 calc.js;发布 wanix v0.4.29(tag +
+  w9y 构建)后,shell 侧 bump runtime wasmUrl。
