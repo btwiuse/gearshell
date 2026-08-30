@@ -2,7 +2,10 @@
 // out of app-constants.js). Pure data: the built-in plugin manifests the
 // kernel loads at boot and the Plugins page lists. Every manifest here is
 // the copyable template for a third-party plugin (component, iframe, or
-// overlay registration kind).
+// overlay registration kind). The `examples` bind provider lives in
+// app-plugin-manifests-examples.js (500-line split).
+
+import { EXAMPLES_PLUGIN } from "./app-plugin-manifests-examples.js";
 
 // --- Shell toolset (the per-task tool binds) ---
 // The bash/w9y/gear binaries and the shell rc file ship as the
@@ -426,52 +429,46 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
       ],
     },
   },
-  // Runnable js-worker and wasi-worker examples, mounted into every task
-  // namespace under examples/ so any terminal can launch them. Ships
-  // DISABLED like the template: enable it from the Plugins page to get
-  // the files, then try, from a terminal with the matching runtime:
-  //
-  //   js   runtime:  examples/hello.js            (plain js worker)
-  //   js   runtime:  examples/fs-demo.js arg      (fs API + spawn)
-  //   wasi runtime:  examples/hello.wasm          (WASI hello world)
-  //   wasi runtime:  examples/args.wasm a b c     (argv/env via WASI ABI)
-  //   wasi runtime:  examples/cat.wasm FILE       (read a file via preopen)
-  //   js   runtime:  examples/calc.js A B [op]    (one task, four worker
-  //                                                 kinds: wasi + gojs + js)
-  //
-  // Sources and the full tutorial live in examples/ (wat sources for the
-  // wasm files, the worker protocol docs in examples/js/wanix.js).
+  // The iframe plugin template: the iframe counterpart of plugin/template/.
+  // Instead of an entry module it declares iframe.src (a self-contained
+  // HTML app) plus permissions.api — the exact list of window.GearShell
+  // methods the iframe may call through /gear-bridge.js (default: none =
+  // every call denied). Copy plugin/iframe-template-plugin/ to start your
+  // own iframe plugin: keep iframe.src + permissions.api, load
+  // /gear-bridge.js in the page, and call GearShell.<method>.<path>() from
+  // there. Disabled by default like the component template.
   {
-    id: "examples",
-    name: "Examples",
-    // Bump the version whenever example content changes: the OPFS bind
-    // cache keys on <pluginId>@<version> + src URL, so a same-version
-    // content edit would keep serving the stale cached copy.
-    version: "1.0.12",
-    icon: "Lightbulb",
-    // No entry module: purely a bind provider. Declares the examples as
-    // per-task `files` binds (same shape the shell-tools plugin uses for
-    // its /bin binaries): every task namespace gets examples/ mounted
-    // into it, so any terminal can run them. The kernel's js driver
-    // reads worker scripts from the task's own namespace (like wasi and
-    // gojs), so per-task mounts work for all four worker kinds.
+    id: "iframe-template",
+    name: "Iframe Plugin Template",
+    version: "1.0.0",
+    icon: "Frame",
+    iframe: {
+      src: "/plugin/iframe-template-plugin/index.html",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+    // The stylesheet loads inside the iframe page itself (a <link> in
+    // index.html); declaring it here too keeps the verify-static check
+    // (every plugin css file must be manifest-declared) happy, and the
+    // iframe-internal classes make the shell-page injection harmless.
+    css: ["/plugin/iframe-template-plugin/iframe-template.css"],
     enabled: false,
-    files: [
-      { id: "hello-js", dst: "examples/hello.js", src: "/examples/js/hello.js" },
-      { id: "fs-demo-js", dst: "examples/fs-demo.js", src: "/examples/js/fs-demo.js" },
-      { id: "ipc-probe-js", dst: "examples/ipc-probe.js", src: "/examples/js/ipc-probe.js" },
-      { id: "calc-js", dst: "examples/calc.js", src: "/examples/js/calc.js" },
-      { id: "calc-service-js", dst: "examples/calc-service.js", src: "/examples/js/calc-service.js" },
-      { id: "hello-wasm", dst: "examples/hello.wasm", src: "/examples/wasi/hello.wasm" },
-      { id: "args-wasm", dst: "examples/args.wasm", src: "/examples/wasi/args.wasm" },
-      { id: "cat-wasm", dst: "examples/cat.wasm", src: "/examples/wasi/cat.wasm" },
-      { id: "calc-wasm", dst: "examples/calc.wasm", src: "/examples/wasi/calc.wasm" },
-      { id: "calc-wat", dst: "examples/calc.wat", src: "/examples/wasi/calc.wat" },
-      // The .wat sources are bound too, so cat.wasm (and any task) can
-      // read them from the namespace, not just fetch them over HTTP.
-      { id: "hello-wat", dst: "examples/hello.wat", src: "/examples/wasi/hello.wat" },
-      { id: "args-wat", dst: "examples/args.wat", src: "/examples/wasi/args.wat" },
-      { id: "cat-wat", dst: "examples/cat.wat", src: "/examples/wasi/cat.wat" },
-    ],
+    permissions: {
+      api: [
+        "panels.list",
+        "panels.open",
+        "music.nowPlaying",
+        "music.play",
+        "music.pause",
+        "events.on",
+        "events.off",
+        "config.getShell",
+      ],
+    },
   },
 ];
+
+// The examples bind provider is data, not logic: pushed after the array
+// literal so DEFAULT_PLUGINS stays one flat list (see
+// app-plugin-manifests-examples.js).
+DEFAULT_PLUGINS.push(EXAMPLES_PLUGIN);

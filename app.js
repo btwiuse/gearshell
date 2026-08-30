@@ -43,6 +43,7 @@ import {
   initWorkspaceApi,
   workspaceApi,
 } from "./workspace-api.js";
+import { initIframePluginApi } from "./plugins-iframe-api.js";
 import {
   ensurePluginSystemFiles,
   ensurePluginToolBinds,
@@ -465,6 +466,12 @@ initCrushRunner({
 // the kernel's jsfs /js projection) and ensure the active workspace
 // carries the gear bind.
 initWorkspaceApi();
+
+// Wire the iframe plugin bridge: postMessage requests from registered
+// iframe plugins are dispatched against window.GearShell through their
+// permissions.api whitelist. Must run after initWorkspaceApi() so the
+// API exists for dispatch.
+initIframePluginApi();
 
 // Dual-mode w9y dependency sync: fire-and-forget `w9y mod apply` for
 // plugins declaring w9y deps that are missing or pinned to another

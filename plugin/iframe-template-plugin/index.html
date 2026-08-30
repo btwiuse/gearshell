@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Iframe Plugin Template</title>
+<link rel="stylesheet" href="/plugin/iframe-template-plugin/iframe-template.css" />
+</head>
+<body>
+  <header class="ift-header">
+    <h1>Iframe Plugin Template</h1>
+    <p id="bridge-status" class="ift-status">loading bridge…</p>
+  </header>
+
+  <!--
+    The iframe <-> GearShell bridge in one paragraph:
+
+    this page is an ENTRY-LESS iframe plugin (no JS module, no importmap,
+    no shared React). Its manifest declares iframe.src + permissions.api;
+    /gear-bridge.js replaces window.GearShell with a Proxy that turns
+    every method call into a postMessage request to the shell, gated by
+    the SAME permissions.api whitelist in-page component plugins get.
+
+    Call any permitted method and await it — the bridge is async even
+    though the shell API is synchronous:
+
+      const list = await GearShell.panels.list();
+
+    Events cannot carry callbacks across postMessage, so they use a
+    dedicated channel (open it once, then listen locally):
+
+      GearShell.subscribe("task.status");
+      GearShell.on("task.status", (payload) => { ... });
+  -->
+
+  <main>
+    <section class="ift-card">
+      <h2>API calls (permitted)</h2>
+      <div class="ift-actions">
+        <button id="btn-panels-list">panels.list()</button>
+        <button id="btn-now-playing">music.nowPlaying()</button>
+        <button id="btn-play">music.play()</button>
+        <button id="btn-pause">music.pause()</button>
+        <button id="btn-get-shell">config.getShell()</button>
+        <button id="btn-run-task">tasks.create()</button>
+      </div>
+      <pre id="out-calls" class="ift-out">results appear here…</pre>
+    </section>
+
+    <section class="ift-card">
+      <h2>Denied call (not in permissions.api)</h2>
+      <div class="ift-actions">
+        <button id="btn-files-open">files.open()</button>
+      </div>
+      <pre id="out-denied" class="ift-out">files.* is NOT in this plugin's permissions.api —
+the shell replies "permission denied: files.open".</pre>
+    </section>
+
+    <section class="ift-card">
+      <h2>Event subscription (task.status)</h2>
+      <div class="ift-actions">
+        <button id="btn-subscribe">subscribe("task.status")</button>
+        <button id="btn-unsubscribe">unsubscribe("task.status")</button>
+      </div>
+      <pre id="out-subscribe" class="ift-out">not subscribed yet</pre>
+      <pre id="out-events" class="ift-out">events land here as the shell pushes them…</pre>
+    </section>
+
+    <section class="ift-card">
+      <h2>Manifest for this plugin</h2>
+      <pre class="ift-out">{
+  id: "iframe-template",
+  name: "Iframe Plugin Template",
+  icon: "Frame",
+  iframe: { src: "/plugin/iframe-template-plugin/index.html",
+            allow: "clipboard-read; clipboard-write; fullscreen",
+            allowFullscreen: true },
+  enabled: false,
+  permissions: {
+    api: [
+      "panels.list", "panels.open",
+      "music.nowPlaying", "music.play", "music.pause",
+      "tasks.create", "events.on", "events.off",
+      "config.getShell",
+    ],
+  },
+}</pre>
+    </section>
+  </main>
+
+  <script src="/gear-bridge.js"></script>
+  <script>
+    // The demo page itself: wire buttons to bridge calls. Copy the
+    // patterns below into your own iframe plugin page.
+    (function () {
+      "use strict";
+
+      function $(id) { return document.getElementById(id); }
+      function out(el, value) {
+        if (typeof value === "string") { el.textContent = value; return; }
+        el.textContent = JSON.stringify(value, null, 2) ?? String(value);
+      }
+
+      var status = $("bridge-status");
+      if (!window.GearShell) {
+        status.textContent =
+          "gear-bridge.js did not load — open this page as an iframe " +
+          "panel inside GearShell";
+        status.classList.add("ift-status-bad");
+        return;
+      }
+      status.textContent = "bridge ready — window.GearShell is a postMessage proxy";
+
+      // --- Permitted API calls (each one is `await GearShell.<path>()`) ---
+      function bindCall(buttonId, outId, call) {
+        $(buttonId).addEventListener("click", function () {
+          out($(outId), "…");
+          call()
+            .then(function (result) { out($(outId), result); })
+            .catch(function (error) { out($(outId), { error: error.message }); });
+        });
+      }
+
+      bindCall("btn-panels-list", "out-calls", function () {
+        return GearShell.panels.list();
+      });
+      bindCall("btn-now-playing", "out-calls", function () {
+        return GearShell.music.nowPlaying();
+      });
+      bindCall("btn-play", "out-calls", function () {
+        return GearShell.music.play();
+      });
+      bindCall("btn-pause", "out-calls", function () {
+        return GearShell.music.pause();
+      });
+      bindCall("btn-get-shell", "out-calls", function () {
+        return GearShell.config.getShell();
+      });
+      bindCall("btn-run-task", "out-calls", function () {
+        // A headless background task: returns a taskId immediately and
+        // fires task.status events, which the subscribe channel above
+        // receives. Needs the wanix runtime to actually run; the call
+        // itself goes through the bridge either way.
+        return GearShell.tasks.create(
+          { name: "iframe-template echo", cmd: "echo hello from the iframe bridge" },
+          { background: true },
+        );
+      });
+
+      // --- Denied call: files.open is not in permissions.api ---
+      bindCall("btn-files-open", "out-denied", function () {
+        return GearShell.files.open("/README.md");
+      });
+
+      // --- Event channel: subscribe once, listen locally, unsubscribe ---
+      var topic = "task.status";
+      var handler = function (payload) {
+        var pre = $("out-events");
+        pre.textContent += (pre.textContent ? "\n" : "") +
+          JSON.stringify(payload, null, 2);
+      };
+
+      $("btn-subscribe").addEventListener("click", function () {
+        GearShell.on(topic, handler); // local listener table
+        GearShell.subscribe(topic)    // open the shell-side channel
+          .then(function (result) { out($("out-subscribe"), result); })
+          .catch(function (error) {
+            out($("out-subscribe"), { error: error.message });
+          });
+      });
+
+      $("btn-unsubscribe").addEventListener("click", function () {
+        GearShell.off(topic, handler);
+        GearShell.unsubscribe(topic)
+          .then(function (result) { out($("out-subscribe"), result); })
+          .catch(function (error) {
+            out($("out-subscribe"), { error: error.message });
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -4,7 +4,9 @@
 import { icons as LucideIcons } from "lucide-react";
 
 // --- Permissions (T1 capability guardrail) ---
-function permitsPath(allow, path) {
+// Exported for the iframe bridge (plugins-iframe-api.js): a method path
+// must pass the SAME whitelist check the in-page scoped proxy applies.
+export function permitsPath(allow, path) {
   return allow.some((pattern) => {
     if (pattern === "*" || pattern === path) return true;
     if (pattern.endsWith(".*") && path.startsWith(pattern.slice(0, -1))) {

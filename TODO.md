@@ -938,3 +938,51 @@ iframe 形式承载大部分插件。研究结论见 memory/iframe-plugins.md。
    别把桥逻辑塞进去。
 6. 提交前:`node --input-type=module --check < file` + `verify-static.mjs`
    + `fn-length-audit.mjs`;迭代用 Go dev server(no-store),无 ?v=。
+
+### §二十九 实现记录(2026-08-30 已落地,STEP 1-4 完成)
+
+**已交付**(commit 待提交):
+- `gear-bridge.js`(仓库根,classic script):`window.top !== window.self`
+  守卫;`window.GearShell = pathProxy("")` 可调用 Proxy(任意路径访问返回
+  可调用节点,调用即 postMessage `{ gear: { id, method, args } }`);
+  8s 超时;函数参数直接 reject;`subscribe/unsubscribe/on/off` 四桥方法;
+  pagehide 自动 unsubscribe。顶层页不装代理。
+- `plugins-iframe-api.js`(shell 侧):`initIframePluginApi()` 在
+  `initWorkspaceApi()` 后接线;`subscribe/unsubscribe` 特殊通道(注册真实
+  events.on → push `{ gear: { event } }`);普通调用 = permitsPath 白名单
+  检查 → createScopedApi 沿点分路径取函数 → 调用 → 回 `event.source.
+  postMessage({ gear: { id, ok, result } }, event.origin)`。
+- `plugins.js`:`listPluginIframes()` 导出(iframe 插件注册表快照)。
+- `plugins-scope.js`:`permitsPath` 导出。
+- `app.js`:import + `initIframePluginApi()` 调用。
+- `app-plugin-manifests.js`:`iframe-template` 插件(DISABLED 默认,
+  权限面板/list music.nowPlaying/play/pause tasks.create events.on/off
+  config.getShell)。**500 行拆分**:examples 插件移到
+  `app-plugin-manifests-examples.js`(`DEFAULT_PLUGINS.push` 合并)。
+- `plugin/iframe-template-plugin/`:`index.html` + css 自包含 demo
+  (按钮:panels.list / music.nowPlaying / play / pause / config.getShell /
+  tasks.create / files.open(反面)/ subscribe / unsubscribe)。
+
+**与计划的偏差**(重要,后续 STEP 5 照此修正):
+1. **白名单不用 origin 匹配**:同源 iframe 全部共享 shell origin,origin
+   匹配会塌缩到第一个注册者(browser,无 permissions → 全拒)。改为
+   **iframe 元素身份匹配**:`event.source`(WindowProxy)=== 某
+   `<iframe>` 的 contentWindow,且该元素 src href === 注册插件 src href。
+   跨源同样成立(WindowProxy 身份可比,不能读 document)。见
+   `plugins-iframe-api.js` 的 `getIframePluginForSender`。
+2. **可调用 Proxy 的路径拼接**:根 path 为 "" 时拼接必须
+   `path ? path + "." + key : key`,否则出现 `.music.nowPlaying` 路径。
+3. **订阅通道名用 `subscribe`/`unsubscribe`**(非 `__subscribe`),在
+   `permitsPath` 之前特判,不占 permissions.api(桥自身通道,恒可用)。
+4. **非函数值路径**(如 `version`)返回 `{ ok: true, result: value }`,
+   桥侧 `await GearShell.version()` 可读。
+5. `normalizePlugins` **不从 def 继承 permissions**(用户配置优先级),
+   同源/跨源存量 iframe 插件要在已存 workspace 里显式声明
+   permissions 才放行——默认全拒,符合安全预期。
+
+**验证结果**(Go dev server 8091,workspace 配置里 enabled:true):
+- panels.list / music.nowPlaying / music.pause / config.getShell /
+  tasks.create(background)全部成功返回;files.open → "permission denied";
+  subscribe 后 shell `events.emit("task.status")` 推送到 iframe 的
+  on 回调;unsubscribe 后事件不再推送;permissions.api 留空 → 全部 denied;
+  console 无桥相关错误(browser/ 子模块的跨源报错是既有噪音)。

@@ -173,6 +173,17 @@ export function registerSyncPlugins() {
   return results;
 }
 
+// The iframe plugin registry snapshot (component -> { src, manifest }),
+// consumed by the iframe bridge (plugins-iframe-api.js) to whitelist
+// sender origins against registered iframe srcs.
+export function listPluginIframes() {
+  return [...pluginIframes.entries()].map(([component, entry]) => ({
+    component,
+    src: entry.src,
+    manifest: entry.manifest,
+  }));
+}
+
 // Config lookup for the panels.js addPanelByComponent iframe branch.
 // Returns the addIframePanel-shaped config ({ title, src, panelType,
 // allow, allowFullscreen }) or null when the component is not a
