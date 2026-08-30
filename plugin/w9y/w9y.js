@@ -251,10 +251,10 @@ function W9yEmpty() {
   `;
 }
 
-export function W9yPackages() {
-  const state = useW9yState();
-  const declared = declaredDeps();
-  const busy = state.installing !== null;
+// Every install/remove/reapply shares the same setBusy -> call ->
+// flash/clearBusy shape, so the handlers live here and W9yPackages only
+// renders.
+function makeW9yActions(state) {
   const flash = (result, okText) => {
     state.setNotice(
       result?.ok
@@ -262,7 +262,6 @@ export function W9yPackages() {
         : { kind: "error", text: result?.error || "Failed." },
     );
   };
-  // Every action shares the same setBusy -> call -> flash/clearBusy shape.
   const runAction = (name, call, okText) => {
     state.setBusy(name);
     try {
@@ -288,6 +287,14 @@ export function W9yPackages() {
   const reapply = (id, version) => {
     runAction(id, () => window.GearShell.w9y.apply(id, version), `${id} re-apply started.`);
   };
+  return { install, remove, reapply };
+}
+
+export function W9yPackages() {
+  const state = useW9yState();
+  const declared = declaredDeps();
+  const busy = state.installing !== null;
+  const { install, remove, reapply } = makeW9yActions(state);
   return html`
     <div className="w9y-page">
       <${W9yHeader} count=${state.packages.length} onRefresh=${state.refresh}/>

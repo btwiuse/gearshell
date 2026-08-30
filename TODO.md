@@ -864,7 +864,7 @@ iframe 形式承载大部分插件。研究结论见 memory/iframe-plugins.md。
 终端(terminal.embed)、任务(tasks.*)、事件(events)、包管理(w9y.list)。
 校验 = origin 白名单 + 复用 createScopedApi 的 permissions.api。
 
-**STEP 1 新建 iframe 侧桥 `gear-bridge.js`(仓库根,同源托管 `/gear-bridge.js`)**
+**STEP 1 新建 iframe 侧桥 `gear-bridge.js`(仓库根,同源托管 `/plugin/gear-bridge.js`)**
 - 顶部守卫:`if (window.top === window.self) { /* 顶层页直接用真实
   GearShell,不装代理 */ return; }`(workspace-api.js 已设 window.GearShell)。
 - `window.GearShell = new Proxy(target, get)`:取 `key`,若当前路径已有值
@@ -911,7 +911,7 @@ iframe 形式承载大部分插件。研究结论见 memory/iframe-plugins.md。
 - 新建演示插件 `plugin/iframe-api-demo/`(manifest 挂 iframe src
   `/plugin/iframe-api-demo/index.html` + permissions.api 含
   `panels.list`、`music.nowPlaying`、一个未授权方法做反面):
-  - index.html 引 `<script src="/gear-bridge.js">`,页面按钮
+  - index.html 引 `<script src="/plugin/gear-bridge.js">`,页面按钮
     `GearShell.panels.list()` / `GearShell.music.nowPlaying()` 显示结果。
 - 浏览器:开面板 → 调用成功返回 JSON;未授权方法返回 denied;console
   无异常;dev server 无报错。
@@ -919,7 +919,7 @@ iframe 形式承载大部分插件。研究结论见 memory/iframe-plugins.md。
 - 跨源(codigo/crush)同一协议,STEP 4 只验同源;跨源留 STEP 5。
 
 **STEP 5 跨源验证(可选,独立任务)**
-- codigo.dev 的 index.html 加 `<script src="https://gear.sh/gear-bridge.js">`
+- codigo.dev 的 index.html 加 `<script src="https://gear.sh/plugin/gear-bridge.js">`
   (btwiuse/vscode 仓库,vercel 部署),shell 侧给 codigo 声明
   permissions.api(如 `["config.getShell", "panels.list"]`),验证
   postMessage 全链路(codigo.dev 已带 COEP: require-corp,不影响)。

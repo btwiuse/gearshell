@@ -178,23 +178,23 @@ export const GEAR_BIND = {
 // built (app.js calls this right after loadActiveWorkspace()), because
 // binds are baked into the namespace at construction. Idempotent by bind
 // dst; also migrates legacy workspaces that still carry the shell binds at
-// system level.
-// Ensure the per-task shell parents live in workspace.binds (not the
-// system namespace), refreshing perm/src so binds saved with the legacy
-// `mode` field get upgraded, and pruning the kernel tool binds the
-// shell-tools plugin now provides. Returns true when anything changed.
-function ensureTaskShellBinds(workspace) {
-  workspace.binds = workspace.binds || [];
-  let changed = false;
-  // Drop the old per-task /profile location; the rc file now rides the
-  // per-task /preset ramfs at preset/profile.
+// Drop the old per-task /profile location; the rc file now rides the
+// per-task /preset ramfs at preset/profile.
+function pruneOldProfileBind(workspace) {
   const withoutOldProfile = workspace.binds.filter((item) =>
     item.dst !== "profile"
   );
   if (withoutOldProfile.length !== workspace.binds.length) {
     workspace.binds = withoutOldProfile;
-    changed = true;
+    return true;
   }
+  return false;
+}
+
+// Ensure the per-task shell parents exist and refresh perm/src/content
+// so binds saved with the legacy `mode` field get upgraded.
+function ensureShellBindEntries(workspace) {
+  let changed = false;
   for (const bind of TASK_SHELL_BINDS) {
     const index = workspace.binds.findIndex((item) => item.dst === bind.dst);
     if (index === -1) {
@@ -209,15 +209,16 @@ function ensureTaskShellBinds(workspace) {
       changed = true;
     }
   }
-  // Legacy name for the CLI bind: drop any saved `bin/gctl` so old
-  // workspaces migrate to the renamed bin/gear (its content is refreshed
-  // below regardless).
-  // The tool binaries + rc file moved out of the kernel into the
-  // `shell-tools` plugin (app-plugin-manifests.js): prune the kernel-
-  // managed tool binds (old task-bash/task-w9y/task-profile, the bash
-  // `gear` script, and the renamed legacy bin/gctl) so they do not fight
-  // the plugin's declarations for the same dst. Prune by id only — a
-  // plugin-provided bind has its own plugin-* id and must survive.
+  return changed;
+}
+
+// The tool binaries + rc file moved out of the kernel into the
+// `shell-tools` plugin (app-plugin-manifests.js): prune the kernel-
+// managed tool binds (old task-bash/task-w9y/task-profile, the bash
+// `gear` script, and the renamed legacy bin/gctl) so they do not fight
+// the plugin's declarations for the same dst. Prune by id only — a
+// plugin-provided bind has its own plugin-* id and must survive.
+function pruneLegacyToolBinds(workspace) {
   const legacyToolBindIds = new Set([
     "task-bash",
     "task-w9y",
@@ -230,8 +231,21 @@ function ensureTaskShellBinds(workspace) {
   );
   if (withoutLegacyTools.length !== workspace.binds.length) {
     workspace.binds = withoutLegacyTools;
-    changed = true;
+    return true;
   }
+  return false;
+}
+
+// Ensure the per-task shell parents live in workspace.binds (not the
+// system namespace), refreshing perm/src so binds saved with the legacy
+// `mode` field get upgraded, and pruning the kernel tool binds the
+// shell-tools plugin now provides. Returns true when anything changed.
+function ensureTaskShellBinds(workspace) {
+  workspace.binds = workspace.binds || [];
+  let changed = false;
+  changed = pruneOldProfileBind(workspace) || changed;
+  changed = ensureShellBindEntries(workspace) || changed;
+  changed = pruneLegacyToolBinds(workspace) || changed;
   return changed;
 }
 

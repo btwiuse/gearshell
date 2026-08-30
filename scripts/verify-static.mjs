@@ -334,4 +334,86 @@ if (corpus.includes("?v=")) {
   );
 }
 
+// 500-line / 50-line rules (AGENTS.md): walk the first-party JS tree
+// (root + plugin/, excluding submodules and node_modules) and fail on
+// any file over 500 lines or any function/method/arrow block over 50.
+const RULE_IGNORE_DIRS = new Set([
+  "browser",
+  "isolation",
+  "wanix-workbench",
+  "bonsai",
+  "web-pet",
+  "memory",
+  ".git",
+  "node_modules",
+  "dist",
+]);
+function firstPartyJsFiles() {
+  const out = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(new URL(dir, root), { withFileTypes: true })) {
+      if (e.isDirectory()) {
+        if (!RULE_IGNORE_DIRS.has(e.name)) walk(`${dir}${e.name}/`);
+      } else if (
+        e.isFile() && e.name.endsWith(".js") &&
+        !e.name.endsWith(".min.js") && !e.name.endsWith(".sw.js")
+      ) {
+        out.push(new URL(`${dir}${e.name}`, root));
+      }
+    }
+  };
+  walk("");
+  return out;
+}
+const FN_HEAD_RE = /\b(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)?\s*\([^)]*\)\s*\{/g;
+const ARROW_BODY_RE = /=>\s*\{/g;
+const METHOD_HEAD_RE = /^\s*(?:async\s+)?\*?\s*([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/gm;
+const CONTROL_KEYWORDS = new Set(["if", "for", "while", "switch", "catch", "with"]);
+function assertBodyWithinLimit(src, headIndex, name, label, file) {
+  const i = src.indexOf("{", headIndex);
+  if (i < 0) return;
+  let depth = 0;
+  let j = i;
+  for (; j < src.length; j++) {
+    if (src[j] === "{") depth++;
+    else if (src[j] === "}") {
+      depth--;
+      if (depth === 0) break;
+    }
+  }
+  if (j >= src.length) return;
+  const startLine = src.slice(0, headIndex).split("\n").length;
+  const endLine = src.slice(0, j + 1).split("\n").length;
+  if (endLine - startLine + 1 > 50) {
+    throw new Error(
+      `${file}:${startLine} ${label} "${name || "(anonymous)"}" is over 50 lines`,
+    );
+  }
+}
+for (const fileUrl of firstPartyJsFiles()) {
+  const src = readFileSync(fileUrl, "utf8");
+  const file = fileUrl.pathname.replace(root.pathname, "");
+  if (src.split("\n").length > 500) {
+    throw new Error(`${file} is over 500 lines; split it`);
+  }
+  let m;
+  FN_HEAD_RE.lastIndex = 0;
+  while ((m = FN_HEAD_RE.exec(src)) !== null) {
+    assertBodyWithinLimit(src, m.index, m[1], "function", file);
+    FN_HEAD_RE.lastIndex = m.index + 1;
+  }
+  ARROW_BODY_RE.lastIndex = 0;
+  while ((m = ARROW_BODY_RE.exec(src)) !== null) {
+    assertBodyWithinLimit(src, m.index, "", "arrow", file);
+    ARROW_BODY_RE.lastIndex = m.index + 1;
+  }
+  METHOD_HEAD_RE.lastIndex = 0;
+  while ((m = METHOD_HEAD_RE.exec(src)) !== null) {
+    if (!CONTROL_KEYWORDS.has(m[1])) {
+      assertBodyWithinLimit(src, m.index, m[1], "method", file);
+    }
+    METHOD_HEAD_RE.lastIndex = m.index + 1;
+  }
+}
+
 console.log("Static verification passed.");

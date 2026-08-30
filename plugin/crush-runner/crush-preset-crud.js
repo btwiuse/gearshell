@@ -88,11 +88,29 @@ function savePresetUpdates(ctx) {
   }
 }
 
+// Build the merged next preset from draft + activePreset (fresh id, user
+// slot, latest crushrc) with a name that won't collide with siblings.
+function nextPresetFromDraft(config, ctx, candidate) {
+  const { activePreset, draft, crushrcContent } = ctx;
+  return crushRunnerDep("normalizeCrushRunnerPreset")({
+    ...CRUSH_RUNNER_DEFAULT_PROFILE,
+    ...activePreset,
+    ...draft,
+    // Force a fresh id and mark this as a user preset so it doesn't
+    // collide with the built-in `crush` slot; spreading activePreset
+    // would otherwise re-use its id (`crush` for the built-in tab) and
+    // silently overwrite the built-in instead of creating a sibling.
+    id: undefined,
+    name: candidate,
+    builtin: false,
+    crushrc: crushrcContent,
+  });
+}
+
 function saveAsNewPreset(ctx) {
   const {
     activePreset,
     draft,
-    crushrcContent,
     setPresets,
     setStatus,
     switchToPreset,
@@ -102,19 +120,7 @@ function saveAsNewPreset(ctx) {
     const baseName = (draft.name || "").trim() || activePreset.name ||
       "Crush";
     const candidate = uniquePresetName(config, baseName);
-    const nextPreset = crushRunnerDep("normalizeCrushRunnerPreset")({
-      ...CRUSH_RUNNER_DEFAULT_PROFILE,
-      ...activePreset,
-      ...draft,
-      // Force a fresh id and mark this as a user preset so it doesn't
-      // collide with the built-in `crush` slot; spreading activePreset
-      // would otherwise re-use its id (`crush` for the built-in tab) and
-      // silently overwrite the built-in instead of creating a sibling.
-      id: undefined,
-      name: candidate,
-      builtin: false,
-      crushrc: crushrcContent,
-    });
+    const nextPreset = nextPresetFromDraft(config, ctx, candidate);
     const nextPresets = [...(config.crushRunnerPresets || []), nextPreset];
     const nextOrder = presetOrderWithSibling(
       config,

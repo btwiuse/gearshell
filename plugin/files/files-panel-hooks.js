@@ -45,56 +45,46 @@ async function sniffWasmEntries(getRoot, path, entries) {
   }));
 }
 
-function useFilesPanelState() {
-  const [path, setPath] = useState(".");
-  const [pathDraft, setPathDraft] = useState("/");
-  const [entries, setEntries] = useState([]);
-  const [highlighted, setHighlighted] = useState(null);
-  const [renameTarget, setRenameTarget] = useState(null);
-  const [creating, setCreating] = useState(null);
-  const [entryName, setEntryName] = useState("");
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState("grid");
-  const [sort, setSort] = useState({ by: "name", desc: false });
-  const [columnWidths, setColumnWidths] = useState({ size: 80, mtime: 164 });
-  const [sidebarCollapsed, setSidebarCollapsed] = useState({
-    explorer: false,
-    favorites: false,
-    volumes: false,
-  });
-  const [finePointer] = useState(() =>
-    window.matchMedia("(hover: hover) and (pointer: fine)").matches
-  );
+// Every files-panel UI field as a [value, setter] pair, one line each.
+function useFilesPanelFields() {
   return {
-    path,
-    setPath,
-    pathDraft,
-    setPathDraft,
-    entries,
-    setEntries,
-    highlighted,
-    setHighlighted,
-    renameTarget,
-    setRenameTarget,
-    creating,
-    setCreating,
-    entryName,
-    setEntryName,
-    status,
-    setStatus,
-    loading,
-    setLoading,
-    viewMode,
-    setViewMode,
-    sort,
-    setSort,
-    columnWidths,
-    setColumnWidths,
-    sidebarCollapsed,
-    setSidebarCollapsed,
-    finePointer,
+    path: useState("."),
+    pathDraft: useState("/"),
+    entries: useState([]),
+    highlighted: useState(null),
+    renameTarget: useState(null),
+    creating: useState(null),
+    entryName: useState(""),
+    status: useState(""),
+    loading: useState(false),
+    viewMode: useState("grid"),
+    sort: useState({ by: "name", desc: false }),
+    columnWidths: useState({ size: 80, mtime: 164 }),
+    sidebarCollapsed: useState({
+      explorer: false,
+      favorites: false,
+      volumes: false,
+    }),
+    finePointer: useState(() =>
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    ),
   };
+}
+
+// Shape the field pairs into the panel context object ({ path, setPath,
+// ... }): value under the field name, setter under the camelCased
+// set<Field> name.
+function useFilesPanelState() {
+  const fields = useFilesPanelFields();
+  const out = {};
+  for (const key of Object.keys(fields)) {
+    const [value, setter] = fields[key];
+    out[key] = value;
+    if (setter) {
+      out["set" + key[0].toUpperCase() + key.slice(1)] = setter;
+    }
+  }
+  return out;
 }
 
 function useFilesMediaLayout() {

@@ -1,6 +1,6 @@
 // plugins-iframe-api.js — shell side of the iframe <-> GearShell bridge.
 //
-// The counterpart of /gear-bridge.js: receives postMessage requests from
+// The counterpart of /plugin/gear-bridge.js: receives postMessage requests from
 // registered iframe plugins and dispatches them against window.GearShell
 // through the same permissions.api whitelist in-page component plugins
 // get (createScopedApi). Both the source origin and the requested method

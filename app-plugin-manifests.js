@@ -371,10 +371,10 @@ export const DEFAULT_PLUGINS = [
   // The iframe plugin template: the iframe counterpart of plugin/template/.
   // Instead of an entry module it declares iframe.src (a self-contained
   // HTML app) plus permissions.api — the exact list of window.GearShell
-  // methods the iframe may call through /gear-bridge.js (default: none =
+  // methods the iframe may call through /plugin/gear-bridge.js (default: none =
   // every call denied). Copy plugin/iframe-template-plugin/ to start your
   // own iframe plugin: keep iframe.src + permissions.api, load
-  // /gear-bridge.js in the page, and call GearShell.<method>.<path>() from
+  // /plugin/gear-bridge.js in the page, and call GearShell.<method>.<path>() from
   // there. Disabled by default like the component template.
   {
     id: "iframe-template",
