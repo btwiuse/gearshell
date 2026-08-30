@@ -447,11 +447,9 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
       allow: "clipboard-read; clipboard-write; fullscreen",
       allowFullscreen: true,
     },
-    // The stylesheet loads inside the iframe page itself (a <link> in
-    // index.html); declaring it here too keeps the verify-static check
-    // (every plugin css file must be manifest-declared) happy, and the
-    // iframe-internal classes make the shell-page injection harmless.
-    css: ["/plugin/iframe-template-plugin/iframe-template.css"],
+    // No css: entry — the iframe page is self-contained and inlines its
+    // own stylesheet. Declaring css: here would make injectPluginCss
+    // apply the page's body/universal rules to the SHELL chrome.
     enabled: false,
     permissions: {
       api: [
