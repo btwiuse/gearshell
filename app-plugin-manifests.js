@@ -436,6 +436,8 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
   //   wasi runtime:  examples/hello.wasm          (WASI hello world)
   //   wasi runtime:  examples/args.wasm a b c     (argv/env via WASI ABI)
   //   wasi runtime:  examples/cat.wasm FILE       (read a file via preopen)
+  //   js   runtime:  examples/calc.js A B [op]    (one task, four worker
+  //                                                 kinds: wasi + gojs + js)
   //
   // Sources and the full tutorial live in examples/ (wat sources for the
   // wasm files, the worker protocol docs in examples/js/wanix.js).
@@ -445,7 +447,7 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
     // Bump the version whenever example content changes: the OPFS bind
     // cache keys on <pluginId>@<version> + src URL, so a same-version
     // content edit would keep serving the stale cached copy.
-    version: "1.0.6",
+    version: "1.0.12",
     icon: "Lightbulb",
     // No entry module: purely a bind provider. Mounts the examples into
     // the SYSTEM root namespace (systemFiles) instead of per-task binds:
@@ -456,9 +458,14 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
     systemFiles: [
       { id: "hello-js", dst: "examples/hello.js", src: "/examples/js/hello.js" },
       { id: "fs-demo-js", dst: "examples/fs-demo.js", src: "/examples/js/fs-demo.js" },
+      { id: "ipc-probe-js", dst: "examples/ipc-probe.js", src: "/examples/js/ipc-probe.js" },
+      { id: "calc-js", dst: "examples/calc.js", src: "/examples/js/calc.js" },
+      { id: "calc-service-js", dst: "examples/calc-service.js", src: "/examples/js/calc-service.js" },
       { id: "hello-wasm", dst: "examples/hello.wasm", src: "/examples/wasi/hello.wasm" },
       { id: "args-wasm", dst: "examples/args.wasm", src: "/examples/wasi/args.wasm" },
       { id: "cat-wasm", dst: "examples/cat.wasm", src: "/examples/wasi/cat.wasm" },
+      { id: "calc-wasm", dst: "examples/calc.wasm", src: "/examples/wasi/calc.wasm" },
+      { id: "calc-wat", dst: "examples/calc.wat", src: "/examples/wasi/calc.wat" },
       // The .wat sources are bound too, so cat.wasm (and any task) can
       // read them from the namespace, not just fetch them over HTTP.
       { id: "hello-wat", dst: "examples/hello.wat", src: "/examples/wasi/hello.wat" },

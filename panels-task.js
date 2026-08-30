@@ -107,7 +107,7 @@ const HeadlessTaskPanel = React.forwardRef(function HeadlessTaskPanel(
           ? "Task finished."
           : status.status === "starting"
           ? "Starting task…"
-          : "Headless task: no terminal. Output is captured to a per-task log; read it with gear tasks.output <id> (live with wanix v0.4.20)."}
+          : "Headless task: no terminal. Output is captured to a per-task log; read it with gear tasks.output <id> (live)."}
       </p>
       <${HeadlessTaskInfo} task=${task} envLines=${envLines}/>
       <span className=${`task-headless-status ${status.status}`}>${status.status}</span>

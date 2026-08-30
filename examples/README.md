@@ -136,6 +136,55 @@ zig build-exe main.zig -target wasm32-wasi -O Debug
 # then point a WASI-runtime terminal profile at ./main.wasm
 ```
 
+## Multi-worker collaboration: the microservice calculator
+
+One plugin can use **all four worker kinds in a single task**: an
+orchestrator (`type="js"`) spawns one child per worker kind, and the
+children cooperate through the shared task namespace. `examples/calc.js`
+is the working demo:
+
+```
+examples/calc.js 6 7        # 6*7, three ways
+examples/calc.js 20 22 add  # 20+22
+examples/calc.js 12 4 div   # 12/4
+```
+
+The orchestrator creates a shared `svc/` directory, spawns three children
+via the kernel's `spawn` API — each binary is sniffed (`auto`): the WASI
+wasm `calc.wasm`, the gojs bash, and the js worker `calc-service.js` —
+and each child writes its answer to `svc/<name>.txt`. The orchestrator
+waits for all three and prints the verdict:
+
+```
+calc: 6 mul 7 — spawning 3 workers...
+  wasi  (examples/calc.wasm)      : 42 (exit 0)
+  gojs  (bin/bash)                : 42 (exit 0)
+  js    (examples/calc-service.js): 42 (exit 0)
+✅ all three workers agree: 42
+```
+
+The pattern in three rules:
+
+1. **The filesystem is the bus.** A spawned child's namespace is a clone
+   of its parent's (same underlying fs nodes), so a directory created by
+   the parent is visible to every child, and files written there are the
+   communication channel — no pipes or RPC plumbing needed.
+2. **Declare stdio.** Pass `stdio: ["inherit", "inherit", "inherit"]` on
+   `fs.spawn` (or rely on the kernel's default since v0.4.26+): the
+   wasi/js child workers resolve their own stdout through
+   `#task/<id>/fd/1`, and that path only exists once spawn registers the
+   inherited fds.
+3. **Write, don't append.** `appendFile` fails on a missing file;
+   services create their output with `writeFile` (the wasm uses
+   `path_open` with `O_CREAT`, bash uses `>` — the js worker uses
+   `writeFile`).
+
+The kernel's `spawn` always allocates children with `type="auto"`, so the
+demo needs no explicit type wiring: `.js` → js driver, `.wasm` (wasi
+magic) → wasi driver, bash → gojs driver. See `examples/js/calc.js` for
+the orchestrator and `examples/wasi/calc.wat` for the hand-written WASI
+service.
+
 ## How the files get into a terminal
 
 The Examples plugin declares the resources with the `files` manifest field
