@@ -6,15 +6,15 @@ import {
   DEFAULT_VM_BACKEND_URL,
   DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
-} from "./app-constants.js?v=20260828.107";
+} from "./app-constants.js?v=20260828.108";
 import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
   normalizeVmNetworkMode,
   normalizeVmWispUrl,
-} from "./app-normalize.js?v=20260828.149";
-import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260828.107";
-import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.148";
+} from "./app-normalize.js?v=20260828.150";
+import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js?v=20260828.108";
+import { loadConfig, saveConfig } from "./app-workspace.js?v=20260826.149";
 
 export function getTerminalProfiles(config = loadConfig()) {
   const shell = {
@@ -79,9 +79,27 @@ export function getVmPanelConfig(config = loadConfig()) {
   };
 }
 
+// The kernel execs the first whitespace token of cmd directly (the gojs
+// driver readFile(args[0])), and the task image only ships bash/gear/w9y,
+// so a compound cmd whose first token is another name (echo, ls, ...)
+// dies with `open <token>: file does not exist`. Wrap those in `bash -c`
+// so the full shell grammar is available; keep explicit paths (the caller
+// said exactly what to exec) and the known image binaries untouched.
+function wrapUnknownShellCmd(cmd) {
+  const text = String(cmd || "").trim();
+  if (!text) return cmd;
+  const first = text.split(/\s+/)[0];
+  if (first === "bash" || first === "gear" || first === "w9y") return cmd;
+  if (first.startsWith("/") || first.startsWith("./") || first.startsWith("../")) {
+    return cmd;
+  }
+  return `bash -c '${text.replace(/'/g, `'\''`)}'`;
+}
+
 export function terminalCommand(profile) {
-  return profile.cmd ||
+  const cmd = profile.cmd ||
     [profile.program, profile.args].filter(Boolean).join(" ");
+  return wrapUnknownShellCmd(cmd);
 }
 
 export function saveTerminalProfiles(profiles, defaultProfileId, profileOrder) {

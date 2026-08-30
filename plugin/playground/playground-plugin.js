@@ -6,7 +6,7 @@
 // Disabling the playground plugin in the Plugins page hides the panel
 // type from the launcher.
 
-import { PlaygroundPanel } from "./playground-panel.js?v=20260829.110";
+import { PlaygroundPanel } from "./playground-panel.js?v=20260829.111";
 
 export const plugin = {
   register(ctx) {
