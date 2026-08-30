@@ -1206,3 +1206,39 @@ extras 重打,gearshell 待推):
   (normalize 重存会冲掉)。
 - 第三方 minified 源码别打补丁,驱动侧补偿优先。
 - iframe 插件默认 enabled(否则 Plugins 页"消失")。
+
+## 三十三、VM 联网跑通(vnet 网关,2026-08-31)
+
+**目标**:guest 能 `apk update && apk add`(用户说"apt"但镜像是 Alpine,用 apk)。
+参考 tractordev/apptron(tractordev 也是 wanix 作者)的虚网方案,放弃 mrrowisp
+(wisp 在 v86 客户端只支持 TCP,DHCP/DNS 不通;vnet 带 UDP,guest 标准 udhcpc)。
+
+**已完成**:
+- 新仓库 `gearshell/vnet`(github.com/progrium/go-netstack/vnet 网关,~150 行):
+  `/x/net` WebSocket(Qemu framing:4 字节 BE 长度 + L2 帧)→ vnet.AcceptQemu;
+  内置 DHCP(DHCPStaticLeases/pool 10.0.0.0/8,gw 10.0.0.1)+ DNS(:53 UDP+TCP)+
+  TCP/UDP NAT 出网;debug 端点 /stats /cam /leases。镜像 btwiuse/arch:golang
+  启动时 `git clone + go build`(k8s 内构建,不推镜像)。
+- 已部署 k3s:`deploy/k8s.yaml`(Service:8080 + Deployment + Ingress),TLS
+  cert-manager letsencrypt(certificate 需显式创建,ingress-shim 没自动建)→
+  `wss://vnet.net.k0s.io/x/net`。
+- gearshell `normalizeVmWispUrl` 放行 ws:/wss:(vnet 用 lb 适配器,非 wisp)。
+- **端到端验证**(dev VM,手动起网):udhcpc 拿到 10.0.0.2/8、默认路由
+  10.0.0.1 → wget http://example.com ✓ → apk update(HTTPS)OK: 25056 包 ✓
+  → apk add htop(3.4.1)✓。
+
+**待办**:
+- ⬜ guest 开机自动起网:镜像 wanix-linux.tgz 加 /boot/rc(或改 /bin/init):
+  `ifconfig lo up; ifconfig eth0 up; udhcpc -i eth0 -s /bin/post-dhcp` + post-dhcp
+  脚本(设 IP/路由/resolv.conf)→ 重建镜像 → extras 新 tag。
+  (临时方案:gearshell vm 会话加一个 boot/rc 的 file bind 覆盖,不用重建镜像。)
+- ⬜ 持久化(下阶段):内核 archive bind 改 cowfs{Base: memfs 解包, Overlay:
+  idbfs "vm/<key>"}(照 apptron boot.go:206-242),guest 9p 写入进 IndexedDB。
+- ⬜ vnet 服务可选增强:ngrok 式公网入口(apptron worker 的 tcp-<port>-<ip> 模式)。
+
+**坑**:
+- cert-manager ingress-shim 不会自动为 Ingress 建 Certificate(matrix 是手动/历史
+  建的);显式创建 Certificate 资源即可(issuerRef letsencrypt)。
+- GitHub push 拒 "email privacy restrictions":commit 作者邮箱必须用
+  `<id>+<login>@users.noreply.github.com`(btwiuse: 54848194+btwiuse@...)。
+- gearshell normalize 在新代码生效前会拒掉 wss:,先 reload 再 updateShell。

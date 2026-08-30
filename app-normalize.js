@@ -396,7 +396,11 @@ export function normalizeVmWispUrl(value) {
   if (!normalized) return "";
   try {
     const { protocol } = new URL(normalized);
-    return ["wisp:", "wisps:"].includes(protocol) ? normalized : "";
+    // wisp: for the v86 wisp relay adapter; ws:/wss: for the raw-packet
+    // WebSocket adapter (vnet gateway), which also supports UDP/DHCP.
+    return ["wisp:", "wisps:", "ws:", "wss:"].includes(protocol)
+      ? normalized
+      : "";
   } catch {
     return "";
   }
