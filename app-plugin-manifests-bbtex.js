@@ -85,3 +85,32 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
 ` },
       ],
 };
+
+// iframe edition of the same playground: the page renders its own xterm
+// and drives the example binaries through the terminal data bridge
+// (terminal.create/write/resize/dispose + term.data/term.exit events),
+// because terminal.embed cannot cross postMessage. Keep in sync with
+// BBTEX_PLUGIN's w9y dependency so either plugin installs the examples.
+export const BBTEX_IFRAME_PLUGIN = {
+    id: "bbtex-iframe",
+    name: "Bubble Tea Playground (iframe)",
+    version: "1.0.0",
+    icon: "Sprout",
+    iframe: {
+      src: "/plugin/bbtex-iframe/index.html",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+    permissions: {
+      api: [
+        "terminal.create",
+        "terminal.write",
+        "terminal.resize",
+        "terminal.dispose",
+        "events.on",
+        "events.off",
+        "w9y.status",
+      ],
+    },
+    w9y: { mod: "bbtex", version: "v2.0.12" },
+};

@@ -6,7 +6,7 @@
 // app-plugin-manifests-examples.js (500-line split).
 
 import { EXAMPLES_PLUGIN } from "./app-plugin-manifests-examples.js";
-import { BBTEX_PLUGIN } from "./app-plugin-manifests-bbtex.js";
+import { BBTEX_PLUGIN, BBTEX_IFRAME_PLUGIN } from "./app-plugin-manifests-bbtex.js";
 
 // --- Shell toolset (the per-task tool binds) ---
 // The bash/w9y/gear binaries and the shell rc file ship as the
@@ -417,3 +417,6 @@ export const DEFAULT_PLUGINS = [
 // app-plugin-manifests-examples.js / app-plugin-manifests-bbtex.js).
 DEFAULT_PLUGINS.push(EXAMPLES_PLUGIN);
 DEFAULT_PLUGINS.push(BBTEX_PLUGIN);
+// iframe edition of the bbtex playground (default DISABLED — the module
+// bbtex stays the default; enable bbtex-iframe to A/B the two).
+DEFAULT_PLUGINS.push({ ...BBTEX_IFRAME_PLUGIN, enabled: false });

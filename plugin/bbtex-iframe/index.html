@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bubble Tea Playground</title>
+<link rel="stylesheet" href="/plugin/bbtex-iframe/bbtex-iframe.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/css/xterm.css" />
+</head>
+<body>
+  <!--
+    Bubble Tea Playground (iframe edition).
+
+    The module plugin (plugin/bbtex/bbtex.js) is a React panel that embeds
+    one terminal per open example with terminal.embed. An iframe cannot
+    call terminal.embed (it needs a DOM anchor in the caller's document and
+    returns a detach function), so this page renders xterm itself and drives
+    the same w9y-installed example binaries through the terminal data bridge
+    (workspace-terminal-bridge.js) — the vscode.Terminal-shaped API:
+
+      terminal.create(profile)   -> { sessionId }   (profile.cmd, wd, extraBinds)
+      terminal.write(id, bytes)  -> input
+      terminal.resize(id, c, r)  -> winch update
+      terminal.dispose(id)       -> kill the session
+      subscribe("term.data"/"term.exit") -> per-session byte/exit pushes
+
+    The examples live at /opfs/wanix/examples/<id>, installed by the w9y
+    bbtex@v2.0.12 dependency declared in the manifest. pager reads
+    artichoke.md from its CWD, so its profile starts with wd=/preset and
+    ships the file as an extraBind, exactly like the module plugin.
+  -->
+
+  <div id="app" class="bbtex-playground">
+    <header class="bbtex-head">
+      <div class="bbtex-title">Bubble Tea Playground</div>
+      <div id="bbtex-hint" class="bbtex-hint" hidden></div>
+      <div id="bbtex-cap" class="bbtex-cap"></div>
+    </header>
+    <div class="bbtex-body">
+      <aside id="bbtex-sidebar" class="bbtex-sidebar"></aside>
+      <main id="bbtex-stage" class="bbtex-stage">
+        <div class="bbtex-empty">Pick an example to run it in a live terminal</div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/gear-bridge.js"></script>
+  <script src="/plugin/bbtex-iframe/bbtex-examples.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/lib/xterm.mjs";
+      var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.300/lib/addon-fit.mjs";
+      var MAX_OPEN = 12;
+      var W9Y_EXAMPLE = function (id) { return "/opfs/wanix/examples/" + id; };
+
+      // Mirrors plugin/bbtex/bbtex.js ARTICHOKE_MD (the pager example
+      // reads artichoke.md from its CWD). Kept in sync.
+      var ARTICHOKE_MD = [
+        "Glow",
+        "====",
+        "",
+        "A casual introduction. 你好世界!",
+        "",
+        "## Let’s talk about artichokes",
+        "",
+        "The _artichoke_ is mentioned as a garden plant in the 8th century BC by Homer",
+        "**and** Hesiod. The naturally occurring variant of the artichoke, the cardoon,",
+        "which is native to the Mediterranean area, also has records of use as a food",
+        "among the ancient Greeks and Romans. Pliny the Elder mentioned growing of",
+        "_carduus_ in Carthage and Cordoba.",
+        "",
+        "> He holds him with a skinny hand,",
+        "> ‘There was a ship,’ quoth he.",
+        "> ‘Hold off! unhand me, grey-beard loon!’",
+        "> An artichoke, dropt he.",
+        "",
+        "--Samuel Taylor Coleridge, [The Rime of the Ancient Mariner][rime]",
+        "",
+        "[rime]: https://poetryfoundation.org/poems/43997/",
+        "",
+        "## Other foods worth mentioning",
+        "",
+        "1. Carrots",
+        "1. Celery",
+        "1. Tacos",
+        "    * Soft",
+        "    * Hard",
+        "1. Cucumber",
+        "",
+        "## Things to eat today",
+        "",
+        "* [x] Carrots",
+        "* [x] Ramen",
+        "* [ ] Currywurst",
+        "",
+        "### Power levels of the aforementioned foods",
+        "",
+        "| Name       | Power | Comment          |",
+        "| ---        | ---   | ---              |",
+        "| Carrots    | 9001  | It’s over 9000?! |",
+        "| Ramen      | 9002  | Also over 9000?! |",
+        "| Currywurst | 10000 | What?!           |",
+        "",
+        "## Currying Artichokes",
+        "",
+        "Here’s a bit of code in [Haskell](https://haskell.org), because we are fancy.",
+        "Remember that to compile Haskell you’ll need `ghc`.",
+        "",
+        "```haskell",
+        "module Main where",
+        "",
+        "import Data.Function ( (&) )",
+        "import Data.List ( intercalculate )",
+        "",
+        "hello :: String -> String",
+        "hello s =",
+        "    \"Hello, \" ++ s ++ \".\"",
+        "",
+        "main :: IO ()",
+        "main =",
+        "    map hello [ \"artichoke\", \"alcachofa\" ] & intercalculate \"\\n\" & putStrLn",
+        "```",
+        "",
+        "***",
+        "",
+        "_Alcachofa_, if you were wondering, is artichoke in Spanish.",
+      ].join("\n");
+
+      // open entries: { id, example, sessionId, xterm, fit, card, host, disposed }
+      var open = [];
+      var sessionsById = {}; // sessionId -> entry (term.data dispatch)
+      var dataHandler = null;
+      var exitHandler = null;
+      var statusTimer = null;
+
+      function $(id) { return document.getElementById(id); }
+      function el(tag, className, text) {
+        var node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text != null) node.textContent = text;
+        return node;
+      }
+
+      function profileFor(example) {
+        var profile = {
+          cmd: W9Y_EXAMPLE(example.id),
+          skipPluginBinds: true,
+          extraBinds:
+            example.id === "pager"
+              ? [
+                  { type: "ns", dst: "preset", src: "#ramfs/new" },
+                  { type: "file", dst: "preset/artichoke.md", content: ARTICHOKE_MD },
+                ]
+              : [],
+        };
+        if (example.profile) Object.assign(profile, example.profile);
+        return profile;
+      }
+
+      // === Sidebar ===
+
+      function renderSidebar() {
+        var sidebar = $("bbtex-sidebar");
+        sidebar.innerHTML = "";
+        sidebar.appendChild(el("h3", "bbtex-sidebar-title",
+          "Examples (" + open.length + "/" + MAX_OPEN + ")"));
+        window.BBTEX_GROUPS.forEach(function (group) {
+          var items = window.BBTEX_EXAMPLES.filter(function (ex) {
+            return ex.group === group;
+          });
+          if (items.length === 0) return;
+          var groupEl = el("div", "bbtex-group");
+          var head = el("div", "bbtex-group-head");
+          head.appendChild(el("span", null, group));
+          head.appendChild(el("span", "bbtex-group-count", String(items.length)));
+          groupEl.appendChild(head);
+          items.forEach(function (ex) {
+            var isOpen = open.some(function (e) { return e.id === ex.id; });
+            var btn = el("button", "bbtex-example" + (isOpen ? " is-open" : ""));
+            btn.type = "button";
+            btn.appendChild(el("span", "bbtex-example-name", ex.label));
+            btn.appendChild(el("span", "bbtex-example-blurb", ex.blurb));
+            btn.addEventListener("click", function () { toggle(ex); });
+            groupEl.appendChild(btn);
+          });
+          sidebar.appendChild(groupEl);
+        });
+      }
+
+      // === Stage / terminals ===
+
+      function makeCard(example, sessionId) {
+        var card = el("div", "bbtex-term");
+        var head = el("div", "bbtex-term-head");
+        head.appendChild(el("span", "bbtex-term-name", example.label));
+        var close = el("button", "bbtex-term-close", "×");
+        close.type = "button";
+        close.title = "Close terminal";
+        close.addEventListener("click", function () { closeEntry(sessionId); });
+        head.appendChild(close);
+        var body = el("div", "bbtex-term-body");
+        card.appendChild(head);
+        card.appendChild(body);
+        return { card: card, head: head, body: body };
+      }
+
+      function resizeEntry(entry) {
+        if (!entry || !entry.xterm || entry.disposed) return;
+        try {
+          entry.fit.fit();
+        } catch {
+          return;
+        }
+        if (entry.sessionId) {
+          GearShell.terminal.resize(
+            entry.sessionId,
+            entry.xterm.cols,
+            entry.xterm.rows,
+          ).catch(function () {});
+        }
+      }
+
+      function attachTerminal(entry) {
+        var body = entry.body;
+        entry.xterm = new window.Terminal({
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+          fontSize: 13,
+          lineHeight: 1.2,
+          cursorBlink: true,
+          convertEol: true,
+          scrollback: 5000,
+          theme: {
+            background: "#0a0e14",
+            foreground: "#e6edf3",
+            cursor: "#58a6ff",
+            selectionBackground: "#1f6feb66",
+          },
+        });
+        entry.fit = new window.FitAddon();
+        entry.xterm.loadAddon(entry.fit);
+        entry.xterm.open(body);
+        entry.xterm.onData(function (data) {
+          if (!entry.sessionId || entry.disposed) return;
+          GearShell.terminal.write(entry.sessionId, new TextEncoder().encode(data))
+            .catch(function () {});
+        });
+        entry.xterm.onResize(function () { resizeEntry(entry); });
+        // The shell may still be laying the panel out: fit once the card
+        // actually has a size, then again on any window/panel resize.
+        var fitTimer = null;
+        function fitWhenReady() {
+          if (entry.disposed) return;
+          if (body.clientWidth < 8 || body.clientHeight < 8) {
+            fitTimer = setTimeout(fitWhenReady, 150);
+            return;
+          }
+          resizeEntry(entry);
+        }
+        window.addEventListener("resize", onWindowResize);
+        function onWindowResize() {
+          if (entry.disposed) return;
+          try {
+            entry.fit.fit();
+          } catch {
+            return;
+          }
+          if (entry.sessionId) {
+            GearShell.terminal.resize(
+              entry.sessionId,
+              entry.xterm.cols,
+              entry.xterm.rows,
+            ).catch(function () {});
+          }
+        }
+        entry._windowResize = onWindowResize;
+        fitWhenReady();
+      }
+
+      function openExample(example) {
+        return GearShell.terminal.create(profileFor(example))
+          .then(function (result) {
+            if (!result || result.ok === false) {
+              throw new Error((result && result.error) || "create failed");
+            }
+            var sessionId = result.sessionId;
+            var made = makeCard(example, sessionId);
+            var entry = {
+              id: example.id,
+              example: example,
+              sessionId: sessionId,
+              xterm: null,
+              fit: null,
+              card: made.card,
+              body: made.body,
+              disposed: false,
+            };
+            open.push(entry);
+            sessionsById[sessionId] = entry;
+            $("bbtex-stage").appendChild(made.card);
+            attachTerminal(entry);
+            renderSidebar();
+            return entry;
+          });
+      }
+
+      function closeEntry(sessionId) {
+        var entry = sessionsById[sessionId];
+        if (!entry) return;
+        entry.disposed = true;
+        if (entry._windowResize) {
+          window.removeEventListener("resize", entry._windowResize);
+        }
+        try {
+          GearShell.terminal.dispose(sessionId).catch(function () {});
+        } catch {
+          // shell gone
+        }
+        if (entry.xterm) {
+          try {
+            entry.xterm.dispose();
+          } catch {
+            // already disposed
+          }
+        }
+        entry.card.remove();
+        delete sessionsById[sessionId];
+        open = open.filter(function (e) { return e.sessionId !== sessionId; });
+        renderSidebar();
+      }
+
+      function toggle(example) {
+        var existing = open.find(function (e) { return e.id === example.id; });
+        if (existing) {
+          closeEntry(existing.sessionId);
+          return;
+        }
+        if (open.length >= MAX_OPEN) {
+          showCap();
+          return;
+        }
+        hideCap();
+        openExample(example).catch(function (error) {
+          var hint = $("bbtex-hint");
+          hint.textContent = "Could not start " + example.label + ": " + error.message;
+          hint.hidden = false;
+        });
+      }
+
+      // === Data / exit events ===
+
+      function onTermData(payload) {
+        var entry = sessionsById[payload.sessionId];
+        if (!entry || entry.disposed || !entry.xterm) return;
+        try {
+          entry.xterm.write(new TextDecoder().decode(payload.data));
+        } catch {
+          // terminal disposed mid-write
+        }
+      }
+
+      function onTermExit(payload) {
+        var entry = sessionsById[payload.sessionId];
+        if (!entry || entry.disposed) return;
+        var code = payload.code ?? "?";
+        var note = payload.error ? "error: " + payload.error : "exit code " + code;
+        entry.xterm.write(
+          "\r\n\x1b[33m[Process " + note + "]\x1b[0m\r\n",
+        );
+        entry.disposed = true;
+        if (entry._windowResize) {
+          window.removeEventListener("resize", entry._windowResize);
+        }
+        if (entry.xterm) {
+          try {
+            entry.xterm.dispose();
+          } catch {
+            // already disposed
+          }
+        }
+        try {
+          GearShell.terminal.dispose(payload.sessionId).catch(function () {});
+        } catch {
+          // shell gone
+        }
+        entry.card.remove();
+        delete sessionsById[payload.sessionId];
+        open = open.filter(function (e) { return e.sessionId !== payload.sessionId; });
+        renderSidebar();
+      }
+
+      // === w9y install status ===
+
+      function refreshStatus() {
+        GearShell.w9y.status("bbtex")
+          .then(function (status) {
+            var hint = $("bbtex-hint");
+            if (status && !status.installed) {
+              hint.textContent =
+                "bbtex is not installed — examples will fail until `w9y mod apply bbtex@v2.0.12` runs (the shell installs it automatically on boot).";
+              hint.hidden = false;
+            } else {
+              hint.hidden = true;
+            }
+          })
+          .catch(function () {
+            // shell not ready yet; the status timer retries
+          });
+      }
+
+      function showCap() {
+        $("bbtex-cap").textContent = "Close a terminal first (max " + MAX_OPEN + " open)";
+      }
+      function hideCap() {
+        $("bbtex-cap").textContent = "";
+      }
+
+      // === Boot ===
+
+      function start() {
+        if (!window.GearShell) {
+          var hint = $("bbtex-hint");
+          hint.textContent = "gear-bridge.js did not load — open this page as an iframe panel.";
+          hint.hidden = false;
+          return;
+        }
+        return Promise.all([
+          import(XTERM_URL).then(function (mod) { window.Terminal = mod.Terminal; }),
+          import(FIT_URL).then(function (mod) { window.FitAddon = mod.FitAddon; }),
+          GearShell.subscribe("term.data"),
+          GearShell.subscribe("term.exit"),
+          GearShell.subscribe("w9y.changed"),
+        ]).then(function () {
+          dataHandler = onTermData;
+          exitHandler = onTermExit;
+          GearShell.on("term.data", dataHandler);
+          GearShell.on("term.exit", exitHandler);
+          renderSidebar();
+          refreshStatus();
+          statusTimer = setInterval(refreshStatus, 5000);
+        });
+      }
+
+      start().catch(function (error) {
+        var hint = $("bbtex-hint");
+        hint.textContent = "Failed to start: " + error.message;
+        hint.hidden = false;
+      });
+    })();
+  </script>
+</body>
+</html>

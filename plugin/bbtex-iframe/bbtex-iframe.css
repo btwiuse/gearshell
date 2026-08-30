@@ -1,0 +1,218 @@
+/* bbtex-iframe.css — Bubble Tea playground (iframe edition).
+   Self-loaded by the plugin page (iframe plugins never declare css: in
+   their manifest — that would inject page rules into the shell). */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0d1117;
+  color: #e6edf3;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  overflow: hidden;
+}
+
+.bbtex-playground {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* === Header === */
+
+.bbtex-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #21262d;
+  background: #161b22;
+  flex: 0 0 auto;
+}
+
+.bbtex-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.bbtex-hint {
+  color: #d29922;
+  font-size: 12px;
+  background: #1f1a10;
+  border: 1px solid #3d2f00;
+  border-radius: 6px;
+  padding: 3px 10px;
+}
+
+.bbtex-cap {
+  color: #d29922;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+/* === Body: sidebar + stage === */
+
+.bbtex-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.bbtex-sidebar {
+  width: 250px;
+  flex: 0 0 auto;
+  overflow-y: auto;
+  background: #0d1117;
+  border-right: 1px solid #21262d;
+  padding: 8px 8px 16px;
+}
+
+.bbtex-sidebar-title {
+  margin: 4px 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bbtex-group {
+  margin-bottom: 10px;
+}
+
+.bbtex-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.bbtex-group-count {
+  color: #484f58;
+  font-weight: 500;
+}
+
+.bbtex-example {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  color: #e6edf3;
+  font: inherit;
+}
+
+.bbtex-example:hover {
+  background: #161b22;
+  border-color: #21262d;
+}
+
+.bbtex-example.is-open {
+  background: #12263a;
+  border-color: #1f6feb;
+}
+
+.bbtex-example-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.bbtex-example-blurb {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+/* === Stage === */
+
+.bbtex-stage {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: #0a0e14;
+}
+
+.bbtex-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #484f58;
+  font-size: 14px;
+}
+
+.bbtex-term {
+  width: calc(50% - 5px);
+  min-width: 300px;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bbtex-term-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+  flex: 0 0 auto;
+}
+
+.bbtex-term-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #c9d1d9;
+}
+
+.bbtex-term-close {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.bbtex-term-close:hover {
+  color: #f85149;
+  background: #21262d;
+}
+
+.bbtex-term-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 4px;
+}
+
+.bbtex-term-body .xterm {
+  height: 100%;
+}
