@@ -96,6 +96,41 @@ function TemplateHeader({ manifest }) {
 // interactive terminal (normalizeTask: term: task.term !== false). The
 // result renders the captured stdout/stderr as a log plus a JSON
 // metadata block (exit code, duration) — console.log never shows it.
+// Poll a headless task every 800ms until it reaches a terminal status or
+// the deadline closes, then hand a ready result object to onDone.
+function pollHeadlessTask(id, startedAt, deadline, onDone) {
+  const poll = () => {
+    const task = window.GearShell?.tasks?.list?.()?.find?.(
+      (item) => item.id === id,
+    );
+    if (task && (task.status === "succeeded" || task.status === "failed")) {
+      const out = window.GearShell?.tasks?.output?.(id);
+      onDone({
+        cmd: task.cmd,
+        status: task.status,
+        error: task.error || null,
+        exitCode: task.status === "succeeded" ? 0 : parseExitCode(task.error),
+        durationMs: Date.now() - startedAt,
+        output: out?.ok ? out.output || "" : out?.error || "(unavailable)",
+      });
+      return;
+    }
+    if (Date.now() < deadline) {
+      setTimeout(poll, 800);
+      return;
+    }
+    onDone({
+      cmd: "…",
+      status: "timeout",
+      error: "exceeded 60s",
+      exitCode: null,
+      durationMs: 60000,
+      output: "",
+    });
+  };
+  setTimeout(poll, 1500);
+}
+
 function TaskDemo({ onNotice }) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
@@ -121,41 +156,13 @@ function TaskDemo({ onNotice }) {
     }
     const id = created.taskId;
     const startedAt = Date.now();
-    const deadline = startedAt + 60000;
-    const poll = () => {
-      const task = window.GearShell?.tasks?.list?.()?.find?.(
-        (item) => item.id === id,
+    pollHeadlessTask(id, startedAt, startedAt + 60000, (done) => {
+      setResult(done);
+      onNotice(
+        `task ${id} finished: ${done.status}${done.error ? " (" + done.error + ")" : ""}`,
       );
-      if (task && (task.status === "succeeded" || task.status === "failed")) {
-        const out = window.GearShell?.tasks?.output?.(id);
-        setResult({
-          cmd: task.cmd,
-          status: task.status,
-          error: task.error || null,
-          exitCode: task.status === "succeeded" ? 0 : parseExitCode(task.error),
-          durationMs: Date.now() - startedAt,
-          output: out?.ok ? out.output || "" : out?.error || "(unavailable)",
-        });
-        onNotice(
-          `task ${id} finished: ${task.status}${task.error ? " (" + task.error + ")" : ""}`,
-        );
-        setRunning(false);
-        return;
-      }
-      if (Date.now() < deadline) setTimeout(poll, 800);
-      else {
-        setResult({
-          cmd: "…",
-          status: "timeout",
-          error: "exceeded 60s",
-          exitCode: null,
-          durationMs: 60000,
-          output: "",
-        });
-        setRunning(false);
-      }
-    };
-    setTimeout(poll, 1500);
+      setRunning(false);
+    });
   };
   return html`
     <div className="template-demo">

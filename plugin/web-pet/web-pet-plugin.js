@@ -6,7 +6,7 @@
 // gates visibility so the launcher menu / Settings toggles keep
 // working.
 
-import { WagiDogPet } from "./web-pet.js?v=20260830.7";
+import { WagiDogPet } from "./web-pet.js?v=20260830.8";
 
 export const plugin = {
   register(ctx) {

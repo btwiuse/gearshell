@@ -54,6 +54,29 @@ function declaredDeps() {
   }
 }
 
+// Build the w9y.changed listener: when the finishing op matches the mod we
+// started, clear the busy state and surface the outcome notice.
+function makeW9yChangeHandler(installingRef, clearBusy, setNotice, refresh) {
+  return (payload) => {
+    const event = payload || {};
+    if (event.id && installingRef.current === event.id) {
+      clearBusy();
+      setNotice(
+        event.ok
+          ? {
+            kind: "ok",
+            text: `${event.id} ${event.op === "remove" ? "removed" : "installed"}${event.version ? " " + event.version : ""}.`,
+          }
+          : {
+            kind: "error",
+            text: `${event.op} ${event.id} failed: ${event.error || "unknown error"}.`,
+          },
+      );
+    }
+    refresh();
+  };
+}
+
 function useW9yState() {
   const [packages, setPackages] = useState([]);
   const [notice, setNotice] = useState(null); // {kind:"ok"|"error", text}
@@ -77,24 +100,10 @@ function useW9yState() {
   };
   useEffect(() => {
     refresh();
-    const unsubscribe = window.GearShell?.events?.on?.("w9y.changed", (payload) => {
-      const event = payload || {};
-      if (event.id && installingRef.current === event.id) {
-        clearBusy();
-        setNotice(
-          event.ok
-            ? {
-              kind: "ok",
-              text: `${event.id} ${event.op === "remove" ? "removed" : "installed"}${event.version ? " " + event.version : ""}.`,
-            }
-            : {
-              kind: "error",
-              text: `${event.op} ${event.id} failed: ${event.error || "unknown error"}.`,
-            },
-        );
-      }
-      refresh();
-    });
+    const unsubscribe = window.GearShell?.events?.on?.(
+      "w9y.changed",
+      makeW9yChangeHandler(installingRef, clearBusy, setNotice, refresh),
+    );
     return () => unsubscribe?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -253,42 +262,31 @@ export function W9yPackages() {
         : { kind: "error", text: result?.error || "Failed." },
     );
   };
+  // Every action shares the same setBusy -> call -> flash/clearBusy shape.
+  const runAction = (name, call, okText) => {
+    state.setBusy(name);
+    try {
+      flash(call(), okText);
+    } catch (error) {
+      flash({ error: error?.message || String(error) });
+      state.clearBusy();
+    }
+  };
   const install = (spec) => {
     const at = spec.indexOf("@");
     const name = (at > 0 ? spec.slice(0, at) : spec).trim();
     const version = at > 0 ? spec.slice(at + 1).trim() : undefined;
     if (!name) return;
-    state.setBusy(name);
-    try {
-      const result = window.GearShell.w9y.apply(name, version);
-      flash(result, `${name} apply started.`);
-    } catch (error) {
-      flash({ error: error?.message || String(error) });
-      state.clearBusy();
-    }
+    runAction(name, () => window.GearShell.w9y.apply(name, version), `${name} apply started.`);
   };
   const remove = (id) => {
     if (!window.confirm(`Remove w9y package "${id}" (files + registry record)?`)) {
       return;
     }
-    state.setBusy(id);
-    try {
-      const result = window.GearShell.w9y.remove(id);
-      flash(result, `${id} remove started.`);
-    } catch (error) {
-      flash({ error: error?.message || String(error) });
-      state.clearBusy();
-    }
+    runAction(id, () => window.GearShell.w9y.remove(id), `${id} remove started.`);
   };
   const reapply = (id, version) => {
-    state.setBusy(id);
-    try {
-      const result = window.GearShell.w9y.apply(id, version);
-      flash(result, `${id} re-apply started.`);
-    } catch (error) {
-      flash({ error: error?.message || String(error) });
-      state.clearBusy();
-    }
+    runAction(id, () => window.GearShell.w9y.apply(id, version), `${id} re-apply started.`);
   };
   return html`
     <div className="w9y-page">

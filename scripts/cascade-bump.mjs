@@ -19,7 +19,6 @@ const SKIP_DIRS = new Set([
   "bonsai",
   "isolation",
   "wanix-workbench",
-  "web-pet",
   "proxy-test-collectsub",
   ".workbuddy",
   "神奇海螺队-第一轮评审",
@@ -28,10 +27,15 @@ const SKIP_DIRS = new Set([
 const DRY = process.argv.includes("--dry");
 
 function collectFiles(dir, out) {
+  const atRoot = path.resolve(dir) === cwd;
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
     if (ent.name.startsWith(".")) continue;
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
+      // web-pet is both a root submodule (untouched) and a tracked plugin
+      // (plugin/web-pet/) whose imports must follow the cascade — skip the
+      // submodule at the root only.
+      if (atRoot && ent.name === "web-pet") continue;
       if (!SKIP_DIRS.has(ent.name)) collectFiles(full, out);
     } else if (
       ent.name.endsWith(".js") || ent.name.endsWith(".mjs") ||

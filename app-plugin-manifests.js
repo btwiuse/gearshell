@@ -90,7 +90,7 @@ export const DEFAULT_PLUGINS = [
     name: "Packages",
     version: "1.0.0",
     icon: "Boxes",
-    entry: "/plugin/w9y/w9y-plugin.js?v=20260830.4",
+    entry: "/plugin/w9y/w9y-plugin.js?v=20260830.5",
     css: ["/plugin/w9y/w9y.css"],
     required: true,
     permissions: {
@@ -133,7 +133,7 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js?v=20260829.131",
+    entry: "/plugin/playground/playground-plugin.js?v=20260829.132",
     css: ["/plugin/playground/playground.css"],
   },
   {
@@ -152,7 +152,7 @@ export const DEFAULT_PLUGINS = [
     name: "Files",
     version: "1.0.0",
     icon: "FolderOpen",
-    entry: "/plugin/files/files-plugin.js?v=20260829.139",
+    entry: "/plugin/files/files-plugin.js?v=20260829.140",
     css: ["/plugin/files/files.css"],
   },
   {
@@ -160,21 +160,21 @@ export const DEFAULT_PLUGINS = [
     name: "Workbench",
     version: "1.0.0",
     icon: "Monitor",
-    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.140",
+    entry: "/plugin/workbench/workbench-plugin.js?v=20260829.141",
   },
   {
     id: "vm",
     name: "VM",
     version: "1.0.0",
     icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js?v=20260829.141",
+    entry: "/plugin/vm/vm-plugin.js?v=20260829.142",
   },
   {
     id: "settings",
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js?v=20260829.145",
+    entry: "/plugin/settings/settings-plugin.js?v=20260829.146",
     css: ["/plugin/settings/settings.css"],
   },
   {
@@ -190,7 +190,7 @@ export const DEFAULT_PLUGINS = [
     name: "Crush Runner",
     version: "1.0.0",
     icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.146",
+    entry: "/plugin/crush-runner/crush-runner-plugin.js?v=20260829.147",
     css: ["/plugin/crush-runner/crush-runner.css"],
   },
   {
@@ -254,7 +254,7 @@ export const DEFAULT_PLUGINS = [
     name: "Wagi Dog",
     version: "1.0.0",
     icon: "Dog",
-    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.39",
+    entry: "/plugin/web-pet/web-pet-plugin.js?v=20260829.40",
   },
   {
     id: "widgetbot",
@@ -277,7 +277,7 @@ export const DEFAULT_PLUGINS = [
     name: "Bubble Tea Playground",
     version: "1.0.0",
     icon: "Sprout",
-    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.48",
+    entry: "/plugin/bbtex/bbtex-plugin.js?v=20260830.49",
     css: ["/plugin/bbtex/bbtex.css"],
     permissions: { api: ["terminal.embed"] },
     w9y: { mod: "bbtex", version: "v2.0.12" },
@@ -401,7 +401,7 @@ _Alcachofa_, if you were wondering, is artichoke in Spanish.
     name: "Plugin Template",
     version: "1.0.0",
     icon: "BookOpen",
-    entry: "/plugin/template/template-plugin.js?v=20260830.6",
+    entry: "/plugin/template/template-plugin.js?v=20260830.7",
     css: ["/plugin/template/template.css"],
     // Disabled by default: the plugin shows up in the Plugins page for
     // reference but is not loaded until the user enables it.
