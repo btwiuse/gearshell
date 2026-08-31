@@ -1326,3 +1326,104 @@ extras 重打,gearshell 待推):
 - 原版 VM 保持 `export="ttyS0"`，默认无网络也能启动到 `~ #`。
 - 配置 vnet 后，Chrome MCP 验证 `tty=/dev/hvc0`、`stty size=51 115`，并通过 `wget -qO- ip.sb` 得到公网 IP `152.32.165.233`。
 - v86 iframe 使用独立页面和同款 vnet 网络配置，已验证可启动并联网。
+
+## 三十九、RV64 demo/kernel 交接快照（2026-09-01）
+
+### 当前状态
+
+- RV64 fork 已创建并存在于 `https://github.com/btwiuse/rv64.js`。本地仓库
+  `/Users/gear/GitHub/rv64.js` 的 `main` 当前为 `e6ab9e7`，比 fork 的 `main`
+  多 13 个本地提交；**这些提交尚未推送**。不要直接推送，先完成下述本地 demo 验证。
+- RV64 fork 的 CI workflow 已手动触发并成功：run `33426082076`。CI 本身不是问题。
+- 失败的是 Demo images workflow：run `33401094403`（tag `demo-images-v11`）。
+  kernel/Wasm/image 构建阶段成功，失败发生在 `tests/alpine-boot.mjs`，4 分钟内没有
+  收到 `Linux version` 输出。此前 tag `demo-images-v9`/`v10` 还曾在 Alpine 验证中显示
+  `ALPINE_READY` 但没有 `APK_UPDATE_OK`，不能据此判定 demo 成功。
+- 当前 GearShell 主仓库的 `.gitmodules` 已在工作区暂存，RV64 vendor URL 已改为
+  `https://github.com/btwiuse/rv64.js`，不要使用 `git add -A`，不要动无关的 untracked
+  交付物。
+
+### 已确认的技术事实
+
+- `virtio_console` 只有在 RV64 runtime 创建 `virtioConsole: true` 时才会进入设备列表；
+  `tests/alpine-boot.mjs` 已加入该参数，并使用
+  `console=ttyS0 console=hvc0 root=/dev/vda rw init=/rv64-init`，保留 ttyS0 启动日志。
+- allnoconfig 的 RV64 kernel 配置现在显式启用 `TTY=y`、`HVC_DRIVER=y`、`VIRTIO=y`、
+  `VIRTIO_MMIO=y`、`VIRTIO_CONSOLE=y`。缺少 HVC/TTY 时，Kconfig 会静默丢弃
+  `VIRTIO_CONSOLE`，于是日志只出现 `virtio_blk`。
+- virtio-console config layout 已修正为标准 packed layout：cols 位于 config offset 0，
+  rows 位于 offset 2；`config_generation` 和 configuration-change interrupt 也已实现。
+  Rust virtio 测试 15/15 通过。
+- 本地 Docker/Nix 构建链现在可用：Docker 使用 OrbStack，Nix 使用容器
+  `nixos/nix:2.30.2`，持久卷名为 `rv64-nix-store`，命令需设置
+  `NIX_CONFIG='experimental-features = nix-command flakes'`。`.#virt-kernel-fast`
+  已在容器内成功构建，输出为 `linux-riscv64-unknown-linux-gnu-6.12.7`。
+- 本地完整 asset build 曾因把宿主 macOS 目录挂入 Nix Linux 容器后，生成的 rootfs 文件
+  权限归属/不可读导致 `mke2fs` 报 `Permission denied ... bbsuid`；不要直接把宿主生成的
+  `target/bench` 当作 workflow 等价物。应在同一 Nix 容器中执行整个
+  `tools/build-demo-assets.sh`，或者先修正 rootfs 权限后再跑。
+- 本地 build 生成的 kernel 启动时出现 `virtio_blk virtio1`，但随后 root mount 失败，
+  因为测试仍使用旧/不匹配的 disk 链接；必须保证 `web/images/alpine/alpine.ext4`、
+  `web/images/alpine/Image`、Wasm 都来自同一次容器构建。不要单独复制 kernel 后混用旧 disk。
+- 运行 `tests/alpine-boot.mjs` 前必须确认三个文件存在，否则脚本会合法地输出
+  `SKIP Alpine boot`：Wasm、`web/images/alpine/Image`、`web/images/alpine/alpine.ext4`。
+- 用户已确认 Docker 可用，并要求沿途触发 RV64 CI；CI run `33426082076` 已成功。
+
+### 下一步（严格顺序）
+
+1. 在容器中清理并重建完整匹配资产，使用同一个 `nixos/nix:2.30.2` 容器、
+   `rv64-nix-store` 卷和 `/Users/gear/GitHub/rv64.js` 挂载；不要只构建 kernel。
+2. 在相同容器中执行 `node tests/alpine-boot.mjs`，必要时设置
+   `RV64_BOOT_TRACE=1`。必须看到 `virtio_console`、`ALPINE_READY`、
+   `OK: ... distinct packages available` 和 `APK_UPDATE_OK`，否则继续修复，不推送。
+3. 用 `wasm-objdump` 或等价工具检查 Wasm 导出包含 `virt_console_resize`，并检查 kernel
+   config 产物确实包含 `CONFIG_VIRTIO_CONSOLE=y`、`CONFIG_HVC_DRIVER=y`。
+4. 只有本地完整 demo 通过后，才提交/推送 RV64 fork，创建新的不可变 demo tag，并发布
+   matched Wasm/kernel/disk。不要复用已经失败的 tag。
+5. 更新 GearShell `plugin/rv64/index.html` 的 asset URL 后，启动 Go dev server，使用
+   Chrome MCP 新 tab 验证 `tty`、`stty size`、panel resize，以及
+   `trap 'echo WINCH' WINCH; sleep ...` 是否收到 SIGWINCH。最后再更新 memory/TODO。
+
+### 重要经验
+
+- RV64 CI 成功不代表 demo images 成功；必须分别看 workflow/job/step。
+- Demo images 失败日志要先区分构建失败、rootfs 组装失败、guest boot 失败和 apk 网络失败，
+  不要只看最终 `AssertionError`。
+- 资产必须是 matched set；Wasm API、kernel 的 virtio-console 支持、设备树设备顺序、
+  rootfs 的控制终端必须同时匹配。
+- 当前不应声称 RV64 自动 resize 或 SIGWINCH 已完成；Chrome MCP 端到端验证仍待完成。
+
+## 四十、RV64 浏览器端到端打通（2026-09-01 夜，上下文压缩前快照）
+
+### 已完成并在浏览器验证（全部通过）
+
+- 本地 macOS 原生工具链构建（无需 docker/nix）：fakeroot + brew e2fsprogs
+  （mke2fs/debugfs），rootfs 直接复用 `target/bench/alpine-riscv64` 缓存目录。
+- rv64.js 源码修复（`/Users/gear/GitHub/rv64.js`，工作区有改动待提交推送）：
+  1. virtio.rs：console 设备 DRIVER_OK 边沿发 config-change 中断 → guest 启动即得 80x24 初始尺寸；
+  2. virtio.rs：console virtqueue 16 → 128；
+  3. web/rv64.js：#tick 空闲退避（slice 指令 <1000 睡 10ms）→ 修掉 100% CPU；
+  4. web/rv64.js：`virtioConsoleInput` 调 wasm `virt_export_input`（输入进 virtio console）；
+  5. tests/virt-smoke/mk-alpine-rootfs.sh：devpts/tmpfs/TERM=xterm/DHCP(wsproxy)/
+     `<> /dev/hvc0`（读写打开，tmux 死锁根因）/ shell 起在 hvc0。
+- GearShell `plugin/rv64/index.html`：资产改本地 `/plugin/rv64/assets/` 直读、
+  监听 console+export、cmdline 加 `console=hvc0`、v86 式启动后 `refitAndResize()`
+  （初始 tty 尺寸正确，无需手动 resize）。
+- 浏览器验证：启动 → `tty`=/dev/hvc0、初始 `stty size`=面板尺寸（56 104）、
+  窗口 resize 后 `stty size` 跟随、`top` 自动重排（SIGWINCH）、DHCP 网络 + `apk add` 成功、
+  **tmux attach 正常显示**（此前死锁，根因是 `</dev/hvc0` 只读打开导致 server 写
+  client 传来的 stdin fd 返回 EBADF）。
+
+### 待办（压缩后继续）
+
+- 推送 rv64.js fork：`cd /Users/gear/GitHub/rv64.js && git add <本轮文件> && git commit && git push btwiuse main`；
+  文件：crates/rv64-system/src/virtio.rs、web/rv64.js、web/rv64.worker.js、
+  tests/virt-smoke/mk-alpine-rootfs.sh（+ tests/alpine-boot.mjs 视情况）。
+- 重建 demo 制品：`tools/build-demo-assets.sh target/local-demo-images`（本地已备好
+  wasm/Image/ext4，输出 SHA256SUMS 即制品）。
+- GearShell：vendor 子模块推进到新的 btwiuse/rv64.js 提交；提交 index.html、
+  `.gitmodules`（vendor URL 改 btwiuse）、TODO.md、memory/ 并推送。
+- `plugin/rv64/assets/`（约 84MB：wasm 4.5M + Image 4.1M + ext4 75M）为生成物，
+  建议加 .gitignore 不提交，部署时单独上传。
+- 剩余可选：github actions 的 Demo images 工作流本地等价验证（`node tests/alpine-boot.mjs`
+  已能用本地资产跑通到 ALPINE_READY+apk）；Chrome MCP 键盘偶发丢字符为工具问题。

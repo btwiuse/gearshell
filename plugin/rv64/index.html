@@ -38,7 +38,7 @@
       // must be same-origin); the WASM + Alpine disk are larger and live
       // on the temporary deploy-site host until a permanent home.
       var RV64_LIB_URL = "/plugin/rv64/vendor/web/rv64.js";
-      var ASSET_BASE = "https://slaha9p690lw.matrix.k0s.io/";
+      var ASSET_BASE = "/plugin/rv64/assets/";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
       var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.mjs";
       var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.301/lib/addon-fit.mjs";
@@ -133,9 +133,18 @@
         var RV64 = module.RV64;
 
         var [wasm, kernel, disk] = await Promise.all([
-          fetchGz(ASSET_BASE + "rv64_wasm.wasm.gz"),
-          fetchGz(ASSET_BASE + "modern-Image.gz"),
-          fetchGz(ASSET_BASE + "modern-alpine.ext4.gz"),
+          fetch(ASSET_BASE + "rv64_wasm.wasm").then(function (response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.arrayBuffer();
+          }),
+          fetch(ASSET_BASE + "modern-Image").then(function (response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.arrayBuffer();
+          }),
+          fetch(ASSET_BASE + "modern-alpine.ext4").then(function (response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.arrayBuffer();
+          }),
         ]);
         setStatus("loading", "booting Alpine (RISC-V 64)…");
 
@@ -148,7 +157,7 @@
             kernel: kernel,
             disk: disk,
             virtioConsole: true,
-            cmdline: "console=ttyS0 root=/dev/vda rw init=/rv64-init",
+            cmdline: "console=ttyS0 console=hvc0 root=/dev/vda rw init=/rv64-init",
           },
           network: {
             mode: "wsproxy",
@@ -159,12 +168,24 @@
               writeToXterm(data);
               if (state.status === "loading") {
                 setStatus("ready", "ready");
+                refitAndResize();
+              }
+            },
+            export: function (data) {
+              writeToXterm(data);
+              if (state.status === "loading") {
+                setStatus("ready", "ready");
+                refitAndResize();
               }
             },
           },
         });
         state.vm = vm;
         await vm.start();
+        // v86-style: push the live terminal size right after boot so the
+        // guest's hvc0 starts with real dimensions instead of 80x24, and
+        // again on first output as a belt-and-braces retry.
+        refitAndResize();
       }
 
       async function main() {

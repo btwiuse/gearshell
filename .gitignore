@@ -3,3 +3,4 @@ node_modules/
 cmd/gear/gear
 cmd/gear/gear.wasm
 cmd/gear/gear-js.wasm
+plugin/rv64/assets/

@@ -19,4 +19,4 @@
 	branch = master
 [submodule "plugin/rv64/vendor"]
 	path = plugin/rv64/vendor
-	url = https://github.com/ibuildthecloud/rv64.js
+	url = https://github.com/btwiuse/rv64.js
