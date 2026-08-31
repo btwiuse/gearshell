@@ -1456,5 +1456,8 @@ extras 重打,gearshell 待推):
   riscv64 交叉编译 wexec/hostexport + extras/linux/bin 脚本。
 - 浏览器验证全通过:boot 进 hvc0 shell;stty size 跟随面板(50 75→26 20);
   fetch relay 网络(apk update 26785 pkgs,apk add tmux);tmux attach 正常。
-- 待办:wanix 是否推送(justwasm/wanix);wtop/wrepeat 的 wexec-js 未在页面
-  实测;fetch relay 慢是已知瓶颈;guest 安装不持久(命名空间 RAM)。
+- wanix 已发布 v0.4.32(justwasm/wanix main+tag,含 wexec JS 移植与 rv64 示例页),
+  w9y.io/jsdelivr 验证通过;gearshell pin 已升 v0.4.32(app-constants.js +
+  plugin/v86/index.html)。
+- 待办:wtop/wrepeat 的 wexec-js 未在页面实测;fetch relay 慢是已知瓶颈;
+  guest 安装不持久(命名空间 RAM)。
