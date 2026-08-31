@@ -1278,3 +1278,19 @@ extras 重打,gearshell 待推):
   第三方库,同 sw.js 豁免)。
 - 遗留:assets 临时宿主(deploy-site)后续换永久 CDN;可把 rv64 的 ext4 也接
   OPFS 持久化(下阶段统一做)。
+
+## 三十六、rv64 guest tty 修复(stty size)(2026-08-31)
+
+- **现象**:rv64 guest `stty size` → "stty: standard input"(v86 guest 正常)。
+- **根因**:rv64 机器模型的控制台是**裸 ns16550 UART**(virt.rs:199 "Minimal
+  ns16550 (8250) UART"),没有终端尺寸通道 → 内核 ttyS0 的 winsize 恒为 0x0;
+  busybox `get_terminal_width_height` 把 0x0 当作"no size information"报错。
+  对比 v86:virtio-console 有 RESIZE 控制消息 → tty_do_resize → winsize 有值。
+- **修**(guest 侧):/rv64-init 里 `exec setsid -c /bin/sh -l </dev/ttyS0 >&0 2>&1`
+  (给 shell 真实控制终端,job control 开启)+ 开机 `stty rows 24 cols 80`(默认
+  winsize)。实测:stty size → "24 80";`stty rows 40 cols 120` 后 → "40 120" ✓
+  (TIOCSWINSZ 变更内核会发 SIGWINCH)。ext4 用 e2tools 改写后重新 gzip 部署。
+- **真正的动态 ptmx 修复**(上游):rv64.js 需要实现 virtio-console RESIZE 事件
+  (照 v86 libv86 的 virtio-console0-resize)+ guest 控制台挂 hvc,插件把 xterm
+  尺寸推给 guest → tty_do_resize + SIGWINCH 自动跟随。当前无此通道,只能静态
+  默认 + 手动 stty。
