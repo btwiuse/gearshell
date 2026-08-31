@@ -89,7 +89,7 @@ body {
 <!-- xterm stylesheet: static link (CDN) so the terminal card renders
      correctly even on first paint; the demo terminal imports the
      module dynamically from the same CDN. -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/css/xterm.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css" />
 </head>
 <body>
   <header class="ift-header">
@@ -349,10 +349,10 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
         Promise.resolve()
           .then(function () {
             // xterm loads lazily on first use (self-host for offline).
-            return import("https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/lib/xterm.mjs")
+            return import("https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.mjs")
               .then(function (mod) {
                 var fitMod = import(
-                  "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.300/lib/addon-fit.mjs"
+                  "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.301/lib/addon-fit.mjs"
                 );
                 return Promise.all([mod, fitMod]);
               });

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>rv64.js — RISC-V 64 Linux</title>
 <link rel="stylesheet" href="/plugin/rv64/rv64.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/css/xterm.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css" />
 </head>
 <body>
   <!--
@@ -38,16 +38,18 @@
       // must be same-origin); the WASM + Alpine disk are larger and live
       // on the temporary deploy-site host until a permanent home.
       var RV64_LIB_URL = "/plugin/rv64/vendor/web/rv64.js";
-      var ASSET_BASE = "https://1thne2suqrij.matrix.k0s.io/";
+      var ASSET_BASE = "https://slaha9p690lw.matrix.k0s.io/";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
-      var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/lib/xterm.mjs";
-      var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.300/lib/addon-fit.mjs";
+      var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.mjs";
+      var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.301/lib/addon-fit.mjs";
 
       var state = {
         xterm: null,
         fit: null,
         vm: null,
         status: "loading",
+        resizeObserver: null,
+        resizeFrame: 0,
       };
 
       function $(id) { return document.getElementById(id); }
@@ -80,13 +82,49 @@
         });
         state.fit = new window.FitAddon.FitAddon();
         term.loadAddon(state.fit);
-        function fit() { try { state.fit.fit(); } catch (e) { /* hidden */ } }
-        fit();
-        window.addEventListener("resize", fit);
+        term.onResize(function (size) {
+          sendResize(size.cols, size.rows);
+        });
+        window.addEventListener("resize", refitAndResize);
         var host = $("rv64-term");
         if (window.ResizeObserver) {
-          new ResizeObserver(fit).observe(host);
+          state.resizeObserver = new ResizeObserver(refitAndResize);
+          state.resizeObserver.observe(host);
         }
+        fitWhenReady();
+      }
+
+      function sendResize(cols, rows) {
+        if (!state.vm || !Number.isInteger(cols) || !Number.isInteger(rows)) return;
+        if (cols < 1 || rows < 1) return;
+        try {
+          state.vm.resize(cols, rows);
+        } catch (error) {
+          console.error("rv64 resize failed", error);
+        }
+      }
+
+      function refitAndResize() {
+        if (!state.fit || !state.xterm) return;
+        var host = $("rv64-term");
+        if (host.clientWidth < 8 || host.clientHeight < 8) {
+          fitWhenReady();
+          return;
+        }
+        try {
+          state.fit.fit();
+        } catch (error) {
+          return;
+        }
+        sendResize(state.xterm.cols, state.xterm.rows);
+      }
+
+      function fitWhenReady() {
+        if (state.resizeFrame) return;
+        state.resizeFrame = requestAnimationFrame(function () {
+          state.resizeFrame = 0;
+          refitAndResize();
+        });
       }
 
       async function boot() {
@@ -104,11 +142,12 @@
         var vm = await RV64.create({
           wasm: wasm,
           memoryMB: 512,
-          execution: { mode: "worker" },
+          execution: { mode: "local" },
           boot: {
             mode: "linux-direct",
             kernel: kernel,
             disk: disk,
+            virtioConsole: true,
             cmdline: "console=ttyS0 root=/dev/vda rw init=/rv64-init",
           },
           network: {
