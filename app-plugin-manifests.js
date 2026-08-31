@@ -8,6 +8,7 @@
 import { EXAMPLES_PLUGIN } from "./app-plugin-manifests-examples.js";
 import { BBTEX_PLUGIN, BBTEX_IFRAME_PLUGIN } from "./app-plugin-manifests-bbtex.js";
 import { RV64_IFRAME_PLUGIN } from "./app-plugin-manifests-rv64.js";
+import { V86_IFRAME_PLUGIN } from "./app-plugin-manifests-v86.js";
 
 // --- Shell toolset (the per-task tool binds) ---
 // The bash/w9y/gear binaries and the shell rc file ship as the
@@ -425,3 +426,4 @@ DEFAULT_PLUGINS.push(BBTEX_IFRAME_PLUGIN);
 // RISC-V 64 Linux in the browser (rv64.js iframe edition): self-contained
 // page, boots Alpine via the shared vnet gateway, apk works.
 DEFAULT_PLUGINS.push(RV64_IFRAME_PLUGIN);
+DEFAULT_PLUGINS.push(V86_IFRAME_PLUGIN);

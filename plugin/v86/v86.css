@@ -1,0 +1,71 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.v86-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: #181825;
+  border-bottom: 1px solid #313244;
+  flex: none;
+}
+
+.v86-dots { display: flex; gap: 6px; }
+.v86-dots i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #313244;
+}
+.v86-dots i:nth-child(1) { background: #f38ba8; }
+.v86-dots i:nth-child(2) { background: #f9e2af; }
+.v86-dots i:nth-child(3) { background: #a6e3a1; }
+
+.v86-title {
+  font-size: 12px;
+  color: #a6adc8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v86-status {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #313244;
+  color: #cdd6f4;
+  font-size: 11px;
+  flex: none;
+}
+.v86-status[data-mode="loading"] { background: #f9e2af; color: #1e1e2e; }
+.v86-status[data-mode="ready"] { background: #a6e3a1; color: #1e1e2e; }
+.v86-status[data-mode="error"] { background: #f38ba8; color: #1e1e2e; }
+
+.v86-host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.v86-host wanix-namespace,
+.v86-host wanix-term {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}

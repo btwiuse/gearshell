@@ -22,6 +22,7 @@ const eslint = new ESLint({
         "**/*.test.js",
         "browser/**",
         "scripts/**",
+        "**/vendor/**",
       ],
     },
   ],

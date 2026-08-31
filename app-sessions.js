@@ -347,7 +347,9 @@ function createVmGuestBinds(config) {
     createWanixBindElement({
       type: "file",
       dst: "boot/rc",
-      src: "/plugin/vm/guest-boot-rc",
+      src: config.netdev
+        ? "/plugin/vm/guest-boot-network-rc"
+        : "/plugin/vm/guest-boot-rc",
       mode: "0755",
     }),
     createWanixBindElement({

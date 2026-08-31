@@ -7,5 +7,3 @@
 #   inodes (bind() returns ENOSYS), which breaks tmux and friends.
 mount -t tmpfs tmpfs /tmp 2>/dev/null
 ifconfig lo up 2>/dev/null
-ifconfig eth0 up 2>/dev/null
-udhcpc -i eth0 -s /bin/post-dhcp 2>/dev/null

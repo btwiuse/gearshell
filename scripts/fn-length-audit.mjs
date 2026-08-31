@@ -27,6 +27,7 @@ const SKIP_DIRS = new Set([
   ".workbuddy",
   "神奇海螺队-第一轮评审",
   "PP评估",
+  "vendor",
 ]);
 
 function collectFiles(dir, out) {

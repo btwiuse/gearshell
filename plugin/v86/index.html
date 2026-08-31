@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>v86 — x86 Linux</title>
+<link rel="stylesheet" href="/plugin/v86/v86.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="v86-head">
+      <span class="v86-dots"><i></i><i></i><i></i></span>
+      <span class="v86-title">v86 · Alpine Linux (x86)</span>
+      <span id="v86-status" class="v86-status" data-mode="loading">loading…</span>
+    </header>
+    <div id="v86-host" class="v86-host"></div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var ASSET_BASE = "https://1thne2suqrij.matrix.k0s.io/";
+      var WANIX_MODULE_URL = "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.30/dist/wanix.min.js";
+      var WANIX_WASM_URL = "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.30";
+      var V86_BACKEND_URL = "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc3/v86.tgz";
+      var V86_LINUX_URL = "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
+      var VNET_URL = "wss://vnet.net.k0s.io/x/net";
+
+      function setStatus(mode, text) {
+        var status = document.getElementById("v86-status");
+        status.dataset.mode = mode;
+        status.textContent = text;
+      }
+
+      function createVm() {
+        var host = document.getElementById("v86-host");
+        var system = document.createElement("wanix-namespace");
+        var rootfs = document.createElement("wanix-bind");
+        var driver = document.createElement("wanix-bind");
+        var vm = document.createElement("wanix-vm");
+        var boot = document.createElement("wanix-bind");
+        var dhcp = document.createElement("wanix-bind");
+        var term = document.createElement("wanix-term");
+
+        system.setAttribute("wasm", WANIX_WASM_URL);
+        rootfs.setAttribute("dst", ".");
+        rootfs.setAttribute("src", V86_LINUX_URL);
+        rootfs.setAttribute("type", "archive");
+        driver.setAttribute("dst", "#vm/v86");
+        driver.setAttribute("src", V86_BACKEND_URL);
+        driver.setAttribute("type", "archive");
+        boot.setAttribute("dst", "boot/rc");
+        boot.setAttribute("src", "/plugin/v86/guest-boot-rc");
+        boot.setAttribute("type", "file");
+        boot.setAttribute("perm", "0755");
+        dhcp.setAttribute("dst", "bin/post-dhcp");
+        dhcp.setAttribute("src", "/plugin/v86/guest-post-dhcp");
+        dhcp.setAttribute("type", "file");
+        dhcp.setAttribute("perm", "0755");
+        vm.setAttribute("id", "v86");
+        vm.setAttribute("type", "v86");
+        vm.setAttribute("export", "ttyS0");
+        vm.setAttribute("mem", "512M");
+        vm.setAttribute("netdev", "user,type=virtio,relay_url=" + VNET_URL);
+        vm.setAttribute("term", "");
+        vm.setAttribute("start", "");
+        term.setAttribute("path", "#vm/v86/term");
+        term.setAttribute("raw", "");
+        term.setAttribute("no-scrollbar", "");
+
+        system.append(rootfs, driver, boot, dhcp, vm, term);
+        host.replaceChildren(system);
+        system.addEventListener("ready", function () {
+          setStatus("ready", "ready · network connected");
+        }, { once: true });
+        system.addEventListener("error", function (event) {
+          var error = event.detail?.error || event.detail || event;
+          setStatus("error", "failed: " + (error.message || error));
+        }, { once: true });
+      }
+
+      import(WANIX_MODULE_URL)
+        .then(function () {
+          setStatus("loading", "booting Alpine (x86)…");
+          createVm();
+        })
+        .catch(function (error) {
+          console.error(error);
+          setStatus("error", "runtime failed: " + error.message);
+        });
+    })();
+  </script>
+</body>
+</html>
