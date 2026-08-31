@@ -333,6 +333,32 @@ export function destroyVmSession(id) {
   session.wrapper.remove();
 }
 
+// Binds mounted into the VM task namespace over the rootfs image: the
+// archive itself plus the guest boot overlay (auto-network + tmpfs for
+// unix sockets, see plugin/vm/guest-boot-rc). Later binds win, so the
+// file overlays shadow nothing but their own paths.
+function createVmGuestBinds(config) {
+  return [
+    createWanixBindElement({
+      type: "archive",
+      dst: ".",
+      src: config.linuxUrl,
+    }),
+    createWanixBindElement({
+      type: "file",
+      dst: "boot/rc",
+      src: "/plugin/vm/guest-boot-rc",
+      mode: "0755",
+    }),
+    createWanixBindElement({
+      type: "file",
+      dst: "bin/post-dhcp",
+      src: "/plugin/vm/guest-post-dhcp",
+      mode: "0755",
+    }),
+  ];
+}
+
 export function startVmSession(session) {
   if (session.startPromise) return session.startPromise;
   session.startPromise = ensureVmDriver(session.config.backendUrl).then(() => {
@@ -347,23 +373,7 @@ export function startVmSession(session) {
       term=""
       start=""
     >
-      ${createWanixBindElement({
-        type: "archive",
-        dst: ".",
-        src: session.config.linuxUrl,
-      })}
-      ${createWanixBindElement({
-        type: "file",
-        dst: "boot/rc",
-        src: "/plugin/vm/guest-boot-rc",
-        mode: "0755",
-      })}
-      ${createWanixBindElement({
-        type: "file",
-        dst: "bin/post-dhcp",
-        src: "/plugin/vm/guest-post-dhcp",
-        mode: "0755",
-      })}
+      ${createVmGuestBinds(session.config)}
     </wanix-vm>`;
 
     const term = html`<wanix-term

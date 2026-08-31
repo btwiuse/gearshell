@@ -49,7 +49,7 @@ function has(marker) {
 // corpus is every app-plugin-manifests*.js concatenated.
 const manifestsSrc = readdirSync(root, { withFileTypes: true })
   .filter((entry) =>
-    entry.isFile() && /^app-plugin-manifests(-[a-z-]+)?\.js$/.test(entry.name)
+    entry.isFile() && /^app-plugin-manifests(-[a-z0-9-]+)?\.js$/.test(entry.name)
   )
   .map((entry) => readFileSync(new URL(entry.name, root), "utf8"))
   .join("\n");
@@ -238,7 +238,7 @@ if (!has("user,type=virtio,relay_url=fetch")) {
 if (!has('data-config-value="vmWispUrl"')) {
   throw new Error("Settings must expose the Wisp server URL.");
 }
-if (!has("wanix-extras@0.4.0-rc2/dist/v86.tgz")) {
+if (!has("wanix-extras@v0.4.0-rc3/v86.tgz")) {
   throw new Error(
     "VMs must default to the public v86 archive with built-in Wisp support.",
   );
@@ -344,6 +344,7 @@ const RULE_IGNORE_DIRS = new Set([
   "bonsai",
   "web-pet",
   "memory",
+  "vendor",
   ".git",
   "node_modules",
   "dist",

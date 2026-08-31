@@ -1257,3 +1257,24 @@ extras 重打,gearshell 待推):
   → apk add tmux → tmux 建会话/attach/detach 全通。
 - 不重建镜像:image 保持通用,guest 覆盖一律走 task bind(参考
   memory/crush-runner-mounts.md 的 preset 挂载纪律)。
+
+## 三十五、rv64.js 插件 + 联网 bonus(2026-08-31)
+
+- **rv64.js**(ibuildthecloud,RISC-V 64 全系统模拟器,Rust→WASM,TinyEMU 系)
+  做成 iframe 插件 `plugin/rv64/`:自足页面(xterm + RV64.create + wsproxy 网络),
+  **emulator 库以 git submodule 引入**(plugin/rv64/vendor → ibuildthecloud/rv64.js,
+  module worker 必须同源,不能 CDN 跨域加载)。镜像/内核/wasm 走 deploy-site 临时
+  静态宿主(3rvx4t2c1dti.matrix.k0s.io,CORS *)。
+- **联网 bonus 完成**:rv64 guest 静态 10.0.2.15/24 gw 10.0.2.2(镜像 rv64-init 内
+  置 QEMU slirp 惯例)→ wsproxy(裸 L2 帧 WebSocket)→ 同一个 vnet 网关。为此:
+  ①vnet subnet 从 10.0.0.0/8 改成 **10.0.2.0/24 gw 10.0.2.2**(v86 DHCP guest 自动
+  适应);②ext4 磁盘用 e2tools 补 /etc/resolv.conf(nameserver 10.0.2.2,Alpine
+  minirootfs 没有 resolv.conf)→ 78MB ext4 gzip 后 4.4MB 部署。
+- **验证**:Alpine 3.24 启动到交互 shell(ALPINE_READY)→ `apk update`
+  OK: 26786 packages ✓(HTTPS 出网)。注:CDP 合成键入到 iframe xterm 会丢空格,
+  是测试工具假象,真人键盘输入正常(apk update 就是靠输入管道执行的)。
+- **verify-static.mjs 修两个坑**:①manifest 文件名 regex `[a-z-]+` 不支持数字 id
+  (rv64)→ 改 `[a-z0-9-]+`;②插件 500 行检查加 "vendor" 目录豁免(submodule
+  第三方库,同 sw.js 豁免)。
+- 遗留:assets 临时宿主(deploy-site)后续换永久 CDN;可把 rv64 的 ext4 也接
+  OPFS 持久化(下阶段统一做)。

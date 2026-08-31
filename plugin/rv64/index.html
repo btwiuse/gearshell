@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>rv64.js — RISC-V 64 Linux</title>
+<link rel="stylesheet" href="/plugin/rv64/rv64.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/css/xterm.css" />
+</head>
+<body>
+  <!--
+    RISC-V 64 Linux in the browser (iframe edition).
+
+    rv64.js is a TinyEMU-derived RV64 full-system emulator compiled to
+    WASM; this page is fully self-contained (no gear API): it renders
+    xterm itself, loads the emulator + Alpine disk from a static assets
+    host, and tunnels the guest's raw ethernet frames to the shared vnet
+    gateway, so the guest gets DHCP/DNS and apk package installs.
+
+    Assets (temporary deploy-site host until a permanent CDN home):
+      https://3rvx4t2c1dti.matrix.k0s.io/
+  -->
+
+  <div id="app">
+    <header class="rv64-head">
+      <span class="rv64-dots"><i></i><i></i><i></i></span>
+      <span class="rv64-title">rv64.js · Alpine Linux (RISC-V 64)</span>
+      <span id="rv64-status" class="rv64-status" data-mode="loading">loading…</span>
+    </header>
+    <div id="rv64-term" class="rv64-term"></div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // Emulator library is a git submodule at vendor/ (module workers
+      // must be same-origin); the WASM + Alpine disk are larger and live
+      // on the temporary deploy-site host until a permanent home.
+      var RV64_LIB_URL = "/plugin/rv64/vendor/web/rv64.js";
+      var ASSET_BASE = "https://3rvx4t2c1dti.matrix.k0s.io/";
+      var VNET_URL = "wss://vnet.net.k0s.io/x/net";
+      var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/lib/xterm.mjs";
+      var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.300/lib/addon-fit.mjs";
+
+      var state = {
+        xterm: null,
+        fit: null,
+        vm: null,
+        status: "loading",
+      };
+
+      function $(id) { return document.getElementById(id); }
+
+      function setStatus(mode, text) {
+        state.status = mode;
+        var bar = $("rv64-status");
+        bar.dataset.mode = mode;
+        bar.textContent = text;
+      }
+
+      function writeToXterm(bytes) {
+        if (!state.xterm) return;
+        state.xterm.write(new TextDecoder().decode(bytes));
+      }
+
+      async function fetchGz(url) {
+        var resp = await fetch(url);
+        if (!resp.ok) throw new Error("HTTP " + resp.status + " " + url);
+        var stream = resp.body.pipeThrough(new DecompressionStream("gzip"));
+        return new Uint8Array(await new Response(stream).arrayBuffer());
+      }
+
+      function wireXterm(term) {
+        var encoder = new TextEncoder();
+        term.onData(function (data) {
+          if (state.vm && state.vm.console) {
+            state.vm.console.send(encoder.encode(data));
+          }
+        });
+        state.fit = new window.FitAddon.FitAddon();
+        term.loadAddon(state.fit);
+        function fit() { try { state.fit.fit(); } catch (e) { /* hidden */ } }
+        fit();
+        window.addEventListener("resize", fit);
+        var host = $("rv64-term");
+        if (window.ResizeObserver) {
+          new ResizeObserver(fit).observe(host);
+        }
+      }
+
+      async function boot() {
+        setStatus("loading", "downloading emulator + Alpine disk…");
+        var module = await import(RV64_LIB_URL);
+        var RV64 = module.RV64;
+
+        var [wasm, kernel, disk] = await Promise.all([
+          fetchGz(ASSET_BASE + "rv64_wasm.wasm.gz"),
+          fetchGz(ASSET_BASE + "modern-Image.gz"),
+          fetchGz(ASSET_BASE + "modern-alpine.ext4.gz"),
+        ]);
+        setStatus("loading", "booting Alpine (RISC-V 64)…");
+
+        var vm = await RV64.create({
+          wasm: wasm,
+          memoryMB: 512,
+          execution: { mode: "worker" },
+          boot: {
+            mode: "linux-direct",
+            kernel: kernel,
+            disk: disk,
+            cmdline: "console=ttyS0 root=/dev/vda rw init=/rv64-init",
+          },
+          network: {
+            mode: "wsproxy",
+            url: VNET_URL,
+          },
+          events: {
+            console: function (data) {
+              writeToXterm(data);
+              if (state.status === "loading") {
+                setStatus("ready", "ready");
+              }
+            },
+          },
+        });
+        state.vm = vm;
+        await vm.start();
+      }
+
+      async function main() {
+        var [{ Terminal }, { FitAddon }] = await Promise.all([
+          import(XTERM_URL),
+          import(FIT_URL),
+        ]);
+        window.FitAddon = { FitAddon: FitAddon };
+        state.xterm = new Terminal({
+          convertEol: true,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: 13,
+          cursorBlink: true,
+          scrollback: 5000,
+        });
+        state.xterm.open($("rv64-term"));
+        wireXterm(state.xterm);
+        boot().catch(function (err) {
+          console.error(err);
+          setStatus("error", "failed: " + err.message);
+          writeToXterm("\r\n\x1b[31mrv64 boot failed: " + err.message + "\x1b[0m\r\n");
+        });
+      }
+
+      main();
+    })();
+  </script>
+</body>
+</html>
