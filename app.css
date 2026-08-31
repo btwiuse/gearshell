@@ -26,6 +26,31 @@ wanix-bind { display: none; }
 .vm-session.visible, .workbench-session.visible { visibility: visible; pointer-events: auto; }
 .vm-session wanix-term, .workbench-session wanix-workbench { flex: 1; min-width: 0; min-height: 0; }
 wanix-term { flex: 1; min-width: 0; }
+.wanix-term-progress {
+  position: relative;
+  flex: none;
+  height: 3px;
+  background: #21262d;
+  overflow: hidden;
+}
+.wanix-term-progress[hidden] { display: none; }
+.wanix-term-progress-fill {
+  height: 100%;
+  width: 0;
+  background: #58a6ff;
+  transition: width 160ms ease-out;
+}
+.wanix-term-progress[data-state="2"] .wanix-term-progress-fill { background: #f85149; }
+.wanix-term-progress[data-state="4"] .wanix-term-progress-fill { background: #d29922; }
+.wanix-term-progress[data-state="3"] .wanix-term-progress-fill {
+  width: 32% !important;
+  background: linear-gradient(90deg, transparent, #58a6ff, transparent);
+  animation: wanix-term-progress-indeterminate 1.2s ease-in-out infinite;
+}
+@keyframes wanix-term-progress-indeterminate {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(320%); }
+}
 
 /* Preserve Workbench's native tree geometry and indentation guides. The
    default VS Code theme intentionally leaves folders to their disclosure
