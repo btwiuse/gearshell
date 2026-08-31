@@ -1248,9 +1248,12 @@ extras 重打,gearshell 待推):
 - **tmux 根因**:9p 根(wanix vfs)不支持 unix socket mknod → bind() ENOSYS
   ("error creating /tmp/tmux-0/default (Function not implemented)")。修:启动时
   `mount -t tmpfs tmpfs /tmp`。详见 memory/vnet-network.md。
-- **机制**:镜像 /bin/init 会 source /boot/rc(若存在)→ gearshell 在 wanix-vm
-  child binds 加 `boot/rc`(tmpfs + ifconfig lo/eth0 up + udhcpc)+
-  `bin/post-dhcp`(udhcpc hook:IP/路由/resolv.conf),file bind 覆盖,无需重建镜像。
-- ⬜ 做完后验证:新开 VM → eth0 自动 10.0.0.x → apk 可用 → tmux 可用。
-- ⬜ 后续(可选):把 boot/rc + post-dhcp 烤进 wanix-linux.tgz 重建镜像,惠及所有
-  wanix 消费者(而不只是 gearshell)。
+- **机制**(与 crush runner preset 同款的 task bind mount,镜像保持通用):
+  镜像 /bin/init 会 source /boot/rc(若存在)→ gearshell 在 wanix-vm child binds
+  挂 `boot/rc`(tmpfs + ifconfig lo/eth0 up + udhcpc)+ `bin/post-dhcp`
+  (udhcpc hook:IP/路由/resolv.conf)两个 file bind 覆盖。boot/ 与 bin/ 目录镜像
+  里已存在,无需像 crush preset 那样先 mint ramfs 保父目录。
+- ✅ 已验证:新开 VM → eth0 自动 10.0.0.x + resolv.conf 10.0.0.1 + tmpfs /tmp
+  → apk add tmux → tmux 建会话/attach/detach 全通。
+- 不重建镜像:image 保持通用,guest 覆盖一律走 task bind(参考
+  memory/crush-runner-mounts.md 的 preset 挂载纪律)。
