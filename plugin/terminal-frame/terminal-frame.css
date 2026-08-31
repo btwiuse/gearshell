@@ -122,6 +122,37 @@ body {
 
 .term-restart:hover { background: #2d333b; border-color: #58a6ff; }
 
+.term-progress {
+  position: relative;
+  flex: none;
+  height: 3px;
+  background: #21262d;
+  overflow: hidden;
+}
+
+.term-progress[hidden] { display: none; }
+
+.term-progress-fill {
+  height: 100%;
+  width: 0;
+  background: #58a6ff;
+  transition: width 160ms ease-out;
+}
+
+.term-progress[data-state="2"] .term-progress-fill { background: #f85149; }
+.term-progress[data-state="4"] .term-progress-fill { background: #d29922; }
+
+.term-progress[data-state="3"] .term-progress-fill {
+  width: 32% !important;
+  background: linear-gradient(90deg, transparent, #58a6ff, transparent);
+  animation: term-progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes term-progress-indeterminate {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(320%); }
+}
+
 /* --- Terminal body --- */
 .term-host {
   flex: 1;

@@ -50,6 +50,9 @@
       </div>
     </header>
 
+    <div id="term-progress" class="term-progress" hidden role="progressbar" aria-label="Terminal progress">
+      <div id="term-progress-fill" class="term-progress-fill"></div>
+    </div>
     <div id="term-host" class="term-host"></div>
     <div id="term-banner" class="term-banner" hidden></div>
   </div>
@@ -61,11 +64,14 @@
 
       var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.303/lib/xterm.mjs";
       var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.300/lib/addon-fit.mjs";
+      var PROGRESS_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-progress@0.3.0-beta.301/lib/addon-progress.mjs";
 
       var state = {
         sessionId: null,
         xterm: null,
         fit: null,
+        progress: null,
+        progressChange: null,
         disposed: true,
         sawData: false,
         resizeObserver: null,
@@ -90,6 +96,20 @@
 
       function hideBanner() {
         $("term-banner").hidden = true;
+      }
+
+      function updateProgress(progress) {
+        var bar = $("term-progress");
+        var fill = $("term-progress-fill");
+        var stateValue = progress && progress.state;
+        var value = Math.max(0, Math.min(100, Number(progress && progress.value) || 0));
+        bar.hidden = stateValue === 0 || stateValue == null;
+        bar.dataset.state = String(stateValue == null ? 0 : stateValue);
+        fill.style.width = value + "%";
+        bar.setAttribute("aria-valuenow", String(value));
+        if (stateValue === 3) {
+          bar.removeAttribute("aria-valuenow");
+        }
       }
 
       function writeToXterm(bytes) {
@@ -198,6 +218,11 @@
           state.resizeObserver.disconnect();
           state.resizeObserver = null;
         }
+        state.progressChange?.dispose?.();
+        state.progress?.dispose?.();
+        state.progressChange = null;
+        state.progress = null;
+        updateProgress({ state: 0, value: 0 });
         if (state.xterm) {
           state.xterm.dispose();
           state.xterm = null;
@@ -209,7 +234,13 @@
       function ensureXterm() {
         return import(XTERM_URL).then(function (mod) {
           return import(FIT_URL).then(function (fitMod) {
-            return { Terminal: mod.Terminal, FitAddon: fitMod.FitAddon };
+            return import(PROGRESS_URL).then(function (progressMod) {
+              return {
+                Terminal: mod.Terminal,
+                FitAddon: fitMod.FitAddon,
+                ProgressAddon: progressMod.ProgressAddon,
+              };
+            });
           });
         });
       }
@@ -226,6 +257,7 @@
             var host = $("term-host");
             host.innerHTML = "";
             state.xterm = new libs.Terminal({
+              termName: "ghostty",
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
               fontSize: 14,
               lineHeight: 1.25,
@@ -241,13 +273,22 @@
             });
             state.fit = new libs.FitAddon();
             state.xterm.loadAddon(state.fit);
+            state.progress = new libs.ProgressAddon();
+            state.xterm.loadAddon(state.progress);
+            state.progressChange = state.progress.onChange(function (progress) {
+              updateProgress(progress);
+            });
             state.xterm.open(host);
             // fitWhenReady (below) fits once the host has real dimensions;
             // an eager fit() at panel-layout time would size xterm to
             // 0 columns and the initial winch frame would be garbage.
             state.xterm.onData(function (data) {
               if (!state.sessionId) return;
-              GearShell.terminal.write(state.sessionId, new TextEncoder().encode(data))
+              var response = data.replace(
+                "\u001bP>|xterm.js(",
+                "\u001bP>|ghostty(",
+              );
+              GearShell.terminal.write(state.sessionId, new TextEncoder().encode(response))
                 .catch(function () {});
             });
             state.xterm.onResize(function () { resizeTerminal(); });
