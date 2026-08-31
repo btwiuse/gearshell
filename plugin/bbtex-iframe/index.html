@@ -371,7 +371,7 @@
         var entry = sessionsById[payload.sessionId];
         if (!entry || entry.disposed || !entry.xterm) return;
         try {
-          entry.xterm.write(new TextDecoder().decode(payload.data));
+          entry.xterm.write(payload.data);
         } catch {
           // terminal disposed mid-write
         }

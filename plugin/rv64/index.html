@@ -61,7 +61,7 @@
 
       function writeToXterm(bytes) {
         if (!state.xterm) return;
-        state.xterm.write(new TextDecoder().decode(bytes));
+        state.xterm.write(bytes);
       }
 
       async function fetchGz(url) {

@@ -95,7 +95,7 @@
       function writeToXterm(bytes) {
         if (!state.xterm) return;
         try {
-          state.xterm.write(new TextDecoder().decode(bytes));
+          state.xterm.write(bytes);
         } catch {
           // terminal already disposed
         }

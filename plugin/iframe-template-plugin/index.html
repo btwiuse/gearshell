@@ -311,7 +311,7 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
         GearShell.on("term.data", function (payload) {
           if (payload.sessionId !== termState.sessionId) return;
           if (termState.xterm) {
-            termState.xterm.write(new TextDecoder().decode(payload.data));
+            termState.xterm.write(payload.data);
           }
         });
         GearShell.on("term.exit", function (payload) {
