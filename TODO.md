@@ -1427,3 +1427,15 @@ extras 重打,gearshell 待推):
   建议加 .gitignore 不提交，部署时单独上传。
 - 剩余可选：github actions 的 Demo images 工作流本地等价验证（`node tests/alpine-boot.mjs`
   已能用本地资产跑通到 ALPINE_READY+apk）；Chrome MCP 键盘偶发丢字符为工具问题。
+
+
+## 四十一、RV64 历史重写(2026-09-02)
+
+- 原 main 领先上游 14 个 commit,含 3 组弯路(净零):rv64-resized guest helper、
+  config 偏移 8/12 再改回、hvc0 attach 又 revert。
+- 新本地分支 `rv64-virtio-console-features`(基于 origin/main)按 feature set
+  重写为 5 个 commit:resize 管线 / DRIVER_OK+queue128 / 内核+启动测试 /
+  hvc0 shell(rootfs+JS) / CI workflow_dispatch。
+- 顺带清掉最终树 2 行弯路残留:usr/local/sbin mkdir、ttyS0 stty。
+- 新树与旧 b7c861d 树仅差 3 行注释+2 行删除;virtio 15 测试全绿;分支未 push。
+- 待办:确认新分支如何与 btwiuse/main 合并(b7c861d 已在远端)。
