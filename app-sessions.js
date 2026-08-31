@@ -352,6 +352,18 @@ export function startVmSession(session) {
         dst: ".",
         src: session.config.linuxUrl,
       })}
+      ${createWanixBindElement({
+        type: "file",
+        dst: "boot/rc",
+        src: "/plugin/vm/guest-boot-rc",
+        mode: "0755",
+      })}
+      ${createWanixBindElement({
+        type: "file",
+        dst: "bin/post-dhcp",
+        src: "/plugin/vm/guest-post-dhcp",
+        mode: "0755",
+      })}
     </wanix-vm>`;
 
     const term = html`<wanix-term

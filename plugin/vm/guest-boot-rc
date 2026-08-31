@@ -1,0 +1,11 @@
+#!/bin/sh
+# GearShell guest boot hook, sourced by /bin/init before the login shell.
+#
+# - Bring the virtual network up via DHCP (the vnet gateway answers DHCP,
+#   DNS and NATs TCP/UDP egress, so apk/apk-style package managers work).
+# - Give unix sockets a tmpfs home: the 9p root cannot create socket
+#   inodes (bind() returns ENOSYS), which breaks tmux and friends.
+mount -t tmpfs tmpfs /tmp 2>/dev/null
+ifconfig lo up 2>/dev/null
+ifconfig eth0 up 2>/dev/null
+udhcpc -i eth0 -s /bin/post-dhcp 2>/dev/null

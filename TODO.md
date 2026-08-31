@@ -1242,3 +1242,15 @@ extras 重打,gearshell 待推):
 - GitHub push 拒 "email privacy restrictions":commit 作者邮箱必须用
   `<id>+<login>@users.noreply.github.com`(btwiuse: 54848194+btwiuse@...)。
 - gearshell normalize 在新代码生效前会拒掉 wss:,先 reload 再 updateShell。
+
+## 三十四、guest 开机自动网络 + tmux 修复(2026-08-31)
+
+- **tmux 根因**:9p 根(wanix vfs)不支持 unix socket mknod → bind() ENOSYS
+  ("error creating /tmp/tmux-0/default (Function not implemented)")。修:启动时
+  `mount -t tmpfs tmpfs /tmp`。详见 memory/vnet-network.md。
+- **机制**:镜像 /bin/init 会 source /boot/rc(若存在)→ gearshell 在 wanix-vm
+  child binds 加 `boot/rc`(tmpfs + ifconfig lo/eth0 up + udhcpc)+
+  `bin/post-dhcp`(udhcpc hook:IP/路由/resolv.conf),file bind 覆盖,无需重建镜像。
+- ⬜ 做完后验证:新开 VM → eth0 自动 10.0.0.x → apk 可用 → tmux 可用。
+- ⬜ 后续(可选):把 boot/rc + post-dhcp 烤进 wanix-linux.tgz 重建镜像,惠及所有
+  wanix 消费者(而不只是 gearshell)。
