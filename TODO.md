@@ -1442,3 +1442,19 @@ extras 重打,gearshell 待推):
   推送保留;feature 分支提升为 main(force-push);评审中删除与 virtExportInput
   重复的 virtioConsoleInput 并 squash 进 hvc0 shell commit;最终 HEAD `92d5342`
   (5 个提交);gearshell vendor 已指向 92d5342;CI 已触发(run 33449565236)。
+
+
+## 四十二、WANIX × rv64 到 v86 同等地位(2026-09-02)
+
+- rv64.js main:新增 vm.serial.send(8250 UART 输入通道);adapter 设备对调
+  (终端 hvc0 + winch→vm.resize,hostexport ttyS0);guest init 加 TERM 与
+  tmpfs(/tmp /run /dev/shm,9p 根不支持 unix socket,tmux 必须);release
+  v0.3.0(btwiuse)并回填 Makefile SHA。commit 64a173a + e2895ef。
+- wanix 本地(/Users/gear/GitHub/wanix,未 push):应用 wanix-riscv64.patch;
+  等价移植 wexec JS-task/signal/live-read;新增 examples/rv64.html。
+- 原生 macOS 构建 guest bundle(无 Docker):既有 alpine rootfs + kernel +
+  riscv64 交叉编译 wexec/hostexport + extras/linux/bin 脚本。
+- 浏览器验证全通过:boot 进 hvc0 shell;stty size 跟随面板(50 75→26 20);
+  fetch relay 网络(apk update 26785 pkgs,apk add tmux);tmux attach 正常。
+- 待办:wanix 是否推送(justwasm/wanix);wtop/wrepeat 的 wexec-js 未在页面
+  实测;fetch relay 慢是已知瓶颈;guest 安装不持久(命名空间 RAM)。
