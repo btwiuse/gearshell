@@ -1433,9 +1433,12 @@ extras 重打,gearshell 待推):
 
 - 原 main 领先上游 14 个 commit,含 3 组弯路(净零):rv64-resized guest helper、
   config 偏移 8/12 再改回、hvc0 attach 又 revert。
-- 新本地分支 `rv64-virtio-console-features`(基于 origin/main)按 feature set
+- 新分支 `rv64-virtio-console-features`(基于 origin/main)按 feature set
   重写为 5 个 commit:resize 管线 / DRIVER_OK+queue128 / 内核+启动测试 /
   hvc0 shell(rootfs+JS) / CI workflow_dispatch。
 - 顺带清掉最终树 2 行弯路残留:usr/local/sbin mkdir、ttyS0 stty。
-- 新树与旧 b7c861d 树仅差 3 行注释+2 行删除;virtio 15 测试全绿;分支未 push。
-- 待办:确认新分支如何与 btwiuse/main 合并(b7c861d 已在远端)。
+- 新树与旧 b7c861d 树仅差 3 行注释+2 行删除;virtio 15 测试全绿。
+- 定稿:旧 14-commit 历史(b7c861d)→ 备份分支 `backup/rv64-console-experiments`
+  推送保留;feature 分支提升为 main(force-push);评审中删除与 virtExportInput
+  重复的 virtioConsoleInput 并 squash 进 hvc0 shell commit;最终 HEAD `92d5342`
+  (5 个提交);gearshell vendor 已指向 92d5342;CI 已触发(run 33449565236)。
