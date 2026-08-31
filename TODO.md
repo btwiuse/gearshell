@@ -1294,3 +1294,27 @@ extras 重打,gearshell 待推):
   (照 v86 libv86 的 virtio-console0-resize)+ guest 控制台挂 hvc,插件把 xterm
   尺寸推给 guest → tty_do_resize + SIGWINCH 自动跟随。当前无此通道,只能静态
   默认 + 手动 stty。
+
+## 三十七、rv64 终端随窗口 resize(进行中,已否决网络方案)
+
+- 目标:xterm 随窗口 resize 时,guest ttyS0 的 winsize 跟随(现在无尺寸通道,
+  只有静态默认 24x80 + 手动 stty)。
+- ❌ **否决:vnet /x/http + guest httpd CGI 方案**(已实现过但撤回思路):插件
+  fetch 尺寸到 guest 的 httpd CGI 应用 stty。**问题:断网(guest 网络没起来、
+  vnet 挂了)就不能 resize——设计不合理**。resize 是本地 UI 事件,不该依赖
+  网络链路。vnet 的 /x/http 反向代理端点本身保留(通用工具,浏览器→guest HTTP)。
+- ✅ 正确方向(离线可用,模拟器自身通道):
+  a. **上游 rv64.js 加 virtio-console RESIZE 事件**(v86 libv86 的
+     virtio-console0-resize 同款):插件在 fit/resize 时直接向模拟器推
+     [cols,rows],模拟器经 virtio-console 控制消息送给 guest 内核 →
+     tty_do_resize → winsize + SIGWINCH。需要:改 rv64.js(vendor submodule
+     的上游或 fork/patch),让 machine.virtio_console 支持 resize 控制消息;
+     插件 API 侧加一个 resize 入口(或复用 console 通道)。
+  b. **export 字节通道**:插件把 "SIZE r c" 写进 virtio-console export 通道
+     (host→guest 字节),guest 后台守护进程读 /dev/hvc0 应用 stty。不用改
+     模拟器,但要 guest 侧 daemon + 确认 export 通道在 guest 里是哪个设备。
+- 已验证的铺垫:guest tty 已真实化(setsid -c 控制终端 + 默认 24x80),`stty
+  rows X cols Y` 交互可用且内核会发 SIGWINCH——只差"自动跟随窗口"的通道。
+- 插件侧 pushResize 网络调用已撤。**另一个硬伤**:镜像 busybox 没编 httpd
+  applet(实测 `/rv64-init: httpd: not found`),CGI 方案即使网络在也不成立。
+  磁盘里的 httpd 段无害可留,下次重建镜像时去掉。
