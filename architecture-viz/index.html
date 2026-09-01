@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GearShell · Architecture Map</title>
+<meta name="description" content="Interactive architecture map of GearShell, a Web Native Agent Sandbox that runs CLI agents, tools and SDKs in the browser." />
+<meta property="og:title" content="GearShell · Architecture Map" />
+<meta property="og:description" content="Browser-is-sandbox: VFS isolation, PTY terminals and WASM microkernel inside a buildless React SPA." />
+<meta property="og:image" content="/cover.svg" />
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c2128;
+    --border: #30363d;
+    --border2: #3d444d;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --blue: #58a6ff;
+    --blue-dim: #1f6feb;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #a371f7;
+    --cyan: #39c5cf;
+    --pink: #db61a2;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.55;
+    background-image:
+      radial-gradient(1200px 500px at 50% -100px, rgba(88,166,255,0.08), transparent 60%),
+      radial-gradient(800px 400px at 90% 110%, rgba(163,113,247,0.06), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: var(--mono); font-size: 12px; }
+
+  /* ── Header ─────────────────────────────────────────── */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(8px);
+    background: rgba(13,17,23,0.85);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner {
+    max-width: 1180px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+  .brand .logo {
+    width: 28px; height: 28px; border-radius: 7px; flex: none;
+    background: linear-gradient(135deg, var(--blue-dim), #6e40c9);
+    display: grid; place-items: center; color: #fff; font-size: 14px;
+    box-shadow: 0 0 14px rgba(88,166,255,0.35);
+  }
+  .brand small { color: var(--muted); font-weight: 400; margin-left: 2px; }
+  nav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+  nav button {
+    background: transparent; border: 1px solid transparent; color: var(--muted);
+    padding: 6px 12px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 13px;
+    transition: all 0.15s;
+  }
+  nav button:hover { color: var(--text); background: var(--panel2); }
+  nav button.active { color: var(--blue); background: rgba(88,166,255,0.12); border-color: rgba(88,166,255,0.35); }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  /* ── Hero ──────────────────────────────────────────── */
+  .hero { text-align: center; padding: 26px 0 8px; }
+  .hero h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+  .hero h1 .accent { background: linear-gradient(90deg, var(--blue), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--muted); max-width: 680px; margin: 10px auto 0; }
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border2);
+    color: var(--muted); background: var(--panel);
+  }
+  .badge b { color: var(--text); font-weight: 600; }
+
+  /* ── Tabs ──────────────────────────────────────────── */
+  .tab { display: none; animation: fade 0.25s ease; }
+  .tab.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .section-title { font-size: 18px; font-weight: 700; margin: 30px 0 4px; display: flex; align-items: center; gap: 8px; }
+  .section-title .n {
+    font-size: 11px; color: var(--blue); background: rgba(88,166,255,0.12);
+    border: 1px solid rgba(88,166,255,0.3); border-radius: 6px; padding: 2px 7px; font-family: var(--mono);
+  }
+  .section-sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+
+  /* ── Layer stack ───────────────────────────────────── */
+  .stack { display: flex; flex-direction: column; }
+  .connector { text-align: center; color: var(--muted); font-size: 12px; line-height: 1; padding: 5px 0; user-select: none; }
+  .connector .pipe { display: inline-block; width: 1px; height: 6px; background: var(--border2); vertical-align: middle; }
+  .connector .tag { margin: 0 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  .layer {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--panel);
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  }
+  .layer:hover { transform: translateY(-1px); }
+  .layer[data-accent="blue"]   { border-left: 4px solid var(--blue); }
+  .layer[data-accent="cyan"]   { border-left: 4px solid var(--cyan); }
+  .layer[data-accent="green"]  { border-left: 4px solid var(--green); }
+  .layer[data-accent="yellow"] { border-left: 4px solid var(--yellow); }
+  .layer[data-accent="purple"] { border-left: 4px solid var(--purple); }
+  .layer[data-accent="red"]    { border-left: 4px solid var(--red); }
+  .layer[data-accent="muted"]  { border-left: 4px solid var(--muted); }
+  .layer[data-accent="pink"]   { border-left: 4px solid var(--pink); }
+
+  .layer-head {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px 8px; cursor: pointer; user-select: none;
+  }
+  .layer-head .tier { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); }
+  .layer-head h2 { font-size: 16px; font-weight: 700; }
+  .layer-head .tagline { color: var(--muted); font-size: 12.5px; }
+  .layer-head .toggle { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .layer-body { padding: 4px 16px 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; padding: 3px 9px;
+    border-radius: 7px; border: 1px solid var(--border2);
+    background: var(--panel2); color: var(--text); cursor: default;
+    transition: all 0.12s;
+  }
+  .chip:hover { border-color: var(--blue); color: var(--blue); background: rgba(88,166,255,0.08); }
+  .chip .sub { color: var(--muted); }
+  .chip.hot { border-color: rgba(88,166,255,0.5); background: rgba(88,166,255,0.10); }
+
+  .layer-detail {
+    display: none; border-top: 1px dashed var(--border);
+    padding: 10px 16px; background: rgba(0,0,0,0.2);
+  }
+  .layer.open .layer-detail { display: block; }
+  .layer-detail ul { list-style: none; }
+  .layer-detail li { padding: 3px 0 3px 18px; position: relative; color: var(--text); font-size: 12.5px; }
+  .layer-detail li::before { content: "▸"; position: absolute; left: 2px; color: var(--blue); }
+  .layer-detail li code { color: var(--cyan); }
+
+  /* ── Timeline (boot) ───────────────────────────────── */
+  .timeline { position: relative; margin-left: 6px; padding-left: 26px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px;
+    width: 2px; background: linear-gradient(var(--blue-dim), var(--purple), transparent);
+  }
+  .step { position: relative; margin-bottom: 16px; }
+  .step .dot {
+    position: absolute; left: -26px; top: 3px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--bg); border: 2px solid var(--blue-dim);
+    display: grid; place-items: center; font-size: 9px; font-family: var(--mono); color: var(--blue);
+  }
+  .step .dot.done { border-color: var(--green); color: var(--green); }
+  .step h3 { font-size: 14px; font-weight: 650; }
+  .step p { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .step p code { color: var(--cyan); }
+
+  /* ── Flow (crush pipeline) ─────────────────────────── */
+  .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 800px) { .flow { grid-template-columns: 1fr; } }
+  .flow-card {
+    border: 1px solid var(--border); border-radius: 12px; background: var(--panel);
+    padding: 14px 16px; position: relative;
+  }
+  .flow-card::after {
+    content: "→"; position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
+    color: var(--blue); font-size: 20px; z-index: 2;
+  }
+  @media (max-width: 800px) { .flow-card::after { content: "↓"; right: auto; top: auto; bottom: -20px; left: 50%; transform: translateX(-50%); } }
+  .flow-card:last-child::after { display: none; }
+  .flow-card .fc-n { font-family: var(--mono); font-size: 11px; color: var(--yellow); font-weight: 700; }
+  .flow-card h3 { font-size: 15px; margin: 4px 0 6px; }
+  .flow-card p { color: var(--muted); font-size: 12.5px; }
+  .flow-card p code { color: var(--cyan); }
+
+  /* ── Module trees ──────────────────────────────────── */
+  .trees { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+  .tree {
+    border: 1px solid var(--border); border-radius: 12px; background: var(--panel);
+    padding: 14px 16px; overflow: hidden;
+  }
+  .tree h3 { font-size: 14px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+  .tree .count { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .tree .rule { font-size: 11px; color: var(--yellow); margin-bottom: 8px; }
+  .tree pre {
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: var(--text);
+    white-space: pre; overflow-x: auto;
+  }
+  .tree pre .c { color: var(--muted); }
+  .tree pre .k { color: var(--blue); }
+  .tree pre .f { color: var(--cyan); }
+  .tree pre .fac { color: var(--green); }
+
+  /* ── Tables ────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; }
+  td code { color: var(--cyan); }
+  tr:hover td { background: rgba(88,166,255,0.04); }
+  .table-wrap { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--panel); }
+
+  /* ── Cards / misc ──────────────────────────────────── */
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 14px 16px; }
+  .card h3 { font-size: 14px; margin-bottom: 6px; }
+  .card p, .card li { color: var(--muted); font-size: 12.5px; }
+  .card ul { list-style: none; }
+  .card li { padding: 2px 0 2px 16px; position: relative; }
+  .card li::before { content: "•"; position: absolute; left: 2px; color: var(--blue); }
+  .card li code { color: var(--cyan); }
+
+  footer { max-width: 1180px; margin: 40px auto 0; padding: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  /* legend */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 14px; font-size: 11px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <span class="logo">⚙</span>
+      GearShell <small>Architecture Map</small>
+    </div>
+    <nav>
+      <button class="active" data-tab="overview">System Overview</button>
+      <button data-tab="boot">Boot &amp; Data Flow</button>
+      <button data-tab="modules">Runtime &amp; Modules</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══════════════════ TAB 1 · OVERVIEW ══════════════════ -->
+  <section class="tab active" id="tab-overview">
+    <div class="hero">
+      <h1>Web Native Agent Sandbox — <span class="accent">the browser is the sandbox</span></h1>
+      <p>GearShell runs CLI agents, tools and SDKs inside a stock browser with zero install: a buildless React SPA that boots a <b>Wanix WASM microkernel</b> providing VFS isolation, PTY terminals and multi-language runtimes. Click any layer for details.</p>
+      <div class="badges">
+        <span class="badge">static <b>CDN-only</b></span>
+        <span class="badge">zero <b>npm</b></span>
+        <span class="badge">runtime <b>Wanix v0.4.14</b></span>
+        <span class="badge">UI <b>React 18 · Dockview 8.2</b></span>
+        <span class="badge">storage <b>OPFS</b></span>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--blue)"></i> UI shell</span>
+        <span><i style="background:var(--cyan)"></i> panels</span>
+        <span><i style="background:var(--green)"></i> modules</span>
+        <span><i style="background:var(--yellow)"></i> runtime core</span>
+        <span><i style="background:var(--purple)"></i> persistence</span>
+        <span><i style="background:var(--red)"></i> submodules</span>
+        <span><i style="background:var(--muted)"></i> external CDN</span>
+      </div>
+    </div>
+
+    <div class="stack">
+
+      <!-- BROWSER -->
+      <div class="layer" data-accent="muted">
+        <div class="layer-head">
+          <span class="tier">L0 · HOST</span>
+          <h2>Web Browser</h2>
+          <span class="tagline">Chrome / Safari / Firefox — plain HTTPS tab, no extension</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip">gear.sh</span>
+            <span class="chip">SPA <span class="sub">?debug → eruda</span></span>
+            <span class="chip">vercel.json <span class="sub">SPA rewrite + COOP/COEP</span></span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li>The browser's own security model is the root of trust: <code>VFS isolation + sandboxed processes</code>, data never leaves the browser.</li>
+            <li><code>vercel.json</code> ships SPA rewrites plus COOP/COEP headers for cross-origin isolation.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="connector"><span class="pipe"></span><span class="tag">loads</span><span class="pipe"></span></div>
+
+      <!-- L1 SHELL UI -->
+      <div class="layer" data-accent="blue">
+        <div class="layer-head">
+          <span class="tier">L1 · SHELL UI</span>
+          <h2>Shell UI — index.html + app.js</h2>
+          <span class="tagline">React 18 · Dockview 8.2 · importmap · lucide</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip hot">index.html</span>
+            <span class="chip hot">app.js?v=20260826.42</span>
+            <span class="chip">app.css</span>
+            <span class="chip">importmap <span class="sub">esm.sh</span></span>
+            <span class="chip">DockviewReact <span class="sub">dockview-theme-github-dark</span></span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li>Body is a single <code>#wanix-host</code> div; the only module script is <code>app.js?v=…</code> — top-level module code is the bootstrap, no DOMContentLoaded.</li>
+            <li>Dependencies resolved via <code>&lt;script type="importmap"&gt;</code>: react/react-dom 18.2, dockview(-react/-enterprise) 8.2, lucide-react 0.468 — all from <code>esm.sh</code>.</li>
+            <li>Classic CDN scripts: <code>marked.min.js</code>, <code>reveal.js 6.0.1</code>, xterm CSS, eruda (debug only).</li>
+            <li>All 9 stylesheets carry <code>?v=</code> cache-busting versions; CSS is flat (no custom properties, colors hard-coded GitHub-dark: <code>#0d1117 / #58a6ff</code>…).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="connector"><span class="pipe"></span><span class="tag">renders</span><span class="pipe"></span></div>
+
+      <!-- L2 PANELS -->
+      <div class="layer" data-accent="cyan">
+        <div class="layer-head">
+          <span class="tier">L2 · PANEL SYSTEM</span>
+          <h2>Dockview Panel Grid</h2>
+          <span class="tagline">unified dispatch via PANEL_ADDERS + addPanelByComponent()</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip">home</span>
+            <span class="chip">files</span>
+            <span class="chip">runtime</span>
+            <span class="chip">deck <span class="sub">reveal.js</span></span>
+            <span class="chip">settings</span>
+            <span class="chip hot">crush-runner</span>
+            <span class="chip">terminal <span class="sub">sessions</span></span>
+            <span class="chip">workbench <span class="sub">VS Code OSS</span></span>
+            <span class="chip">vm <span class="sub">v86</span></span>
+            <span class="chip">browser <span class="sub">iframe</span></span>
+            <span class="chip">group / task</span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li>Static panels (home, deck, settings, files, runtime, crush-runner) vs session panels keyed by <code>sessionId</code> (terminal, workbench, vm, task, group, iframe).</li>
+            <li>Default startup panel: <code>['home']</code>. <code>PANEL_CREATION_OPTIONS</code> catalog has 16 entries.</li>
+            <li>Top-right <code>AddTerminalButton</code>: click = terminal, long-press/right-click = menu with terminal profiles + Wagi Dog + all panels.</li>
+            <li>iframe sub-panels: browser → <code>/browser/</code>, bonsai → <code>/bonsai/</code>, codigo → codigo.dev, crush → justwasm.github.io/crush, rickroll → YouTube.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="connector"><span class="pipe"></span><span class="tag">imports</span><span class="pipe"></span></div>
+
+      <!-- L3 MODULES -->
+      <div class="layer" data-accent="green">
+        <div class="layer-head">
+          <span class="tier">L3 · SHELL MODULES</span>
+          <h2>Vanilla JS module families</h2>
+          <span class="tagline">buildless · 500-line rule · ?v= version discipline</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip">app-* <span class="sub">17 files</span></span>
+            <span class="chip">files-* <span class="sub">16 files</span></span>
+            <span class="chip">settings-* <span class="sub">11 files</span></span>
+            <span class="chip">crush-* <span class="sub">10 files</span></span>
+            <span class="chip">panels.js</span>
+            <span class="chip">home / deck / runtime / launcher</span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li><b>500-line rule:</b> any JS file over 500 lines is split into cohesive modules; every function stays under 50 lines.</li>
+            <li><b>Module URL consistency:</b> every internal import must carry the SAME <code>?v=</code> — a version split loads a module twice, breaking DI/singleton state (e.g. <code>files-registry.js</code> "initFiles has not been called").</li>
+            <li>DI-shim pattern: each submodule exports <code>initX(deps)</code> + lazy <code>xDep(name)</code>; wiring is centralized at the bottom of <code>app.js</code>.</li>
+            <li>No global namespace (<code>window.app</code> doesn't exist); sessions live in module-level Maps.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="connector"><span class="pipe"></span><span class="tag">bootstrap</span><span class="pipe"></span></div>
+
+      <!-- L4 WANIX -->
+      <div class="layer" data-accent="yellow">
+        <div class="layer-head">
+          <span class="tier">L4 · RUNTIME CORE</span>
+          <h2>Wanix WASM microkernel <span class="mono">v0.4.14</span></h2>
+          <span class="tagline">dynamically imported · the terminal, VFS &amp; tasks all live here</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip hot">&lt;wanix-namespace&gt;</span>
+            <span class="chip hot">&lt;wanix-term&gt;</span>
+            <span class="chip hot">&lt;wanix-task&gt;</span>
+            <span class="chip">bash <span class="sub">/bash</span></span>
+            <span class="chip">w9y <span class="sub">binaries</span></span>
+            <span class="chip">VFS <span class="sub">9p</span></span>
+            <span class="chip">drivers <span class="sub">gojs · wasi · js</span></span>
+            <span class="chip">fetch binds <span class="sub">w9y.io</span></span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li>Shell code never touches the wasm directly: <code>loadActiveWorkspace()</code> dynamically imports the runtime ES module, then <code>createWanixSystem()</code> builds <code>&lt;wanix-namespace id="wanix-system" wasm="…"&gt;</code> inside <code>#wanix-host</code>.</li>
+            <li>wasm + module pinned to <code>@v0.4.8</code> (semver only — legacy commit-hash/@main URLs are auto-migrated by <code>app-normalize.js</code>).</li>
+            <li>Terminals are native <code>&lt;wanix-term&gt;</code> elements backed by the kernel — <b>no xterm.js JS, no WebSocket/PTY code in the shell</b> (xterm is imported as CSS only).</li>
+            <li>Terminal sessions: <code>createTerminalSession()</code> = <code>&lt;wanix-task id="repl-*"&gt;</code> + <code>&lt;wanix-term path="#task/…"&gt;</code>, overlaid via <code>attachOverlayTerminalSession</code>.</li>
+            <li>The shell binary is a hush build mounted at <code>/bash</code>; default command <code>bash -rcfile /profile</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="connector"><span class="pipe"></span><span class="tag">persists to</span><span class="pipe"></span></div>
+
+      <!-- L5 PERSISTENCE -->
+      <div class="layer" data-accent="purple">
+        <div class="layer-head">
+          <span class="tier">L5 · PERSISTENCE &amp; STATE</span>
+          <h2>OPFS + localStorage</h2>
+          <span class="tagline">no IndexedDB · no service worker (yet)</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip hot">/opfs/wanix</span>
+            <span class="chip hot">/opfs/home</span>
+            <span class="chip">localStorage <span class="sub">gear-shell-config</span></span>
+            <span class="chip">/tmp <span class="sub">memfs</span></span>
+            <span class="chip">events <span class="sub">gear-shell-workspace-change</span></span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li>OPFS mounted through an <code>opfs</code> bind; <code>WANIX='/opfs/wanix'</code>, <code>HOME='/opfs/home'</code>. No IndexedDB anywhere.</li>
+            <li>Workspace layout / config is JSON in localStorage (e.g. <code>gear-shell-config</code>); legacy <code>hush-shell</code> keys are kept as stable ids.</li>
+            <li>Crush-runner scratch state (crushrc) is written to the in-memory <code>/tmp/crush-runner-&lt;id&gt;</code> — never touches OPFS.</li>
+            <li>State sync via custom events: <code>gear-shell-workspace-change</code> on window, <code>gear-shell-task-status</code> on task elements.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="connector"><span class="pipe"></span><span class="tag">plus</span><span class="pipe"></span></div>
+
+      <!-- L6 SUBMODULES -->
+      <div class="layer" data-accent="red">
+        <div class="layer-head">
+          <span class="tier">L6 · GIT SUBMODULES</span>
+          <h2>Five embedded apps</h2>
+          <span class="tagline">mounted as static panels · pointers updated deliberately</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip">bonsai/ <span class="sub">27B WebGPU LLM</span></span>
+            <span class="chip">browser/ <span class="sub">Browser.js · Scramjet proxy</span></span>
+            <span class="chip">isolation/ <span class="sub">Cloudflare Worker</span></span>
+            <span class="chip">wanix-workbench/ <span class="sub">VS Code OSS</span></span>
+            <span class="chip">web-pet/ <span class="sub">Wagi Dog</span></span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li><code>bonsai</code> — btwiuse/bonsai-webgpu-kernels: buildless 27B LLM, streams GGUF from Hugging Face.</li>
+            <li><code>browser</code> — btwiuse/gear-browser: Browser.js static build (Scramjet), mounted at <code>/browser/</code>.</li>
+            <li><code>isolation</code> — btwiuse/gear-isolation: Cloudflare Worker providing the Browser.js isolation sandbox on <code>*.greggang.com</code>.</li>
+            <li><code>wanix-workbench</code> — btwiuse/gear-wanix-workbench: Code-OSS static build + GearShell Wanix extension.</li>
+            <li><code>web-pet</code> — justwasm/wagi-web-pet: Wagi Dog desktop pet (drag / click / right-click chat).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="connector"><span class="pipe"></span><span class="tag">fetches from</span><span class="pipe"></span></div>
+
+      <!-- L7 EXTERNAL -->
+      <div class="layer" data-accent="muted">
+        <div class="layer-head">
+          <span class="tier">L7 · EXTERNAL CDN / CLOUD</span>
+          <h2>Everything is fetched at runtime — nothing is bundled</h2>
+          <span class="tagline">importmap + CDN is the dependency strategy</span>
+          <span class="toggle">details ▾</span>
+        </div>
+        <div class="layer-body">
+          <div class="chips">
+            <span class="chip">esm.sh <span class="sub">react · dockview · lucide</span></span>
+            <span class="chip">jsDelivr <span class="sub">marked · reveal.js · xterm.css · eruda</span></span>
+            <span class="chip">w9y.io <span class="sub">wanix wasm · bash · w9y</span></span>
+            <span class="chip">Hugging Face <span class="sub">GGUF models</span></span>
+            <span class="chip">agw.k0s.io <span class="sub">Crush AGW</span></span>
+          </div>
+        </div>
+        <div class="layer-detail">
+          <ul>
+            <li>Runtime wasm comes from <code>w9y.io</code> pinned by commit → verified byte-identical with the old railway URL (<code>sha256 07c81e6c…</code>).</li>
+            <li>The only network URL baked into Crush's default crushrc is <code>AGW=https://agw.k0s.io</code>.</li>
+            <li>Bonsai loads GGUF weights on demand from Hugging Face (requires HF token).</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section-title"><span class="n">TABLE</span> Dependency graph at a glance</div>
+    <div class="table-wrap" style="margin-top:10px">
+      <table>
+        <thead><tr><th>Source</th><th>Provides</th><th>Delivered via</th></tr></thead>
+        <tbody>
+          <tr><td>esm.sh</td><td><code>react 18.2 · react-dom 18.2 · dockview 8.2 · dockview-react 8.2 · dockview-enterprise 8.2 · lucide-react 0.468</code></td><td>importmap (ES modules)</td></tr>
+          <tr><td>jsDelivr</td><td><code>marked.min.js · reveal.js 6.0.1 · @xterm/xterm css · eruda</code></td><td>classic scripts / stylesheets</td></tr>
+          <tr><td>w9y.io</td><td><code>wanix runtime module + wasm (v0.4.14) · bash (hush build) · w9y</code></td><td>fetch binds + dynamic import</td></tr>
+          <tr><td>Hugging Face</td><td><code>Bonsai 27B GGUF weights</code></td><td>streamed on demand</td></tr>
+          <tr><td>railway (agw)</td><td><code>Crush agent gateway</code></td><td>crushrc env</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════════ TAB 2 · BOOT & DATA FLOW ══════════════════ -->
+  <section class="tab" id="tab-boot">
+    <div class="hero">
+      <h1>Boot sequence &amp; <span class="accent">data flow</span></h1>
+      <p>From a blank tab to a fully wired multi-panel agent sandbox — the exact bootstrap order from <code>index.html</code> and the bottom of <code>app.js</code>.</p>
+    </div>
+
+    <div class="section-title"><span class="n">BOOT</span> Startup order</div>
+    <div class="timeline" style="margin-top:14px">
+      <div class="step">
+        <span class="dot">1</span>
+        <h3><code>index.html</code> parses — <code>&lt;base href="/"&gt;</code>, importmap, 9 versioned stylesheets</h3>
+        <p>Body is only <code>&lt;div id="wanix-host"&gt;&lt;/div&gt;</code>. Eruda attaches when the URL contains <code>?debug</code>.</p>
+      </div>
+      <div class="step">
+        <span class="dot">2</span>
+        <h3><code>app.js?v=20260826.42</code> loads as the single module script</h3>
+        <p>Top-level module code is the bootstrap — no DOMContentLoaded listener. Imports react, dockview, lucide and every panel module.</p>
+      </div>
+      <div class="step">
+        <span class="dot">3</span>
+        <h3><code>loadActiveWorkspace()</code> → dynamic import of the Wanix runtime</h3>
+        <p>Default <code>https://w9y.io/…/wanix.min.js@v0.4.14</code> (wasm pinned to the same semver tag).</p>
+      </div>
+      <div class="step">
+        <span class="dot">4</span>
+        <h3><code>createWanixSystem()</code> mounts the microkernel</h3>
+        <p>Builds <code>&lt;wanix-namespace id="wanix-system" wasm="…"&gt;</code> inside <code>#wanix-host</code> — the kernel now owns terminal, VFS and tasks.</p>
+      </div>
+      <div class="step">
+        <span class="dot">5</span>
+        <h3>React mounts the Dockview grid</h3>
+        <p><code>createRoot(#app-root)</code> renders <code>&lt;DockviewReact className="dockview-theme-github-dark"&gt;</code>; startup panel is <code>['home']</code>.</p>
+      </div>
+      <div class="step">
+        <span class="dot">6</span>
+        <h3>DI wiring at the bottom of app.js</h3>
+        <p><code>initLauncher → initPanels → initDeck → initRuntime → initFiles → initSettings → initHome → initCrushRunner</code> — every panel receives its deps via <code>initX(deps)</code> + lazy <code>xDep(name)</code>.</p>
+      </div>
+    </div>
+
+    <div class="section-title"><span class="n">DATA</span> Runtime wiring &amp; communication patterns</div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="card">
+        <h3>Terminal session anatomy</h3>
+        <ul>
+          <li><code>createTerminalSession()</code> → <code>&lt;wanix-task id="repl-*"&gt;</code> + <code>&lt;wanix-term path="#task/…"&gt;</code></li>
+          <li>Sessions overlay inside <code>#terminal-layer</code> via <code>attachOverlayTerminalSession</code> (absolute positioning, not Dockview content)</li>
+          <li>Default cmd <code>bash -rcfile /profile</code>; profiles from <code>BUILTIN_TERMINAL_PROFILES</code> (bash, crush)</li>
+          <li>The same <code>&lt;wanix-term&gt;</code> machinery powers Workbench terminals and VM serial console</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>State &amp; events</h3>
+        <ul>
+          <li>Module-level Maps: <code>terminalSessions</code>, <code>workspaceTaskSessions</code>, <code>iframeSessions</code>, <code>vmSessions</code>, <code>workbenchSessions</code></li>
+          <li>Events: <code>gear-shell-workspace-change</code> (window) · <code>gear-shell-task-status</code> (task element)</li>
+          <li>Workspace JSON in localStorage; shell/wasm state in OPFS via the <code>opfs</code> bind</li>
+          <li>No <code>window.app</code> global — everything flows through the DI shim</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>URL &amp; version discipline</h3>
+        <ul>
+          <li>Runtime URLs only allow <code>@v&lt;semver&gt;</code> — commit-hash / <code>@main</code> pins are auto-migrated to the current default by <code>app-normalize.js</code></li>
+          <li>Every JS module import carries <code>?v=</code>; a version split loads the module twice and breaks singletons</li>
+          <li>Legacy hush terminal profiles migrate automatically: <code>cmd hush -rcfile /tmp/profile</code> → <code>bash -rcfile /profile</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Deck panel</h3>
+        <ul>
+          <li><code>loadSlidesMarkdown()</code> fetches <code>slides.md?v=…</code>, splits on <code>/^\s*--\s*$/m</code>, renders via <code>marked.parse</code> into reveal.js <code>&lt;section&gt;</code>s</li>
+          <li>reveal.js 6.0.1 + marked are global CDN scripts, passed through DI</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ TAB 3 · RUNTIME & MODULES ══════════════════ -->
+  <section class="tab" id="tab-modules">
+    <div class="hero">
+      <h1>Crush Runner pipeline &amp; <span class="accent">module families</span></h1>
+      <p>How CLI agents (Crush) boot inside the browser, and how the buildless codebase is organized under the 500-line rule.</p>
+    </div>
+
+    <div class="section-title"><span class="n">PIPE</span> Crush Runner: detect → install → launch</div>
+    <p class="section-sub">Entirely on the Wanix kernel — no Worker, no wasm fetch, no WebSocket.</p>
+    <div class="flow" style="margin-top:10px">
+      <div class="flow-card">
+        <div class="fc-n">STEP 1 · DETECT</div>
+        <h3>which crush</h3>
+        <p>Runs <code>bash</code> script <code>which crush</code> (CRUSH_DETECT_SCRIPT) and polls a <code>/tmp</code> marker file; on failure checks <code>${HOME}/.w9y/crush</code>.</p>
+      </div>
+      <div class="flow-card">
+        <div class="fc-n">STEP 2 · INSTALL</div>
+        <h3>/w9y mod apply crush</h3>
+        <p>Spawns <code>/w9y mod apply crush</code>, polls the marker directory for up to 90s; on timeout shows the install log. Runtimes: <code>auto | gojs | wasi | js</code>.</p>
+      </div>
+      <div class="flow-card">
+        <div class="fc-n">STEP 3 · LAUNCH</div>
+        <h3>crushrc + terminal</h3>
+        <p><code>prepareCrushLaunch()</code> writes <code>/tmp/crush-runner-&lt;id&gt;/crushrc</code> (in-memory fs, never OPFS), forces <code>CRUSH_GLOBAL_CONFIG</code>, then opens a terminal panel or inline overlay.</p>
+      </div>
+    </div>
+
+    <div class="section-title"><span class="n">MODULES</span> Module families after the 500-line split</div>
+    <p class="section-sub">Each original giant was carved into cohesive files (&lt;500 lines); facades keep the entry import lines stable. Internal imports carry matching <code>?v=</code> versions.</p>
+    <div class="trees" style="margin-top:10px">
+      <div class="tree">
+        <h3>app.js <span class="count">→ 17 files</span></h3>
+        <div class="rule">app.js stays the entry: bootstrap side effects, App component, DI wiring</div>
+        <pre><span class="fac">app.js</span>            <span class="c">// entry + DI wiring</span>
+├─ <span class="f">app-constants.js</span>        <span class="c">// data, DEFAULT_CMD, binds</span>
+├─ <span class="f">app-normalize.js</span>        <span class="c">// legacy config migration</span>
+├─ <span class="f">app-storage.js</span>
+├─ <span class="f">app-state.js</span>           <span class="c">// dependency-free session state</span>
+├─ <span class="f">app-workspace.js</span>       <span class="c">// + presets / store / binds</span>
+├─ <span class="f">app-panels.js</span>          <span class="c">// + panels-store</span>
+├─ <span class="f">app-sessions.js</span>        <span class="c">// session Maps</span>
+├─ <span class="f">app-terminal-*.js</span>      <span class="c">// profiles + sessions</span>
+└─ <span class="f">app-wanix.js</span></pre>
+      </div>
+      <div class="tree">
+        <h3>crush-runner.js <span class="count">→ 10 files</span></h3>
+        <div class="rule">crush-runner.js is a re-export facade so app.js's import stays stable</div>
+        <pre><span class="fac">crush-runner.js</span>        <span class="c">// facade</span>
+├─ <span class="f">crush-deps.js</span>          <span class="c">// dep registry + id counters</span>
+├─ <span class="f">crush-presets.js</span>       <span class="c">// default profile + builtins</span>
+├─ <span class="f">crush-config.js</span>        <span class="c">// dirs + launch prep</span>
+├─ <span class="f">crush-install.js</span>      <span class="c">// detect + install</span>
+├─ <span class="f">crush-json-edit.js</span>
+├─ <span class="f">crush-preset-crud.js</span>
+├─ <span class="f">crush-panel-controller.js</span> <span class="c">// ctl state/handlers</span>
+├─ <span class="f">crush-panel-config.js</span> <span class="c">// config section JSX</span>
+└─ <span class="f">crush-panel.js</span>        <span class="c">// component + addCrushRunnerPanel</span></pre>
+      </div>
+      <div class="tree">
+        <h3>settings.js <span class="count">→ 11 files</span></h3>
+        <div class="rule">settings.js is a facade; 9 panel sections</div>
+        <pre><span class="fac">settings.js</span>           <span class="c">// facade</span>
+├─ <span class="f">settings-deps.js</span>
+├─ <span class="f">settings-template.js</span>
+├─ <span class="f">settings-config.js</span>
+├─ <span class="f">settings-launcher.js</span>
+├─ <span class="f">settings-preset-library.js</span>
+├─ <span class="f">settings-workspace.js</span>
+├─ <span class="f">settings-system.js</span>
+├─ <span class="f">settings-binds.js</span>
+├─ <span class="f">settings-task.js</span>
+├─ <span class="f">settings-terminal-editor.js</span>
+├─ <span class="f">settings-icons.js</span> / <span class="f">settings-panel.js</span></pre>
+      </div>
+      <div class="tree">
+        <h3>files-* <span class="count">→ 16 files</span></h3>
+        <div class="rule">Files panel: OPFS + VFS explorer</div>
+        <pre><span class="fac">files.js</span>             <span class="c">// facade</span>
+├─ <span class="f">files-registry.js</span>     <span class="c">// DI (initFiles singleton)</span>
+├─ <span class="f">files-panel-*.js</span>      <span class="c">// sections / hooks</span>
+├─ <span class="f">files-tree.js</span>         <span class="c">// + path / ui / parts</span>
+├─ <span class="f">files-editor.js</span>
+├─ <span class="f">files-mounts.js</span>       <span class="c">// local/remote mounts</span>
+├─ <span class="f">files-favorites.js</span>    <span class="c">// + favorites-ui</span>
+├─ <span class="f">files-context-menu.js</span> <span class="c">// + context-menu-ui</span>
+├─ <span class="f">files-info.js</span> / <span class="f">files-topbar.js</span> / <span class="f">files-resize.js</span></pre>
+      </div>
+    </div>
+
+    <div class="section-title"><span class="n">RULES</span> Engineering constraints that shape the architecture</div>
+    <div class="table-wrap" style="margin-top:10px">
+      <table>
+        <thead><tr><th>Rule</th><th>Why it exists</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>500-line / 50-line caps</td><td>Forces cohesive, reviewable modules</td><td>all JS</td></tr>
+          <tr><td>Matching <code>?v=</code> on every import</td><td>ES modules cache by full URL; a split loads two instances and breaks DI singletons</td><td>all importers</td></tr>
+          <tr><td>Runtime pins are <code>@v&lt;semver&gt;</code> only</td><td>Legacy hash/@main URLs auto-migrate to the current default</td><td><code>app-normalize.js</code> · <code>app-constants.js</code></td></tr>
+          <tr><td>Buildless: importmap + CDN</td><td>Zero install for users, cacheable static host (vercel)</td><td><code>index.html</code></td></tr>
+          <tr><td>Shell never touches wasm directly</td><td>All kernel work goes through Wanix elements/tasks</td><td><code>app-wanix.js</code></td></tr>
+          <tr><td>ESM check with <code>node --input-type=module</code></td><td><code>node --check</code> misses strict-mode errors on .js files</td><td><code>scripts/verify-static.mjs</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>GearShell · Web Native Agent Sandbox — architecture map generated from repo facts (memory/architecture.md, index.html, README.md)</span>
+  <span class="mono">wanix v0.4.14 · dockview 8.2 · react 18.2</span>
+</footer>
+
+<script>
+  // Tab switching
+  const tabs = document.querySelectorAll("nav button");
+  tabs.forEach(btn => btn.addEventListener("click", () => {
+    tabs.forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll(".tab").forEach(t =>
+      t.classList.toggle("active", t.id === "tab-" + btn.dataset.tab));
+  }));
+
+  // Layer expand/collapse
+  document.querySelectorAll(".layer").forEach(layer => {
+    const head = layer.querySelector(".layer-head");
+    head.addEventListener("click", () => {
+      layer.classList.toggle("open");
+      head.querySelector(".toggle").textContent =
+        layer.classList.contains("open") ? "details ▴" : "details ▾";
+    });
+  });
+</script>
+</body>
+</html>

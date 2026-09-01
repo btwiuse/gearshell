@@ -3,6 +3,18 @@
 
 export const agentCatalog = [
   {
+    namespace: "vm",
+    title: "VM",
+    methods: [
+      { name: "list", args: [], hint: "List VM sessions hosted by the shell." },
+      {
+        name: "create",
+        args: [{ key: "config", label: "Config", type: "json", default: "{}", placeholder: '{"memory":"512M","netdev":""}' }],
+        hint: "Create an iframe VM session; VM plugins normally provide the backend and Linux assets.",
+      },
+    ],
+  },
+  {
     namespace: "tasks",
     title: "Tasks",
     methods: [

@@ -1197,6 +1197,15 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 三十六、Playground VM API 与 AGW 域名迁移(2026-09-02)
+
+- Playground API catalog 新增 `vm.list` / `vm.create`，workspace API 增加对应
+  root namespace，iframe manifest 放行 `vm.*`、`w9y.*`、`hotkeys.*`。
+- VM iframe 专用 dispatch 仍负责真实 VM session，Playground 的 `vm.create` 作为
+  API 目录入口可观察桥接限制；真实创建应传 VM backend/Linux 配置。
+- 默认 `AGW` 已改为 `https://agw.k0s.io`，架构文档同步替换旧 AGW host；旧日志和
+  非 AGW Railway 服务地址不属于本次替换范围。
+
 ## 三十五、Plugin Hotkey API 与 Launcher 快捷键(2026-09-02)
 
 - Playground API sidebar 使用 6px WebKit scrollbar、Firefox `thin` 和统一 thumb

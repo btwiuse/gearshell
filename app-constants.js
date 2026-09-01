@@ -88,7 +88,7 @@ export const DOCKVIEW_LICENSE_KEY =
 export const WANIX = "/opfs/wanix";
 export const HOME = "/opfs/home";
 export const USER = "me";
-export const AGW = "https://agw.up.railway.app";
+export const AGW = "https://agw.k0s.io";
 export const BASH_ENV = {
   TERM: "xterm-256color",
   COLORTERM: "truecolor",

@@ -105,6 +105,10 @@ const api = {
   agents: wrapNamespace(agentsApi),
   music: wrapNamespace(musicApi),
   terminal: wrapNamespace(terminalApi),
+  vm: {
+    create: safe(() => ({ ok: false, error: "vm.create is available only to iframe VM plugins" })),
+    list: safe(() => ({ ok: true, sessions: [] })),
+  },
 
   // Global w9y package registry: which mods are installed and at which
   // version (WANIX/w9y-registry.json, written by the w9y CLI itself).
