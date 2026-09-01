@@ -1197,6 +1197,11 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 三十八、Settings iframe 禁用 overscroll(2026-09-02)
+
+- Settings iframe 的 `html`、`body` 与 `.settings-panel` 统一设置
+  `overscroll-behavior: none`，保留内容滚动但禁止触摸板/触摸快速滚动产生弹簧回弹。
+
 ## 三十七、Launcher 单例(2026-09-02)
 
 - `panels.open("launcher")` 和内部 `addPanelByComponent(..., "launcher")` 现在先查找
