@@ -1197,6 +1197,14 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 四十、Debug runtime URL escape hatch(2026-09-02)
+
+- 新增 `/debug/` 静态页面，不加载 GearShell API 或 iframe bridge，直接读写
+  `gear-shell-active-workspace`、`gear-shell-workspace-index` 与 active workspace key。
+- 页面可直接设置 `runtime.moduleUrl` / `runtime.wasmUrl`，保存后重新加载 GearShell
+  生效，作为 runtime 配置损坏时的逃生舱；默认示例为 wanix v0.4.33。
+- Settings iframe body 同样禁用 overscroll，保留正常内容滚动但不产生回弹。
+
 ## 三十九、Launcher 焦点与键盘导航(2026-09-02)
 
 - Launcher 激活时向页面派发 `GearShellPanelFocused`，Launcher 搜索框自动获得焦点；

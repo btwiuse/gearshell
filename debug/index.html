@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GearShell Debug Escape Hatch</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: #0d1117; color: #c9d1d9; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body { padding: 24px; }
+main { max-width: 760px; margin: 0 auto; }
+h1 { color: #f0f6fc; font-size: 22px; margin: 0 0 8px; }
+p { color: #8b949e; line-height: 1.5; }
+form { display: grid; gap: 14px; margin-top: 22px; padding: 18px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; }
+label { display: grid; gap: 6px; color: #c9d1d9; }
+input { width: 100%; padding: 9px 10px; border: 1px solid #30363d; border-radius: 5px; background: #0d1117; color: #c9d1d9; font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+button { justify-self: start; padding: 8px 14px; border: 1px solid #2ea043; border-radius: 6px; background: #238636; color: #fff; cursor: pointer; font: inherit; }
+button:hover { background: #2ea043; }
+#status { min-height: 22px; color: #3fb950; }
+code { color: #79c0ff; }
+</style>
+</head>
+<body>
+<main>
+<h1>GearShell Debug Escape Hatch</h1>
+<p>直接修改当前 active workspace 的 <code>runtime.moduleUrl</code> 和 <code>runtime.wasmUrl</code>。此页面不加载 GearShell API 或 iframe bridge。保存后重新加载 GearShell。</p>
+<form id="runtime-form">
+<label>Wanix runtime module URL<input id="module-url" type="url" required></label>
+<label>Wanix wasm URL<input id="wasm-url" type="url" required></label>
+<button type="submit">Save runtime URLs</button>
+<div id="status" role="status"></div>
+</form>
+</main>
+<script>
+(function () {
+  "use strict";
+  var ACTIVE_KEY = "gear-shell-active-workspace";
+  var INDEX_KEY = "gear-shell-workspace-index";
+  var PREFIX = "gear-shell-workspace:";
+  var form = document.getElementById("runtime-form");
+  var moduleInput = document.getElementById("module-url");
+  var wasmInput = document.getElementById("wasm-url");
+  var status = document.getElementById("status");
+  function activeId() {
+    var index = JSON.parse(localStorage.getItem(INDEX_KEY) || "[]");
+    var selected = localStorage.getItem(ACTIVE_KEY);
+    return index.some(function (item) { return item.id === selected; }) ? selected : (index[0] && index[0].id) || "hush-shell";
+  }
+  function load() {
+    var raw = localStorage.getItem(PREFIX + activeId());
+    var workspace = raw ? JSON.parse(raw) : { runtime: {} };
+    moduleInput.value = workspace.runtime && workspace.runtime.moduleUrl || "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.33/dist/wanix.min.js";
+    wasmInput.value = workspace.runtime && workspace.runtime.wasmUrl || "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.33";
+  }
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var id = activeId();
+    var key = PREFIX + id;
+    var raw = localStorage.getItem(key);
+    var workspace = raw ? JSON.parse(raw) : { id: id, name: id, runtime: {} };
+    workspace.runtime = Object.assign({}, workspace.runtime, { moduleUrl: moduleInput.value.trim(), wasmUrl: wasmInput.value.trim() });
+    localStorage.setItem(key, JSON.stringify(workspace));
+    status.textContent = "Saved for workspace " + id + ". Reload GearShell to apply.";
+  });
+  load();
+}());
+</script>
+</body>
+</html>
