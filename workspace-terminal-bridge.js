@@ -32,10 +32,19 @@ import {
   createHeadlessTerminalSession,
   destroyTerminalSession,
 } from "./app-terminal-sessions.js";
-import { getDefaultTerminalProfile } from "./app-terminal-profiles.js";
+import {
+  createVmSession,
+  destroyVmSession,
+  startVmSession,
+} from "./app-sessions.js";
+import {
+  getDefaultTerminalProfile,
+  getVmPanelConfig,
+} from "./app-terminal-profiles.js";
 import { getWanixRoot } from "./app-state.js";
 
-// sessionId -> { session, reader, writer, source, origin, exitTimer }
+// sessionId -> { session|vmSession, kind, reader, writer, source, origin,
+// exitTimer, disposed } — kind is "task" (shell session) or "vm".
 const sessions = new Map();
 
 let sessionCounter = 0;
@@ -89,28 +98,42 @@ async function wakeTask(entry) {
   }
 }
 
-function dataPath(id) {
-  return `#task/repl-${id}/term/data`;
+function dataPath(entry) {
+  return entry.kind === "vm"
+    ? `#vm/vm-panel-${entry.vmSession.id}/term/data`
+    : `#task/repl-${entry.sessionId}/term/data`;
 }
 
-function winchPath(id) {
-  return `#task/repl-${id}/term/winch`;
+function winchPath(entry) {
+  return entry.kind === "vm"
+    ? `#vm/vm-panel-${entry.vmSession.id}/term/winch`
+    : `#task/repl-${entry.sessionId}/term/winch`;
 }
 
 function exitPath(id) {
   return `#task/repl-${id}/exit`;
 }
 
+// Await the session's backing element: shell tasks self-activate (see
+// wakeTask), VM sessions resolve when the host kernel spawned the VM.
+function whenReady(entry) {
+  return entry.kind === "vm"
+    ? entry.vmSession.startPromise
+    : wakeTask(entry);
+}
+
 async function connectStreams(entry) {
   const root = getWanixRoot();
   // Integer literal timeout: floats panic the kernel (see header note).
-  await root.waitFor(dataPath(entry.sessionId), 30000);
-  const readable = await root.openReadable(dataPath(entry.sessionId));
-  const writable = await root.openWritable(dataPath(entry.sessionId));
+  await root.waitFor(dataPath(entry), 30000);
+  const readable = await root.openReadable(dataPath(entry));
+  const writable = await root.openWritable(dataPath(entry));
   entry.reader = readable.getReader();
   entry.writer = writable.getWriter();
   pumpOutput(entry);
-  startExitPolling(entry);
+  if (entry.kind !== "vm") {
+    startExitPolling(entry);
+  }
 }
 
 // Forward kernel output chunks to the creating iframe. The payload data
@@ -174,7 +197,11 @@ function cleanupSession(entry, { code = null } = {}) {
     // already closed
   }
   try {
-    destroyTerminalSession(entry.sessionId);
+    if (entry.kind === "vm") {
+      destroyVmSession(entry.vmSession.id);
+    } else {
+      destroyTerminalSession(entry.sessionId);
+    }
   } catch {
     // session already gone
   }
@@ -208,6 +235,45 @@ function handleCreate(event, id, args) {
   // term.data push only arrives once the kernel stream is open.
   reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
   wakeTask(entry)
+    .then(() => connectStreams(entry))
+    .catch((error) => {
+      push(entry.source, entry.origin, "term.exit", {
+        sessionId,
+        code: null,
+        error: error?.message || String(error),
+      });
+      cleanupSession(entry);
+    });
+  return sessionId;
+}
+
+// Spawn a VM in the HOST wanix kernel (the same instance the shell and
+// panels use — no second kernel per plugin) and bridge its term device
+// to the creating iframe. The plugin renders its own xterm; the host VM
+// session renders no wanix-term (renderTerm: false). Input and winch
+// ride the same term device as shell sessions, so the plugin drives
+// them with terminal.write / terminal.resize.
+function handleVmCreate(event, id, args) {
+  const sessionId = `bridge-vm-${++sessionCounter}`;
+  const config = {
+    ...getVmPanelConfig(),
+    ...(args[0] && typeof args[0] === "object" ? args[0] : {}),
+  };
+  const vmSession = createVmSession(`bridge-${sessionId}`, config);
+  const entry = {
+    sessionId,
+    kind: "vm",
+    vmSession,
+    reader: null,
+    writer: null,
+    source: event.source,
+    origin: event.origin,
+    exitTimer: null,
+    disposed: false,
+  };
+  sessions.set(sessionId, entry);
+  reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
+  startVmSession(vmSession, { renderTerm: false })
     .then(() => connectStreams(entry))
     .catch((error) => {
       push(entry.source, entry.origin, "term.exit", {
@@ -254,13 +320,13 @@ function handleWrite(event, id, args) {
 // The term device's winch path is a signal broadcaster whose reader
 // blocks until the first frame, so the very first winch write must land
 // or apps (cat /winch, bubbletea-style TERM_WINCH readers) hang forever.
-function writeWinch(root, sessionId, cols, rows, xpixel, ypixel) {
+function writeWinch(root, entry, cols, rows, xpixel, ypixel) {
   // openWritable, not writeFile: the root writeFile helper chmods after
   // writing and the signal FS rejects chmod, silently killing every winch
   // update (the shell's own terminals use openWritable for the same
   // reason — elements/term.js).
   return root
-    .openWritable(winchPath(sessionId))
+    .openWritable(winchPath(entry))
     .then((stream) => {
       const writer = stream.getWriter();
       return writer
@@ -284,9 +350,12 @@ function handleResize(event, id, args) {
   const xpixel = Number(sessionArgs(args, 3)) || 0;
   const ypixel = Number(sessionArgs(args, 4)) || 0;
   // The iframe resizes right after create(), which races kernel boot;
-  // wait for readiness so the initial winch frame cannot be lost.
-  wakeTask(entry)
-    .then(() => writeWinch(getWanixRoot(), sessionId, cols, rows, xpixel, ypixel))
+  // wait for readiness AND the term device itself (the winch path only
+  // exists once the VM element finished allocating its term) so the
+  // initial winch frame cannot be lost.
+  whenReady(entry)
+    .then(() => getWanixRoot().waitFor(winchPath(entry), 30000))
+    .then(() => writeWinch(getWanixRoot(), entry, cols, rows, xpixel, ypixel))
     .then(() => reply(event.source, event.origin, { id: id, ok: true }))
     .catch((error) =>
       reply(event.source, event.origin, {
@@ -310,6 +379,43 @@ function handleList(event, id) {
     ok: true,
     result: { sessions: [...sessions.keys()] },
   });
+}
+
+// Entry point from plugins-iframe-api.js: vm.* methods create a VM in the
+// host kernel and return a sessionId driven through the terminal.* methods
+// (same session table). Permission check mirrors the generic path.
+export function dispatchVmCall(event, gear, plugin) {
+  const { id, method, args } = gear;
+  try {
+    const allow = plugin.manifest?.permissions?.api || [];
+    if (!permitsPath(allow, method)) {
+      return reply(event.source, event.origin, {
+        id,
+        ok: false,
+        error: `permission denied: ${method}`,
+      });
+    }
+    const name = method.slice("vm.".length);
+    switch (name) {
+      case "create":
+        return handleVmCreate(event, id, args);
+      case "list":
+        return handleList(event, id);
+      default:
+        return reply(event.source, event.origin, {
+          id,
+          ok: false,
+          error: `unknown vm method: ${name}`,
+        });
+    }
+  } catch (error) {
+    console.error("vm bridge error:", error);
+    return reply(event.source, event.origin, {
+      id,
+      ok: false,
+      error: error?.message || String(error),
+    });
+  }
 }
 
 // Entry point from plugins-iframe-api.js: terminal.* methods are routed

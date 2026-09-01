@@ -20,7 +20,7 @@ import { createScopedApi, permitsPath } from "./plugins-scope.js";
 import { workspaceApi } from "./workspace-api.js";
 import { listPluginIframes } from "./plugins.js";
 import { on as onEvent, off as offEvent } from "./workspace-events.js";
-import { dispatchTerminalCall } from "./workspace-terminal-bridge.js";
+import { dispatchTerminalCall, dispatchVmCall } from "./workspace-terminal-bridge.js";
 
 // origin|topic -> unsubscribe fn (from workspace-events on())
 const subscriptions = new Map();
@@ -183,9 +183,13 @@ export function handleGearMessage(event) {
   // Terminal data methods are iframe-only by design (they need the
   // event context to stream output back to the creating iframe; the
   // in-page terminal.embed is DOM-based and cannot cross postMessage).
-  // Permission checking happens inside the terminal bridge.
+  // Permission checking happens inside the terminal bridge. vm.* methods
+  // spawn a VM in the host kernel and reuse the same session plumbing.
   if (gear.method.startsWith("terminal.")) {
     return dispatchTerminalCall(event, gear, plugin);
+  }
+  if (gear.method.startsWith("vm.")) {
+    return dispatchVmCall(event, gear, plugin);
   }
   handleCall(event, gear, plugin);
 }

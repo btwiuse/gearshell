@@ -40,8 +40,7 @@
       var RV64_LIB_URL = "/plugin/rv64/vendor/web/rv64.js";
       var ASSET_BASE = "/plugin/rv64/assets/";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
-      var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.mjs";
-      var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.301/lib/addon-fit.mjs";
+      var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
 
       var state = {
         xterm: null,
@@ -215,12 +214,11 @@
       }
 
       async function main() {
-        var [{ Terminal }, { FitAddon }] = await Promise.all([
-          import(XTERM_URL),
-          import(FIT_URL),
-        ]);
-        window.FitAddon = { FitAddon: FitAddon };
-        state.xterm = new Terminal({
+        var bundle = await import(XTERM_BUNDLE);
+        var libs = await bundle.loadXtermBundle();
+        window.FitAddon = { FitAddon: libs.FitAddon };
+        state.xterm = new libs.Terminal({
+              allowProposedApi: true,
           convertEol: true,
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           fontSize: 13,
@@ -228,6 +226,7 @@
           scrollback: 5000,
         });
         state.xterm.open($("rv64-term"));
+        bundle.applyXtermAddons(state.xterm, libs);
         enableTapFocus(state.xterm, $("rv64-term"));
         wireXterm(state.xterm);
         boot().catch(function (err) {

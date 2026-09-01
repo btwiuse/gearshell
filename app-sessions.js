@@ -347,21 +347,21 @@ function createVmGuestBinds(config) {
     createWanixBindElement({
       type: "file",
       dst: "boot/rc",
-      src: config.netdev
+      src: config.bootRc || (config.netdev
         ? "/plugin/vm/guest-boot-network-rc"
-        : "/plugin/vm/guest-boot-rc",
+        : "/plugin/vm/guest-boot-rc"),
       mode: "0755",
     }),
     createWanixBindElement({
       type: "file",
       dst: "bin/post-dhcp",
-      src: "/plugin/vm/guest-post-dhcp",
+      src: config.postDhcp || "/plugin/vm/guest-post-dhcp",
       mode: "0755",
     }),
   ];
 }
 
-export function startVmSession(session) {
+export function startVmSession(session, options = {}) {
   if (session.startPromise) return session.startPromise;
   session.startPromise = ensureVmDriver(session.config.backendUrl).then(() => {
     if (session.destroyed) return;
@@ -378,13 +378,20 @@ export function startVmSession(session) {
       ${createVmGuestBinds(session.config)}
     </wanix-vm>`;
 
+    session.vm = vm;
+    if (options.renderTerm === false) {
+      // Bridge-attached sessions (bare-xterm plugin pages) keep only the
+      // VM; the plugin renders its own terminal over the term device.
+      session.wrapper.replaceChildren(vm);
+      return;
+    }
+
     const term = html`<wanix-term
       for="wanix-system"
       path=${`#vm/${vmId}/term`}
       raw=""
       no-scrollbar=""
     />`;
-    session.vm = vm;
     session.term = term;
     session.wrapper.replaceChildren(vm, term);
   }).catch((error) => {

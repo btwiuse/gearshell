@@ -9,6 +9,15 @@ export const V86_IFRAME_PLUGIN = {
     allowFullscreen: true,
   },
   permissions: {
-    api: [],
+    // vm.create spawns the v86 VM in the host kernel; the page then
+    // drives the terminal with the terminal.* data bridge.
+    api: [
+      "vm.create",
+      "terminal.write",
+      "terminal.resize",
+      "terminal.dispose",
+      "events.on",
+      "events.off",
+    ],
   },
 };

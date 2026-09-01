@@ -368,26 +368,29 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
         logTerm("creating kernel terminal session…");
         Promise.resolve()
           .then(function () {
-            // xterm loads lazily on first use (self-host for offline).
-            return import("https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.mjs")
-              .then(function (mod) {
-                var fitMod = import(
-                  "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.301/lib/addon-fit.mjs"
-                );
-                return Promise.all([mod, fitMod]);
+            // xterm loads lazily on first use (self-host for offline);
+            // the shared bundle keeps every plugin terminal on the same
+            // xterm/addon versions as the wanix kernel.
+            return import("/plugin/xterm-bundle.mjs").then(function (m) {
+              return m.loadXtermBundle().then(function (libs) {
+                libs.apply = m.applyXtermAddons;
+                return libs;
               });
+            });
           })
-          .then(function (mods) {
+          .then(function (libs) {
             var host = $("term-host");
             host.innerHTML = "";
-            termState.xterm = new mods[0].Terminal({
+            termState.xterm = new libs.Terminal({
+              allowProposedApi: true,
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
               convertEol: true,
               cursorBlink: true,
             });
-            termState.fit = new mods[1].FitAddon();
+            termState.fit = new libs.FitAddon();
             termState.xterm.loadAddon(termState.fit);
             termState.xterm.open(host);
+            libs.apply(termState.xterm, libs);
             enableTapFocus(termState.xterm, host);
             termState.fit.fit();
             termState.xterm.onData(function (data) {

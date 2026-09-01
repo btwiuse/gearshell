@@ -173,6 +173,10 @@ export function normalizePlugins(list, defaults) {
         version: def.version || item.version,
         entry: def.entry || item.entry,
         ...(def.iframe ? { iframe: def.iframe } : {}),
+        // permissions ride the same refresh as iframe src: a builtin
+        // plugin's API surface is a property of the shipped manifest, so
+        // workspace-saved copies must not freeze an old whitelist.
+        ...(def.permissions ? { permissions: def.permissions } : {}),
         wasm: def.wasm || [],
         ...(def.preset ? { preset: def.preset } : {}),
         // files/systemFiles are REPLACED even when the default no longer

@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>v86 — x86 Linux</title>
 <link rel="stylesheet" href="/plugin/v86/v86.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css" />
+<style>
+  /* The bare-xterm host replaces the wanix-namespace/wanix-term selectors. */
+  #v86-term {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+  }
+  #v86-term .xterm { height: 100%; }
+</style>
 </head>
 <body>
   <div id="app">
@@ -13,82 +24,184 @@
       <span class="v86-title">v86 · Alpine Linux (x86)</span>
       <span id="v86-status" class="v86-status" data-mode="loading">loading…</span>
     </header>
-    <div id="v86-host" class="v86-host"></div>
+    <div id="v86-host" class="v86-host">
+      <div id="v86-term"></div>
+    </div>
   </div>
 
+  <script src="/plugin/gear-bridge.js"></script>
   <script>
     (function () {
       "use strict";
 
-      var ASSET_BASE = "https://1thne2suqrij.matrix.k0s.io/";
-      var WANIX_MODULE_URL = "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.33/dist/wanix.min.js";
-      var WANIX_WASM_URL = "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.33";
-      var V86_BACKEND_URL = "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc3/v86.tgz";
-      var V86_LINUX_URL = "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
+      // The VM runs in the HOST wanix kernel (the same instance the shell
+      // and panels use): vm.create spawns it there and this page renders a
+      // bare xterm that streams the VM's term device over the bridge.
+      var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
 
+      var state = {
+        sessionId: null,
+        xterm: null,
+        fit: null,
+        disposed: true,
+        dataHandler: null,
+        exitHandler: null,
+        resizeObserver: null,
+        resizeFrame: 0,
+      };
+
+      function $(id) { return document.getElementById(id); }
+
       function setStatus(mode, text) {
-        var status = document.getElementById("v86-status");
+        var status = $("v86-status");
         status.dataset.mode = mode;
         status.textContent = text;
       }
 
-      function createVm() {
-        var host = document.getElementById("v86-host");
-        var system = document.createElement("wanix-namespace");
-        var rootfs = document.createElement("wanix-bind");
-        var driver = document.createElement("wanix-bind");
-        var vm = document.createElement("wanix-vm");
-        var boot = document.createElement("wanix-bind");
-        var dhcp = document.createElement("wanix-bind");
-        var term = document.createElement("wanix-term");
-
-        system.setAttribute("wasm", WANIX_WASM_URL);
-        rootfs.setAttribute("dst", ".");
-        rootfs.setAttribute("src", V86_LINUX_URL);
-        rootfs.setAttribute("type", "archive");
-        driver.setAttribute("dst", "#vm/v86");
-        driver.setAttribute("src", V86_BACKEND_URL);
-        driver.setAttribute("type", "archive");
-        boot.setAttribute("dst", "boot/rc");
-        boot.setAttribute("src", "/plugin/v86/guest-boot-rc");
-        boot.setAttribute("type", "file");
-        boot.setAttribute("perm", "0755");
-        dhcp.setAttribute("dst", "bin/post-dhcp");
-        dhcp.setAttribute("src", "/plugin/v86/guest-post-dhcp");
-        dhcp.setAttribute("type", "file");
-        dhcp.setAttribute("perm", "0755");
-        vm.setAttribute("id", "v86");
-        vm.setAttribute("type", "v86");
-        vm.setAttribute("export", "ttyS0");
-        vm.setAttribute("mem", "512M");
-        vm.setAttribute("netdev", "user,type=virtio,relay_url=" + VNET_URL);
-        vm.setAttribute("term", "");
-        vm.setAttribute("start", "");
-        term.setAttribute("path", "#vm/v86/term");
-        term.setAttribute("raw", "");
-        term.setAttribute("no-scrollbar", "");
-
-        system.append(rootfs, driver, boot, dhcp, vm, term);
-        host.replaceChildren(system);
-        system.addEventListener("ready", function () {
-          setStatus("ready", "ready · network connected");
-        }, { once: true });
-        system.addEventListener("error", function (event) {
-          var error = event.detail?.error || event.detail || event;
-          setStatus("error", "failed: " + (error.message || error));
-        }, { once: true });
+      function writeToXterm(bytes) {
+        if (state.xterm) state.xterm.write(bytes);
       }
 
-      import(WANIX_MODULE_URL)
-        .then(function () {
+      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
+      // xterm listens for after the terminal lost focus, so a tap would never
+      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
+      function enableTapFocus(term, host) {
+        var touchStart = null;
+        host.addEventListener("touchstart", function (event) {
+          var t = event.changedTouches[0];
+          if (t) touchStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+        host.addEventListener("touchend", function (event) {
+          if (!touchStart) return;
+          var t = event.changedTouches[0];
+          var moved = t
+            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
+            : 0;
+          touchStart = null;
+          if (moved < 12) term.focus();
+        }, { passive: true });
+      }
+
+      function termWrite(data) {
+        if (!state.sessionId) return;
+        var response = data.replace(
+          "\u001bP>|xterm.js(",
+          "\u001bP>|ghostty(",
+        );
+        GearShell.terminal.write(
+          state.sessionId,
+          new TextEncoder().encode(response),
+        ).catch(function () {});
+      }
+
+      function termResize() {
+        if (!state.xterm || !state.sessionId) return;
+        GearShell.terminal.resize(
+          state.sessionId,
+          state.xterm.cols,
+          state.xterm.rows,
+        ).catch(function () {});
+      }
+
+      function refitAndResize() {
+        if (!state.fit || !state.xterm) return;
+        try {
+          state.fit.fit();
+        } catch {
+          return;
+        }
+        termResize();
+      }
+
+      function onTermData(event) {
+        if (!event || event.sessionId !== state.sessionId) return;
+        writeToXterm(event.data);
+        if ($("v86-status").dataset.mode === "loading") {
+          setStatus("ready", "ready · network connected");
+        }
+      }
+
+      function onTermExit(event) {
+        if (!event || event.sessionId !== state.sessionId) return;
+        setStatus("error", "VM stopped" + (event.error ? ": " + event.error : ""));
+      }
+
+      function start() {
+        if (state.sessionId) return;
+        setStatus("loading", "starting…");
+        Promise.all([
+          import(XTERM_BUNDLE).then(function (m) {
+            return m.loadXtermBundle().then(function (libs) {
+              libs.apply = m.applyXtermAddons;
+              return libs;
+            });
+          }),
+          GearShell.subscribe("term.data"),
+          GearShell.subscribe("term.exit"),
+        ]).then(function (results) {
+          var libs = results[0];
+          state.xterm = new libs.Terminal({
+            allowProposedApi: true,
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontSize: 13,
+            cursorBlink: true,
+            convertEol: true,
+            scrollback: 10000,
+            theme: {
+              background: "#0a0e14",
+              foreground: "#e6edf3",
+              cursor: "#58a6ff",
+              selectionBackground: "#1f6feb66",
+            },
+          });
+          state.fit = new libs.FitAddon();
+          state.xterm.loadAddon(state.fit);
+          state.xterm.open($("v86-term"));
+          libs.apply(state.xterm, libs);
+          enableTapFocus(state.xterm, $("v86-term"));
+          state.xterm.onData(termWrite);
+          state.xterm.onResize(termResize);
+          state.dataHandler = onTermData;
+          state.exitHandler = onTermExit;
+          GearShell.on("term.data", state.dataHandler);
+          GearShell.on("term.exit", state.exitHandler);
+          state.resizeObserver = new ResizeObserver(function () {
+            // Debounce fit+winch so layout passes during panel resize do
+            // not spam the kernel with stale frames.
+            window.clearTimeout(state.resizeFrame);
+            state.resizeFrame = window.setTimeout(refitAndResize, 80);
+          });
+          state.resizeObserver.observe($("v86-term"));
+          refitAndResize();
+        }).then(function () {
+          return GearShell.vm.create({
+            netdev: "user,type=virtio,relay_url=" + VNET_URL,
+            bootRc: "/plugin/v86/guest-boot-rc",
+            postDhcp: "/plugin/v86/guest-post-dhcp",
+          });
+        }).then(function (result) {
+          if (!result || result.ok === false) {
+            throw new Error((result && result.error) || "vm.create failed");
+          }
+          state.sessionId = result.sessionId;
           setStatus("loading", "booting Alpine (x86)…");
-          createVm();
-        })
-        .catch(function (error) {
-          console.error(error);
-          setStatus("error", "runtime failed: " + error.message);
+          // Initial winch can race the VM's term-device creation; the VM
+          // still boots and the ResizeObserver refits on the first frame.
+          return GearShell.terminal.resize(
+            state.sessionId,
+            state.xterm.cols,
+            state.xterm.rows,
+          ).catch(function () { /* non-fatal: winch races the term */ });
+        }).catch(function (error) {
+          console.error("v86 start failed", error);
+          setStatus("error", "failed: " + (error.message || error));
+          writeToXterm("\r\n\x1b[31mv86 failed to start: " +
+            (error.message || error) + "\x1b[0m\r\n");
         });
+      }
+
+      start();
     })();
   </script>
 </body>

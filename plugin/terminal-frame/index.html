@@ -62,9 +62,7 @@
     (function () {
       "use strict";
 
-      var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.mjs";
-      var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.301/lib/addon-fit.mjs";
-      var PROGRESS_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-progress@0.3.0-beta.301/lib/addon-progress.mjs";
+      var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
 
       var state = {
         sessionId: null,
@@ -252,15 +250,14 @@
       }
 
       function ensureXterm() {
-        return import(XTERM_URL).then(function (mod) {
-          return import(FIT_URL).then(function (fitMod) {
-            return import(PROGRESS_URL).then(function (progressMod) {
-              return {
-                Terminal: mod.Terminal,
-                FitAddon: fitMod.FitAddon,
-                ProgressAddon: progressMod.ProgressAddon,
-              };
-            });
+        return import(XTERM_BUNDLE).then(function (m) {
+          return m.loadXtermBundle().then(function (libs) {
+            // The page wires its own progress addon (state.progress + bar),
+            // so applyXtermAddons skips progress to avoid a duplicate bar.
+            libs.applyXtermAddons = function (xterm) {
+              m.applyXtermAddons(xterm, libs, { progress: false });
+            };
+            return libs;
           });
         });
       }
@@ -277,6 +274,7 @@
             var host = $("term-host");
             host.innerHTML = "";
             state.xterm = new libs.Terminal({
+              allowProposedApi: true,
               termName: "ghostty",
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
               fontSize: 14,
@@ -299,6 +297,7 @@
               updateProgress(progress);
             });
             state.xterm.open(host);
+            libs.applyXtermAddons(state.xterm);
             enableTapFocus(state.xterm, host);
             // fitWhenReady (below) fits once the host has real dimensions;
             // an eager fit() at panel-layout time would size xterm to

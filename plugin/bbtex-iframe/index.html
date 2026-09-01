@@ -50,8 +50,7 @@
     (function () {
       "use strict";
 
-      var XTERM_URL = "https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.mjs";
-      var FIT_URL = "https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.12.0-beta.301/lib/addon-fit.mjs";
+      var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
       var MAX_OPEN = 12;
       var W9Y_EXAMPLE = function (id) { return "/opfs/wanix/examples/" + id; };
 
@@ -260,6 +259,7 @@
       function attachTerminal(entry) {
         var body = entry.body;
         entry.xterm = new window.Terminal({
+              allowProposedApi: true,
           fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
           fontSize: 13,
           lineHeight: 1.2,
@@ -276,6 +276,7 @@
         entry.fit = new window.FitAddon();
         entry.xterm.loadAddon(entry.fit);
         entry.xterm.open(body);
+        window.ApplyXtermAddons(entry.xterm);
         enableTapFocus(entry.xterm, body);
         entry.xterm.onData(function (data) {
           if (!entry.sessionId || entry.disposed) return;
@@ -468,8 +469,16 @@
           return;
         }
         return Promise.all([
-          import(XTERM_URL).then(function (mod) { window.Terminal = mod.Terminal; }),
-          import(FIT_URL).then(function (mod) { window.FitAddon = mod.FitAddon; }),
+          import(XTERM_BUNDLE).then(function (m) {
+            return m.loadXtermBundle().then(function (libs) {
+              window.Terminal = libs.Terminal;
+              window.FitAddon = { FitAddon: libs.FitAddon };
+              // Each terminal card applies the full wanix addon set.
+              window.ApplyXtermAddons = function (xterm) {
+                m.applyXtermAddons(xterm, libs);
+              };
+            });
+          }),
           GearShell.subscribe("term.data"),
           GearShell.subscribe("term.exit"),
           GearShell.subscribe("w9y.changed"),
