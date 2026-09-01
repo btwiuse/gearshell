@@ -54,6 +54,26 @@
 
       function $(id) { return document.getElementById(id); }
 
+      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
+      // xterm listens for after the terminal lost focus, so a tap would never
+      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
+      function enableTapFocus(term, host) {
+        var touchStart = null;
+        host.addEventListener("touchstart", function (event) {
+          var t = event.changedTouches[0];
+          if (t) touchStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+        host.addEventListener("touchend", function (event) {
+          if (!touchStart) return;
+          var t = event.changedTouches[0];
+          var moved = t
+            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
+            : 0;
+          touchStart = null;
+          if (moved < 12) term.focus();
+        }, { passive: true });
+      }
+
       function setStatus(mode, text) {
         state.status = mode;
         var bar = $("rv64-status");
@@ -202,6 +222,7 @@
           scrollback: 5000,
         });
         state.xterm.open($("rv64-term"));
+        enableTapFocus(state.xterm, $("rv64-term"));
         wireXterm(state.xterm);
         boot().catch(function (err) {
           console.error(err);

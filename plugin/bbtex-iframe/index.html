@@ -136,6 +136,26 @@
       var statusTimer = null;
 
       function $(id) { return document.getElementById(id); }
+
+      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
+      // xterm listens for after the terminal lost focus, so a tap would never
+      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
+      function enableTapFocus(term, host) {
+        var touchStart = null;
+        host.addEventListener("touchstart", function (event) {
+          var t = event.changedTouches[0];
+          if (t) touchStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+        host.addEventListener("touchend", function (event) {
+          if (!touchStart) return;
+          var t = event.changedTouches[0];
+          var moved = t
+            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
+            : 0;
+          touchStart = null;
+          if (moved < 12) term.focus();
+        }, { passive: true });
+      }
       function el(tag, className, text) {
         var node = document.createElement(tag);
         if (className) node.className = className;
@@ -256,6 +276,7 @@
         entry.fit = new window.FitAddon();
         entry.xterm.loadAddon(entry.fit);
         entry.xterm.open(body);
+        enableTapFocus(entry.xterm, body);
         entry.xterm.onData(function (data) {
           if (!entry.sessionId || entry.disposed) return;
           GearShell.terminal.write(entry.sessionId, new TextEncoder().encode(data))

@@ -194,6 +194,26 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
       "use strict";
 
       function $(id) { return document.getElementById(id); }
+
+      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
+      // xterm listens for after the terminal lost focus, so a tap would never
+      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
+      function enableTapFocus(term, host) {
+        var touchStart = null;
+        host.addEventListener("touchstart", function (event) {
+          var t = event.changedTouches[0];
+          if (t) touchStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+        host.addEventListener("touchend", function (event) {
+          if (!touchStart) return;
+          var t = event.changedTouches[0];
+          var moved = t
+            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
+            : 0;
+          touchStart = null;
+          if (moved < 12) term.focus();
+        }, { passive: true });
+      }
       function out(el, value) {
         if (typeof value === "string") { el.textContent = value; return; }
         el.textContent = JSON.stringify(value, null, 2) ?? String(value);
@@ -368,6 +388,7 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
             termState.fit = new mods[1].FitAddon();
             termState.xterm.loadAddon(termState.fit);
             termState.xterm.open(host);
+            enableTapFocus(termState.xterm, host);
             termState.fit.fit();
             termState.xterm.onData(function (data) {
               termWrite(termState.sessionId, data);
