@@ -1504,3 +1504,16 @@ extras 重打,gearshell 待推):
   resize 机制本身通(默认 100 100 生效)。宿主 wasm 曾为旧 debug 构建;workspace
   pin 已同步 v0.4.33 后仍无效。隔离页 wanix/examples/v86-resize-test.html 保留。
   下一步候选:重建/重发 v86.tgz 并加日志,或对照 rv64 适配器(同模式可用)。
+
+## 四十七、移除独立 VM 面板,资产配置归 v86(2026-09-02)
+
+- 独立 VM 面板(plugin/vm)功能被 v86 插件覆盖,整体移除。
+- 删除:plugin/vm/(vm-config.js、vm-plugin.js、vm-panel.js、guest rc)、
+  DEFAULT_VM_BACKEND_URL/LINUX_URL、getVmPanelConfig、addVmPanel、
+  attachVmSession、config 键 vmBackendUrl/vmLinuxUrl/vmMemory/vmNetworkMode/
+  vmWispUrl + normalize*、Settings Wanix tools 的 VM 字段、launcher "vm" 项、
+  saved-layout 的 vm 恢复分支。commit c61285b。
+- 保留:bridge 的 VM 会话引擎(createVmSession/startVmSession/vm.create,
+  供 v86 在宿主 kernel 跑),自身内联 fallback URL,不再读宿主 VM config。
+- 结论印证:wanix-linux.tgz 是 x86-only(boot/bzImage),rv64 用独立的
+  wanix-linux-rv64.tgz,故 VM 面板移除不影响 rv64。
