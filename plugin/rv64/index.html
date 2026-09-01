@@ -48,6 +48,9 @@
         fit: null,
         vm: null,
         status: "loading",
+        // ttyS0 (console) is only shown until hvc0 emits; afterwards both
+        // kernel consoles duplicate every printk (console=ttyS0 console=hvc0).
+        hvcLive: false,
         resizeObserver: null,
         resizeFrame: 0,
       };
@@ -185,13 +188,16 @@
           },
           events: {
             console: function (data) {
-              writeToXterm(data);
+              // Early boot lives on ttyS0; once hvc0 is live the same printk
+              // arrives on both streams, so keep only hvc0 to avoid doubling.
+              if (!state.hvcLive) writeToXterm(data);
               if (state.status === "loading") {
                 setStatus("ready", "ready");
                 refitAndResize();
               }
             },
             export: function (data) {
+              state.hvcLive = true;
               writeToXterm(data);
               if (state.status === "loading") {
                 setStatus("ready", "ready");
