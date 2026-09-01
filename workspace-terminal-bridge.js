@@ -41,6 +41,7 @@ import {
   getDefaultTerminalProfile,
 } from "./app-terminal-profiles.js";
 import { getWanixRoot } from "./app-state.js";
+import { nextVmMac } from "./workspace-vm-mac.js";
 
 // The standalone VM panel was removed; vm.create is driven by plugins
 // (v86) that pass their own assets. These are the host fallback used only
@@ -265,13 +266,20 @@ function handleVmCreate(event, id, args) {
   // The standalone VM panel was removed; vm.create is driven by plugins
   // (v86) that pass their own assets. A minimal inline default keeps an
   // unparameterized session working without re-introducing host VM config.
+  const req = (args[0] && typeof args[0] === "object") ? args[0] : {};
   const config = {
-    backendUrl: args[0]?.backendUrl || FALLBACK_VM_BACKEND_URL,
-    linuxUrl: args[0]?.linuxUrl || FALLBACK_VM_LINUX_URL,
-    memory: args[0]?.memory || "512M",
-    netdev: args[0]?.netdev || "",
-    ...(args[0] && typeof args[0] === "object" ? args[0] : {}),
+    backendUrl: req.backendUrl || FALLBACK_VM_BACKEND_URL,
+    linuxUrl: req.linuxUrl || FALLBACK_VM_LINUX_URL,
+    memory: req.memory || "512M",
+    netdev: req.netdev || "",
+    ...req,
   };
+  // The vnet gateway assigns IPs by the guest NIC's MAC, so every VM
+  // instance needs a unique MAC or concurrent guests collide onto one IP.
+  // Inject one into the netdev unless the caller already supplied it.
+  if (config.netdev && !config.netdev.includes("mac=")) {
+    config.netdev += ",mac=" + nextVmMac();
+  }
   const vmSession = createVmSession(`bridge-${sessionId}`, config);
   const entry = {
     sessionId,
