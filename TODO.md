@@ -1197,6 +1197,12 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 三十九、Launcher 焦点与键盘导航(2026-09-02)
+
+- Launcher 激活时向页面派发 `GearShellPanelFocused`，Launcher 搜索框自动获得焦点。
+- 搜索框中的 ArrowUp/ArrowDown 在 Launcher item list 中循环移动焦点，Enter 点击当前
+  item，保留鼠标操作和现有搜索过滤行为。
+
 ## 三十八、Settings iframe 禁用 overscroll(2026-09-02)
 
 - Settings iframe 的 `html`、`body` 与 `.settings-panel` 统一设置

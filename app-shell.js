@@ -88,6 +88,9 @@ function trackActivePanel(api) {
     if (!activeEvent.panel) return;
     const idx = api.panels.findIndex((p) => p.id === activeEvent.panel.id);
     if (idx < 0) return;
+    if (activeEvent.panel.params?.panelType === "launcher") {
+      window.dispatchEvent(new Event("GearShellPanelFocused"));
+    }
     const workspace = loadActiveWorkspace();
     if (workspace.ui?.activeOpenPanelIndex === idx) return;
     workspace.ui = { ...workspace.ui, activeOpenPanelIndex: idx };

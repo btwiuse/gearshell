@@ -15,7 +15,7 @@
 // Mirrors the same pattern used by home.js / settings.js /
 // crush-runner.js / files.js / runtime.js / deck.js.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Ellipsis, Star } from "lucide-react";
 import { nextPanelIndex } from "../../app-panel-ids.js";
 import htm from "htm";
@@ -159,6 +159,7 @@ function renderLauncherRow(
     : html`
       <button
         key=${option.component}
+        className="launcher-item-action"
         type="button"
         onClick=${() => addPanel(option.component)}
       >
@@ -236,6 +237,17 @@ function useLauncherSearch() {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   return { query, setQuery, q };
+}
+
+function useLauncherFocus(searchRef) {
+  useEffect(() => {
+    const focusSearch = () => {
+      requestAnimationFrame(() => searchRef.current?.focus());
+    };
+    focusSearch();
+    window.addEventListener("GearShellPanelFocused", focusSearch);
+    return () => window.removeEventListener("GearShellPanelFocused", focusSearch);
+  }, [searchRef]);
 }
 
 // Pinned-first + collapsed split of the ordered catalog.
@@ -316,6 +328,7 @@ function LauncherActions(
 }
 
 function FallbackPage({ containerApi, className }) {
+  const searchRef = useRef(null);
   const { showMore, setShowMore, collapsedItems } = useLauncherCollapsedState();
   const { pinnedItems, togglePin } = useLauncherPins();
   const { query, setQuery, q } = useLauncherSearch();
@@ -337,6 +350,9 @@ function FallbackPage({ containerApi, className }) {
     pinned,
     togglePin,
   });
+  useEffect(() => {
+    searchRef.current?.focus();
+  }, []);
   const matches = q
     ? options.filter((option) =>
       option.label.toLowerCase().includes(q) ||
@@ -354,6 +370,7 @@ function FallbackPage({ containerApi, className }) {
     showMore=${showMore}
     setShowMore=${setShowMore}
     q=${q}
+    searchRef=${searchRef}
   />`;
 }
 
@@ -370,8 +387,23 @@ function LauncherCard(
     showMore,
     setShowMore,
     q,
+    searchRef,
   },
 ) {
+  const onKeyDown = (event) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Enter") return;
+    const items = [...event.currentTarget.closest(".empty-workspace-card").querySelectorAll(".launcher-item-action")];
+    if (!items.length) return;
+    const index = items.indexOf(document.activeElement);
+    if (event.key === "Enter" && index >= 0) {
+      event.preventDefault();
+      document.activeElement.click();
+      return;
+    }
+    event.preventDefault();
+    const next = event.key === "ArrowDown" ? index + 1 : index - 1;
+    (items[(next + items.length) % items.length] || items[0]).focus();
+  };
   return html`
     <div className=${className}>
       <div className="empty-workspace-card">
@@ -381,6 +413,8 @@ function LauncherCard(
           type="search"
           placeholder="Search apps…"
           aria-label="Search apps"
+          ref=${searchRef}
+          onKeyDown=${onKeyDown}
           value=${query}
           onChange=${(event) => setQuery(event.target.value)}
         />
