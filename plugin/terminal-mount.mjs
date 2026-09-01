@@ -35,6 +35,7 @@
 //     onData: (bytes) => {},                             // observe each output chunk
 //     onExit: (payload) => {},                           // observe session exit
 //     exitMessage: "\x1b[33m[Process exited]\x1b[0m",      // line on exit; false to skip
+//     snapToRows: true,                                    // false to disable row snapping
 //   });
 
 import { loadXtermBundle, applyXtermAddons } from "./xterm-bundle.mjs";
@@ -113,9 +114,31 @@ export async function mountTerminal(anchor, session, options = {}) {
     } catch {}
   };
   // fit to the anchor then forward (anchor ResizeObserver / window resize).
+  // `snapToRows` is on by default (option.snapToRows !== false): xterm only
+  // renders whole rows, so when the anchor height is not an exact multiple of
+  // the cell height a fractional strip would hang inside the terminal's scroll
+  // area below the last row. Snap the xterm element down to the nearest
+  // whole-row height so the terminal ends flush on its last row (native-
+  // terminal behaviour) and the scroll area has no blank tail. Only the
+  // element height is touched, so the observer on the anchor never loops and
+  // the terminal keeps tracking panel resizes.
+  const snapToRows = () => {
+    if (options.snapToRows === false) return;
+    const elt = term.element;
+    if (!elt || !term.rows) return;
+    const screen = elt.querySelector(".xterm-screen");
+    const cell = screen && screen.offsetHeight ? screen.offsetHeight / term.rows : 0;
+    const rowsH = term.rows * cell;
+    const avail = anchor.offsetHeight;
+    if (!cell || !rowsH || !avail) return;
+    // Snap only when the fractional strip is meaningful (>= half a cell) to
+    // avoid needless jitter when a resize lands on a near-multiple.
+    elt.style.height = avail - rowsH >= cell / 2 ? rowsH + "px" : "";
+  };
   const refitAndResize = () => {
     try {
       fit.fit();
+      snapToRows();
       forwardSize();
     } catch {}
   };
