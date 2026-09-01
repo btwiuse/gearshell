@@ -52,3 +52,32 @@ export function normalizeRuntimeConfig(runtime = {}) {
     ...(moduleUrl ? { moduleUrl } : {}),
   };
 }
+
+// Resolve the effective wanix runtime pair for this boot. Workspaces saved
+// on other devices persist their own moduleUrl/wasmUrl (often an older tag);
+// a stale or broken override must never prevent the system from loading.
+// The configured module is probed first; on failure the packaged default
+// pair is used instead. The pair always falls back together so the module
+// and the wasm stay on the same wanix version.
+export async function resolveWanixRuntime(runtime = {}) {
+  const configured = runtime && typeof runtime === "object" ? runtime : {};
+  const { moduleUrl, wasmUrl } = WANIX_RUNTIME;
+  const configuredModule = configured.moduleUrl;
+  const configuredWasm = configured.wasmUrl;
+  if (!configuredModule || configuredModule === moduleUrl) {
+    // No override (or already the packaged default): load the default pair,
+    // keeping a configured wasm that points at the same module.
+    return { moduleUrl, wasmUrl: configuredWasm || wasmUrl };
+  }
+  try {
+    await import(configuredModule);
+  } catch (error) {
+    console.warn(
+      "[wanix] configured runtime module failed to load; falling back to the packaged default.",
+      configuredModule,
+      error,
+    );
+    return { moduleUrl, wasmUrl };
+  }
+  return { moduleUrl: configuredModule, wasmUrl: configuredWasm || wasmUrl };
+}

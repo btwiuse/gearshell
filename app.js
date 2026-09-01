@@ -67,6 +67,7 @@ import {
   workspaceTaskSessions,
 } from "./app-state.js";
 import { createWanixSystem } from "./app-wanix.js";
+import { resolveWanixRuntime } from "./app-normalize-runtime.js";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,
@@ -201,8 +202,12 @@ loadW9yRegistry().catch((error) => {
 // NOTE: the dual-mode dependency sync (ensureW9yDependencies) is NOT here
 // (pre-runtime, before initPanels) — the apply path needs panelsDep +
 // GearShell, so it fires after initWorkspaceApi below.
-await import(systemWorkspace.runtime.moduleUrl || WANIX_RUNTIME.moduleUrl);
-const wanixSystem = createWanixSystem(systemWorkspace);
+// Resolve the runtime pair first so a stale workspace pin falls back to the
+// packaged default; then load the module (this import is the boot gate) and
+// build the system with the same pair the module resolved to.
+const effectiveRuntime = await resolveWanixRuntime(systemWorkspace.runtime);
+await import(effectiveRuntime.moduleUrl);
+const wanixSystem = createWanixSystem(systemWorkspace, effectiveRuntime);
 setSystemReady(Boolean(wanixSystem?.isReady));
 setWanixSystem(wanixSystem);
 setTerminalLayer(wanixSystem.querySelector("#terminal-layer"));

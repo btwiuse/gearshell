@@ -21,12 +21,12 @@ export function createWanixBindElement(bind) {
   >${bind.content || null}</wanix-bind>`;
 }
 
-export function createWanixSystem(workspace = loadActiveWorkspace()) {
+export function createWanixSystem(workspace = loadActiveWorkspace(), runtime = {}) {
   const host = document.getElementById("wanix-host");
   if (!host) throw new Error("Unable to find the Wanix host.");
   const system = html`<wanix-namespace
     id="wanix-system"
-    wasm=${workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl}
+    wasm=${runtime.wasmUrl || workspace.runtime.wasmUrl || WANIX_RUNTIME.wasmUrl}
     allow-origins=${workspace.system.allowOrigins || null}
   />`;
 
