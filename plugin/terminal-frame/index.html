@@ -145,7 +145,6 @@
         $("term-host").innerHTML = "";
         import(MOUNT_BUNDLE).then(function (m) {
           return m.mountTerminal($("term-host"), m.iframeSession(GearShell), {
-            progress: false, // the page wires its own ProgressAddon below
             terminal: {
               termName: "ghostty",
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
@@ -159,7 +158,10 @@
                 selectionBackground: "#1f6feb66",
               },
             },
-            // Wire the page's progress bar; the helper skips its own.
+            // The helper already loads the shared ProgressAddon (a pure OSC
+            // 9;4 escape listener that renders nothing). This page loads its
+            // own so it can onChange() the bar; xterm chains multiple handlers
+            // per OSC number, so both coexist and only this one renders.
             setupAddons: function (term, libs) {
               state.progress = new libs.ProgressAddon();
               term.loadAddon(state.progress);

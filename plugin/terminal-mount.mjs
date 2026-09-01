@@ -31,7 +31,6 @@
 //   const { term, fit, sessionId, dispose } = await mountTerminal(anchor, session, {
 //     terminal: { fontFamily, fontSize, theme, ... },   // any Terminal options
 //     transformInput: (data) => data,                   // optional input rewrite
-//     progress: false,                                   // skip the shared progress addon
 //     setupAddons: (term, libs) => {},                   // extra addon setup (called last)
 //     onData: (bytes) => {},                             // observe each output chunk
 //     onExit: (payload) => {},                           // observe session exit
@@ -93,7 +92,7 @@ export async function mountTerminal(anchor, session, options = {}) {
   const fit = new libs.FitAddon();
   term.loadAddon(fit);
   term.open(anchor);
-  applyXtermAddons(term, libs, { progress: options.progress !== false });
+  applyXtermAddons(term, libs);
   if (typeof options.setupAddons === "function") {
     options.setupAddons(term, libs);
   }

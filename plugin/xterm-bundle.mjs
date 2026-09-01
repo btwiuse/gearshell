@@ -50,17 +50,17 @@ export async function loadXtermBundle() {
 }
 
 // Apply the wanix kernel's addon set to a freshly created xterm. Call
-// after xterm.open(host) so the addons can bind to the DOM. Pass
-// { progress: false } when the page wires its own progress addon so the
-// overlay bar is not rendered twice.
-export function applyXtermAddons(xterm, libs, options = {}) {
+// after xterm.open(host) so the addons can bind to the DOM. The progress
+// addon is always loaded: it only registers an OSC 9;4 escape handler and
+// exposes an onChange event — it renders nothing itself, so a page that
+// draws its own progress bar can load another ProgressAddon safely (xterm
+// chains multiple handlers per OSC number) or listen to this one.
+export function applyXtermAddons(xterm, libs) {
   xterm.loadAddon(new libs.ClipboardAddon());
   xterm.loadAddon(new libs.ImageAddon());
   xterm.loadAddon(new libs.CursorTrailAddon());
   xterm.loadAddon(new libs.Unicode11Addon());
   xterm.unicode.activeVersion = "11";
   xterm.loadAddon(new libs.WebLinksAddon());
-  if (options.progress !== false) {
-    xterm.loadAddon(new libs.ProgressAddon());
-  }
+  xterm.loadAddon(new libs.ProgressAddon());
 }
