@@ -1212,6 +1212,9 @@ extras 重打,gearshell 待推):
 - Playground iframe 根布局固定为 `100vh` 且 `html/body/#app` 隐藏外层溢出；
   Tab 内容不再撑高 iframe，Explorer detail、Providers、Events 在内部滚动，
   左侧 API column 继续独立保留 scrollbar。
+- Settings iframe 的启用 Plugin 卡片增加 `Open` 快捷入口，调用
+  `panels.open(plugin.panels[0])`，行为等价于从 Launcher 打开该插件；禁用插件不显示
+  入口，仍保留 Enable/Disable 操作。
 - 注:libv86 resize handler 还写 config-space this.cols=e[0](收 [rows,cols] 时
   config 里 cols/rows 是反的);guest 只走控制消息路径不用 config,故无害,
   但别再依赖 config 空间。

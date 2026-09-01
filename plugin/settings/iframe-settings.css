@@ -27,6 +27,7 @@ body { overflow: auto; }
 .resource-card strong { color: #f0f6fc; overflow-wrap: anywhere; }
 .resource-card > span { color: #8b949e; overflow-wrap: anywhere; }
 .resource-card button { border: 1px solid #30363d; border-radius: 5px; padding: 5px 9px; background: #21262d; color: #c9d1d9; cursor: pointer; }
+.resource-card > div:last-child { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .editor-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; }
 .editor-form input, .editor-form select, .editor-form textarea { min-width: 0; padding: 7px 9px; border: 1px solid #30363d; border-radius: 5px; background: #161b22; color: #c9d1d9; font: inherit; }
 .icon-picker { display: grid; grid-template-columns: 42px minmax(0, 1fr) minmax(150px, 1fr); grid-column: span 2; gap: 8px; align-items: center; }

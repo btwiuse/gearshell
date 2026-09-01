@@ -323,9 +323,15 @@
       const card = document.createElement("article"); card.className = "resource-card";
       const title = document.createElement("strong"); title.textContent = plugin.name || plugin.id;
       const meta = document.createElement("span"); meta.textContent = `${plugin.version || ""} · ${plugin.iframe ? "iframe" : "builtin"}`;
+      const actions = document.createElement("div");
       const toggle = document.createElement("button"); toggle.type = "button"; toggle.textContent = plugin.enabled ? "Disable" : "Enable"; toggle.disabled = plugin.required === true;
       toggle.onclick = async () => { try { await call("config.plugins.setEnabled", plugin.id, !plugin.enabled); await load(); status("Plugin state saved"); } catch (error) { status(error.message || String(error), true); } };
-      card.append(title, meta, toggle); list.append(card);
+      if (plugin.enabled && (plugin.panels || []).length > 0) {
+        const open = document.createElement("button"); open.type = "button"; open.textContent = "Open"; open.title = "Open this plugin like Launcher";
+        open.onclick = async () => { try { await call("panels.open", plugin.panels[0]); } catch (error) { status(error.message || String(error), true); } };
+        actions.append(open);
+      }
+      actions.append(toggle); card.append(title, meta, actions); list.append(card);
     }
     if (!plugins.length) list.textContent = "No plugins configured.";
   };
