@@ -397,16 +397,17 @@ function LauncherCard(
     const index = items.indexOf(document.activeElement);
     if (event.key === "Enter" && index >= 0) {
       event.preventDefault();
-      document.activeElement.click();
+      items[index].click();
       return;
     }
     event.preventDefault();
-    const next = event.key === "ArrowDown" ? index + 1 : index - 1;
-    (items[(next + items.length) % items.length] || items[0]).focus();
+    const start = index < 0 ? (event.key === "ArrowDown" ? -1 : 0) : index;
+    const next = event.key === "ArrowDown" ? start + 1 : start - 1;
+    items[(next + items.length) % items.length].focus();
   };
   return html`
     <div className=${className}>
-      <div className="empty-workspace-card">
+      <div className="empty-workspace-card" onKeyDown=${onKeyDown}>
         <p>Task Launcher</p>
         <input
           className="launcher-search"
@@ -414,7 +415,6 @@ function LauncherCard(
           placeholder="Search apps…"
           aria-label="Search apps"
           ref=${searchRef}
-          onKeyDown=${onKeyDown}
           value=${query}
           onChange=${(event) => setQuery(event.target.value)}
         />
