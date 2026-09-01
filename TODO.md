@@ -1461,3 +1461,13 @@ extras 重打,gearshell 待推):
   plugin/v86/index.html)。
 - 待办:wtop/wrepeat 的 wexec-js 未在页面实测;fetch relay 慢是已知瓶颈;
   guest 安装不持久(命名空间 RAM)。
+
+
+## 四十三、wanix runtime 加载回退(2026-09-02)
+
+- 问题:localStorage 旧 pin(semver 被视为用户自定义,normalize 不迁移)在
+  新发布后仍被旧设备导入;URL 失效则 app.js 的 import() reject,整页加载失败。
+- 修复(方向1,commit 79fdc51):resolveWanixRuntime() 先试配置 module,失败
+  回退源码默认对(module+wasm 成对);app.js boot 门接入;可用 pin 仍尊重。
+- 实测:404 pin 自动回退 v0.4.32 启动;v0.4.29 恢复后照常加载;node 单测 7/7。
+- 未选:?debug 模式、出错手动指定版本(设置面板已有手动改 URL 能力)。
