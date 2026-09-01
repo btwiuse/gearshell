@@ -35,25 +35,9 @@ function queryConfigElements(settingsContent) {
     integrationEls: [
       ...settingsContent.querySelectorAll("[data-config-value]"),
     ],
-    vmNetworkModeEl: settingsContent.querySelector(
-      '[data-config-value="vmNetworkMode"]',
-    ),
-    vmWispUrlEl: settingsContent.querySelector(
-      '[data-config-value="vmWispUrl"]',
-    ),
     saveButton: settingsContent.querySelector('[data-config-action="save"]'),
     resetButton: settingsContent.querySelector('[data-config-action="reset"]'),
   };
-}
-
-function syncVmNetworkFields(els) {
-  if (!els.vmNetworkModeEl || !els.vmWispUrlEl) return;
-  const enabled = els.vmNetworkModeEl.value === "wisp";
-  els.vmWispUrlEl.disabled = !enabled;
-  els.vmWispUrlEl.closest(".cfg-network-field")?.classList.toggle(
-    "disabled",
-    !enabled,
-  );
 }
 
 function fillConfigFields(els, cfg) {
@@ -66,7 +50,6 @@ function fillConfigFields(els, cfg) {
   for (const input of els.integrationEls) {
     input.value = cfg[input.dataset.configValue] || "";
   }
-  syncVmNetworkFields(els);
 }
 
 function flashConfigStatus(settingsContent, message, color) {
@@ -80,17 +63,6 @@ function flashConfigStatus(settingsContent, message, color) {
 
 function wireConfigSave(settingsContent, els, showConfigStatus) {
   els.saveButton.addEventListener("click", () => {
-    if (
-      els.vmNetworkModeEl?.value === "wisp" &&
-      !settingsDep("normalizeVmWispUrl")(els.vmWispUrlEl?.value)
-    ) {
-      showConfigStatus(
-        settingsContent,
-        "Enter a valid Wisp server URL.",
-        "#f85149",
-      );
-      return;
-    }
     const config = settingsDep("loadConfig")();
     settingsDep("saveConfig")({
       ...config,
@@ -127,10 +99,6 @@ export function setupConfigForm(settingsContent) {
     fillConfigFields(els, settingsDep("loadConfig")());
   };
   populate();
-  els.vmNetworkModeEl?.addEventListener(
-    "change",
-    () => syncVmNetworkFields(els),
-  );
   wireConfigSave(settingsContent, els, flashConfigStatus);
   wireConfigReset(settingsContent, els, flashConfigStatus);
   window.addEventListener(settingsDep("WORKSPACE_CHANGED_EVENT"), populate);

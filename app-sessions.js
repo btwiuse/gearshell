@@ -335,30 +335,34 @@ export function destroyVmSession(id) {
 }
 
 // Binds mounted into the VM task namespace over the rootfs image: the
-// archive itself plus the guest boot overlay (auto-network + tmpfs for
-// unix sockets, see plugin/vm/guest-boot-rc). Later binds win, so the
-// file overlays shadow nothing but their own paths.
+// archive itself plus an optional guest boot overlay / network hook
+// (the v86 plugin supplies its own boot/rc + post-dhcp via vm.create;
+// the standalone VM panel was removed, so no host defaults remain).
 function createVmGuestBinds(config) {
+  const rc = config.bootRc;
+  const dhcp = config.postDhcp;
   return [
     createWanixBindElement({
       type: "archive",
       dst: ".",
       src: config.linuxUrl,
     }),
-    createWanixBindElement({
-      type: "file",
-      dst: "boot/rc",
-      src: config.bootRc || (config.netdev
-        ? "/plugin/vm/guest-boot-network-rc"
-        : "/plugin/vm/guest-boot-rc"),
-      mode: "0755",
-    }),
-    createWanixBindElement({
-      type: "file",
-      dst: "bin/post-dhcp",
-      src: config.postDhcp || "/plugin/vm/guest-post-dhcp",
-      mode: "0755",
-    }),
+    ...(rc
+      ? [createWanixBindElement({
+        type: "file",
+        dst: "boot/rc",
+        src: rc,
+        mode: "0755",
+      })]
+      : []),
+    ...(dhcp
+      ? [createWanixBindElement({
+        type: "file",
+        dst: "bin/post-dhcp",
+        src: dhcp,
+        mode: "0755",
+      })]
+      : []),
   ];
 }
 
@@ -408,8 +412,3 @@ export function startVmSession(session, options = {}) {
   return session.startPromise;
 }
 
-export function attachVmSession(id, config, anchor, api) {
-  const session = getVmSession(id, config);
-  startVmSession(session);
-  return createOverlayAttachment(session, anchor, api);
-}

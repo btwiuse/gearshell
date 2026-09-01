@@ -39,9 +39,16 @@ import {
 } from "./app-sessions.js";
 import {
   getDefaultTerminalProfile,
-  getVmPanelConfig,
 } from "./app-terminal-profiles.js";
 import { getWanixRoot } from "./app-state.js";
+
+// The standalone VM panel was removed; vm.create is driven by plugins
+// (v86) that pass their own assets. These are the host fallback used only
+// when a session arrives without an explicit archive/rootfs.
+const FALLBACK_VM_BACKEND_URL =
+  "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc3/v86.tgz";
+const FALLBACK_VM_LINUX_URL =
+  "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
 
 // sessionId -> { session|vmSession, kind, reader, writer, source, origin,
 // exitTimer, disposed } — kind is "task" (shell session) or "vm".
@@ -255,8 +262,14 @@ function handleCreate(event, id, args) {
 // them with terminal.write / terminal.resize.
 function handleVmCreate(event, id, args) {
   const sessionId = `bridge-vm-${++sessionCounter}`;
+  // The standalone VM panel was removed; vm.create is driven by plugins
+  // (v86) that pass their own assets. A minimal inline default keeps an
+  // unparameterized session working without re-introducing host VM config.
   const config = {
-    ...getVmPanelConfig(),
+    backendUrl: args[0]?.backendUrl || FALLBACK_VM_BACKEND_URL,
+    linuxUrl: args[0]?.linuxUrl || FALLBACK_VM_LINUX_URL,
+    memory: args[0]?.memory || "512M",
+    netdev: args[0]?.netdev || "",
     ...(args[0] && typeof args[0] === "object" ? args[0] : {}),
   };
   const vmSession = createVmSession(`bridge-${sessionId}`, config);

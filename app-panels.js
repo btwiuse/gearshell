@@ -7,7 +7,6 @@ import {
 } from "./app-workspace.js";
 import {
   getDefaultTerminalProfile,
-  getVmPanelConfig,
   getWorkbenchPanelConfig,
 } from "./app-terminal-profiles.js";
 import {
@@ -18,7 +17,6 @@ import { reserveCrushRunnerIds } from "./plugin/crush-runner/crush-runner.js";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
-  addVmPanel as addVmPanelFromPanels,
   addWorkbenchPanel as addWorkbenchPanelFromPanels,
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
 } from "./panels.js";
@@ -92,8 +90,6 @@ function addRestoredPanel(api, panel) {
       undefined,
       panel.config || getWorkbenchPanelConfig(),
     );
-  } else if (panel.component === "vm") {
-    addVmPanelFromPanels(api, undefined, panel.config || getVmPanelConfig());
   } else if (panel.component === "task" && panel.task) {
     addWorkspaceTaskPanelFromPanels(
       api,

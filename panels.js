@@ -181,23 +181,6 @@ function addWorkbenchPanel(
   return panel;
 }
 
-// === addVmPanel ===
-function addVmPanel(api, group, config = panelsDep("getVmPanelConfig")()) {
-  const id = nextPanelIndex("vm");
-  const panel = api.addPanel({
-    id: `vm-${id}`,
-    component: "vm",
-    params: { vmId: id, panelType: "vm", config: panelsDep("clone")(config) },
-    title: `VM ${id}`,
-    ...(group && { position: { referenceGroup: group } }),
-  });
-  panelsDep("rememberOpenPanel")(panel, {
-    component: "vm",
-    config: panelsDep("clone")(config),
-  });
-  panel.api.setActive();
-  return panel;
-}
 
 // === addIframePanel ===
 function addIframePanel(api, config, group) {
@@ -288,7 +271,6 @@ export {
   addIframePanel,
   addPanelByComponent,
   addTerminalPanel,
-  addVmPanel,
   addWorkbenchPanel,
   addWorkspaceTaskPanel,
   IframePanel,

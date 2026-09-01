@@ -238,26 +238,9 @@ export const SETTINGS_TEMPLATE_HTML =
             <details>
               <summary><span>Wanix tools</span></summary>
               <div class="body">
-                <p class="hint">New VM and Workbench panels use these workspace-local defaults. Existing panels keep their launch snapshot.</p>
+                <p class="hint">New Workbench panels use this workspace-local default. Existing panels keep their launch snapshot.</p>
                 <label for="workbench-assets-url">Workbench assets URL or path</label>
                 <input id="workbench-assets-url" data-config-value="workbenchAssetsUrl" type="text" spellcheck="false" placeholder="/wanix-workbench">
-                <label for="vm-linux-url">Linux archive URL</label>
-                <input id="vm-linux-url" data-config-value="vmLinuxUrl" type="url" spellcheck="false">
-                <label for="vm-backend-url">v86 backend archive URL</label>
-                <input id="vm-backend-url" data-config-value="vmBackendUrl" type="url" spellcheck="false">
-                <label for="vm-memory">VM memory</label>
-                <input id="vm-memory" data-config-value="vmMemory" type="text" inputmode="text" spellcheck="false" placeholder="512M">
-                <label for="vm-network-mode">VM network</label>
-                <select id="vm-network-mode" data-config-value="vmNetworkMode">
-                  <option value="none">Disabled</option>
-                  <option value="fetch">Browser fetch</option>
-                  <option value="wisp">Wisp relay</option>
-                </select>
-                <div class="cfg-network-field">
-                  <label for="vm-wisp-url">Wisp relay URL</label>
-                  <input id="vm-wisp-url" data-config-value="vmWispUrl" type="url" spellcheck="false" placeholder="wisps://relay.example.com">
-                  <p class="hint">Use <code>wisp://</code> or <code>wisps://</code>. New VM panels pass this URL to v86's built-in Wisp adapter.</p>
-                </div>
               </div>
             </details>
 

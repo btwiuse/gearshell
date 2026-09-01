@@ -3,15 +3,11 @@
 
 import {
   BUILTIN_TERMINAL_PROFILES,
-  DEFAULT_VM_BACKEND_URL,
-  DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
 } from "./app-constants.js";
 import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
-  normalizeVmNetworkMode,
-  normalizeVmWispUrl,
 } from "./app-normalize.js";
 import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js";
 import { loadConfig, saveConfig } from "./app-workspace.js";
@@ -61,21 +57,6 @@ export function getDefaultTerminalProfile(config = loadConfig()) {
 export function getWorkbenchPanelConfig(config = loadConfig()) {
   return {
     assetsUrl: config.workbenchAssetsUrl || DEFAULT_WORKBENCH_ASSETS_URL,
-  };
-}
-
-export function getVmPanelConfig(config = loadConfig()) {
-  const networkMode = normalizeVmNetworkMode(config.vmNetworkMode);
-  const wispUrl = normalizeVmWispUrl(config.vmWispUrl);
-  return {
-    backendUrl: config.vmBackendUrl || DEFAULT_VM_BACKEND_URL,
-    linuxUrl: config.vmLinuxUrl || DEFAULT_VM_LINUX_URL,
-    memory: config.vmMemory || "512M",
-    netdev: networkMode === "fetch"
-      ? "user,type=virtio,relay_url=fetch"
-      : networkMode === "wisp" && wispUrl
-      ? `user,type=virtio,relay_url=${wispUrl}`
-      : "",
   };
 }
 

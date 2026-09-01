@@ -4,10 +4,6 @@
 
 import { icons as LucideIcons } from "lucide-react";
 import {
-  VM_BACKEND_URL,
-  VM_LINUX_URL,
-} from "./plugin/vm/vm-config.js";
-import {
   DEFAULT_GEAR_BINARY_URL,
   DEFAULT_HUSH_BINARY_URL,
   DEFAULT_PLUGINS,
@@ -117,12 +113,6 @@ export const DEFAULT_CMD = "bash -rcfile /preset/profile";
 export const DEFAULT_WORKBENCH_ASSETS_URL = "/wanix-workbench";
 export const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL =
   "https://wanix.dev/workbench";
-// VM panel assets live with the plugin (plugin/vm/vm-config.js). These
-// re-exports are DEPRECATED compatibility aliases so existing config
-// normalization and saved snapshots keep resolving; new code should
-// import from the plugin.
-export { VM_BACKEND_URL as DEFAULT_VM_BACKEND_URL,
-  VM_LINUX_URL as DEFAULT_VM_LINUX_URL } from "./plugin/vm/vm-config.js";
 export const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = [
   "deck",
   "codigo",
@@ -134,7 +124,6 @@ export const DEFAULT_LAUNCHER_ITEM_ORDER = [
   "home",
   "deck",
   "workbench",
-  "vm",
   "settings",
   "files",
   "runtime",
@@ -165,11 +154,6 @@ export const DEFAULT_CONFIG = {
   restoreTabs: false,
   allowBackgroundPlayback: true,
   workbenchAssetsUrl: DEFAULT_WORKBENCH_ASSETS_URL,
-  vmBackendUrl: DEFAULT_VM_BACKEND_URL,
-  vmLinuxUrl: DEFAULT_VM_LINUX_URL,
-  vmMemory: "512M",
-  vmNetworkMode: "none",
-  vmWispUrl: "",
   wagiDogEnabled: false,
   widgetbot: false,
   providers: [],
@@ -207,7 +191,6 @@ export const STARTUP_PANEL_TYPES = [
   "deck",
   "terminal",
   "workbench",
-  "vm",
   "settings",
   "files",
   "runtime",

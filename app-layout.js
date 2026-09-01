@@ -57,7 +57,10 @@ function panelSnapshotFor(panel) {
     case "workbench":
       return { component: "workbench", config: clone(params.config) };
     case "vm":
-      return { component: "vm", config: clone(params.config) };
+      // The standalone VM panel was removed; its capability is covered
+      // by the v86 plugin and the terminal bridge (vm.create). A layout
+      // snapshot saved against the old component simply falls through.
+      return null;
     case "task":
       return {
         component: "task",

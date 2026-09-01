@@ -25,8 +25,6 @@ import {
   DEFAULT_HUSH_BINARY_URL,
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
-  DEFAULT_VM_BACKEND_URL,
-  DEFAULT_VM_LINUX_URL,
   DEFAULT_WORKBENCH_ASSETS_URL,
   HOME,
   isLegacyHushBinaryUrl,
@@ -222,14 +220,6 @@ export function normalizeShellConfig(config) {
     restoreTabs: config?.restoreTabs === true,
     allowBackgroundPlayback: config?.allowBackgroundPlayback !== false,
     workbenchAssetsUrl: normalizeWorkbenchAssetsUrl(config?.workbenchAssetsUrl),
-    vmBackendUrl: normalizeVmBackendUrl(config?.vmBackendUrl),
-    vmLinuxUrl: normalizeIntegrationUrl(
-      config?.vmLinuxUrl,
-      DEFAULT_VM_LINUX_URL,
-    ),
-    vmMemory: normalizeVmMemory(config?.vmMemory),
-    vmNetworkMode: normalizeVmNetworkMode(config?.vmNetworkMode),
-    vmWispUrl: normalizeVmWispUrl(config?.vmWispUrl),
     wagiDogEnabled: config?.wagiDogEnabled === true,
     widgetbot: config?.widgetbot === true,
     providers: normalizeProviders(config?.providers),
@@ -364,46 +354,6 @@ export function normalizeWorkbenchAssetsUrl(value) {
   return normalized === LEGACY_DEFAULT_WORKBENCH_ASSETS_URL
     ? DEFAULT_WORKBENCH_ASSETS_URL
     : normalized;
-}
-
-export function normalizeVmBackendUrl(value) {
-  const normalized = normalizeIntegrationUrl(value, DEFAULT_VM_BACKEND_URL);
-  // The temporary custom archive was pinned to a wanix-extras commit
-  // hash; only the semver-pinned public archive is supported going
-  // forward, so restore workspaces that inherited the commit-pinned one.
-  return isLegacyVmBackendUrl(normalized) ? DEFAULT_VM_BACKEND_URL : normalized;
-}
-
-function isLegacyVmBackendUrl(url) {
-  return typeof url === "string" &&
-    url.includes("wanix-extras@") &&
-    /@[0-9a-f]{7,}\/v86\.tgz$/.test(url);
-}
-
-export function normalizeVmMemory(value) {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  return /^\d+(?:[KMG])?$/i.test(normalized)
-    ? normalized.toUpperCase()
-    : "512M";
-}
-
-export function normalizeVmNetworkMode(value) {
-  return ["none", "fetch", "wisp"].includes(value) ? value : "none";
-}
-
-export function normalizeVmWispUrl(value) {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  if (!normalized) return "";
-  try {
-    const { protocol } = new URL(normalized);
-    // wisp: for the v86 wisp relay adapter; ws:/wss: for the raw-packet
-    // WebSocket adapter (vnet gateway), which also supports UDP/DHCP.
-    return ["wisp:", "wisps:", "ws:", "wss:"].includes(protocol)
-      ? normalized
-      : "";
-  } catch {
-    return "";
-  }
 }
 
 export function normalizeTerminalProfile(profile = {}) {

@@ -169,13 +169,6 @@ export const DEFAULT_PLUGINS = [
     entry: "/plugin/workbench/workbench-plugin.js",
   },
   {
-    id: "vm",
-    name: "VM",
-    version: "1.0.0",
-    icon: "Cpu",
-    entry: "/plugin/vm/vm-plugin.js",
-  },
-  {
     id: "settings",
     name: "Settings",
     version: "1.0.0",

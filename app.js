@@ -118,13 +118,11 @@ import {
   normalizePlugin,
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
-  normalizeVmWispUrl,
 } from "./app-normalize.js";
 import {
   buildEnv,
   getDefaultTerminalProfile,
   getTerminalProfiles,
-  getVmPanelConfig,
   getWorkbenchPanelConfig,
   saveTerminalProfiles,
   terminalCommand,
@@ -138,7 +136,6 @@ import {
 } from "./app-terminal-sessions.js";
 import {
   attachIframeSession,
-  attachVmSession,
   attachWorkbenchSession,
   waitForWanixSystem,
 } from "./app-sessions.js";
@@ -261,7 +258,6 @@ initLauncher({
 initPanels({
   attachTerminalSession,
   attachWorkbenchSession,
-  attachVmSession,
   attachWorkspaceTaskSession,
   attachIframeSession,
   loadActiveWorkspace,
@@ -277,7 +273,6 @@ initPanels({
   getWorkspaceTaskSession,
   taskEnvLines,
   getTerminalPresetIcon,
-  getVmPanelConfig,
   getWorkbenchPanelConfig,
   getDefaultTerminalProfile,
   // Cross-module add*Panel dispatchers so panels.js can route every
@@ -369,7 +364,6 @@ initSettings({
   saveConfig,
   resetConfig,
   normalizeLauncherOrder,
-  normalizeVmWispUrl,
   PANEL_CREATION_OPTIONS,
   WORKSPACE_CHANGED_EVENT,
   WANIX_RUNTIME,

@@ -114,10 +114,8 @@ for (
     "LandingPanel",
     "DeckPanel",
     "WorkbenchPanel",
-    "VmPanel",
     "component: 'deck'",
     "component: 'workbench'",
-    "component: 'vm'",
     'value="import"',
     'data-system="allow-origins"',
   ]
@@ -149,9 +147,6 @@ if (!has("panel.id.startsWith('workbench-')")) {
 }
 if (!has("window.dispatchEvent(new Event('resize'))")) {
   throw new Error("Workbench panels must forward Dockview resize events.");
-}
-if (!has("netdev=${session.config.netdev || null}")) {
-  throw new Error("VM panels must forward their saved network configuration.");
 }
 if (!has("DEFAULT_COLLAPSED_LAUNCHER_ITEMS")) {
   throw new Error("Launcher needs configurable default collapsed items.");
@@ -229,23 +224,9 @@ if (
 if (!has("terminal-profile-handle") || !has("onDragStart:")) {
   throw new Error("Terminal presets need drag reorder controls.");
 }
-if (!has("user,type=virtio,relay_url=${wispUrl}")) {
-  throw new Error("VM settings must derive v86's native Wisp relay argument.");
-}
-if (!has("user,type=virtio,relay_url=fetch")) {
-  throw new Error("VM settings must derive v86's native fetch relay argument.");
-}
-if (!has('data-config-value="vmWispUrl"')) {
-  throw new Error("Settings must expose the Wisp server URL.");
-}
 if (!has("wanix-extras@v0.4.0-rc3/v86.tgz")) {
   throw new Error(
-    "VMs must default to the public v86 archive with built-in Wisp support.",
-  );
-}
-if (!has("isLegacyVmBackendUrl")) {
-  throw new Error(
-    "Workspaces pinned to the commit-hash custom v86 archive must migrate to the semver-pinned public archive.",
+    "VM bridge sessions must fall back to the public v86 archive.",
   );
 }
 if (!has("Workbench assets URL or path")) {
