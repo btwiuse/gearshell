@@ -1233,6 +1233,9 @@ extras 重打,gearshell 待推):
 - Playground iframe 根布局固定为 `100vh` 且 `html/body/#app` 隐藏外层溢出；
   Tab 内容不再撑高 iframe，Explorer detail、Providers、Events 在内部滚动，
   左侧 API column 继续独立保留 scrollbar。
+- 移动端 Playground Explorer 改为上下分屏，API sidebar 位于上方，detail 位于下方；
+  中间 resizer 使用 Pointer Events 支持触摸/鼠标拖拽调整 sidebar 高度，桌面端保留左右
+  分屏并调整 sidebar 宽度。
 - Settings iframe 的启用 Plugin 卡片增加 `Open` 快捷入口，调用
   `panels.open(plugin.panels[0])`，行为等价于从 Launcher 打开该插件；禁用插件不显示
   入口，仍保留 Enable/Disable 操作。
