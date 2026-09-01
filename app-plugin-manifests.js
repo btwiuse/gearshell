@@ -137,6 +137,7 @@ export const DEFAULT_PLUGINS = [
   {
     id: "playground",
     name: "GearShell API Playground",
+    label: "GearShell API Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
     iframe: {
@@ -145,6 +146,8 @@ export const DEFAULT_PLUGINS = [
     },
     permissions: {
       api: [
+        "version",
+        "ping",
         "config.*",
         "panels.*",
         "browser.*",

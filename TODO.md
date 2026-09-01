@@ -1197,6 +1197,15 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 三十四、Playground iframe 名称与 Root API 权限修复(2026-09-02)
+
+- Playground 内置 manifest 的 `name`/`label` 统一为 `GearShell API Playground`，
+  并同步刷新已保存插件配置的 manifest name，避免 Launcher 和 dock tab 继续显示含义
+  不明确的 `Playground`。
+- Explorer tab 改名为 `GearShell API Explorer`，与其他 Playground 产品区分。
+- iframe 权限白名单补充 root API 的 `version` 和 `ping`，修复 bridge 返回
+  `permission denied: version` / `permission denied: ping`。
+
 ## 三十三、Playground iframe 视觉与 version 修复(2026-09-02)
 
 - Playground iframe 的 body 现在复用 shell 的系统字体栈与 14px 基准，避免

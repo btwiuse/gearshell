@@ -170,6 +170,7 @@ export function normalizePlugins(list, defaults) {
         // bind cache keys on <pluginId>@<version>, so a manifest version
         // bump must land in the saved config or the cache keeps serving
         // stale bytes under the old key.
+        name: def.name || item.name,
         version: def.version || item.version,
         entry: def.entry !== undefined ? def.entry : item.entry,
         ...(def.iframe ? { iframe: def.iframe } : {}),
