@@ -1,7 +1,5 @@
 // bbtex-examples.js — example catalog for the iframe bbtex plugin.
-// Mirror of BTEX_EXAMPLES/BTEX_GROUPS in plugin/bbtex/bbtex.js (the module
-// plugin renders with React; this file is a classic script the iframe page
-// loads alongside gear-bridge.js). Keep the two in sync.
+// A classic script the iframe page loads alongside gear-bridge.js.
 window.BBTEX_EXAMPLES = [
   {
     "id": "textinput",

@@ -1,9 +1,5 @@
-// workspace-terminal-api.js — the terminal embed + session surface of
+// workspace-terminal-api.js — the terminal session surface of
 // window.GearShell for same-document callers (Home demo, panel plugins).
-//
-// `terminal.embed(anchor, profile?)` mounts a real wanix terminal into a
-// caller-supplied DOM element — the original in-page surface, kept for
-// backward compatibility (bbtex and other plugins still use it).
 //
 // `terminal.create(profile?)` returns a session id for a headless kernel
 // terminal the caller renders with its own xterm (via the shared
@@ -22,7 +18,6 @@
 
 import { getDockviewApi } from "./app-panels-store.js";
 import {
-  attachTerminalSession,
   createHeadlessTerminalSession,
   destroyTerminalSession,
 } from "./app-terminal-sessions.js";
@@ -194,31 +189,7 @@ function unsubscribe(id, type, listener) {
   return { ok: true };
 }
 
-function embedTerminal(anchor, profile) {
-  if (!anchor || typeof anchor.appendChild !== "function") {
-    throw new Error("terminal.embed requires a DOM element");
-  }
-  const api = getDockviewApi();
-  if (!api) throw new Error("terminal.embed requires a mounted dockview");
-  const id = `embed-${++sessionCounter}`;
-  let detachOverlay;
-  try {
-    detachOverlay = attachTerminalSession(id, profile, anchor, api);
-  } catch (error) {
-    destroyTerminalSession(id);
-    throw error;
-  }
-  return {
-    sessionId: id,
-    detach: () => {
-      detachOverlay();
-      destroyTerminalSession(id);
-    },
-  };
-}
-
 export const terminalApi = {
-  embed: embedTerminal,
   create: createTerminal,
   write: writeTerminal,
   resize: resizeTerminal,

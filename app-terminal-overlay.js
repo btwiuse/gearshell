@@ -235,10 +235,11 @@ function trackScrollParents(anchor, wrapper, scheduleUpdate) {
 }
 
 // Panel terminals carry the dockview panel api, which exposes the six
-// onDid* subscriptions below. Embedded terminals (terminal.embed) carry
-// the dockview instance api instead, where those panel-level events do
-// not exist - their layout is tracked by the anchor ResizeObserver and
-// scroll-parent listeners, so absent subscriptions are simply skipped.
+// onDid* subscriptions below. Overlay terminals that attach to an in-page
+// anchor (workspace task sessions) carry the dockview instance api
+// instead, where those panel-level events do not exist - their layout is
+// tracked by the anchor ResizeObserver and scroll-parent listeners, so
+// absent subscriptions are simply skipped.
 function subscribeOverlayEvents(session, anchor, api, scheduleUpdate, focus) {
   const subscriptions = [];
   const subscribe = (name, handler) => {

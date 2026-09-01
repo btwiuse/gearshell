@@ -6,7 +6,7 @@
 // app-plugin-manifests-examples.js (500-line split).
 
 import { EXAMPLES_PLUGIN } from "./app-plugin-manifests-examples.js";
-import { BBTEX_PLUGIN, BBTEX_IFRAME_PLUGIN } from "./app-plugin-manifests-bbtex.js";
+import { BBTEX_IFRAME_PLUGIN } from "./app-plugin-manifests-bbtex.js";
 import { RV64_IFRAME_PLUGIN } from "./app-plugin-manifests-rv64.js";
 import { V86_IFRAME_PLUGIN } from "./app-plugin-manifests-v86.js";
 
@@ -150,7 +150,7 @@ export const DEFAULT_PLUGINS = [
     entry: "/plugin/home/home-plugin.js",
     css: ["/plugin/home/home.css"],
     permissions: {
-      api: ["terminal.embed"],
+      api: ["terminal.create"],
     },
   },
   {
@@ -317,13 +317,6 @@ export const DEFAULT_PLUGINS = [
       },
     ],
   },
-  // The GearShell plugin template: a reference implementation showing
-  // every extension point (panel + settings section + overlay + the
-  // permission-scoped API) from one entry module. It appears in the
-  // Plugins page but ships DISABLED — nothing imports or fetches until
-  // you enable it. Copy plugin/template/ as the starting point for your
-  // own plugin.
-  //
   // Other manifest fields you can declare:
   //   wasm:   [{ id, dst, src }]              binaries mounted into every
   //                                           task namespace at dst
@@ -337,33 +330,7 @@ export const DEFAULT_PLUGINS = [
   //   iframe: { src, allow?, allowFullscreen? } a sandboxed app instead
   //                                           of an entry module
   //   required: true                          cannot be disabled/removed
-  {
-    id: "template",
-    name: "Plugin Template",
-    version: "1.0.0",
-    icon: "BookOpen",
-    entry: "/plugin/template/template-plugin.js",
-    css: ["/plugin/template/template.css"],
-    // Disabled by default: the plugin shows up in the Plugins page for
-    // reference but is not loaded until the user enables it.
-    enabled: false,
-    permissions: {
-      api: [
-        "config.getShell",
-        "tasks.create",
-        "tasks.list",
-        "tasks.output",
-        "events.on",
-        "events.off",
-        "events.drain",
-        "w9y.list",
-        "w9y.status",
-        "terminal.embed",
-        "panels.open",
-      ],
-    },
-  },
-  // The iframe plugin template: the iframe counterpart of plugin/template/.
+  // The iframe plugin template: a self-contained iframe app reference.
   // Instead of an entry module it declares iframe.src (a self-contained
   // HTML app) plus permissions.api — the exact list of window.GearShell
   // methods the iframe may call through /plugin/gear-bridge.js (default: none =
@@ -411,10 +378,8 @@ export const DEFAULT_PLUGINS = [
 // the array literal so DEFAULT_PLUGINS stays one flat list (see
 // app-plugin-manifests-examples.js / app-plugin-manifests-bbtex.js).
 DEFAULT_PLUGINS.push(EXAMPLES_PLUGIN);
-DEFAULT_PLUGINS.push(BBTEX_PLUGIN);
-// iframe edition of the bbtex playground (default enabled alongside the
-// module one — the iframe build is the reference for third-party plugin
-// layout; either can be disabled in the Plugins page).
+// iframe edition of the bbtex playground: the reference for third-party
+// plugin layout; can be disabled in the Plugins page.
 DEFAULT_PLUGINS.push(BBTEX_IFRAME_PLUGIN);
 // RISC-V 64 Linux in the browser (rv64.js iframe edition): self-contained
 // page, boots Alpine via the shared vnet gateway, apk works.

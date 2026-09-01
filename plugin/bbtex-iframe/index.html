@@ -11,11 +11,8 @@
   <!--
     Bubble Tea Playground (iframe edition).
 
-    The module plugin (plugin/bbtex/bbtex.js) is a React panel that embeds
-    one terminal per open example with terminal.embed. An iframe cannot
-    call terminal.embed (it needs a DOM anchor in the caller's document and
-    returns a detach function), so this page renders xterm itself and drives
-    the same w9y-installed example binaries through the terminal data bridge
+    This page renders xterm itself and drives the w9y-installed example
+    binaries through the terminal data bridge
     (workspace-terminal-bridge.js) — the vscode.Terminal-shaped API:
 
       terminal.create(profile)   -> { sessionId }   (profile.cmd, wd, extraBinds)
@@ -54,8 +51,7 @@
       var MAX_OPEN = 12;
       var W9Y_EXAMPLE = function (id) { return "/opfs/wanix/examples/" + id; };
 
-      // Mirrors plugin/bbtex/bbtex.js ARTICHOKE_MD (the pager example
-      // reads artichoke.md from its CWD). Kept in sync.
+      // ARTICHOKE_MD for the pager example (reads artichoke.md from CWD).
       var ARTICHOKE_MD = [
         "Glow",
         "====",
