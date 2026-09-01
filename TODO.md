@@ -1491,3 +1491,16 @@ extras 重打,gearshell 待推):
 - 澄清:wanix-term 与裸 xterm 是两条独立路径 —— v86 iframe 是 wanix-term(自身
   import wanix@v0.4.33),rv64 等 4 插件是裸 xterm;修复分别落在 wanix v0.4.33
   与页面内联 enableTapFocus。v86 wanix-term tap 聚焦已直接合成 touch 验证。
+
+
+## 四十六、插件终端统一:裸 xterm + 共享宿主 kernel(2026-09-02)
+
+- v86 插件迁移到裸 xterm(像 rv64),VM 经 vm.create 桥接跑在宿主 wanix kernel
+  (startVmSession renderTerm:false);实测 boot/网络/输入通。
+- 5 个自渲染终端插件统一用 plugin/xterm-bundle.mjs(wanix 同款 addon 全集,
+  同 beta tag);normalizePlugins 补 permissions 合并。
+- **遗留 TODO:v86 winch→guest resize 仍 100 100**。已验证:winch 帧写入与
+  信号广播正确、term 路径正确、适配器(v86.tgz rc3)含 forwardWinch、guest
+  resize 机制本身通(默认 100 100 生效)。宿主 wasm 曾为旧 debug 构建;workspace
+  pin 已同步 v0.4.33 后仍无效。隔离页 wanix/examples/v86-resize-test.html 保留。
+  下一步候选:重建/重发 v86.tgz 并加日志,或对照 rv64 适配器(同模式可用)。
