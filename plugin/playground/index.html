@@ -7,7 +7,12 @@
 <link rel="stylesheet" href="/plugin/playground/playground.css" />
 <style>
 html, body, #app { height: 100%; margin: 0; }
-body { background: #0d1117; }
+body {
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 14px !important;
+}
 </style>
 <script type="importmap">
 {
@@ -49,7 +54,11 @@ function resolvePath(root, group, name) {
 
 async function runEntry(group, method, values) {
   const args = buildMethodArgs(method, values);
-  if (method.kind === "value") return { ok: true, value: resolvePath(GearShell, group, method.name) };
+  if (method.kind === "value") {
+    const target = resolvePath(GearShell, group, method.name);
+    if (typeof target !== "function") throw new Error("GearShell API value is unavailable");
+    return { ok: true, value: await target() };
+  }
   const target = resolvePath(GearShell, group, method.name);
   if (typeof target !== "function") throw new Error("GearShell API method is unavailable");
   return await target(...args);

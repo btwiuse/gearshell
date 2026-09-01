@@ -136,7 +136,7 @@ export const DEFAULT_PLUGINS = [
   },
   {
     id: "playground",
-    name: "Playground",
+    name: "GearShell API Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
     iframe: {

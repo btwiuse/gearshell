@@ -1196,6 +1196,16 @@ extras 重打,gearshell 待推):
 - ⬜ **发布链(等用户)**:`npm publish wanix-extras`(bump)→ gearshell
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
+
+## 三十三、Playground iframe 视觉与 version 修复(2026-09-02)
+
+- Playground iframe 的 body 现在复用 shell 的系统字体栈与 14px 基准，避免
+  `ROOT`、`CONFIG` 等目录标题和原 builtin 版本出现字体漂移。
+- manifest 标题改为 `GearShell API Playground`，因此 launcher、dock tab 和
+  iframe 注册标题保持一致。
+- Explorer 的 `version` value 通过 bridge 调用 `version.toJSON`，但 manifest
+  白名单是 `config.*` 等，导致 permission denied；iframe 现在将 value 作为
+  bridged callable 执行，避免直接访问 Proxy 内部属性。
 - 注:libv86 resize handler 还写 config-space this.cols=e[0](收 [rows,cols] 时
   config 里 cols/rows 是反的);guest 只走控制消息路径不用 config,故无害,
   但别再依赖 config 空间。
