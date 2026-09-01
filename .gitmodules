@@ -17,6 +17,3 @@
 	path = memory
 	url = https://github.com/btwiuse/gearshell.wiki.git
 	branch = master
-[submodule "plugin/rv64/vendor"]
-	path = plugin/rv64/vendor
-	url = https://github.com/btwiuse/rv64.js
