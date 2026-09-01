@@ -1197,6 +1197,12 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 三十七、Launcher 单例(2026-09-02)
+
+- `panels.open("launcher")` 和内部 `addPanelByComponent(..., "launcher")` 现在先查找
+  已存在的 Launcher panel；存在时只激活并复用，不再创建重复 tab。
+- `Ctrl+Shift+P` 因此始终打开同一个 Launcher，返回结果增加 `id` 与 `reused` 信息。
+
 ## 三十六、Playground VM API 与 AGW 域名迁移(2026-09-02)
 
 - Playground API catalog 新增 `vm.list` / `vm.create`，workspace API 增加对应

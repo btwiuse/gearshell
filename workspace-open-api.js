@@ -42,8 +42,8 @@ export const openApi = {
     open: (component, options) => {
       const dockview = getDockviewApi();
       if (!dockview) return { ok: false, error: "dockview not ready" };
-      addPanelByComponent(dockview, component, options?.group, options);
-      return { ok: true };
+      const panel = addPanelByComponent(dockview, component, options?.group, options);
+      return { ok: true, id: panel?.id || null, reused: panel?.params?.panelType === "launcher" };
     },
     close: (id) => {
       getDockviewApi()?.getPanel(id)?.api.close();

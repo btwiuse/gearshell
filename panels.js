@@ -216,6 +216,15 @@ function addPanelByComponent(api, component, group, options) {
   // Legacy name for the launcher panel (pre-plugin snapshots saved
   // component "fallback"); route it to the pluginized "launcher".
   if (component === "fallback") component = "launcher";
+  if (component === "launcher") {
+    const existing = api.panels.find(
+      (panel) => panel.params?.panelType === "launcher",
+    );
+    if (existing) {
+      existing.api.setActive();
+      return existing;
+    }
+  }
   const direction = options?.direction;
   let targetGroup = group;
   if (direction) {
