@@ -1199,7 +1199,9 @@ extras 重打,gearshell 待推):
 
 ## 三十九、Launcher 焦点与键盘导航(2026-09-02)
 
-- Launcher 激活时向页面派发 `GearShellPanelFocused`，Launcher 搜索框自动获得焦点。
+- Launcher 激活时向页面派发 `GearShellPanelFocused`，Launcher 搜索框自动获得焦点；
+  全局 hotkey 触发 `panels.open("launcher")` 后也在下一帧补发该事件，修复 Launcher
+  已经激活时按 Ctrl+Shift+P 导致 search bar 失焦的问题。
 - 搜索框所在 card 统一接管 ArrowUp/ArrowDown，基于当前 activeElement 在 Launcher
   item list 中连续循环移动焦点，支持反向导航，Enter 点击当前 item，保留鼠标操作和
   现有搜索过滤行为。

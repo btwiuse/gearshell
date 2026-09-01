@@ -14,11 +14,22 @@ function eventKey(event) {
   return parts.join("+");
 }
 
+// Supported hotkey actions. `panels.open` opens a dockview panel;
+// `overlay.toggle` flips a registered shell overlay (the Spotlight
+// launcher), which is transient chrome and must not create a tab.
+const HOTKEY_METHODS = new Set(["panels.open", "overlay.toggle"]);
+
 function validateAction(action) {
   if (!action || typeof action !== "object") throw new Error("hotkey action is required");
-  if (action.method !== "panels.open") throw new Error("only panels.open is supported for hotkeys");
+  if (!HOTKEY_METHODS.has(action.method)) {
+    throw new Error(
+      `unsupported hotkey method "${action.method}" (expected one of: ${
+        [...HOTKEY_METHODS].join(", ")
+      })`,
+    );
+  }
   if (!Array.isArray(action.args) || typeof action.args[0] !== "string") {
-    throw new Error("panels.open requires a component argument");
+    throw new Error(`${action.method} requires a string argument`);
   }
 }
 
@@ -59,5 +70,8 @@ export function initHotkeys(invoke) {
     if (!matches.length) return;
     event.preventDefault();
     for (const entry of matches) invoke(entry.action);
+    if (matches.some((entry) => entry.action.method === "panels.open" && entry.action.args[0] === "launcher")) {
+      requestAnimationFrame(() => window.dispatchEvent(new Event("GearShellPanelFocused")));
+    }
   });
 }

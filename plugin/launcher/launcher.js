@@ -350,9 +350,7 @@ function FallbackPage({ containerApi, className }) {
     pinned,
     togglePin,
   });
-  useEffect(() => {
-    searchRef.current?.focus();
-  }, []);
+  useLauncherFocus(searchRef);
   const matches = q
     ? options.filter((option) =>
       option.label.toLowerCase().includes(q) ||
