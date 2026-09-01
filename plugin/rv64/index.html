@@ -6,55 +6,67 @@
 <title>rv64.js — RISC-V 64 Linux</title>
 <link rel="stylesheet" href="/plugin/rv64/rv64.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css" />
+<style>
+  #rv64-term {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+  }
+  #rv64-term .xterm { height: 100%; }
+</style>
 </head>
 <body>
-  <!--
-    RISC-V 64 Linux in the browser (iframe edition).
-
-    rv64.js is a TinyEMU-derived RV64 full-system emulator compiled to
-    WASM; this page is fully self-contained (no gear API): it renders
-    xterm itself, loads the emulator + Alpine disk from a static assets
-    host, and tunnels the guest's raw ethernet frames to the shared vnet
-    gateway, so the guest gets DHCP/DNS and apk package installs.
-
-    Assets (temporary deploy-site host until a permanent CDN home):
-      https://3rvx4t2c1dti.matrix.k0s.io/
-  -->
-
   <div id="app">
     <header class="rv64-head">
       <span class="rv64-dots"><i></i><i></i><i></i></span>
       <span class="rv64-title">rv64.js · Alpine Linux (RISC-V 64)</span>
       <span id="rv64-status" class="rv64-status" data-mode="loading">loading…</span>
     </header>
-    <div id="rv64-term" class="rv64-term"></div>
+    <div id="rv64-host" class="rv64-host">
+      <div id="rv64-term"></div>
+    </div>
   </div>
 
+  <script src="/plugin/gear-bridge.js"></script>
   <script>
     (function () {
       "use strict";
 
-      // Emulator library is a git submodule at vendor/ (module workers
-      // must be same-origin); the WASM + Alpine disk are larger and live
-      // on the temporary deploy-site host until a permanent home.
-      var RV64_LIB_URL = "/plugin/rv64/vendor/web/rv64.js";
-      var ASSET_BASE = "/plugin/rv64/assets/";
-      var VNET_URL = "wss://vnet.net.k0s.io/x/net";
+      // The VM runs in the HOST wanix kernel (the same instance the shell
+      // and panels use): vm.create spawns it there and this page renders a
+      // bare xterm that streams the VM's term device over the bridge.
       var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
+      // rv64-specific assets live with the plugin: rv64.tgz is the WANIX
+      // rv64 adapter (emulator WASM + loader), and wanix-linux-rv64.tgz is
+      // the RISC-V Alpine guest built by rv64.js/integrations/wanix.
+      var RV64_BACKEND_URL =
+        "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc4/rv64.tgz";
+      var RV64_LINUX_URL =
+        "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc4/wanix-linux-rv64.tgz";
 
       var state = {
+        sessionId: null,
         xterm: null,
         fit: null,
-        vm: null,
-        status: "loading",
-        // ttyS0 (console) is only shown until hvc0 emits; afterwards both
-        // kernel consoles duplicate every printk (console=ttyS0 console=hvc0).
-        hvcLive: false,
+        disposed: true,
+        dataHandler: null,
+        exitHandler: null,
         resizeObserver: null,
         resizeFrame: 0,
       };
 
       function $(id) { return document.getElementById(id); }
+
+      function setStatus(mode, text) {
+        var status = $("rv64-status");
+        status.dataset.mode = mode;
+        status.textContent = text;
+      }
+
+      function writeToXterm(bytes) {
+        if (state.xterm) state.xterm.write(bytes);
+      }
 
       // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
       // xterm listens for after the terminal lost focus, so a tap would never
@@ -76,167 +88,117 @@
         }, { passive: true });
       }
 
-      function setStatus(mode, text) {
-        state.status = mode;
-        var bar = $("rv64-status");
-        bar.dataset.mode = mode;
-        bar.textContent = text;
+      function termWrite(data) {
+        if (!state.sessionId) return;
+        GearShell.terminal.write(
+          state.sessionId,
+          new TextEncoder().encode(data),
+        ).catch(function () {});
       }
 
-      function writeToXterm(bytes) {
-        if (!state.xterm) return;
-        state.xterm.write(bytes);
-      }
-
-      async function fetchGz(url) {
-        var resp = await fetch(url);
-        if (!resp.ok) throw new Error("HTTP " + resp.status + " " + url);
-        var stream = resp.body.pipeThrough(new DecompressionStream("gzip"));
-        return new Uint8Array(await new Response(stream).arrayBuffer());
-      }
-
-      function wireXterm(term) {
-        var encoder = new TextEncoder();
-        term.onData(function (data) {
-          if (state.vm && state.vm.console) {
-            state.vm.console.send(encoder.encode(data));
-          }
-        });
-        state.fit = new window.FitAddon.FitAddon();
-        term.loadAddon(state.fit);
-        term.onResize(function (size) {
-          sendResize(size.cols, size.rows);
-        });
-        window.addEventListener("resize", refitAndResize);
-        var host = $("rv64-term");
-        if (window.ResizeObserver) {
-          state.resizeObserver = new ResizeObserver(refitAndResize);
-          state.resizeObserver.observe(host);
-        }
-        fitWhenReady();
-      }
-
-      function sendResize(cols, rows) {
-        if (!state.vm || !Number.isInteger(cols) || !Number.isInteger(rows)) return;
-        if (cols < 1 || rows < 1) return;
-        try {
-          state.vm.resize(cols, rows);
-        } catch (error) {
-          console.error("rv64 resize failed", error);
-        }
+      function termResize() {
+        if (!state.xterm || !state.sessionId) return;
+        GearShell.terminal.resize(
+          state.sessionId,
+          state.xterm.cols,
+          state.xterm.rows,
+        ).catch(function () {});
       }
 
       function refitAndResize() {
         if (!state.fit || !state.xterm) return;
-        var host = $("rv64-term");
-        if (host.clientWidth < 8 || host.clientHeight < 8) {
-          fitWhenReady();
-          return;
-        }
         try {
           state.fit.fit();
-        } catch (error) {
+        } catch {
           return;
         }
-        sendResize(state.xterm.cols, state.xterm.rows);
+        termResize();
       }
 
-      function fitWhenReady() {
-        if (state.resizeFrame) return;
-        state.resizeFrame = requestAnimationFrame(function () {
-          state.resizeFrame = 0;
+      function onTermData(event) {
+        if (!event || event.sessionId !== state.sessionId) return;
+        writeToXterm(event.data);
+        if ($("rv64-status").dataset.mode === "loading") {
+          setStatus("ready", "ready · network connected");
+        }
+      }
+
+      function onTermExit(event) {
+        if (!event || event.sessionId !== state.sessionId) return;
+        setStatus("error", "VM stopped" + (event.error ? ": " + event.error : ""));
+      }
+
+      function start() {
+        if (state.sessionId) return;
+        setStatus("loading", "starting…");
+        Promise.all([
+          import(XTERM_BUNDLE).then(function (m) {
+            return m.loadXtermBundle().then(function (libs) {
+              libs.apply = m.applyXtermAddons;
+              return libs;
+            });
+          }),
+          GearShell.subscribe("term.data"),
+          GearShell.subscribe("term.exit"),
+        ]).then(function (results) {
+          var libs = results[0];
+          state.xterm = new libs.Terminal({
+            allowProposedApi: true,
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontSize: 13,
+            cursorBlink: true,
+            convertEol: true,
+            scrollback: 10000,
+            theme: {
+              background: "#0a0e14",
+              foreground: "#e6edf3",
+              cursor: "#58a6ff",
+              selectionBackground: "#1f6feb66",
+            },
+          });
+          state.fit = new libs.FitAddon();
+          state.xterm.loadAddon(state.fit);
+          state.xterm.open($("rv64-term"));
+          libs.apply(state.xterm, libs);
+          enableTapFocus(state.xterm, $("rv64-term"));
+          state.xterm.onData(termWrite);
+          state.xterm.onResize(termResize);
+          state.dataHandler = onTermData;
+          state.exitHandler = onTermExit;
+          GearShell.on("term.data", state.dataHandler);
+          GearShell.on("term.exit", state.exitHandler);
+          state.resizeObserver = new ResizeObserver(function () {
+            window.clearTimeout(state.resizeFrame);
+            state.resizeFrame = window.setTimeout(refitAndResize, 80);
+          });
+          state.resizeObserver.observe($("rv64-term"));
           refitAndResize();
+        }).then(function () {
+          return GearShell.vm.create({
+            type: "rv64",
+            backendUrl: RV64_BACKEND_URL,
+            linuxUrl: RV64_LINUX_URL,
+          });
+        }).then(function (result) {
+          if (!result || result.ok === false) {
+            throw new Error((result && result.error) || "vm.create failed");
+          }
+          state.sessionId = result.sessionId;
+          setStatus("loading", "booting Alpine (RISC-V 64)…");
+          return GearShell.terminal.resize(
+            state.sessionId,
+            state.xterm.cols,
+            state.xterm.rows,
+          ).catch(function () { /* non-fatal: winch races the term */ });
+        }).catch(function (error) {
+          console.error("rv64 start failed", error);
+          setStatus("error", "failed: " + (error.message || error));
+          writeToXterm("\r\n\x1b[31mrv64 failed to start: " +
+            (error.message || error) + "\x1b[0m\r\n");
         });
       }
 
-      async function boot() {
-        setStatus("loading", "downloading emulator + Alpine disk…");
-        var module = await import(RV64_LIB_URL);
-        var RV64 = module.RV64;
-
-        var [wasm, kernel, disk] = await Promise.all([
-          fetch(ASSET_BASE + "rv64_wasm.wasm").then(function (response) {
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            return response.arrayBuffer();
-          }),
-          fetch(ASSET_BASE + "modern-Image").then(function (response) {
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            return response.arrayBuffer();
-          }),
-          fetch(ASSET_BASE + "modern-alpine.ext4").then(function (response) {
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            return response.arrayBuffer();
-          }),
-        ]);
-        setStatus("loading", "booting Alpine (RISC-V 64)…");
-
-        var vm = await RV64.create({
-          wasm: wasm,
-          memoryMB: 512,
-          execution: { mode: "local" },
-          boot: {
-            mode: "linux-direct",
-            kernel: kernel,
-            disk: disk,
-            virtioConsole: true,
-            cmdline: "console=ttyS0 console=hvc0 root=/dev/vda rw init=/rv64-init",
-          },
-          network: {
-            mode: "wsproxy",
-            url: VNET_URL,
-          },
-          events: {
-            console: function (data) {
-              // Early boot lives on ttyS0; once hvc0 is live the same printk
-              // arrives on both streams, so keep only hvc0 to avoid doubling.
-              if (!state.hvcLive) writeToXterm(data);
-              if (state.status === "loading") {
-                setStatus("ready", "ready");
-                refitAndResize();
-              }
-            },
-            export: function (data) {
-              state.hvcLive = true;
-              writeToXterm(data);
-              if (state.status === "loading") {
-                setStatus("ready", "ready");
-                refitAndResize();
-              }
-            },
-          },
-        });
-        state.vm = vm;
-        await vm.start();
-        // v86-style: push the live terminal size right after boot so the
-        // guest's hvc0 starts with real dimensions instead of 80x24, and
-        // again on first output as a belt-and-braces retry.
-        refitAndResize();
-      }
-
-      async function main() {
-        var bundle = await import(XTERM_BUNDLE);
-        var libs = await bundle.loadXtermBundle();
-        window.FitAddon = { FitAddon: libs.FitAddon };
-        state.xterm = new libs.Terminal({
-              allowProposedApi: true,
-          convertEol: true,
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-          fontSize: 13,
-          cursorBlink: true,
-          scrollback: 5000,
-        });
-        state.xterm.open($("rv64-term"));
-        bundle.applyXtermAddons(state.xterm, libs);
-        enableTapFocus(state.xterm, $("rv64-term"));
-        wireXterm(state.xterm);
-        boot().catch(function (err) {
-          console.error(err);
-          setStatus("error", "failed: " + err.message);
-          writeToXterm("\r\n\x1b[31mrv64 boot failed: " + err.message + "\x1b[0m\r\n");
-        });
-      }
-
-      main();
+      start();
     })();
   </script>
 </body>

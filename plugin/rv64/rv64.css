@@ -63,3 +63,10 @@ html, body {
 }
 .rv64-term .xterm { height: 100%; }
 .rv64-term .xterm-viewport { background-color: transparent !important; }
+
+.rv64-host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
