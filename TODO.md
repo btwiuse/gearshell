@@ -1199,6 +1199,8 @@ extras 重打,gearshell 待推):
 
 ## 三十五、Plugin Hotkey API 与 Launcher 快捷键(2026-09-02)
 
+- Playground API sidebar 使用 6px WebKit scrollbar、Firefox `thin` 和统一 thumb
+  颜色，与结果 JSON 区域的滚动条视觉一致。
 - 新增 `app-hotkeys.js`，提供 `registerHotkey`、`unregisterHotkey`、`listHotkeys`，
   并监听 shell 全局 `keydown`；当前 action 采用受限的 `panels.open` 结构，避免插件
   注册任意脚本回调。

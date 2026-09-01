@@ -75,8 +75,28 @@ body,
   overscroll-behavior: contain;
   min-width: 240px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #484f58 transparent;
   border-right: 1px solid #30363d;
   padding-right: 10px;
+}
+.playground-sidebar::-webkit-scrollbar,
+.playground-json::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.playground-sidebar::-webkit-scrollbar-track,
+.playground-json::-webkit-scrollbar-track {
+  background: transparent;
+}
+.playground-sidebar::-webkit-scrollbar-thumb,
+.playground-json::-webkit-scrollbar-thumb {
+  background: #484f58;
+  border-radius: 999px;
+}
+.playground-sidebar::-webkit-scrollbar-thumb:hover,
+.playground-json::-webkit-scrollbar-thumb:hover {
+  background: #6e7681;
 }
 .playground-search {
   width: 100%;
