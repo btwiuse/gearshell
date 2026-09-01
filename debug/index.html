@@ -8,28 +8,46 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; background: #0d1117; color: #c9d1d9; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 body { padding: 24px; }
+.back-home { position: fixed; top: 18px; left: 20px; z-index: 1; display: inline-flex; align-items: center; gap: 8px; color: #c9d1d9; text-decoration: none; font-size: 13px; }
+.back-home:hover { color: #58a6ff; }
+.back-home img { width: 24px; height: 24px; object-fit: contain; border-radius: 5px; }
 main { max-width: 760px; margin: 0 auto; }
 h1 { color: #f0f6fc; font-size: 22px; margin: 0 0 8px; }
 p { color: #8b949e; line-height: 1.5; }
 form { display: grid; gap: 14px; margin-top: 22px; padding: 18px; border: 1px solid #30363d; border-radius: 8px; background: #161b22; }
 label { display: grid; gap: 6px; color: #c9d1d9; }
 input { width: 100%; padding: 9px 10px; border: 1px solid #30363d; border-radius: 5px; background: #0d1117; color: #c9d1d9; font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
 button { justify-self: start; padding: 8px 14px; border: 1px solid #2ea043; border-radius: 6px; background: #238636; color: #fff; cursor: pointer; font: inherit; }
+button.secondary { border-color: #30363d; background: #21262d; }
 button:hover { background: #2ea043; }
+button.secondary:hover { background: #30363d; }
 #status { min-height: 22px; color: #3fb950; }
+#history { display: grid; gap: 8px; margin-top: 18px; }
+.history-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #30363d; border-radius: 6px; background: #161b22; }
+.history-item code { color: #8b949e; font-size: 12px; }
 code { color: #79c0ff; }
 </style>
 </head>
 <body>
+<a class="back-home" href="/" aria-label="Back to GearShell home"><img src="/plugin/home/logo-banner-logo.png" alt="">GearShell</a>
 <main>
 <h1>GearShell Debug Escape Hatch</h1>
 <p>直接修改当前 active workspace 的 <code>runtime.moduleUrl</code> 和 <code>runtime.wasmUrl</code>。此页面不加载 GearShell API 或 iframe bridge。保存后重新加载 GearShell。</p>
 <form id="runtime-form">
 <label>Wanix runtime module URL<input id="module-url" type="url" required></label>
 <label>Wanix wasm URL<input id="wasm-url" type="url" required></label>
+<div class="actions">
 <button type="submit">Save runtime URLs</button>
+<button id="reset-default" class="secondary" type="button">Reset Default</button>
+</div>
 <div id="status" role="status"></div>
 </form>
+<section>
+<h2>Runtime history</h2>
+<p>选择一个历史状态即可恢复，保存和恢复都会生成新的历史记录。</p>
+<div id="history"></div>
+</section>
 </main>
 <script>
 (function () {
@@ -41,26 +59,66 @@ code { color: #79c0ff; }
   var moduleInput = document.getElementById("module-url");
   var wasmInput = document.getElementById("wasm-url");
   var status = document.getElementById("status");
+  var history = document.getElementById("history");
+  var resetButton = document.getElementById("reset-default");
+  var DEFAULTS = {
+    moduleUrl: "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.33/dist/wanix.min.js",
+    wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.33"
+  };
+  function historyKey(id) { return "gear-shell-debug-runtime-history:" + id; }
+  function readHistory(id) {
+    try { return JSON.parse(localStorage.getItem(historyKey(id)) || "[]"); }
+    catch { return []; }
+  }
+  function writeHistory(id, entries) {
+    localStorage.setItem(historyKey(id), JSON.stringify(entries.slice(0, 30)));
+  }
   function activeId() {
     var index = JSON.parse(localStorage.getItem(INDEX_KEY) || "[]");
     var selected = localStorage.getItem(ACTIVE_KEY);
     return index.some(function (item) { return item.id === selected; }) ? selected : (index[0] && index[0].id) || "hush-shell";
   }
-  function load() {
+  function loadWorkspace() {
     var raw = localStorage.getItem(PREFIX + activeId());
-    var workspace = raw ? JSON.parse(raw) : { runtime: {} };
-    moduleInput.value = workspace.runtime && workspace.runtime.moduleUrl || "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.33/dist/wanix.min.js";
-    wasmInput.value = workspace.runtime && workspace.runtime.wasmUrl || "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.33";
+    return raw ? JSON.parse(raw) : { id: activeId(), name: activeId(), runtime: {} };
+  }
+  function renderHistory() {
+    var id = activeId();
+    history.replaceChildren();
+    readHistory(id).forEach(function (entry) {
+      var item = document.createElement("div"); item.className = "history-item";
+      var text = document.createElement("code"); text.textContent = new Date(entry.time).toLocaleString();
+      var button = document.createElement("button"); button.className = "secondary"; button.type = "button"; button.textContent = "Restore";
+      button.onclick = function () { saveRuntime(id, entry.moduleUrl, entry.wasmUrl, "Restored historical runtime URLs."); };
+      item.append(text, button); history.append(item);
+    });
+    if (!history.children.length) history.textContent = "No saved runtime states yet.";
+  }
+  function load() {
+    var workspace = loadWorkspace();
+    moduleInput.value = workspace.runtime && workspace.runtime.moduleUrl || DEFAULTS.moduleUrl;
+    wasmInput.value = workspace.runtime && workspace.runtime.wasmUrl || DEFAULTS.wasmUrl;
+    renderHistory();
+  }
+  function saveRuntime(id, moduleUrl, wasmUrl, message) {
+    var workspace = loadWorkspace();
+    var current = workspace.runtime || {};
+    var entries = readHistory(id);
+    entries.unshift({ time: Date.now(), moduleUrl: current.moduleUrl || DEFAULTS.moduleUrl, wasmUrl: current.wasmUrl || DEFAULTS.wasmUrl });
+    writeHistory(id, entries);
+    workspace.runtime = Object.assign({}, current, { moduleUrl: moduleUrl, wasmUrl: wasmUrl });
+    localStorage.setItem(PREFIX + id, JSON.stringify(workspace));
+    moduleInput.value = moduleUrl; wasmInput.value = wasmUrl;
+    status.textContent = message + " Reload GearShell to apply.";
+    renderHistory();
   }
   form.addEventListener("submit", function (event) {
     event.preventDefault();
     var id = activeId();
-    var key = PREFIX + id;
-    var raw = localStorage.getItem(key);
-    var workspace = raw ? JSON.parse(raw) : { id: id, name: id, runtime: {} };
-    workspace.runtime = Object.assign({}, workspace.runtime, { moduleUrl: moduleInput.value.trim(), wasmUrl: wasmInput.value.trim() });
-    localStorage.setItem(key, JSON.stringify(workspace));
-    status.textContent = "Saved for workspace " + id + ". Reload GearShell to apply.";
+    saveRuntime(id, moduleInput.value.trim(), wasmInput.value.trim(), "Saved for workspace " + id + ".");
+  });
+  resetButton.addEventListener("click", function () {
+    saveRuntime(activeId(), DEFAULTS.moduleUrl, DEFAULTS.wasmUrl, "Reset to default runtime URLs.");
   });
   load();
 }());

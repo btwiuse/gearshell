@@ -1197,6 +1197,13 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 四十一、Debug runtime 历史与默认重置(2026-09-02)
+
+- `/debug/` 增加 `Reset Default`，恢复 wanix v0.4.33 的默认 module/wasm URL。
+- 增加 active workspace 级 runtime 历史，保存和恢复前自动记录当前 URL，最多保留
+  30 条；点击 `Restore` 直接回写 localStorage，不经过 GearShell API。
+- `/debug/` 左上角增加带 GearShell logo 的主页返回入口，直接链接 `/`。
+
 ## 四十、Debug runtime URL escape hatch(2026-09-02)
 
 - 新增 `/debug/` 静态页面，不加载 GearShell API 或 iframe bridge，直接读写
