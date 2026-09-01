@@ -19,6 +19,7 @@ import {
   Package,
   PackageOpen,
   Plus,
+  Search,
 } from "lucide-react";
 import { PLUGIN_CHANGED_EVENT } from "./plugins.js";
 import { configApi } from "./workspace-config-api.js";
@@ -109,6 +110,7 @@ function makePluginActions(flash, setModal, setNotice) {
 // --- Page state ---
 function usePluginsState() {
   const [plugins, setPlugins] = useState(() => configApi.plugins.list());
+  const [query, setQuery] = useState("");
   const [modal, setModal] = useState(null); // {mode:"add"} | {mode:"edit", plugin}
   const [notice, setNotice] = useState(null); // {kind:"ok"|"error", text}
   useEffect(() => {
@@ -129,8 +131,19 @@ function usePluginsState() {
     );
   };
   const actions = makePluginActions(flash, setModal, setNotice);
+  const normalizedQuery = query.trim().toLowerCase();
+  const visiblePlugins = normalizedQuery
+    ? plugins.filter((plugin) =>
+      [plugin.name, plugin.id, plugin.description]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(normalizedQuery))
+    )
+    : plugins;
   return {
     plugins,
+    visiblePlugins,
+    query,
+    setQuery,
     modal,
     notice,
     setModal,
@@ -140,7 +153,7 @@ function usePluginsState() {
 }
 
 // --- Page chrome ---
-function PluginsHeader({ count, enabled, onAdd }) {
+function PluginsHeader({ count, enabled, query, onQueryChange, onAdd }) {
   return html`
     <header className="plugins-header">
       <div className="plugins-header-title">
@@ -148,14 +161,26 @@ function PluginsHeader({ count, enabled, onAdd }) {
         <h2>Plugins</h2>
         <span className="plugins-header-note">${count} installed · ${enabled} enabled</span>
       </div>
-      <button
-        type="button"
-        className="plugin-action-btn primary"
-        onClick=${onAdd}
-      >
-        <${Plus} size=${14} aria-hidden=${true}/>
-        Add plugin
-      </button>
+      <div className="plugins-header-actions">
+        <label className="plugins-search">
+          <${Search} size=${14} aria-hidden=${true}/>
+          <input
+            type="search"
+            placeholder="Search plugins…"
+            aria-label="Search plugins"
+            value=${query}
+            onChange=${(event) => onQueryChange(event.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className="plugin-action-btn primary"
+          onClick=${onAdd}
+        >
+          <${Plus} size=${14} aria-hidden=${true}/>
+          Add plugin
+        </button>
+      </div>
     </header>
   `;
 }
@@ -224,14 +249,16 @@ export function PluginsPage() {
   const editing = state.modal?.mode === "edit" ? state.modal.plugin : null;
   return html`
     <div className="plugins-page">
-      <${PluginsHeader} count=${state.plugins.length} enabled=${enabledCount} onAdd=${() => state.setModal({ mode: "add" })}/>
+      <${PluginsHeader} count=${state.plugins.length} enabled=${enabledCount} query=${state.query} onQueryChange=${state.setQuery} onAdd=${() => state.setModal({ mode: "add" })}/>
       <${PluginsNotice} notice=${state.notice} onDismiss=${state.dismissNotice}/>
       <${PluginsGrid}
-        plugins=${state.plugins}
+        plugins=${state.visiblePlugins}
         onToggle=${state.togglePlugin}
         onEdit=${(plugin) => state.setModal({ mode: "edit", plugin })}
         onRemove=${state.removePlugin}
       />
+      ${state.plugins.length > 0 && state.visiblePlugins.length === 0 &&
+        html`<p className="plugins-empty-match">No plugins match "${state.query}"</p>`}
       ${state.plugins.length === 0 &&
         html`<${PluginsEmpty} onAdd=${() => state.setModal({ mode: "add" })}/>`}
       <${PluginsFooter}/>
