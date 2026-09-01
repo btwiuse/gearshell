@@ -195,12 +195,27 @@ export function normalizeProviders(providers) {
 
 function normalizeProviderModels(models) {
   if (Array.isArray(models)) {
-    return models.map((model) => String(model)).filter(Boolean);
+    return models.map(normalizeModel).filter(Boolean);
   }
   if (typeof models === "string" && models.trim()) {
-    return models.split(/[\n,]+/).map((model) => model.trim()).filter(Boolean);
+    return models.split(/[\n,]+/).map((model) => normalizeModel(model)).filter(Boolean);
   }
   return [];
+}
+
+function normalizeModel(model) {
+  if (typeof model === "string") return model.trim();
+  if (!model || typeof model !== "object") return "";
+  const id = String(model.id || model.name || "").trim();
+  if (!id) return "";
+  return {
+    id,
+    name: String(model.name || id).trim(),
+    contextWindow: Number(model.contextWindow) || 0,
+    defaultMaxTokens: Number(model.defaultMaxTokens) || 0,
+    canReason: model.canReason === true,
+    supportsImages: model.supportsImages === true,
+  };
 }
 
 // Plugin manifests (WISHLIST #9): { id, name, version, icon, entry,

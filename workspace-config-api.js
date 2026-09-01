@@ -125,6 +125,51 @@ function restoreProviderKeys(prevProviders, nextProviders) {
   }));
 }
 
+function listModels() {
+  return normalizeProviders(loadConfig().providers).flatMap((provider) =>
+    (provider.models || []).map((model) => ({
+      providerId: provider.id,
+      ...(typeof model === "string" ? { id: model, name: model } : model),
+    }))
+  );
+}
+
+function saveModel(model, agentOrOptions = {}) {
+  const providerId = String(model?.providerId || "").trim();
+  const id = String(model?.id || model?.name || "").trim();
+  if (!providerId || !id) throw new Error("model requires providerId and id");
+  const config = loadConfig();
+  const provider = normalizeProviders(config.providers).find((item) => item.id === providerId);
+  if (!provider) throw new Error(`provider "${providerId}" not found`);
+  const nextModel = { ...model, providerId: undefined, id, name: String(model.name || id).trim() };
+  delete nextModel.providerId;
+  const models = (provider.models || []).filter((item) =>
+    (typeof item === "string" ? item : item.id) !== id
+  );
+  const next = { ...config, providers: config.providers.map((item) =>
+    item.id === providerId ? { ...item, models: [...models, nextModel] } : item
+  ) };
+  saveConfig(next);
+  pushAuditEntry({ prev: config, next, agent: auditOptions(agentOrOptions).agent });
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  return { ok: true, model: { providerId, ...nextModel } };
+}
+
+function removeModel(providerId, modelId, agentOrOptions = {}) {
+  const config = loadConfig();
+  const provider = normalizeProviders(config.providers).find((item) => item.id === providerId);
+  if (!provider) throw new Error(`provider "${providerId}" not found`);
+  const models = (provider.models || []).filter((item) =>
+    (typeof item === "string" ? item : item.id) !== modelId
+  );
+  if (models.length === (provider.models || []).length) throw new Error(`model "${modelId}" not found`);
+  const next = { ...config, providers: config.providers.map((item) => item.id === providerId ? { ...item, models } : item) };
+  saveConfig(next);
+  pushAuditEntry({ prev: config, next, agent: auditOptions(agentOrOptions).agent });
+  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  return { ok: true, providerId, removed: modelId };
+}
+
 function listProviders() {
   return normalizeProviders(loadConfig().providers).map((provider) => ({
     ...provider,
@@ -331,6 +376,11 @@ export const configApi = {
     list: listProviders,
     save: saveProvider,
     remove: removeProvider,
+  },
+  models: {
+    list: listModels,
+    save: saveModel,
+    remove: removeModel,
   },
   plugins: {
     list: listPlugins,

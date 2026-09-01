@@ -8,7 +8,9 @@ body {
   color: #c9d1d9;
   font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-body { overflow: auto; overscroll-behavior: none; }
+html { overflow-y: auto; }
+body { overflow: visible; overscroll-behavior: none; }
+.settings-panel { min-height: 100vh; overflow: visible; }
 .settings-panel {
   max-width: 960px;
   margin: 0 auto;

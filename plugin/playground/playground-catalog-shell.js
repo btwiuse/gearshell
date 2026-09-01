@@ -183,6 +183,21 @@ export const shellCatalog = [
         hint: "Model providers; apiKey is returned empty with hasApiKey.",
       },
       {
+        name: "models.list",
+        args: [],
+        hint: "List configured models across providers.",
+      },
+      {
+        name: "models.save",
+        args: [{ key: "model", label: "Model", type: "json", placeholder: '{"providerId":"deepseek","id":"deepseek-v4-flash","name":"DeepSeek V4 Flash","contextWindow":1000000,"defaultMaxTokens":163840,"canReason":true,"supportsImages":false}' }],
+        hint: "Add or update a model under an existing provider.",
+      },
+      {
+        name: "models.remove",
+        args: [{ key: "providerId", label: "Provider id", type: "string" }, { key: "modelId", label: "Model id", type: "string" }],
+        hint: "Remove a model from a provider.",
+      },
+      {
         name: "providers.save",
         args: [
           {

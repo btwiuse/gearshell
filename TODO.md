@@ -1197,6 +1197,14 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 四十二、模型 API 与 Settings 滚动修复(2026-09-02)
+
+- `config.models.list/save/remove` 已加入 GearShell，模型存储在对应 provider 的
+  `models` 数组，支持名称、上下文窗口、最大 token、推理和图片能力字段；Playground
+  catalog 已增加三项操作。
+- Settings iframe 恢复正常页面滚动：仅禁用 overscroll，不再让 body `overflow: visible`
+  阻断滚动；`html` 负责纵向滚动，`.settings-panel` 保持至少一屏高度。
+
 ## 四十一、Debug runtime 历史与默认重置(2026-09-02)
 
 - `/debug/` 增加 `Reset Default`，恢复 wanix v0.4.33 的默认 module/wasm URL。
