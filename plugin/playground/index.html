@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GearShell API Playground</title>
+<link rel="stylesheet" href="/plugin/playground/playground.css" />
+<style>
+html, body, #app { height: 100%; margin: 0; }
+body { background: #0d1117; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "htm": "https://esm.sh/htm@3.1.1"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<script src="/plugin/gear-bridge.js"></script>
+<script type="module">
+import React, { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import htm from "htm";
+import {
+  PLAYGROUND_CATALOG,
+  buildMethodArgs,
+  findCatalogMethod,
+  gearInvocation,
+  serializeArgs,
+} from "./playground-api-catalog.js";
+
+const html = htm.bind(React.createElement);
+const TABS = [
+  { id: "explorer", label: "Explorer" },
+  { id: "providers", label: "Providers" },
+  { id: "events", label: "Events" },
+];
+
+function resolvePath(root, group, name) {
+  let value = group.namespace ? root[group.namespace] : root;
+  for (const part of name.split(".")) value = value?.[part];
+  return value;
+}
+
+async function runEntry(group, method, values) {
+  const args = buildMethodArgs(method, values);
+  if (method.kind === "value") return { ok: true, value: resolvePath(GearShell, group, method.name) };
+  const target = resolvePath(GearShell, group, method.name);
+  if (typeof target !== "function") throw new Error("GearShell API method is unavailable");
+  return await target(...args);
+}
+
+function JsonBlock({ value }) {
+  let text;
+  try { text = JSON.stringify(value, null, 2); } catch { text = String(value); }
+  return html`<pre className="playground-json">${text}</pre>`;
+}
+
+function TabBar({ active, onSelect }) {
+  return html`<div className="playground-tabs" role="tablist">
+    ${TABS.map((tab) => html`<button type="button" role="tab" key=${tab.id}
+      className=${"playground-tab" + (active === tab.id ? " active" : "")}
+      aria-selected=${active === tab.id} onClick=${() => onSelect(tab.id)}>${tab.label}</button>`)}
+  </div>`;
+}
+
+function MethodList({ filter, selected, onSelect }) {
+  const needle = filter.trim().toLowerCase();
+  return html`<div className="playground-method-list">
+    ${PLAYGROUND_CATALOG.map((group) => {
+      const methods = group.methods.filter((method) => {
+        const id = group.namespace ? `${group.namespace}.${method.name}` : method.name;
+        return !needle || id.toLowerCase().includes(needle);
+      });
+      if (!methods.length) return null;
+      return html`<div className="playground-method-group" key=${group.title}>
+        <h3 className="playground-method-group-title">${group.title}</h3>
+        ${methods.map((method) => {
+          const id = group.namespace ? `${group.namespace}.${method.name}` : method.name;
+          return html`<button type="button" key=${id}
+            className=${"playground-method" + (selected === id ? " active" : "")}
+            onClick=${() => onSelect(id)}>${id}</button>`;
+        })}
+      </div>`;
+    })}
+  </div>`;
+}
+
+function ArgField({ arg, value, onChange }) {
+  if (arg.type === "handler") return html`<div className="playground-arg playground-arg-handler">
+    <span>${arg.label}</span><code className="playground-hint-text">in-page function</code>
+  </div>`;
+  if (arg.type === "boolean") return html`<label className="playground-arg playground-arg-check">
+    <input type="checkbox" checked=${value === true || value === "true"}
+      onChange=${(event) => onChange(arg.key, event.target.checked)} /><span>${arg.label}</span>
+  </label>`;
+  if (arg.type === "json") return html`<label className="playground-arg">
+    <span className="playground-arg-label">${arg.label}</span>
+    <textarea className="playground-json-input" rows=${Math.min(8, 1 + String(value ?? arg.default ?? "").split("\n").length)}
+      value=${value ?? arg.default ?? ""} placeholder=${arg.placeholder} spellCheck=${false}
+      onChange=${(event) => onChange(arg.key, event.target.value)}></textarea>
+  </label>`;
+  return html`<label className="playground-arg">
+    <span className="playground-arg-label">${arg.label + (arg.optional ? " (optional)" : "")}</span>
+    <input className="playground-text-input" type=${arg.type === "number" ? "number" : "text"}
+      value=${value ?? arg.default ?? ""} placeholder=${arg.placeholder}
+      onChange=${(event) => onChange(arg.key, event.target.value)} />
+  </label>`;
+}
+
+function Explorer() {
+  const [selected, setSelected] = useState("panels.list");
+  const [filter, setFilter] = useState("");
+  const [values, setValues] = useState({});
+  const [result, setResult] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [history, setHistory] = useState([]);
+  const entry = findCatalogMethod(selected);
+  const method = entry?.method;
+  const group = entry?.group;
+  const current = values[selected] || {};
+  const setArg = (key, value) => setValues((old) => ({ ...old, [selected]: { ...current, [key]: value } }));
+  const run = async () => {
+    try {
+      const output = await runEntry(group, method, current);
+      const argsJson = serializeArgs(method, current);
+      setResult(output);
+      setNotice("");
+      setHistory((old) => [{ ts: Date.now(), method: selected, argsJson, result: output }, ...old].slice(0, 100));
+    } catch (error) {
+      const output = { ok: false, error: error?.message || String(error) };
+      setResult(output);
+      setNotice(output.error);
+    }
+  };
+  const copy = async () => {
+    try {
+      const line = gearInvocation(group, method, serializeArgs(method, current));
+      await navigator.clipboard?.writeText(line);
+      setNotice(`Copied: ${line}`);
+    } catch (error) { setNotice(`Invalid JSON: ${error?.message || error}`); }
+  };
+  return html`<div className="playground-explorer">
+    <aside className="playground-sidebar">
+      <input type="search" className="playground-search" placeholder="Filter methods…"
+        value=${filter} onChange=${(event) => setFilter(event.target.value)} />
+      <${MethodList} filter=${filter} selected=${selected} onSelect=${(id) => { setSelected(id); setResult(null); setNotice(""); }} />
+    </aside>
+    <section className="playground-detail">
+      ${!window.GearShell && html`<div className="playground-banner">GearShell is not ready yet.</div>`}
+      ${method && html`<header className="playground-detail-head"><h3>GearShell.${selected}</h3><p className="playground-hint">${method.hint}</p></header>`}
+      ${method && html`<div className="playground-args">${method.args.map((arg) => html`<${ArgField} key=${arg.key} arg=${arg} value=${current[arg.key]} onChange=${setArg} />`)}</div>`}
+      ${method && html`<div className="playground-actions"><button type="button" className="playground-run" onClick=${run}>Run</button><button type="button" className="playground-copy" onClick=${copy}>Copy gear line</button></div>`}
+      ${notice && html`<p className="playground-notice">${notice}</p>`}
+      ${result !== null && html`<div className="playground-result"><div className=${"playground-result-status " + (result?.ok === false ? "error" : "ok")}>${result?.ok === false ? "error" : "ok"}</div><${JsonBlock} value=${result} /></div>`}
+      <h4 className="playground-section-title">Request log</h4>
+      ${history.length ? html`<div className="playground-history">${history.map((item, index) => html`<button type="button" key=${`${item.ts}-${index}`} className=${"playground-history-row " + (item.result?.ok === false ? "error" : "ok")} onClick=${() => { setSelected(item.method); setResult(item.result); }}><span className="playground-history-method">${item.method}</span><span className="playground-history-args">${item.argsJson}</span><span className="playground-history-time">${new Date(item.ts).toLocaleTimeString()}</span></button>`)}</div>` : html`<p className="playground-hint">No calls yet. Run a method and it shows up here.</p>`}
+    </section>
+  </div>`;
+}
+
+function ProviderEditor({ draft, onSave, onCancel }) {
+  const [local, setLocal] = useState(draft);
+  const set = (key) => (event) => setLocal((old) => ({ ...old, [key]: event.target.type === "checkbox" ? event.target.checked : event.target.value }));
+  const save = () => onSave({ ...local, id: local.id.trim() || local.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "provider"), name: local.name.trim(), baseURL: local.baseURL.trim(), apiKey: local.apiKey, models: local.modelsText.split(/\n+/).map((item) => item.trim()).filter(Boolean) });
+  return html`<div className="playground-provider-editor"><div className="playground-provider-fields">
+    ${[["name", "Name", "OpenAI"], ["id", "Id", "openai"], ["baseURL", "Base URL", "https://api.openai.com/v1"]].map(([key, label, placeholder]) => html`<label className="playground-arg"><span className="playground-arg-label">${label}</span><input className="playground-text-input" value=${local[key]} placeholder=${placeholder} onChange=${set(key)} /></label>`)}
+    <label className="playground-arg"><span className="playground-arg-label">API key</span><input type="password" autoComplete="off" className="playground-text-input" value=${local.apiKey} placeholder="leave empty to keep the stored key" onChange=${set("apiKey")} /></label>
+    <label className="playground-arg"><span className="playground-arg-label">Models (one per line)</span><textarea className="playground-json-input" rows=${4} value=${local.modelsText} onChange=${set("modelsText")}></textarea></label>
+    <label className="playground-arg playground-arg-check"><input type="checkbox" checked=${local.enabled} onChange=${set("enabled")} /><span>Enabled</span></label>
+  </div><div className="playground-actions"><button type="button" className="playground-run" onClick=${save}>Save changes</button><button type="button" className="playground-copy" onClick=${onCancel}>Cancel</button></div></div>`;
+}
+
+function Providers() {
+  const [providers, setProviders] = useState([]);
+  const [draft, setDraft] = useState(null);
+  const [status, setStatus] = useState("");
+  const refresh = async () => setProviders(await GearShell.config.providers.list());
+  useEffect(() => { refresh().catch((error) => setStatus(error.message)); }, []);
+  const save = async (provider) => { try { const result = await GearShell.config.providers.save(provider); setStatus(result?.ok ? `Saved "${provider.name}".` : result?.error || "Save failed."); setDraft(null); await refresh(); } catch (error) { setStatus(error.message); } };
+  const remove = async (provider) => { if (!window.confirm(`Delete provider "${provider.name}"?`)) return; try { await GearShell.config.providers.remove(provider.id); setStatus(`Deleted "${provider.name}".`); await refresh(); } catch (error) { setStatus(error.message); } };
+  return html`<div className="playground-providers"><div className="playground-providers-head"><div><h3>Model providers</h3><p className="playground-hint">Stored in shell config and exposed through config.providers.*. API keys are never returned.</p></div>${!draft && html`<button type="button" className="playground-run" onClick=${() => setDraft({ id: "", name: "", baseURL: "", apiKey: "", modelsText: "", enabled: true })}>Add provider</button>`}</div>${draft && html`<${ProviderEditor} draft=${draft} onSave=${save} onCancel=${() => setDraft(null)} />`}${status && html`<p className="playground-ok">${status}</p>`}<div className="playground-provider-list">${providers.length ? providers.map((provider) => html`<div className="playground-provider-row" key=${provider.id}><div className="playground-provider-main"><div className="playground-provider-title"><span className="playground-provider-name">${provider.name || provider.id}</span><span className=${"playground-provider-badge" + (provider.enabled ? " on" : "")}>${provider.enabled ? "enabled" : "disabled"}</span><span className=${"playground-provider-badge" + (provider.hasApiKey ? " key" : "")}>${provider.hasApiKey ? "api key set" : "no api key"}</span></div><div className="playground-provider-meta"><code>${provider.id}</code>${provider.baseURL && html`<code>${provider.baseURL}</code>`}</div><div className="playground-provider-models">${(provider.models || []).join(", ")}</div></div><div className="playground-provider-actions"><button type="button" onClick=${() => setDraft({ ...provider, apiKey: "", modelsText: (provider.models || []).join("\n") })}>Edit</button><button type="button" className="danger" onClick=${() => remove(provider)}>Delete</button></div></div>`) : html`<p className="playground-hint">No providers configured yet.</p>`}</div></div>`;
+}
+
+function Events() {
+  const [pending, setPending] = useState(0);
+  const [feed, setFeed] = useState([]);
+  const [topic, setTopic] = useState("demo.topic");
+  const [payload, setPayload] = useState('{\n  "note": "hello from the playground"\n}');
+  const [status, setStatus] = useState("");
+  const refresh = async () => { const result = await GearShell.events.pending(); setPending(result?.count || 0); };
+  useEffect(() => { refresh().catch((error) => setStatus(error.message)); }, []);
+  const drain = async () => { try { const result = await GearShell.events.drain(); const events = result?.events || []; setFeed((old) => [{ ts: Date.now(), type: "ring.drain", detail: { count: events.length, events } }, ...old].slice(0, 100)); setStatus(`Drained ${events.length} buffered event(s).`); await refresh(); } catch (error) { setStatus(error.message); } };
+  const emit = async () => { try { const result = await GearShell.events.emit(topic.trim(), payload.trim() ? JSON.parse(payload) : {}); setStatus(result?.ok ? `Emitted ${topic}.` : result?.error || "Emit failed."); await refresh(); } catch (error) { setStatus(error.message); } };
+  return html`<div className="playground-events"><div className="playground-events-head"><div><h3>Events</h3><p className="playground-hint">The iframe can inspect the agent ring without consuming it automatically. Drain explicitly to show buffered events here.</p></div><div className="playground-actions"><span className="playground-pending">${pending} pending</span><button type="button" className="playground-run" onClick=${drain}>Drain</button><button type="button" className="playground-copy" onClick=${() => setFeed([])}>Clear feed</button></div></div>${status && html`<p className="playground-ok">${status}</p>`}<div className="playground-events-emit"><label className="playground-arg"><span className="playground-arg-label">Topic</span><input className="playground-text-input" value=${topic} onChange=${(event) => setTopic(event.target.value)} /></label><label className="playground-arg"><span className="playground-arg-label">Payload (JSON)</span><textarea className="playground-json-input" rows=${4} value=${payload} onChange=${(event) => setPayload(event.target.value)}></textarea></label><div className="playground-actions"><button type="button" className="playground-run" onClick=${emit}>Emit</button></div></div>${feed.length ? html`<div className="playground-events-feed">${feed.map((item, index) => html`<div className="playground-events-item" key=${`${item.ts}-${index}`}><div className="playground-events-item-head"><span className="playground-events-type">${item.type}</span><span className="playground-history-time">${new Date(item.ts).toLocaleTimeString()}</span></div><${JsonBlock} value=${item.detail} /></div>`)}</div>` : html`<p className="playground-hint">No drained events yet.</p>`}</div>`;
+}
+
+function App() {
+  const [tab, setTab] = useState("explorer");
+  return html`<div className="playground-panel panel-content"><div className="playground-header"><h2>GearShell API Playground</h2><span className="playground-header-note">the same window.GearShell surface agents reach through gear</span></div><${TabBar} active=${tab} onSelect=${setTab} /><div className="playground-body">${tab === "explorer" && html`<${Explorer} />`}${tab === "providers" && html`<${Providers} />`}${tab === "events" && html`<${Events} />`}</div></div>`;
+}
+
+createRoot(document.getElementById("app")).render(html`<${App} />`);
+</script>
+</body>
+</html>

@@ -139,8 +139,22 @@ export const DEFAULT_PLUGINS = [
     name: "Playground",
     version: "1.0.0",
     icon: "SlidersHorizontal",
-    entry: "/plugin/playground/playground-plugin.js",
-    css: ["/plugin/playground/playground.css"],
+    iframe: {
+      src: "/plugin/playground/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    permissions: {
+      api: [
+        "config.*",
+        "panels.*",
+        "browser.*",
+        "files.*",
+        "tasks.*",
+        "agents.*",
+        "music.*",
+        "events.*",
+      ],
+    },
   },
   {
     id: "home",
