@@ -39,6 +39,13 @@
       // bare xterm that streams the VM's term device over the bridge.
       var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
+      // v86-specific assets live with the plugin (like rv64's ASSET_BASE),
+      // not in the host app-constants: the archive is the x86 emulator
+      // adapter, and the Linux rootfs is its guest image.
+      var V86_BACKEND_URL =
+        "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc3/v86.tgz";
+      var V86_LINUX_URL =
+        "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
 
       var state = {
         sessionId: null,
@@ -176,6 +183,8 @@
           refitAndResize();
         }).then(function () {
           return GearShell.vm.create({
+            backendUrl: V86_BACKEND_URL,
+            linuxUrl: V86_LINUX_URL,
             netdev: "user,type=virtio,relay_url=" + VNET_URL,
             bootRc: "/plugin/v86/guest-boot-rc",
             postDhcp: "/plugin/v86/guest-post-dhcp",

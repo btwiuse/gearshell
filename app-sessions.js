@@ -268,14 +268,15 @@ export function waitForWanixSystem() {
   });
 }
 
-export function ensureVmDriver(backendUrl) {
-  const existing = vmDriverInstallations.get(backendUrl);
+export function ensureVmDriver(backendUrl, driverKey = "v86") {
+  const cacheKey = `${driverKey}:${backendUrl}`;
+  const existing = vmDriverInstallations.get(cacheKey);
   if (existing) return existing;
   const install = (async () => {
     await waitForWanixSystem();
     const bind = createWanixBindElement({
       type: "archive",
-      dst: "#vm/v86",
+      dst: `#vm/${driverKey}`,
       src: backendUrl,
     });
     const bindings = html`<div>${bind}</div>`;
@@ -290,8 +291,8 @@ export function ensureVmDriver(backendUrl) {
       bindings.remove();
     }
   })();
-  vmDriverInstallations.set(backendUrl, install);
-  install.catch(() => vmDriverInstallations.delete(backendUrl));
+  vmDriverInstallations.set(cacheKey, install);
+  install.catch(() => vmDriverInstallations.delete(cacheKey));
   return install;
 }
 
@@ -363,12 +364,14 @@ function createVmGuestBinds(config) {
 
 export function startVmSession(session, options = {}) {
   if (session.startPromise) return session.startPromise;
-  session.startPromise = ensureVmDriver(session.config.backendUrl).then(() => {
+  const vmType = session.config.type || "v86";
+  session.startPromise = ensureVmDriver(session.config.backendUrl, vmType).then(() => {
     if (session.destroyed) return;
     const vmId = `vm-panel-${session.id}`;
     const vm = html`<wanix-vm
       for="wanix-system"
       id=${vmId}
+      type=${vmType}
       export="ttyS0"
       mem=${session.config.memory}
       netdev=${session.config.netdev || null}
