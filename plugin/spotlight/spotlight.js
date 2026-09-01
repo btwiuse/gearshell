@@ -10,20 +10,31 @@
 // Apps the user pinned in the launcher config sort first, exactly like
 // the launcher card's pinned-first ordering.
 //
+// Icons: shell plugins declare icon names (lucide-react) but React
+// components cannot cross postMessage, so the iframe ships a small
+// self-contained icon path dictionary (spotlight-icons.js) instead.
+// Anything not in the dictionary falls back to a 2-letter monogram.
+//
 // Closing is the shell's job: this page posts { spotlight: "close" } to
 // the parent, which unmounts the overlay (so the iframe is never left
 // invisible-but-alive swallowing clicks).
 
 "use strict";
 
+import { ICON_PATHS } from "./spotlight-icons.js";
+
 const CLOSE_MESSAGE = { spotlight: "close" };
 
 // Panel types that exist in the shell but are not installable plugins:
-// the launcher's own fallback card and the terminal. Terminal is worth
-// offering because it is the single most launched thing.
+// the launcher's own fallback card, the terminal, and the built-in
+// Plugins manager (a dockview built-in, not a plugin). Terminal +
+// Plugins deserve to be in Spotlight regardless of whether the user
+// has them pinned, because they're the two most-launched built-ins
+// alongside a keyboard-first launcher.
 const EXTRA_APPS = [
-  { component: "terminal", name: "Terminal" },
-  { component: "launcher", name: "Launcher" },
+  { component: "terminal", name: "Terminal", iconName: "Terminal" },
+  { component: "launcher", name: "Launcher", iconName: "Rocket" },
+  { component: "plugins", name: "Plugins", iconName: "Puzzle" },
 ];
 
 const state = {
@@ -50,14 +61,44 @@ function closeSpotlight() {
 
 // --- Catalog ---------------------------------------------------------
 
-// Two-letter monogram stands in for the shell's lucide icons: icon
-// components cannot cross postMessage, and pulling a font/sprite sheet
-// into the iframe for this would be a heavier dependency than it earns.
+// Two-letter monogram stands in for icons we don't have a path for
+// (anything outside the inlined spotlight-icons.js dictionary). This
+// keeps a missing icon from showing as a literal "?" and matches the
+// rough visual weight of a 24px lucide stroke icon.
 function monogram(name) {
   const words = String(name || "?").trim().split(/[\s-_]+/).filter(Boolean);
   if (words.length === 0) return "?";
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+// Render the row's icon area: real lucide SVG if we have a path for
+// the icon name the shell assigned, monogram otherwise. The SVG keeps
+// lucide's stroke="currentColor" so CSS color rules apply (active row
+// recolors via .sl-row.is-active .sl-row-icon).
+function iconNode(item) {
+  const wrap = document.createElement("span");
+  wrap.className = "sl-row-icon";
+  wrap.setAttribute("aria-hidden", "true");
+  const path = item.iconName ? ICON_PATHS[item.iconName] : null;
+  if (path) {
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", "14");
+    svg.setAttribute("height", "14");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    // iconify's body uses <g>/<path> with inherited stroke; wrap as-is.
+    svg.innerHTML = path;
+    wrap.appendChild(svg);
+  } else {
+    wrap.textContent = monogram(item.name);
+  }
+  return wrap;
 }
 
 function pluginApps(plugins) {
@@ -69,6 +110,9 @@ function pluginApps(plugins) {
       kind: "app",
       component: plugin.id,
       name: plugin.name || plugin.id,
+      // Icon name from the manifest (lucide-react component name).
+      // Resolved to an SVG path inside this iframe via ICON_PATHS.
+      iconName: typeof plugin.icon === "string" ? plugin.icon : null,
     }));
 }
 
@@ -173,11 +217,6 @@ function rowNode(item, index) {
   row.className = index === state.active ? "sl-row is-active" : "sl-row";
   row.dataset.index = String(index);
 
-  const icon = document.createElement("span");
-  icon.className = "sl-row-icon";
-  icon.textContent = monogram(item.name);
-  icon.setAttribute("aria-hidden", "true");
-
   const text = document.createElement("span");
   text.className = "sl-row-text";
   const title = document.createElement("span");
@@ -192,7 +231,7 @@ function rowNode(item, index) {
     text.appendChild(sub);
   }
 
-  row.append(icon, text);
+  row.append(iconNode(item), text);
   if (item.pinned) {
     const pin = document.createElement("span");
     pin.className = "sl-row-pin";

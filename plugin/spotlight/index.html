@@ -126,8 +126,10 @@
     background: rgba(110, 118, 129, 0.18);
     font-size: 13px;
     font-weight: 600;
+    color: #c9d1d9;
   }
-  .sl-row.is-active .sl-row-icon { background: rgba(255, 255, 255, 0.18); }
+  .sl-row-icon svg { display: block; }
+  .sl-row.is-active .sl-row-icon { background: rgba(255, 255, 255, 0.18); color: #fff; }
   .sl-row-text { flex: 1 1 auto; min-width: 0; }
   .sl-row-title {
     overflow: hidden;
@@ -157,6 +159,6 @@
   </div>
 
   <script src="/plugin/gear-bridge.js"></script>
-  <script src="./spotlight.js"></script>
+  <script type="module" src="./spotlight.js"></script>
 </body>
 </html>
