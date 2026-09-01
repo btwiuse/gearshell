@@ -1471,3 +1471,13 @@ extras 重打,gearshell 待推):
   回退源码默认对(module+wasm 成对);app.js boot 门接入;可用 pin 仍尊重。
 - 实测:404 pin 自动回退 v0.4.32 启动;v0.4.29 恢复后照常加载;node 单测 7/7。
 - 未选:?debug 模式、出错手动指定版本(设置面板已有手动改 URL 能力)。
+
+
+## 四十四、移动端 terminal 点按聚焦修复(2026-09-02)
+
+- 问题:移动端 terminal 失焦后手指点按无法重新聚焦(iframe 内浏览器不合成
+  xterm 依赖的 mousedown);桌面鼠标正常。
+- 修复:wanix-term 加 tap 聚焦(wanix v0.4.33);4 个裸 xterm 插件页(rv64/
+  terminal-frame/bbtex-iframe/iframe-template-plugin)内联 enableTapFocus;
+  gearshell pins 升 v0.4.33。
+- 验证:合成 touch tap 聚焦 true、滚动不聚焦 false;v0.4.33 CDN 字节一致。
