@@ -42,15 +42,101 @@
 .mkt-feature-idx { color: #58a6ff; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .mkt-feature-head svg { color: #8b949e; }
 .mkt-feature p { margin: 0; color: #c9d1d9; font-size: 15px; line-height: 1.6; }
-.mkt-demo-frame { display: block; width: 100%; text-align: left; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; background: #0a0e14; cursor: pointer; font: inherit; color: inherit; padding: 0; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
-.mkt-demo-frame:hover { border-color: #58a6ff; }
-/* Once the demo frame becomes a live terminal it is a div, not a button. */
-.mkt-demo-frame:not(button) { cursor: default; }
-.mkt-demo-frame:not(button):hover { border-color: #30363d; }
-.mkt-demo-live { height: 300px; padding: 0; }
-.mkt-demo-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #161b22; border-bottom: 1px solid #30363d; }
-.mkt-demo-dot { width: 12px; height: 12px; border-radius: 50%; background: #30363d; }
-.mkt-demo-title { margin-left: 12px; color: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+/* The demo terminal window: titlebar + terminal body, rounded like a real
+   window. It is a div (titlebar first); the static placeholder is the only
+   button. In .is-fullscreen it expands to fill the whole browser tab. */
+.mkt-demo-frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0e14;
+  cursor: default;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+.mkt-demo-frame.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+.mkt-demo-live { flex: 1; min-height: 300px; padding: 0; }
+/* The clickable placeholder that opens the terminal fills the body area. */
+.mkt-demo-placeholder {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: #0a0e14;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.mkt-demo-placeholder:hover { background: #0d1117; }
+
+/* Terminal-frame style title bar: macOS traffic lights over a monospace
+   title, status + restart/fullscreen actions on the right (live only). */
+.mkt-demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(#161b22, #141920);
+  border-bottom: 1px solid #30363d;
+  flex: none;
+}
+.mkt-demo-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.mkt-demo-dot-red { background: #ff5f56; }
+.mkt-demo-dot-yellow { background: #ffbd2e; }
+.mkt-demo-dot-green { background: #27c93f; }
+.mkt-demo-title {
+  flex: 1;
+  min-width: 0;
+  color: #8b949e;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mkt-demo-actions { display: inline-flex; align-items: center; gap: 10px; }
+.mkt-demo-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8b949e;
+  font: 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.mkt-demo-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #27c93f;
+  animation: mkt-demo-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mkt-demo-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.mkt-demo-btn {
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #21262d;
+  color: #c9d1d9;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.mkt-demo-btn:hover { background: #2d333b; border-color: #58a6ff; }
 .mkt-demo-body { padding: 22px 24px; font: 13.5px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #e6edf3; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
 .mkt-prompt { color: #58a6ff; }
 .mkt-muted { color: #8b949e; }

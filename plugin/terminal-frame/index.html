@@ -74,6 +74,7 @@
         progress: null,
         progressChange: null,
         disposed: true,
+        starting: false,
         sawData: false,
         stallTimer: null,
       };
@@ -112,7 +113,10 @@
       }
 
       function teardown() {
-        if (state.disposed) return;
+        // Force a full clear whether or not the session already exited
+        // (an exited session leaves the terminal + handle in place so the
+        // restart can read the last output; start() re-invokes teardown
+        // to release them before opening a fresh session).
         state.disposed = true;
         if (state.stallTimer) {
           clearTimeout(state.stallTimer);
@@ -132,11 +136,13 @@
         state.progressChange = null;
         state.progress = null;
         updateProgress({ state: 0, value: 0 });
-        $("term-host").innerHTML = "";
+        var host = $("term-host");
+        if (host) host.innerHTML = "";
       }
 
       function start() {
-        if (!state.disposed) return;
+        if (state.starting) return;
+        state.starting = true;
         teardown();
         state.disposed = false;
         state.sawData = false;
@@ -195,6 +201,7 @@
             },
             exitMessage: false, // the banner above owns the exit notice
           }).then(function (handle) {
+            state.starting = false;
             state.handle = handle;
             state.sessionId = handle.sessionId;
             setStatus("connected", "session " + handle.sessionId);
@@ -211,6 +218,7 @@
             }, 8000);
           });
         }).catch(function (error) {
+          state.starting = false;
           setStatus("exited", "failed");
           showBanner("Could not start the terminal: " + error.message);
           teardown();

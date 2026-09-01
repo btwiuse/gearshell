@@ -132,15 +132,31 @@ function DemoTerminal() {
   `;
 }
 
-// The traffic-light title bar shown above both the static transcript
-// and the live terminal.
-function DemoBar() {
+// Terminal-frame-style title bar shown above both the static transcript and
+// the live terminal. Only once the terminal is live do the restart and
+// fullscreen actions appear (the static placeholder is the click target that
+// opens the terminal, so it stays clean).
+function DemoBar({ live, full, onRestart, onFullscreen }) {
   return html`
-    <div className="mkt-demo-bar">
-      <span className="mkt-demo-dot"></span>
-      <span className="mkt-demo-dot"></span>
-      <span className="mkt-demo-dot"></span>
+    <div className="mkt-demo-bar" data-live=${live ? "1" : "0"}>
+      <span className="mkt-demo-dot mkt-demo-dot-red"></span>
+      <span className="mkt-demo-dot mkt-demo-dot-yellow"></span>
+      <span className="mkt-demo-dot mkt-demo-dot-green"></span>
       <span className="mkt-demo-title">gear@gear: ~</span>
+      ${
+        live
+          ? html`
+              <span className="mkt-demo-actions">
+                <span className="mkt-demo-status"><span className="mkt-demo-status-dot"></span>session live</span>
+                <button className="mkt-demo-btn" type="button" title="Restart terminal" aria-label="Restart terminal"
+                  onClick=${(ev) => { ev.stopPropagation(); onRestart(); }}>↻</button>
+                <button className="mkt-demo-btn" type="button" title=${full ? "Exit fullscreen" : "Fullscreen"}
+                  aria-label=${full ? "Exit fullscreen" : "Fullscreen"}
+                  onClick=${(ev) => { ev.stopPropagation(); onFullscreen(); }}>${full ? "⤡" : "⛶"}</button>
+              </span>
+            `
+          : ""
+      }
     </div>
   `;
 }
@@ -200,24 +216,35 @@ function LiveTerminal() {
 
 export function HomeDemo() {
   const [live, setLive] = useState(false);
+  const [full, setFull] = useState(false);
+  const [restartKey, setRestartKey] = useState(0);
+  const restart = () => setRestartKey((k) => k + 1);
+  const fullscreen = () => setFull((f) => !f);
   return html`
     <section className="mkt-page mkt-section" id="mkt-demo">
       <div className="mkt-section-label">DEMO</div>
       <h2>Open a tab. Get a terminal.</h2>
       <p className="lead">Same shell. Same dotfiles. Same state. On a borrowed laptop, a coffee shop Wi-Fi, or a phone on a plane.</p>
-      <${live ? "div" : "button"}
-        className="mkt-demo-frame"
-        ...${live
-          ? { "aria-label": "Live terminal" }
-          : {
-            type: "button",
-            "aria-label": "Open Terminal",
-            onClick: () => setLive(true),
-          }}
+      <div
+        className=${"mkt-demo-frame" + (full ? " is-fullscreen" : "")}
+        ...${live ? { "aria-label": "Live terminal" } : {}}
       >
-        <${DemoBar}/>
-        ${live ? html`<${LiveTerminal}/>` : html`<${DemoTerminal}/>`}
-      </${live ? "div" : "button"}>
+        <${DemoBar} live=${live} full=${full} onRestart=${restart} onFullscreen=${fullscreen}/>
+        ${
+          live
+            ? html`<${LiveTerminal} key=${restartKey}/>`
+            : html`
+                <button
+                  className="mkt-demo-placeholder"
+                  type="button"
+                  aria-label="Open Terminal"
+                  onClick=${() => setLive(true)}
+                >
+                  <${DemoTerminal}/>
+                </button>
+              `
+        }
+      </div>
       <p className="mkt-demo-caption">Real terminal, real Claude Code, zero installs.</p>
     </section>
   `;
