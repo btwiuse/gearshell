@@ -1,0 +1,12 @@
+#!/bin/sh
+# rv64 guest DHCP script (udhcpc -s /bin/post-dhcp), configured from the
+# vnet gateway's lease the same way the v86 plugin's post-dhcp works.
+case "$1" in
+  bound|renew)
+    ifconfig "$interface" "$ip" netmask "$subnet" 2>/dev/null
+    route add default gw "$router" 2>/dev/null
+    if [ -n "$dns" ]; then
+      for d in $dns; do echo "nameserver $d"; done > /etc/resolv.conf
+    fi
+    ;;
+esac

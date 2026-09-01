@@ -1,0 +1,9 @@
+#!/bin/sh
+# rv64 guest boot rc, sourced by the wanix rv64 guest init (/boot/rc).
+# The vnet wsproxy tunnel presents eth0 over a layer-2 relay, so the guest
+# runs DHCP exactly like the v86 plugin to get an address, a default route
+# and a resolver from the gateway.
+mount -t tmpfs tmpfs /tmp 2>/dev/null
+ifconfig lo up 2>/dev/null
+ifconfig eth0 up 2>/dev/null
+udhcpc -i eth0 -s /bin/post-dhcp 2>/dev/null

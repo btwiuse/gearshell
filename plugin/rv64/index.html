@@ -37,13 +37,14 @@
       // and panels use): vm.create spawns it there and this page renders a
       // bare xterm that streams the VM's term device over the bridge.
       var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
+      var VNET_URL = "wss://vnet.net.k0s.io/x/net";
       // rv64-specific assets live with the plugin: rv64.tgz is the WANIX
       // rv64 adapter (emulator WASM + loader), and wanix-linux-rv64.tgz is
       // the RISC-V Alpine guest built by rv64.js/integrations/wanix.
       var RV64_BACKEND_URL =
-        "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc4/rv64.tgz";
+        "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc5/rv64.tgz";
       var RV64_LINUX_URL =
-        "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc4/wanix-linux-rv64.tgz";
+        "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc5/wanix-linux-rv64.tgz";
 
       var state = {
         sessionId: null,
@@ -178,6 +179,12 @@
             type: "rv64",
             backendUrl: RV64_BACKEND_URL,
             linuxUrl: RV64_LINUX_URL,
+            // Same shared vnet gateway as the v86 plugin: the adapter routes
+            // the guest NIC through it (rv64.js wsproxy mode), and the guest
+            // boot rc runs DHCP to pick up an address + DNS.
+            netdev: "user,type=virtio,relay_url=" + VNET_URL,
+            bootRc: "/plugin/rv64/guest-boot-rc",
+            postDhcp: "/plugin/rv64/guest-post-dhcp",
           });
         }).then(function (result) {
           if (!result || result.ok === false) {
