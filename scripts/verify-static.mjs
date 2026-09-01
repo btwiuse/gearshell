@@ -338,7 +338,8 @@ function firstPartyJsFiles() {
         if (!RULE_IGNORE_DIRS.has(e.name)) walk(`${dir}${e.name}/`);
       } else if (
         e.isFile() && e.name.endsWith(".js") &&
-        !e.name.endsWith(".min.js") && !e.name.endsWith(".sw.js")
+        !e.name.endsWith(".min.js") && !e.name.endsWith(".sw.js") &&
+        !e.name.endsWith(".bundle.js")
       ) {
         out.push(new URL(`${dir}${e.name}`, root));
       }

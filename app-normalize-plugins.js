@@ -138,6 +138,10 @@ export function normalizePlugin(plugin = {}) {
     // local module; rely on HTTP cache headers and DevTools "Disable
     // cache" during iteration instead of cache-bust tokens).
     ...(css.length ? { css } : {}),
+    // Opt-in flag for the empty-workspace fallback (see plugins.js
+    // getEmptyGridPanel). Lives on the manifest, not under iframe,
+    // because both component and iframe plugins opt in the same way.
+    ...(plugin.emptyGrid === true ? { emptyGrid: true } : {}),
   };
 }
 
@@ -187,6 +191,11 @@ export function normalizePlugins(list, defaults) {
         systemFiles: def.systemFiles || [],
         ...(def.w9y ? { w9y: def.w9y } : {}),
         css: def.css || [],
+        // emptyGrid is a manifest-only opt-in (not user-editable): the
+        // boot-time plugin kernel reads it from the manifest, so the
+        // default must always win even when the user has never saved
+        // this plugin id (first boot) or saved a stale version.
+        emptyGrid: def.emptyGrid === true,
       };
     });
   const userIds = new Set(user.map((item) => item.id));

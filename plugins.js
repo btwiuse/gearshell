@@ -62,14 +62,19 @@ export function isPluginPanel(component) {
   return pluginPanels.has(component) || pluginIframes.has(component);
 }
 
-// Empty-grid fallback lookup. First enabled panel that opted in
-// via registerPanel({ emptyGrid: true }) wins; disabled providers
-// are skipped so turning off default-page brings launcher back.
+// Empty-grid fallback lookup. First enabled { emptyGrid: true }
+// entry wins across both registries; disabled providers skipped so
+// toggling in the Plugins page changes the default without code.
 export function getEmptyGridPanel() {
   for (const [component, entry] of pluginPanels) {
     if (!entry.emptyGrid) continue;
     if (entry.manifest?.enabled === false) continue;
-    return { component, open: entry.open };
+    return { component, open: entry.open || null };
+  }
+  for (const [component, entry] of pluginIframes) {
+    if (!entry.emptyGrid) continue;
+    if (entry.manifest?.enabled === false) continue;
+    return { component, open: null };
   }
   return null;
 }
@@ -109,12 +114,11 @@ function ensureRestorable(component) {
 }
 
 // Iframe plugins need no JS module: the manifest itself carries the
-// iframe src, so registration is synchronous (no import round-trip),
-// which also removes the boot race where openStartupPanels / restore
-// would miss a panel type that is still loading.
+// iframe src, so registration is synchronous and dockview's boot
+// path sees them before any import resolves.
 function registerIframePanel(manifest, opts) {
   const component = opts.component || manifest.id;
-  const { src, title, allow, allowFullscreen } = opts;
+  const { src, title, allow, allowFullscreen, emptyGrid } = opts;
   if (typeof src !== "string" || !src) {
     throw new Error("iframe plugin requires an iframe.src");
   }
@@ -127,6 +131,7 @@ function registerIframePanel(manifest, opts) {
     src,
     allow,
     allowFullscreen,
+    emptyGrid: emptyGrid === true,
   };
   pluginIframes.set(component, entry);
   const options = pluginsDep("PANEL_CREATION_OPTIONS");
@@ -148,6 +153,7 @@ function registerIframePlugin(manifest) {
     component: manifest.id,
     ...manifest.iframe,
     title: manifest.name,
+    emptyGrid: manifest.emptyGrid,
   });
   pluginLoadResults.set(manifest.id, { ok: true, at: Date.now() });
   emitPluginChanged({ id: manifest.id, ok: true });
@@ -278,13 +284,7 @@ function registerPluginPanel(
     label: label || manifest.name,
     title: title || label || manifest.name,
     render,
-    // Optional custom opener for panels whose creation needs more
-    // than the generic dockview.addPanel path (single-instance,
-    // open-panel tracking, etc). Panels without `open` fall back to
-    // the standard opener in panels.js.
     open: typeof open === "function" ? open : null,
-    // Opt-in flag for the empty-workspace fallback (see
-    // getEmptyGridPanel). First enabled provider wins.
     emptyGrid: emptyGrid === true,
   };
   pluginPanels.set(component, entry);

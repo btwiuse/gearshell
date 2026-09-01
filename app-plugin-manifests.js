@@ -244,10 +244,10 @@ export const DEFAULT_PLUGINS = [
       ],
     },
   },
-  // Default Page: the empty-workspace landing. Activates whenever the
-  // dockview grid has no panels left, with a tiny card that points at
-  // Spotlight and offers a few high-frequency quick launches. Replaces
-  // the launcher panel for users who want a keyboard-first shell.
+  // Default Page: the empty-workspace landing. Disabled by default
+  // — glmatrix (Digital Rain, below) claims the empty-grid slot
+  // instead. Re-enable from the Plugins page to bring the keyboard
+  // hint + quick-launch card back as the default.
   {
     id: "default-page",
     name: "Default Page",
@@ -255,6 +255,26 @@ export const DEFAULT_PLUGINS = [
     icon: "Home",
     entry: "/plugin/default-page/default-page-plugin.js",
     css: ["/plugin/default-page/default-page.css"],
+    enabled: false,
+  },
+  // Digital Rain: a WebGL/WebAssembly demo page that ships as an
+  // iframe-only plugin (no entry module — the page is self-contained).
+  // Opts in to the empty-grid fallback so the workspace opens straight
+  // into it whenever every panel is closed. css is empty because the
+  // page paints its own surface; declaring a shell stylesheet here
+  // would only inject host rules.
+  {
+    id: "glmatrix",
+    name: "Digital Rain",
+    version: "1.0.0",
+    icon: "CloudRain",
+    iframe: {
+      src: "/plugin/glmatrix/index.html",
+      title: "Digital Rain",
+      allow: "fullscreen",
+      allowFullscreen: true,
+    },
+    emptyGrid: true,
   },
   {
     id: "crush-runner",
