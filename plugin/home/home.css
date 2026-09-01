@@ -69,6 +69,34 @@
   box-shadow: none;
 }
 .mkt-demo-live { flex: 1; min-height: 300px; padding: 0; }
+
+/* Thin OSC progress bar between the titlebar and the terminal (mirrors
+   terminal-frame). Hidden until the guest reports progress. */
+.mkt-demo-progress {
+  position: relative;
+  flex: none;
+  height: 3px;
+  background: #21262d;
+  overflow: hidden;
+}
+.mkt-demo-progress[hidden] { display: none; }
+.mkt-demo-progress-fill {
+  height: 100%;
+  width: 0;
+  background: #58a6ff;
+  transition: width 160ms ease-out;
+}
+.mkt-demo-progress[data-state="2"] .mkt-demo-progress-fill { background: #f85149; }
+.mkt-demo-progress[data-state="4"] .mkt-demo-progress-fill { background: #d29922; }
+.mkt-demo-progress[data-state="3"] .mkt-demo-progress-fill {
+  width: 32% !important;
+  background: linear-gradient(90deg, transparent, #58a6ff, transparent);
+  animation: mkt-demo-progress-indeterminate 1.2s ease-in-out infinite;
+}
+@keyframes mkt-demo-progress-indeterminate {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(320%); }
+}
 /* The clickable placeholder that opens the terminal fills the body area. */
 .mkt-demo-placeholder {
   display: block;

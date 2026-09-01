@@ -178,14 +178,40 @@ async function awaitTerminalApi() {
 }
 
 // Start a kernel terminal session in-flow on `anchor` and wire it through
+// Render an OSC 9;4-style progress bar into `bar` (like terminal-frame's).
+// The addon itself only exposes onChange; the bar is a thin element whose
+// fill width reflects the reported progress.
+function wireProgress(term, libs, bar) {
+  if (!bar) return null;
+  const addon = new libs.ProgressAddon();
+  term.loadAddon(addon);
+  const sub = addon.onChange((progress) => {
+    const stateValue = progress && progress.state;
+    const value = Math.max(0, Math.min(100, Number(progress && progress.value) || 0));
+    bar.hidden = stateValue === 0 || stateValue == null;
+    bar.dataset.state = String(stateValue == null ? 0 : stateValue);
+    const fill = bar.firstElementChild;
+    if (fill) fill.style.width = value + "%";
+    if (stateValue === 3) fill?.removeAttribute("aria-valuenow");
+  });
+  return () => {
+    sub?.dispose?.();
+    addon?.dispose?.();
+  };
+}
+
 // the shared mountTerminal helper (same transport adapters as the iframe
-// plugins, but driving the same-document terminal API). Returns a cleanup
-// function that tears the session, xterm, observers and listeners down.
-async function openDemoTerminal(anchor, terminalApi) {
+// plugins, but driving the same-document terminal API). `prog` is the
+// progress bar element (optional). Returns a cleanup function that tears
+// the session, xterm, observers, progress and listeners down.
+async function openDemoTerminal(anchor, terminalApi, prog) {
   const handle = await mountTerminal(anchor, sameDocSession(terminalApi), {
     terminal: {
       fontSize: 13,
       theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" },
+    },
+    setupAddons: (term, libs) => {
+      wireProgress(term, libs, prog);
     },
   });
   return () => {
@@ -196,13 +222,14 @@ async function openDemoTerminal(anchor, terminalApi) {
 }
 
 function LiveTerminal() {
-  const ref = useRef(null);
+  const hostRef = useRef(null);
+  const progRef = useRef(null);
   useEffect(() => {
     let cleanup = null;
     awaitTerminalApi()
       .then((terminalApi) =>
-        terminalApi && ref.current
-          ? openDemoTerminal(ref.current, terminalApi)
+        terminalApi && hostRef.current
+          ? openDemoTerminal(hostRef.current, terminalApi, progRef.current)
           : null,
       )
       .then((fn) => {
@@ -211,7 +238,12 @@ function LiveTerminal() {
       .catch((error) => console.error("home demo terminal:", error));
     return () => cleanup?.();
   }, []);
-  return html`<div ref=${ref} className="mkt-demo-live"></div>`;
+  return html`
+    <div className="mkt-demo-progress" ref=${progRef} hidden>
+      <div className="mkt-demo-progress-fill"></div>
+    </div>
+    <div ref=${hostRef} className="mkt-demo-live"></div>
+  `;
 }
 
 export function HomeDemo() {
