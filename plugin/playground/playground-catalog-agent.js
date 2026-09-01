@@ -3,7 +3,23 @@
 
 export const agentCatalog = [
   {
+    namespace: "terminal",
+    title: "Terminal",
+    methods: [
+      { name: "list", args: [], hint: "List live terminal and VM bridge sessions." },
+      {
+        name: "create",
+        args: [{ key: "profile", label: "Profile", type: "json", default: "{}", placeholder: '{"cmd":"/bin/bash","term":true}' }],
+        hint: "Create a terminal session for an iframe or same-page terminal client.",
+      },
+      { name: "write", args: [{ key: "id", label: "Session id", type: "string" }, { key: "data", label: "Data", type: "json", default: '"ls\\n"' }], hint: "Write input data to a terminal session." },
+      { name: "resize", args: [{ key: "id", label: "Session id", type: "string" }, { key: "cols", label: "Columns", type: "number", default: "80" }, { key: "rows", label: "Rows", type: "number", default: "24" }], hint: "Update terminal dimensions." },
+      { name: "dispose", args: [{ key: "id", label: "Session id", type: "string" }], hint: "Dispose a terminal session." },
+    ],
+  },
+  {
     namespace: "vm",
+    title: "VM",
     title: "VM",
     methods: [
       { name: "list", args: [], hint: "List VM sessions hosted by the shell." },

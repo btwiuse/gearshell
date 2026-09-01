@@ -155,6 +155,7 @@ export const DEFAULT_PLUGINS = [
         "tasks.*",
         "agents.*",
         "vm.*",
+        "terminal.*",
         "music.*",
         "events.*",
         "w9y.*",

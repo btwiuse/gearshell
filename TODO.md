@@ -1201,6 +1201,8 @@ extras 重打,gearshell 待推):
 
 - Playground API catalog 新增 `vm.list` / `vm.create`，workspace API 增加对应
   root namespace，iframe manifest 放行 `vm.*`、`w9y.*`、`hotkeys.*`。
+- API catalog 审计补充 `terminal.*`、`vm.*`、`w9y.*`、`hotkeys.*` 等此前漏列的
+  namespace；VM/terminal 的 iframe 专用 dispatch 仍负责真实 session。
 - VM iframe 专用 dispatch 仍负责真实 VM session，Playground 的 `vm.create` 作为
   API 目录入口可观察桥接限制；真实创建应传 VM backend/Linux 配置。
 - 默认 `AGW` 已改为 `https://agw.k0s.io`，架构文档同步替换旧 AGW host；旧日志和

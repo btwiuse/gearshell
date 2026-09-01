@@ -22,6 +22,30 @@ export const shellCatalog = [
     ],
   },
   {
+    namespace: "hotkeys",
+    title: "Hotkeys",
+    methods: [
+      { name: "list", args: [], hint: "List registered shell and plugin hotkeys." },
+      {
+        name: "register",
+        args: [{ key: "spec", label: "Spec", type: "json", default: "{}", placeholder: '{"key":"ctrl+shift+p","action":{"method":"panels.open","args":["launcher"]}}' }],
+        hint: "Register a controlled panels.open hotkey from a trusted caller.",
+      },
+      { name: "unregister", args: [{ key: "id", label: "Hotkey id", type: "string" }], hint: "Remove a hotkey owned by the API caller." },
+    ],
+  },
+  {
+    namespace: "w9y",
+    title: "W9y",
+    methods: [
+      { name: "list", args: [], hint: "List installed w9y packages." },
+      { name: "status", args: [{ key: "id", label: "Package id", type: "string" }], hint: "Read one installed package status." },
+      { name: "refresh", args: [], hint: "Refresh the installed package registry." },
+      { name: "apply", args: [{ key: "id", label: "Package id", type: "string" }, { key: "version", label: "Version", type: "string", optional: true }], hint: "Start installing a w9y package." },
+      { name: "remove", args: [{ key: "id", label: "Package id", type: "string" }], hint: "Start removing a w9y package." },
+    ],
+  },
+  {
     namespace: "config",
     title: "Config",
     methods: [
