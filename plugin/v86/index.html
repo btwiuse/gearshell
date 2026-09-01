@@ -36,8 +36,10 @@
 
       // The VM runs in the HOST wanix kernel (the same instance the shell
       // and panels use): vm.create spawns it there and this page renders a
-      // bare xterm that streams the VM's term device over the bridge.
-      var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
+      // bare xterm that streams the VM's term device over the bridge. The
+      // shared terminal-mount helper owns xterm/addons/resize/input; this
+      // page keeps v86's VM asset config, status bar and ghostty transform.
+      var MOUNT_BUNDLE = "/plugin/terminal-mount.mjs";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
       // v86-specific assets live with the plugin (like rv64's ASSET_BASE),
       // not in the host app-constants: the archive is the x86 emulator
@@ -49,13 +51,8 @@
 
       var state = {
         sessionId: null,
-        xterm: null,
-        fit: null,
-        disposed: true,
-        dataHandler: null,
-        exitHandler: null,
-        resizeObserver: null,
-        resizeFrame: 0,
+        handle: null,
+        starting: false,
       };
 
       function $(id) { return document.getElementById(id); }
@@ -67,121 +64,15 @@
       }
 
       function writeToXterm(bytes) {
-        if (state.xterm) state.xterm.write(bytes);
+        if (state.handle && state.handle.term) state.handle.term.write(bytes);
       }
 
-      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
-      // xterm listens for after the terminal lost focus, so a tap would never
-      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
-      function enableTapFocus(term, host) {
-        var touchStart = null;
-        host.addEventListener("touchstart", function (event) {
-          var t = event.changedTouches[0];
-          if (t) touchStart = { x: t.clientX, y: t.clientY };
-        }, { passive: true });
-        host.addEventListener("touchend", function (event) {
-          if (!touchStart) return;
-          var t = event.changedTouches[0];
-          var moved = t
-            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
-            : 0;
-          touchStart = null;
-          if (moved < 12) term.focus();
-        }, { passive: true });
-      }
-
-      function termWrite(data) {
-        if (!state.sessionId) return;
-        var response = data.replace(
-          "\u001bP>|xterm.js(",
-          "\u001bP>|ghostty(",
-        );
-        GearShell.terminal.write(
-          state.sessionId,
-          new TextEncoder().encode(response),
-        ).catch(function () {});
-      }
-
-      function termResize() {
-        if (!state.xterm || !state.sessionId) return;
-        GearShell.terminal.resize(
-          state.sessionId,
-          state.xterm.cols,
-          state.xterm.rows,
-        ).catch(function () {});
-      }
-
-      function refitAndResize() {
-        if (!state.fit || !state.xterm) return;
-        try {
-          state.fit.fit();
-        } catch {
-          return;
-        }
-        termResize();
-      }
-
-      function onTermData(event) {
-        if (!event || event.sessionId !== state.sessionId) return;
-        writeToXterm(event.data);
-        if ($("v86-status").dataset.mode === "loading") {
-          setStatus("ready", "ready · network connected");
-        }
-      }
-
-      function onTermExit(event) {
-        if (!event || event.sessionId !== state.sessionId) return;
-        setStatus("error", "VM stopped" + (event.error ? ": " + event.error : ""));
-      }
-
-      function start() {
-        if (state.sessionId) return;
-        setStatus("loading", "starting…");
-        Promise.all([
-          import(XTERM_BUNDLE).then(function (m) {
-            return m.loadXtermBundle().then(function (libs) {
-              libs.apply = m.applyXtermAddons;
-              return libs;
-            });
-          }),
-          GearShell.subscribe("term.data"),
-          GearShell.subscribe("term.exit"),
-        ]).then(function (results) {
-          var libs = results[0];
-          state.xterm = new libs.Terminal({
-            allowProposedApi: true,
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-            fontSize: 13,
-            cursorBlink: true,
-            convertEol: true,
-            scrollback: 10000,
-            theme: {
-              background: "#0a0e14",
-              foreground: "#e6edf3",
-              cursor: "#58a6ff",
-              selectionBackground: "#1f6feb66",
-            },
-          });
-          state.fit = new libs.FitAddon();
-          state.xterm.loadAddon(state.fit);
-          state.xterm.open($("v86-term"));
-          libs.apply(state.xterm, libs);
-          enableTapFocus(state.xterm, $("v86-term"));
-          state.xterm.onData(termWrite);
-          state.xterm.onResize(termResize);
-          state.dataHandler = onTermData;
-          state.exitHandler = onTermExit;
-          GearShell.on("term.data", state.dataHandler);
-          GearShell.on("term.exit", state.exitHandler);
-          state.resizeObserver = new ResizeObserver(function () {
-            // Debounce fit+winch so layout passes during panel resize do
-            // not spam the kernel with stale frames.
-            window.clearTimeout(state.resizeFrame);
-            state.resizeFrame = window.setTimeout(refitAndResize, 80);
-          });
-          state.resizeObserver.observe($("v86-term"));
-          refitAndResize();
-        }).then(function () {
+      // A minimal vm session facade: create() spawns the VM in the host
+      // kernel (returns { sessionId }); write/resize/dispose mirror the
+      // VM's term device on that same session.
+      function vmSession(m) {
+        var s = m.iframeSession(GearShell);
+        s.create = function () {
           return GearShell.vm.create({
             backendUrl: V86_BACKEND_URL,
             linuxUrl: V86_LINUX_URL,
@@ -189,20 +80,53 @@
             bootRc: "/plugin/v86/guest-boot-rc",
             postDhcp: "/plugin/v86/guest-post-dhcp",
           });
-        }).then(function (result) {
-          if (!result || result.ok === false) {
-            throw new Error((result && result.error) || "vm.create failed");
-          }
-          state.sessionId = result.sessionId;
-          setStatus("loading", "booting Alpine (x86)…");
-          // Initial winch can race the VM's term-device creation; the VM
-          // still boots and the ResizeObserver refits on the first frame.
-          return GearShell.terminal.resize(
-            state.sessionId,
-            state.xterm.cols,
-            state.xterm.rows,
-          ).catch(function () { /* non-fatal: winch races the term */ });
+        };
+        return s;
+      }
+
+      function start() {
+        if (state.starting) return;
+        state.starting = true;
+        setStatus("loading", "starting…");
+        import(MOUNT_BUNDLE).then(function (m) {
+          return m.mountTerminal($("v86-term"), vmSession(m), {
+            terminal: {
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              fontSize: 13,
+              scrollback: 10000,
+              theme: {
+                background: "#0a0e14",
+                foreground: "#e6edf3",
+                cursor: "#58a6ff",
+                selectionBackground: "#1f6feb66",
+              },
+            },
+            transformInput: function (data) {
+              return data.replace(
+                "\u001bP>|xterm.js(",
+                "\u001bP>|ghostty(",
+              );
+            },
+            onData: function () {
+              if ($("v86-status").dataset.mode === "loading") {
+                setStatus("ready", "ready · network connected");
+              }
+            },
+            onExit: function (event) {
+              if (event && event.error) {
+                setStatus("error", "VM stopped: " + event.error);
+              } else {
+                setStatus("error", "VM stopped");
+              }
+            },
+          }).then(function (handle) {
+            state.handle = handle;
+            state.sessionId = handle.sessionId;
+            state.starting = false;
+            setStatus("loading", "booting Alpine (x86)…");
+          });
         }).catch(function (error) {
+          state.starting = false;
           console.error("v86 start failed", error);
           setStatus("error", "failed: " + (error.message || error));
           writeToXterm("\r\n\x1b[31mv86 failed to start: " +

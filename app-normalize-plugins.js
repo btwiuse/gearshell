@@ -160,7 +160,7 @@ export function normalizePlugins(list, defaults) {
   );
   const user = (Array.isArray(list) ? list : [])
     .map(normalizePlugin)
-    .filter(Boolean)
+    .filter((item) => item && item.id !== "vm")
     .map((item) => {
       const def = defaultsById.get(item.id);
       if (!def) return item;

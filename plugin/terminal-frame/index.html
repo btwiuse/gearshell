@@ -62,42 +62,23 @@
     (function () {
       "use strict";
 
-      var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
+      // The shared terminal-mount helper owns xterm construction, the addon
+      // set, input/output wiring, resize (fit + winch with real pixels) and
+      // tap-focus. This page keeps its frame: status bar + progress + ghostty
+      // transform + restart + the "waiting for output" stall timer.
+      var MOUNT_BUNDLE = "/plugin/terminal-mount.mjs";
 
       var state = {
         sessionId: null,
-        xterm: null,
-        fit: null,
+        handle: null,
         progress: null,
         progressChange: null,
         disposed: true,
         sawData: false,
-        resizeObserver: null,
-        dataHandler: null,
-        exitHandler: null,
+        stallTimer: null,
       };
 
       function $(id) { return document.getElementById(id); }
-
-      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
-      // xterm listens for after the terminal lost focus, so a tap would never
-      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
-      function enableTapFocus(term, host) {
-        var touchStart = null;
-        host.addEventListener("touchstart", function (event) {
-          var t = event.changedTouches[0];
-          if (t) touchStart = { x: t.clientX, y: t.clientY };
-        }, { passive: true });
-        host.addEventListener("touchend", function (event) {
-          if (!touchStart) return;
-          var t = event.changedTouches[0];
-          var moved = t
-            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
-            : 0;
-          touchStart = null;
-          if (moved < 12) term.focus();
-        }, { passive: true });
-      }
 
       function setStatus(mode, text) {
         var bar = $("term-status");
@@ -130,136 +111,28 @@
         }
       }
 
-      function writeToXterm(bytes) {
-        if (!state.xterm) return;
-        try {
-          state.xterm.write(bytes);
-        } catch {
-          // terminal already disposed
-        }
-      }
-
-      function pushData(payload) {
-        if (payload.sessionId !== state.sessionId) return;
-        state.sawData = true;
-        writeToXterm(payload.data);
-        // First bytes prove the session is live; drop the stale
-        // "waiting for output…" state the boot timer may have set.
-        if (document.getElementById("term-status").dataset.mode === "waiting") {
-          setStatus("connected", "session " + state.sessionId);
-        }
-      }
-
-      function pushExit(payload) {
-        if (payload.sessionId !== state.sessionId) return;
-        var code = payload.code ?? "?";
-        var note = payload.error ? "error: " + payload.error : "exit code " + code;
-        setStatus("exited", "exited (" + code + ")");
-        showBanner("Process " + note + " — restart to open a new session.");
-        teardown();
-      }
-
-      function wireEvents() {
-        state.dataHandler = pushData;
-        state.exitHandler = pushExit;
-        GearShell.on("term.data", state.dataHandler);
-        GearShell.on("term.exit", state.exitHandler);
-        return GearShell.subscribe("term.data")
-          .then(function () { return GearShell.subscribe("term.exit"); });
-      }
-
-      function unwireEvents() {
-        if (state.dataHandler) GearShell.off("term.data", state.dataHandler);
-        if (state.exitHandler) GearShell.off("term.exit", state.exitHandler);
-        state.dataHandler = null;
-        state.exitHandler = null;
-        GearShell.unsubscribe("term.data").catch(function () {});
-        GearShell.unsubscribe("term.exit").catch(function () {});
-      }
-
-      function resizeTerminal() {
-        if (!state.xterm || !state.sessionId) return;
-        var host = $("term-host");
-        GearShell.terminal.resize(
-          state.sessionId,
-          state.xterm.cols,
-          state.xterm.rows,
-          host.clientWidth || 0,
-          host.clientHeight || 0,
-        ).catch(function () { /* shell gone */ });
-      }
-
-      // The shell resizes this iframe (window resize or panel drag) but
-      // xterm only learns its new size after a fit(); without this the
-      // winch file keeps the boot dims and the kernel never sees a resize.
-      // Mirrors wanix-term's _publishWinSize: fit, then send the winch
-      // frame unconditionally (pixel-only changes still matter).
-      function refitAndResize() {
-        if (!state.xterm) return;
-        // The shell may still be laying the panel out when the terminal
-        // boots: the host can be 0-sized at that moment, fit() yields a
-        // zero-column xterm and nothing renders until a later resize.
-        // Skip zero sizes here; fitWhenReady/ResizeObserver re-run fit
-        // once the host actually gets its real dimensions.
-        if ($("term-host").clientWidth < 8 || $("term-host").clientHeight < 8) {
-          return;
-        }
-        try {
-          state.fit.fit();
-        } catch {
-          return;
-        }
-        resizeTerminal();
-      }
-
-      // Retry fit until the host has real dimensions (the panel may be
-      // mid-layout when start() runs), then send the winch frame.
-      function fitWhenReady() {
-        if (!state.xterm) return;
-        if ($("term-host").clientWidth < 8 || $("term-host").clientHeight < 8) {
-          setTimeout(fitWhenReady, 200);
-          return;
-        }
-        refitAndResize();
-      }
-
       function teardown() {
         if (state.disposed) return;
         state.disposed = true;
-        if (state.sessionId) {
-          GearShell.terminal.dispose(state.sessionId).catch(function () {});
-          state.sessionId = null;
+        if (state.stallTimer) {
+          clearTimeout(state.stallTimer);
+          state.stallTimer = null;
         }
-        unwireEvents();
-        window.removeEventListener("resize", refitAndResize);
-        if (state.resizeObserver) {
-          state.resizeObserver.disconnect();
-          state.resizeObserver = null;
+        if (state.handle) {
+          try {
+            state.handle.dispose();
+          } catch {
+            // already disposed
+          }
+          state.handle = null;
         }
+        state.sessionId = null;
         state.progressChange?.dispose?.();
         state.progress?.dispose?.();
         state.progressChange = null;
         state.progress = null;
         updateProgress({ state: 0, value: 0 });
-        if (state.xterm) {
-          state.xterm.dispose();
-          state.xterm = null;
-          state.fit = null;
-          $("term-host").innerHTML = "";
-        }
-      }
-
-      function ensureXterm() {
-        return import(XTERM_BUNDLE).then(function (m) {
-          return m.loadXtermBundle().then(function (libs) {
-            // The page wires its own progress addon (state.progress + bar),
-            // so applyXtermAddons skips progress to avoid a duplicate bar.
-            libs.applyXtermAddons = function (xterm) {
-              m.applyXtermAddons(xterm, libs, { progress: false });
-            };
-            return libs;
-          });
-        });
+        $("term-host").innerHTML = "";
       }
 
       function start() {
@@ -269,18 +142,15 @@
         state.sawData = false;
         hideBanner();
         setStatus("connecting", "starting…");
-        ensureXterm()
-          .then(function (libs) {
-            var host = $("term-host");
-            host.innerHTML = "";
-            state.xterm = new libs.Terminal({
-              allowProposedApi: true,
+        $("term-host").innerHTML = "";
+        import(MOUNT_BUNDLE).then(function (m) {
+          return m.mountTerminal($("term-host"), m.iframeSession(GearShell), {
+            progress: false, // the page wires its own ProgressAddon below
+            terminal: {
               termName: "ghostty",
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
               fontSize: 14,
               lineHeight: 1.25,
-              cursorBlink: true,
-              convertEol: true,
               scrollback: 10000,
               theme: {
                 background: "#0a0e14",
@@ -288,66 +158,61 @@
                 cursor: "#58a6ff",
                 selectionBackground: "#1f6feb66",
               },
-            });
-            state.fit = new libs.FitAddon();
-            state.xterm.loadAddon(state.fit);
-            state.progress = new libs.ProgressAddon();
-            state.xterm.loadAddon(state.progress);
-            state.progressChange = state.progress.onChange(function (progress) {
-              updateProgress(progress);
-            });
-            state.xterm.open(host);
-            libs.applyXtermAddons(state.xterm);
-            enableTapFocus(state.xterm, host);
-            // fitWhenReady (below) fits once the host has real dimensions;
-            // an eager fit() at panel-layout time would size xterm to
-            // 0 columns and the initial winch frame would be garbage.
-            state.xterm.onData(function (data) {
-              if (!state.sessionId) return;
-              var response = data.replace(
+            },
+            // Wire the page's progress bar; the helper skips its own.
+            setupAddons: function (term, libs) {
+              state.progress = new libs.ProgressAddon();
+              term.loadAddon(state.progress);
+              state.progressChange = state.progress.onChange(function (progress) {
+                updateProgress(progress);
+              });
+            },
+            transformInput: function (data) {
+              return data.replace(
                 "\u001bP>|xterm.js(",
                 "\u001bP>|ghostty(",
               );
-              GearShell.terminal.write(state.sessionId, new TextEncoder().encode(response))
-                .catch(function () {});
-            });
-            state.xterm.onResize(function () { resizeTerminal(); });
-            window.addEventListener("resize", refitAndResize);
-            // Panel drags and the initial layout settle resize the host
-            // without a window resize; observe it directly (also covers
-            // the 0-sized-boot case via fitWhenReady).
-            if (typeof ResizeObserver !== "undefined") {
-              state.resizeObserver = new ResizeObserver(refitAndResize);
-              state.resizeObserver.observe($("term-host"));
-            }
-            fitWhenReady();
-            return wireEvents();
-          })
-          .then(function () {
-            return GearShell.terminal.create({});
-          })
-          .then(function (result) {
-            if (result.ok === false) throw new Error(result.error || "create failed");
-            state.sessionId = result.sessionId;
-            setStatus("connected", "session " + result.sessionId);
-            $("term-title").textContent = "gear@gear: ~  (" + result.sessionId + ")";
-            resizeTerminal();
+            },
+            onData: function () {
+              state.sawData = true;
+              // First bytes prove the session is live; drop the stale
+              // "waiting for output…" state the stall timer may have set.
+              if ($("term-status").dataset.mode === "waiting") {
+                setStatus("connected", "session " + state.sessionId);
+              }
+            },
+            onExit: function (payload) {
+              var code = payload.code ?? "?";
+              var note = payload.error ? "error: " + payload.error : "exit code " + code;
+              setStatus("exited", "exited (" + code + ")");
+              showBanner("Process " + note + " — restart to open a new session.");
+              // Mark idle so the restart button can start() again, but do
+              // NOT dispose yet: keep the last output on screen until the
+              // user restarts (start()'s teardown() then releases it).
+              state.disposed = true;
+            },
+            exitMessage: false, // the banner above owns the exit notice
+          }).then(function (handle) {
+            state.handle = handle;
+            state.sessionId = handle.sessionId;
+            setStatus("connected", "session " + handle.sessionId);
+            $("term-title").textContent = "gear@gear: ~  (" + handle.sessionId + ")";
             // If the process produces nothing within a few seconds the
-            // runtime is likely stalled (see the README note on large
-            // gojs binaries); surface that instead of a dead black pane.
-            // The timer is a fallback: once term.data has flowed it must
-            // not override the connected state.
-            setTimeout(function () {
+            // runtime is likely stalled (see the README note on large gojs
+            // binaries); surface that instead of a dead black pane. The
+            // timer is a fallback: once term.data has flowed it must not
+            // override the connected state.
+            state.stallTimer = setTimeout(function () {
               if (!state.disposed && state.sessionId && !state.sawData) {
                 setStatus("waiting", "waiting for output…");
               }
             }, 8000);
-          })
-          .catch(function (error) {
-            setStatus("exited", "failed");
-            showBanner("Could not start the terminal: " + error.message);
-            teardown();
           });
+        }).catch(function (error) {
+          setStatus("exited", "failed");
+          showBanner("Could not start the terminal: " + error.message);
+          teardown();
+        });
       }
 
       $("term-restart").addEventListener("click", start);

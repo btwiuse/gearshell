@@ -161,6 +161,11 @@ body {
   color: #484f58;
   font-size: 14px;
 }
+/* The author display:flex above would override the UA [hidden] rule;
+   keep the hidden attribute meaningful when terminals are open. */
+.bbtex-empty[hidden] {
+  display: none;
+}
 
 /* Each terminal fills the stage viewport (minus the sidebar); with
    several examples open they stack vertically and the stage scrolls

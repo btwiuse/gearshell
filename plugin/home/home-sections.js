@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, BookOpen, Github, LayoutGrid, Zap } from "lucide-react";
 import { localFirstChips } from "./home-data.js";
 import htm from "htm";
+import { mountTerminal, sameDocSession } from "../terminal-mount.mjs";
 
 const html = htm.bind(React.createElement);
 
@@ -144,14 +145,55 @@ function DemoBar() {
   `;
 }
 
-// Live embedded terminal: the demo frame swaps its static transcript
-// for a real wanix terminal (window.GearShell.terminal.embed) once
-// clicked; detach tears the session down on unmount.
+// Poll for the shell's GearShell terminal API (exposed during boot wiring;
+// the Home panel can mount before initWorkspaceApi runs). Returns the
+// resolved terminal surface or null after 30s.
+async function awaitTerminalApi() {
+  let terminalApi = window.GearShell?.terminal;
+  const deadline = Date.now() + 30000;
+  while ((!terminalApi || typeof terminalApi.create !== "function") &&
+         Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    terminalApi = window.GearShell?.terminal;
+  }
+  return terminalApi && typeof terminalApi.create === "function"
+    ? terminalApi
+    : null;
+}
+
+// Start a kernel terminal session in-flow on `anchor` and wire it through
+// the shared mountTerminal helper (same transport adapters as the iframe
+// plugins, but driving the same-document terminal API). Returns a cleanup
+// function that tears the session, xterm, observers and listeners down.
+async function openDemoTerminal(anchor, terminalApi) {
+  const handle = await mountTerminal(anchor, sameDocSession(terminalApi), {
+    terminal: {
+      fontSize: 13,
+      theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" },
+    },
+  });
+  return () => {
+    try {
+      handle.dispose();
+    } catch {}
+  };
+}
+
 function LiveTerminal() {
   const ref = useRef(null);
   useEffect(() => {
-    const handle = window.GearShell?.terminal?.embed(ref.current);
-    return () => handle?.detach?.();
+    let cleanup = null;
+    awaitTerminalApi()
+      .then((terminalApi) =>
+        terminalApi && ref.current
+          ? openDemoTerminal(ref.current, terminalApi)
+          : null,
+      )
+      .then((fn) => {
+        cleanup = fn;
+      })
+      .catch((error) => console.error("home demo terminal:", error));
+    return () => cleanup?.();
   }, []);
   return html`<div ref=${ref} className="mkt-demo-live"></div>`;
 }

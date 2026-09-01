@@ -36,7 +36,7 @@
     <div class="bbtex-body">
       <aside id="bbtex-sidebar" class="bbtex-sidebar"></aside>
       <main id="bbtex-stage" class="bbtex-stage">
-        <div class="bbtex-empty">Pick an example to run it in a live terminal</div>
+        <div id="bbtex-empty" class="bbtex-empty">Pick an example to run it in a live terminal</div>
       </main>
     </div>
   </div>
@@ -47,7 +47,7 @@
     (function () {
       "use strict";
 
-      var XTERM_BUNDLE = "/plugin/xterm-bundle.mjs";
+      var MOUNT_BUNDLE = "/plugin/terminal-mount.mjs";
       var MAX_OPEN = 12;
       var W9Y_EXAMPLE = function (id) { return "/opfs/wanix/examples/" + id; };
 
@@ -123,34 +123,13 @@
         "_Alcachofa_, if you were wondering, is artichoke in Spanish.",
       ].join("\n");
 
-      // open entries: { id, example, sessionId, xterm, fit, card, host, disposed }
+      // open entries: { id, example, sessionId, handle, card, body, disposed }
       var open = [];
-      var sessionsById = {}; // sessionId -> entry (term.data dispatch)
-      var dataHandler = null;
-      var exitHandler = null;
+      var sessionsById = {}; // sessionId -> entry (close/toggle dispatch)
       var statusTimer = null;
 
       function $(id) { return document.getElementById(id); }
 
-      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
-      // xterm listens for after the terminal lost focus, so a tap would never
-      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
-      function enableTapFocus(term, host) {
-        var touchStart = null;
-        host.addEventListener("touchstart", function (event) {
-          var t = event.changedTouches[0];
-          if (t) touchStart = { x: t.clientX, y: t.clientY };
-        }, { passive: true });
-        host.addEventListener("touchend", function (event) {
-          if (!touchStart) return;
-          var t = event.changedTouches[0];
-          var moved = t
-            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
-            : 0;
-          touchStart = null;
-          if (moved < 12) term.focus();
-        }, { passive: true });
-      }
       function el(tag, className, text) {
         var node = document.createElement(tag);
         if (className) node.className = className;
@@ -177,6 +156,9 @@
       // === Sidebar ===
 
       function renderSidebar() {
+        // Show the "pick an example" empty state only while no terminal is
+        // open; cards stack in the stage and read as the real content.
+        $("bbtex-empty").hidden = open.length > 0;
         var sidebar = $("bbtex-sidebar");
         sidebar.innerHTML = "";
         sidebar.appendChild(el("h3", "bbtex-sidebar-title",
@@ -209,8 +191,9 @@
       // Full-bleed window chrome like the terminal-frame plugin: macOS
       // traffic lights over a monospace title bar. Each card fills the
       // stage viewport, so with several examples open they stack and the
-      // stage scrolls between them (never a cramped grid).
-      function makeCard(example, sessionId) {
+      // stage scrolls between them (never a cramped grid). The sessionId
+      // is patched in once the session is created (setCardTitle).
+      function makeCard(example) {
         var card = el("div", "bbtex-term");
         var head = el("div", "bbtex-term-head");
         var traffic = el("div", "bbtex-term-traffic");
@@ -219,7 +202,7 @@
         traffic.appendChild(el("span", "bbtex-term-dot bbtex-term-dot-green"));
         head.appendChild(traffic);
         var title = el("span", "bbtex-term-title", example.label);
-        title.title = example.id + " · " + sessionId;
+        title.title = example.id;
         head.appendChild(title);
         var actions = el("div", "bbtex-term-actions");
         var status = el("span", "bbtex-term-status", "starting…");
@@ -227,141 +210,110 @@
         var close = el("button", "bbtex-term-close", "✕");
         close.type = "button";
         close.title = "Close terminal";
-        close.addEventListener("click", function () { closeEntry(sessionId); });
         actions.appendChild(close);
         head.appendChild(actions);
         var body = el("div", "bbtex-term-body");
         card.appendChild(head);
         card.appendChild(body);
-        return { card: card, head: head, status: status, body: body };
-      }
-
-      function resizeEntry(entry) {
-        if (!entry || !entry.xterm || entry.disposed) return;
-        try {
-          entry.fit.fit();
-        } catch {
-          return;
-        }
-        if (entry.sessionId) {
-          GearShell.terminal.resize(
-            entry.sessionId,
-            entry.xterm.cols,
-            entry.xterm.rows,
-          ).catch(function () {});
-        }
-      }
-
-      function attachTerminal(entry) {
-        var body = entry.body;
-        entry.xterm = new window.Terminal({
-              allowProposedApi: true,
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
-          fontSize: 13,
-          lineHeight: 1.2,
-          cursorBlink: true,
-          convertEol: true,
-          scrollback: 5000,
-          theme: {
-            background: "#0a0e14",
-            foreground: "#e6edf3",
-            cursor: "#58a6ff",
-            selectionBackground: "#1f6feb66",
-          },
-        });
-        entry.fit = new window.FitAddon.FitAddon();
-        entry.xterm.loadAddon(entry.fit);
-        entry.xterm.open(body);
-        window.ApplyXtermAddons(entry.xterm);
-        enableTapFocus(entry.xterm, body);
-        entry.xterm.onData(function (data) {
-          if (!entry.sessionId || entry.disposed) return;
-          GearShell.terminal.write(entry.sessionId, new TextEncoder().encode(data))
-            .catch(function () {});
-        });
-        entry.xterm.onResize(function () { resizeEntry(entry); });
-        // The shell may still be laying the panel out: fit once the card
-        // actually has a size, then again on any window/panel resize.
-        var fitTimer = null;
-        function fitWhenReady() {
-          if (entry.disposed) return;
-          if (body.clientWidth < 8 || body.clientHeight < 8) {
-            fitTimer = setTimeout(fitWhenReady, 150);
-            return;
-          }
-          resizeEntry(entry);
-        }
-        window.addEventListener("resize", onWindowResize);
-        function onWindowResize() {
-          if (entry.disposed) return;
-          try {
-            entry.fit.fit();
-          } catch {
-            return;
-          }
-          if (entry.sessionId) {
-            GearShell.terminal.resize(
-              entry.sessionId,
-              entry.xterm.cols,
-              entry.xterm.rows,
-            ).catch(function () {});
-          }
-        }
-        entry._windowResize = onWindowResize;
-        fitWhenReady();
+        return { card: card, head: head, status: status, body: body, title: title, close: close };
       }
 
       function openExample(example) {
-        return GearShell.terminal.create(profileFor(example))
-          .then(function (result) {
-            if (!result || result.ok === false) {
-              throw new Error((result && result.error) || "create failed");
-            }
-            var sessionId = result.sessionId;
-            var made = makeCard(example, sessionId);
-            var entry = {
-              id: example.id,
-              example: example,
-              sessionId: sessionId,
-              xterm: null,
-              fit: null,
-              card: made.card,
-              status: made.status,
-              body: made.body,
-              disposed: false,
-            };
-            made.status.textContent = "session " + sessionId;
-            open.push(entry);
-            sessionsById[sessionId] = entry;
-            $("bbtex-stage").appendChild(made.card);
-            attachTerminal(entry);
-            renderSidebar();
-            return entry;
+        var made = makeCard(example);
+        var entry = {
+          id: example.id,
+          example: example,
+          sessionId: null,
+          handle: null,
+          card: made.card,
+          status: made.status,
+          body: made.body,
+          title: made.title,
+          disposed: false,
+        };
+        $("bbtex-stage").appendChild(made.card);
+        made.close.addEventListener("click", function () { closeEntry(entry); });
+        return import(MOUNT_BUNDLE).then(function (m) {
+          var session = m.iframeSession(GearShell);
+          session.create = function () {
+            return GearShell.terminal.create(profileFor(example));
+          };
+          return m.mountTerminal(entry.body, session, {
+            terminal: {
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+              fontSize: 13,
+              lineHeight: 1.2,
+              scrollback: 10000,
+              theme: {
+                background: "#0a0e14",
+                foreground: "#e6edf3",
+                cursor: "#58a6ff",
+                selectionBackground: "#1f6feb66",
+              },
+            },
+            onData: function () {
+              if (entry.status.textContent !== "connected") {
+                entry.status.textContent = "connected";
+              }
+            },
+            onExit: function (payload) {
+              var code = payload.code ?? "?";
+              var note = payload.error ? "error: " + payload.error : "exit code " + code;
+              if (entry.status) entry.status.textContent = "exited (" + code + ")";
+              // Write the exit line to the terminal before the card stays
+              // visibly (the card is not auto-removed here; the close ✕ or
+              // re-toggle removes it).
+              if (entry.handle && entry.handle.term) {
+                entry.handle.term.write(
+                  "\r\n\x1b[33m[Process " + note + "]\x1b[0m\r\n",
+                );
+              }
+            },
+            exitMessage: false,
           });
+        }).then(function (handle) {
+          if (entry.disposed) {
+            handle.dispose();
+            return entry;
+          }
+          entry.handle = handle;
+          entry.sessionId = handle.sessionId;
+          entry.title.textContent = entry.example.label;
+          entry.title.title = entry.example.id + " · " + handle.sessionId;
+          entry.status.textContent = "session " + handle.sessionId;
+          open.push(entry);
+          sessionsById[handle.sessionId] = entry;
+          renderSidebar();
+          return entry;
+        }).catch(function (error) {
+          entry.card.remove();
+          throw error;
+        });
       }
 
-      function closeEntry(sessionId) {
-        var entry = sessionsById[sessionId];
+      // Accept either an entry object (from the card ✕) or a sessionId
+      // (from toggle). A close may arrive while the card is still mounting
+      // (sessionId not yet set): set disposed so the pending mount's .then
+      // disposes the handle instead of registering the entry.
+      function closeEntry(sessionIdOrEntry) {
+        var entry = typeof sessionIdOrEntry === "string"
+          ? sessionsById[sessionIdOrEntry]
+          : sessionIdOrEntry;
         if (!entry) return;
         entry.disposed = true;
-        if (entry._windowResize) {
-          window.removeEventListener("resize", entry._windowResize);
-        }
-        try {
-          GearShell.terminal.dispose(sessionId).catch(function () {});
-        } catch {
-          // shell gone
-        }
-        if (entry.xterm) {
+        if (entry.handle) {
           try {
-            entry.xterm.dispose();
+            entry.handle.dispose();
           } catch {
             // already disposed
           }
+          entry.handle = null;
         }
-        entry.card.remove();
-        delete sessionsById[sessionId];
-        open = open.filter(function (e) { return e.sessionId !== sessionId; });
+        if (entry.card) entry.card.remove();
+        if (entry.sessionId) {
+          delete sessionsById[entry.sessionId];
+          open = open.filter(function (e) { return e.sessionId !== entry.sessionId; });
+        }
         renderSidebar();
       }
 
@@ -381,52 +333,6 @@
           hint.textContent = "Could not start " + example.label + ": " + error.message;
           hint.hidden = false;
         });
-      }
-
-      // === Data / exit events ===
-
-      function onTermData(payload) {
-        var entry = sessionsById[payload.sessionId];
-        if (!entry || entry.disposed || !entry.xterm) return;
-        try {
-          entry.xterm.write(payload.data);
-        } catch {
-          // terminal disposed mid-write
-        }
-        if (entry.status.textContent !== "connected") {
-          entry.status.textContent = "connected";
-        }
-      }
-
-      function onTermExit(payload) {
-        var entry = sessionsById[payload.sessionId];
-        if (!entry || entry.disposed) return;
-        var code = payload.code ?? "?";
-        var note = payload.error ? "error: " + payload.error : "exit code " + code;
-        if (entry.status) entry.status.textContent = "exited (" + code + ")";
-        entry.xterm.write(
-          "\r\n\x1b[33m[Process " + note + "]\x1b[0m\r\n",
-        );
-        entry.disposed = true;
-        if (entry._windowResize) {
-          window.removeEventListener("resize", entry._windowResize);
-        }
-        if (entry.xterm) {
-          try {
-            entry.xterm.dispose();
-          } catch {
-            // already disposed
-          }
-        }
-        try {
-          GearShell.terminal.dispose(payload.sessionId).catch(function () {});
-        } catch {
-          // shell gone
-        }
-        entry.card.remove();
-        delete sessionsById[payload.sessionId];
-        open = open.filter(function (e) { return e.sessionId !== payload.sessionId; });
-        renderSidebar();
       }
 
       // === w9y install status ===
@@ -464,25 +370,9 @@
           hint.hidden = false;
           return;
         }
-        return Promise.all([
-          import(XTERM_BUNDLE).then(function (m) {
-            return m.loadXtermBundle().then(function (libs) {
-              window.Terminal = libs.Terminal;
-              window.FitAddon = { FitAddon: libs.FitAddon };
-              // Each terminal card applies the full wanix addon set.
-              window.ApplyXtermAddons = function (xterm) {
-                m.applyXtermAddons(xterm, libs);
-              };
-            });
-          }),
-          GearShell.subscribe("term.data"),
-          GearShell.subscribe("term.exit"),
-          GearShell.subscribe("w9y.changed"),
-        ]).then(function () {
-          dataHandler = onTermData;
-          exitHandler = onTermExit;
-          GearShell.on("term.data", dataHandler);
-          GearShell.on("term.exit", exitHandler);
+        // Each card loads the shared xterm through the helper on demand;
+        // w9y.changed is still on the pub/sub channel for install status.
+        return GearShell.subscribe("w9y.changed").then(function () {
           renderSidebar();
           refreshStatus();
           statusTimer = setInterval(refreshStatus, 5000);

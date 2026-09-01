@@ -195,25 +195,6 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
 
       function $(id) { return document.getElementById(id); }
 
-      // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
-      // xterm listens for after the terminal lost focus, so a tap would never
-      // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
-      function enableTapFocus(term, host) {
-        var touchStart = null;
-        host.addEventListener("touchstart", function (event) {
-          var t = event.changedTouches[0];
-          if (t) touchStart = { x: t.clientX, y: t.clientY };
-        }, { passive: true });
-        host.addEventListener("touchend", function (event) {
-          if (!touchStart) return;
-          var t = event.changedTouches[0];
-          var moved = t
-            ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y)
-            : 0;
-          touchStart = null;
-          if (moved < 12) term.focus();
-        }, { passive: true });
-      }
       function out(el, value) {
         if (typeof value === "string") { el.textContent = value; return; }
         el.textContent = JSON.stringify(value, null, 2) ?? String(value);
@@ -304,7 +285,7 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
       //   FitAddon resize -> terminal.resize(sessionId, cols, rows)
       // xterm ships from the CDN at the same version the wanix kernel
       // bundles; self-host it under this plugin dir for offline use.
-      var termState = { sessionId: null, xterm: null, fit: null, disposed: true };
+      var termState = { sessionId: null, xterm: null, fit: null, handle: null, disposed: true };
 
       function logTerm(text) {
         var pre = $("out-term");
@@ -312,51 +293,14 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
           "\n" + (pre.textContent === "idle — terminal.create() gives you a real wanix kernel session;\nthe iframe renders xterm and streams bytes over the bridge." ? "" : pre.textContent);
       }
 
-      function termWrite(sessionId, data) {
-        GearShell.terminal.write(sessionId, new TextEncoder().encode(data))
-          .catch(function (error) { logTerm("write error: " + error.message); });
-      }
-
-      function termResize() {
-        if (!termState.xterm || !termState.sessionId) return;
-        GearShell.terminal.resize(
-          termState.sessionId,
-          termState.xterm.cols,
-          termState.xterm.rows,
-        ).catch(function () { /* shell may be gone */ });
-      }
-
-      function wireTermEvents() {
-        // Output channel: kernel -> iframe.
-        GearShell.on("term.data", function (payload) {
-          if (payload.sessionId !== termState.sessionId) return;
-          if (termState.xterm) {
-            termState.xterm.write(payload.data);
-          }
-        });
-        GearShell.on("term.exit", function (payload) {
-          if (payload.sessionId !== termState.sessionId) return;
-          logTerm("term.exit code=" + (payload.code ?? "?") +
-            (payload.error ? " error=" + payload.error : ""));
-          stopTerminal();
-        });
-        return GearShell.subscribe("term.data")
-          .then(function () { return GearShell.subscribe("term.exit"); });
-      }
-
       function stopTerminal() {
-        if (termState.sessionId) {
-          GearShell.terminal.dispose(termState.sessionId)
-            .catch(function () { /* already gone */ });
-          GearShell.unsubscribe("term.data").catch(function () {});
-          GearShell.unsubscribe("term.exit").catch(function () {});
+        if (termState.handle) {
+          termState.handle.dispose();
+          termState.handle = null;
         }
-        if (termState.xterm) {
-          termState.xterm.dispose();
-          termState.xterm = null;
-          termState.fit = null;
-          $("term-host").innerHTML = "";
-        }
+        termState.xterm = null;
+        termState.fit = null;
+        $("term-host").innerHTML = "";
         termState.sessionId = null;
         termState.disposed = true;
       }
@@ -366,47 +310,22 @@ the iframe renders xterm and streams bytes over the bridge.</pre>
         stopTerminal(); // clear any half-open state
         termState.disposed = false;
         logTerm("creating kernel terminal session…");
-        Promise.resolve()
-          .then(function () {
-            // xterm loads lazily on first use (self-host for offline);
-            // the shared bundle keeps every plugin terminal on the same
-            // xterm/addon versions as the wanix kernel.
-            return import("/plugin/xterm-bundle.mjs").then(function (m) {
-              return m.loadXtermBundle().then(function (libs) {
-                libs.apply = m.applyXtermAddons;
-                return libs;
-              });
+        var host = $("term-host");
+        host.innerHTML = "";
+        import("/plugin/terminal-mount.mjs")
+          .then(function (m) {
+            return m.mountTerminal(host, m.iframeSession(GearShell), {
+              terminal: {
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              },
             });
           })
-          .then(function (libs) {
-            var host = $("term-host");
-            host.innerHTML = "";
-            termState.xterm = new libs.Terminal({
-              allowProposedApi: true,
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              convertEol: true,
-              cursorBlink: true,
-            });
-            termState.fit = new libs.FitAddon();
-            termState.xterm.loadAddon(termState.fit);
-            termState.xterm.open(host);
-            libs.apply(termState.xterm, libs);
-            enableTapFocus(termState.xterm, host);
-            termState.fit.fit();
-            termState.xterm.onData(function (data) {
-              termWrite(termState.sessionId, data);
-            });
-            termState.xterm.onResize(function () { termResize(); });
-            return wireTermEvents();
-          })
-          .then(function () {
-            return GearShell.terminal.create({});
-          })
-          .then(function (result) {
-            if (result.ok === false) throw new Error(result.error || "create failed");
-            termState.sessionId = result.sessionId;
+          .then(function (handle) {
+            termState.handle = handle;
+            termState.xterm = handle.term;
+            termState.fit = handle.fit;
+            termState.sessionId = handle.sessionId;
             logTerm("session " + termState.sessionId + " created — type in the terminal");
-            termResize();
           })
           .catch(function (error) {
             logTerm("start failed: " + error.message);
