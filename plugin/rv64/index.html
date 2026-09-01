@@ -52,6 +52,7 @@
         sessionId: null,
         handle: null,
         starting: false,
+        retries: 0,
       };
 
       function $(id) { return document.getElementById(id); }
@@ -124,10 +125,22 @@
           });
         }).catch(function (error) {
           state.starting = false;
+          var msg = error && error.message ? error.message : String(error);
+          // A permission-denied here is usually a one-off boot race: the
+          // iframe's first vm.create can land before the sender resolves to
+          // the registered rv64 plugin (empty permit set -> deny), while a
+          // retry a moment later picks up the real manifest. Self-heal with a
+          // short bounded retry instead of failing the whole boot.
+          if (/permission denied/i.test(msg) && state.retries < 5) {
+            state.retries += 1;
+            setStatus("loading", "retrying… (" + state.retries + ")");
+            setTimeout(start, 1500);
+            return;
+          }
+          state.retries = 0;
           console.error("rv64 start failed", error);
-          setStatus("error", "failed: " + (error.message || error));
-          writeToXterm("\r\n\x1b[31mrv64 failed to start: " +
-            (error.message || error) + "\x1b[0m\r\n");
+          setStatus("error", "failed: " + msg);
+          writeToXterm("\r\n\x1b[31mrv64 failed to start: " + msg + "\x1b[0m\r\n");
         });
       }
 
