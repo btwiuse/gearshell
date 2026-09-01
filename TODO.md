@@ -1209,6 +1209,9 @@ extras 重打,gearshell 待推):
 - iframe 文档、根容器及 Explorer 两个滚动容器统一设置
   `overscroll-behavior: none/contain`，禁止触控板或触摸快速滚动时的弹簧回弹
   和顶部白边，保留刚性滚动。
+- Playground iframe 根布局固定为 `100vh` 且 `html/body/#app` 隐藏外层溢出；
+  Tab 内容不再撑高 iframe，Explorer detail、Providers、Events 在内部滚动，
+  左侧 API column 继续独立保留 scrollbar。
 - 注:libv86 resize handler 还写 config-space this.cols=e[0](收 [rows,cols] 时
   config 里 cols/rows 是反的);guest 只走控制消息路径不用 config,故无害,
   但别再依赖 config 空间。
