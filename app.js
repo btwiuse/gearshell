@@ -13,10 +13,8 @@ import {
   initCrushRunner,
 } from "./plugin/crush-runner/crush-runner.js";
 import { addLandingPanel, initHome } from "./plugin/home/home.js";
-import {
-  initSettings,
-  TerminalPresetIconPicker,
-} from "./plugin/settings/settings.js";
+import { initSettings } from "./plugin/settings/settings-deps.js";
+import { TerminalPresetIconPicker } from "./plugin/settings/settings-icons.js";
 
 import { initFiles } from "./plugin/files/files-registry.js";
 import { initRuntime } from "./plugin/runtime/runtime.js";

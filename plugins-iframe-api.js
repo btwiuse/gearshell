@@ -122,7 +122,7 @@ function handleUnsubscribe(event, id, args) {
   reply(event.source, event.origin, { id, ok: true });
 }
 
-function handleCall(event, g, plugin) {
+async function handleCall(event, g, plugin) {
   const { id, method, args } = g;
   const allow = plugin.manifest?.permissions?.api || [];
   if (!permitsPath(allow, method)) {
@@ -152,7 +152,7 @@ function handleCall(event, g, plugin) {
   }
   let result;
   try {
-    result = resolved.value(...(Array.isArray(args) ? args : []));
+    result = await resolved.value(...(Array.isArray(args) ? args : []));
   } catch (error) {
     return reply(event.source, event.origin, {
       id,

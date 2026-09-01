@@ -171,7 +171,7 @@ export function normalizePlugins(list, defaults) {
         // bump must land in the saved config or the cache keeps serving
         // stale bytes under the old key.
         version: def.version || item.version,
-        entry: def.entry || item.entry,
+        entry: def.entry !== undefined ? def.entry : item.entry,
         ...(def.iframe ? { iframe: def.iframe } : {}),
         // permissions ride the same refresh as iframe src: a builtin
         // plugin's API surface is a property of the shipped manifest, so
@@ -185,7 +185,7 @@ export function normalizePlugins(list, defaults) {
         files: def.files || [],
         systemFiles: def.systemFiles || [],
         ...(def.w9y ? { w9y: def.w9y } : {}),
-        ...(def.css ? { css: def.css } : {}),
+        css: def.css || [],
       };
     });
   const userIds = new Set(user.map((item) => item.id));

@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings</title>
+<link rel="stylesheet" href="/plugin/settings/settings.css">
+<link rel="stylesheet" href="/plugin/settings/iframe-settings.css">
+<script type="importmap">
+{"imports":{"react":"https://esm.sh/react@18.2.0","react-dom/client":"https://esm.sh/react-dom@18.2.0/client","lucide-react":"https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"}}
+</script>
+</head>
+<body>
+<main class="settings-panel panel-content">
+  <header class="settings-header">
+    <div>
+      <h1>Settings</h1>
+      <p>Manage the current workspace and its shell defaults.</p>
+    </div>
+    <button id="refresh" type="button">Refresh</button>
+  </header>
+  <nav id="tabs" class="settings-tabs" aria-label="Settings sections">
+    <button type="button" data-tab="behavior">Behavior</button>
+    <button type="button" data-tab="workspace">Workspace</button>
+    <button type="button" data-tab="system">Runtime &amp; system</button>
+    <button type="button" data-tab="binds">Mounts &amp; tasks</button>
+    <button type="button" data-tab="terminal">Terminal presets</button>
+    <button type="button" data-tab="activity">Agent activity</button>
+    <button type="button" data-tab="plugins">Plugins</button>
+  </nav>
+  <p id="status" class="settings-status" role="status" aria-live="polite"></p>
+  <section data-section="behavior" class="settings-section">
+    <h2>Behavior</h2>
+    <label><input id="restore-tabs" type="checkbox"> Restore open tabs</label>
+    <label><input id="wagi-dog" type="checkbox"> Show Wagi Dog</label>
+    <label><input id="background-playback" type="checkbox"> Allow background playback</label>
+    <label><input id="widgetbot" type="checkbox"> Enable Widgetbot</label>
+    <label>Workbench assets URL<input id="workbench-assets" type="text"></label>
+    <button id="save-behavior" type="button">Save behavior</button>
+    <button id="reset-behavior" type="button">Reset defaults</button>
+  </section>
+  <section data-section="workspace" class="settings-section" hidden>
+    <h2>Workspace</h2>
+    <label>Active workspace<select id="workspace-list"></select></label>
+    <label>Workspace name<input id="workspace-name" type="text"></label>
+    <div class="settings-actions"><button id="rename-workspace" type="button">Rename</button><button id="duplicate-workspace" type="button">Duplicate</button><button id="delete-workspace" type="button">Delete</button></div>
+    <label>Create from preset<select id="preset-list"></select></label>
+    <button id="create-workspace" type="button">Create workspace</button>
+    <label>Workspace JSON<textarea id="workspace-json" spellcheck="false"></textarea></label>
+    <div class="settings-actions"><button id="reset-workspace-json" type="button">Reset JSON</button><button id="copy-workspace-json" type="button">Copy JSON</button><button id="download-workspace-json" type="button">Download JSON</button><label class="file-button">Load JSON<input id="load-workspace-json" type="file" accept="application/json,.json"></label></div>
+    <div class="settings-actions"><button id="import-workspace" type="button">Import as new</button><button id="create-json-workspace" type="button">Create from JSON</button><button id="replace-workspace" type="button">Replace current</button></div>
+    <h3>Preset library</h3>
+    <div id="preset-library"></div>
+    <label>Preset name<input id="preset-name" type="text"></label>
+    <label>Preset description<textarea id="preset-description"></textarea></label>
+    <button id="save-preset" type="button">Save current as preset</button>
+  </section>
+  <section data-section="system" class="settings-section" hidden>
+    <h2>Runtime &amp; system</h2>
+    <label>Wanix runtime module URL<input id="runtime-module" type="url"></label>
+    <label>Wanix wasm URL<input id="runtime-wasm" type="url"></label>
+    <label>Allowed import origins<input id="runtime-origins" type="text"></label>
+    <button id="save-runtime" type="button">Save runtime settings</button>
+    <button id="reload-runtime" type="button">Apply &amp; restart</button>
+    <label>Namespace share URL<input id="share-url" type="url" readonly></label>
+    <button id="copy-share" type="button">Copy share URL</button>
+    <h3>System mounts</h3>
+    <div id="system-binds" class="item-list"></div>
+    <form id="system-bind-form" class="editor-form">
+      <select id="system-bind-type"><option value="ns">Namespace</option><option value="file">File</option><option value="fetch">Fetch</option><option value="archive">Archive</option><option value="import">Remote namespace</option></select>
+      <input id="system-bind-dst" placeholder="Destination">
+      <input id="system-bind-src" placeholder="Source URL or namespace">
+      <textarea id="system-bind-content" placeholder="Inline file content"></textarea>
+      <input id="system-bind-mode" placeholder="Permissions, e.g. 0644">
+      <select id="system-bind-union"><option value="after">After</option><option value="before">Before</option></select>
+      <button type="submit">Add system mount</button>
+    </form>
+    <p>Changes take effect after reload.</p>
+  </section>
+  <section data-section="binds" class="settings-section" hidden>
+    <h2>Mounts &amp; tasks</h2>
+    <h3>Task mounts</h3>
+    <div id="task-binds" class="item-list"></div>
+    <form id="task-bind-form" class="editor-form">
+      <select id="task-bind-type"><option value="ns">Namespace</option><option value="file">File</option><option value="fetch">Fetch</option><option value="archive">Archive</option><option value="import">Remote namespace</option></select>
+      <input id="task-bind-dst" placeholder="Destination">
+      <input id="task-bind-src" placeholder="Source URL or namespace">
+      <textarea id="task-bind-content" placeholder="Inline file content"></textarea>
+      <input id="task-bind-perm" placeholder="Permissions, e.g. 0644">
+      <select id="task-bind-union"><option value="after">After</option><option value="before">Before</option></select>
+      <button type="submit">Add task mount</button>
+    </form>
+    <h3>Workspace tasks</h3>
+    <div id="workspace-tasks" class="item-list"></div>
+    <form id="task-form" class="editor-form">
+      <input id="task-name" placeholder="Name">
+      <input id="task-cmd" placeholder="Command">
+      <select id="task-type"><option value="auto">Auto</option><option value="gojs">Go + JavaScript</option><option value="wasi">WASI</option><option value="js">JavaScript</option></select>
+      <input id="task-wd" value="." placeholder="Working directory">
+      <textarea id="task-env" placeholder="KEY=value"></textarea>
+      <label><input id="task-term" type="checkbox" checked> Interactive terminal</label>
+      <label><input id="task-auto" type="checkbox"> Auto-start</label>
+      <button type="submit">Add task</button>
+    </form>
+  </section>
+  <section data-section="terminal" class="settings-section" hidden>
+    <h2>Terminal launch presets</h2>
+    <div id="terminal-profiles" class="item-list"></div>
+    <form id="terminal-profile-form" class="editor-form">
+      <input id="profile-name" placeholder="Preset name">
+      <div class="icon-picker"><div id="profile-icon-preview" class="icon-preview" aria-hidden="true"></div><input id="profile-icon-search" placeholder="Search icon"><select id="profile-icon"></select></div>
+      <input id="profile-program" placeholder="Program, e.g. bash">
+      <input id="profile-args" placeholder="Arguments">
+      <select id="profile-type"><option value="gojs">Go + JavaScript</option><option value="wasi">WASI</option><option value="js">JavaScript</option></select>
+      <input id="profile-wd" placeholder="Working directory">
+      <textarea id="profile-env" placeholder="KEY=value"></textarea>
+      <label>Default profile<select id="terminal-default"></select></label>
+      <button type="submit">Save terminal preset</button>
+    </form>
+  </section>
+  <section data-section="activity" class="settings-section" hidden>
+    <h2>Agent activity</h2>
+    <div id="activity-list"></div>
+    <button id="clear-activity" type="button">Clear history</button>
+  </section>
+  <section data-section="plugins" class="settings-section" hidden>
+    <h2>Plugins</h2>
+    <p>Enable or disable extensions that add tabs, tools, and integrations.</p>
+    <div id="plugin-list" class="item-list"></div>
+    <button id="open-plugin-manager" type="button">Open plugins page</button>
+  </section>
+</main>
+<script src="/plugin/gear-bridge.js"></script>
+<script>
+(async () => {
+  const [$, react, reactDom, lucide] = await Promise.all([
+    Promise.resolve((id) => document.getElementById(id)),
+    import("react"),
+    import("react-dom/client"),
+    import("lucide-react"),
+  ]);
+  const iconPreviewRoot = reactDom.createRoot($("profile-icon-preview"));
+  const status = (message, error = false) => {
+    $("status").textContent = message;
+    $("status").dataset.error = error ? "true" : "false";
+  };
+  const call = async (path, ...args) => {
+    const parts = path.split(".");
+    let value = GearShell;
+    for (const part of parts) value = value[part];
+    const result = await value(...args);
+    if (result && result.ok === false) {
+      throw new Error(result.error || path + " failed");
+    }
+    return result;
+  };
+  const json = (value) => JSON.stringify(value, null, 2);
+  const parseJson = (id) => {
+    try { return JSON.parse($(id).value); }
+    catch { throw new Error(id + " must contain valid JSON"); }
+  };
+  const formatTime = (timestamp) => new Date(timestamp).toLocaleString();
+  const changedKeys = (entry) => [...new Set([
+    ...Object.keys(entry.prev || {}),
+    ...Object.keys(entry.next || {}),
+  ])].filter((key) => JSON.stringify(entry.prev?.[key]) !== JSON.stringify(entry.next?.[key]));
+  const appendValue = (parent, value) => {
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify(value, null, 2);
+    parent.append(pre);
+  };
+  const renderActivity = (entries) => {
+    const list = $("activity-list");
+    list.replaceChildren();
+    if (!entries.length) {
+      const empty = document.createElement("p");
+      empty.className = "activity-empty";
+      empty.textContent = "No agent config changes recorded yet.";
+      list.append(empty);
+      return;
+    }
+    for (const entry of entries) {
+      const card = document.createElement("article");
+      card.className = "activity-card" + (entry.undone ? " is-undone" : "");
+      const head = document.createElement("div");
+      head.className = "activity-card-head";
+      const meta = document.createElement("div");
+      meta.className = "activity-meta";
+      const agent = document.createElement("strong");
+      agent.textContent = entry.agent || "agent";
+      const time = document.createElement("time");
+      time.dateTime = new Date(entry.ts).toISOString();
+      time.textContent = formatTime(entry.ts);
+      const kind = document.createElement("span");
+      kind.className = "activity-kind";
+      kind.textContent = entry.kind || "shell";
+      meta.append(agent, time, kind);
+      head.append(meta);
+      if (!entry.undone) {
+        const undo = document.createElement("button");
+        undo.type = "button";
+        undo.textContent = "Undo";
+        undo.onclick = async () => {
+          try { await call("config.audit.undo", entry.id); status("Change undone"); await load(); }
+          catch (error) { status(error.message || String(error), true); }
+        };
+        head.append(undo);
+      } else {
+        const undone = document.createElement("span");
+        undone.className = "activity-undone";
+        undone.textContent = "Undone";
+        head.append(undone);
+      }
+      const keys = document.createElement("div");
+      keys.className = "activity-keys";
+      for (const key of changedKeys(entry)) {
+        const chip = document.createElement("span");
+        chip.className = "activity-key";
+        chip.textContent = key;
+        keys.append(chip);
+      }
+      card.append(head, keys);
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "View change details";
+      details.append(summary);
+      for (const key of changedKeys(entry)) {
+        const row = document.createElement("div");
+        row.className = "activity-change";
+        const label = document.createElement("strong");
+        label.textContent = key;
+        const before = document.createElement("div");
+        before.className = "activity-value";
+        const beforeLabel = document.createElement("span");
+        beforeLabel.textContent = "Before";
+        before.append(beforeLabel);
+        appendValue(before, entry.prev?.[key]);
+        const after = document.createElement("div");
+        after.className = "activity-value";
+        const afterLabel = document.createElement("span");
+        afterLabel.textContent = "After";
+        after.append(afterLabel);
+        appendValue(after, entry.next?.[key]);
+        row.append(label, before, after);
+        details.append(row);
+      }
+      card.append(details);
+      list.append(card);
+    }
+  };
+  const text = (value) => value == null || value === "" ? "—" : String(value);
+  const button = (label, handler, className = "") => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.textContent = label;
+    item.className = className;
+    item.onclick = handler;
+    return item;
+  };
+  const enableDrag = (card, itemId, items, reorder) => {
+    card.draggable = true;
+    card.addEventListener("dragstart", (event) => { event.dataTransfer.setData("text/plain", itemId); card.classList.add("is-dragging"); });
+    card.addEventListener("dragend", () => card.classList.remove("is-dragging"));
+    card.addEventListener("dragover", (event) => event.preventDefault());
+    card.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      const sourceId = event.dataTransfer.getData("text/plain");
+      if (!sourceId || sourceId === itemId) return;
+      const sourceIndex = items.findIndex((item) => item.id === sourceId);
+      const targetIndex = items.findIndex((item) => item.id === itemId);
+      if (sourceIndex < 0 || targetIndex < 0) return;
+      try { await reorder(sourceId, itemId, sourceIndex > targetIndex); await load(); }
+      catch (error) { status(error.message || String(error), true); }
+    });
+  };
+  const renderBindCards = (id, binds, system) => {
+    const list = $(id);
+    list.replaceChildren();
+    for (const bind of binds) {
+      const card = document.createElement("article");
+      card.className = "resource-card";
+      const title = document.createElement("strong");
+      title.textContent = bind.dst || "Unnamed mount";
+      const meta = document.createElement("span");
+      meta.textContent = `${bind.type} · ${text(bind.src || bind.content)} · ${text(bind.mode || bind.perm)}`;
+      const actions = document.createElement("div");
+      const index = binds.indexOf(bind);
+      const move = async (offset) => { const target = binds[index + offset]; if (!target) return; try { await call(system ? "config.binds.systemReorder" : "config.binds.reorder", bind.id, target.id, offset > 0); await load(); } catch (error) { status(error.message, true); } };
+      actions.append(button("↑", () => move(-1)), button("↓", () => move(1)), button("Edit", () => fillBindForm(bind, system)), button("Remove", async () => { try { await call(system ? "config.binds.systemRemove" : "config.binds.remove", bind.id); await load(); } catch (error) { status(error.message, true); } }));
+      card.append(title, meta, actions);
+      enableDrag(card, bind.id, binds, (sourceId, targetId, after) => call(system ? "config.binds.systemReorder" : "config.binds.reorder", sourceId, targetId, after));
+      list.append(card);
+    }
+    if (!binds.length) list.textContent = "No mounts configured.";
+  };
+  const renderTaskCards = (tasks) => {
+    const list = $("workspace-tasks");
+    list.replaceChildren();
+    for (const task of tasks) {
+      const card = document.createElement("article"); card.className = "resource-card";
+      const title = document.createElement("strong"); title.textContent = task.name || task.cmd;
+      const meta = document.createElement("span"); meta.textContent = `${task.type} · ${task.term ? "interactive" : "headless"}${task.autoStart ? " · auto-start" : ""} · ${task.cmd}`;
+      const actions = document.createElement("div");
+      const index = tasks.indexOf(task);
+      const move = async (offset) => { const target = tasks[index + offset]; if (!target) return; const next = [...tasks]; [next[index], next[index + offset]] = [next[index + offset], next[index]]; try { await call("config.tasks.set", next); await load(); } catch (error) { status(error.message, true); } };
+      actions.append(button("↑", () => move(-1)), button("↓", () => move(1)), button("Run", async () => { try { await call("tasks.create", task, { persist: false }); status("Started " + (task.name || task.cmd)); } catch (error) { status(error.message, true); } }), button("Edit", () => fillTaskForm(task)), button("Remove", async () => { try { await call("config.tasks.remove", task.id); await load(); } catch (error) { status(error.message, true); } }));
+      card.append(title, meta, actions);
+      enableDrag(card, task.id, tasks, async (sourceId, targetId) => {
+        const sourceIndex = tasks.findIndex((item) => item.id === sourceId);
+        const targetIndex = tasks.findIndex((item) => item.id === targetId);
+        const next = [...tasks];
+        const [moved] = next.splice(sourceIndex, 1);
+        next.splice(targetIndex, 0, moved);
+        return call("config.tasks.set", next);
+      });
+      list.append(card);
+    }
+    if (!tasks.length) list.textContent = "No tasks configured.";
+  };
+  const renderPlugins = (plugins) => {
+    const list = $("plugin-list"); list.replaceChildren();
+    for (const plugin of plugins) {
+      const card = document.createElement("article"); card.className = "resource-card";
+      const title = document.createElement("strong"); title.textContent = plugin.name || plugin.id;
+      const meta = document.createElement("span"); meta.textContent = `${plugin.version || ""} · ${plugin.iframe ? "iframe" : "builtin"}`;
+      const toggle = document.createElement("button"); toggle.type = "button"; toggle.textContent = plugin.enabled ? "Disable" : "Enable"; toggle.disabled = plugin.required === true;
+      toggle.onclick = async () => { try { await call("config.plugins.setEnabled", plugin.id, !plugin.enabled); await load(); status("Plugin state saved"); } catch (error) { status(error.message || String(error), true); } };
+      card.append(title, meta, toggle); list.append(card);
+    }
+    if (!plugins.length) list.textContent = "No plugins configured.";
+  };
+  const renderPresets = (presets) => {
+    const list = $("preset-library"); list.replaceChildren();
+    for (const preset of presets) {
+      const card = document.createElement("article"); card.className = "resource-card";
+      const title = document.createElement("strong"); title.textContent = preset.name;
+      const meta = document.createElement("span"); meta.textContent = preset.description || (preset.builtin ? "Built-in preset" : "Custom preset");
+      const actions = document.createElement("div");
+      if (!preset.builtin) actions.append(button("Load", async () => { try { const data = await call("config.presets.getCustom", preset.id); if (data?.template) { $("workspace-json").value = json(data.template); status("Preset loaded into workspace JSON"); } } catch (error) { status(error.message, true); } }), button("Edit", async () => { try { const data = await call("config.presets.getCustom", preset.id); $("preset-name").value = data.name || ""; $("preset-description").value = data.description || ""; $("save-preset").dataset.editing = preset.id; $("save-preset").textContent = "Update preset"; status("Editing preset"); } catch (error) { status(error.message, true); } }), button("Delete", async () => { if (!confirm("Delete this preset?")) return; try { await call("config.presets.removeCustom", preset.id); await load(); } catch (error) { status(error.message, true); } }));
+      card.append(title, meta, actions); list.append(card);
+    }
+    if (!presets.length) list.textContent = "No presets.";
+  };
+  let terminalIcons = [];
+  const renderIconPreview = () => {
+    const selected = terminalIcons.find((icon) => icon.id === $("profile-icon").value);
+    const Icon = selected && lucide[selected.name];
+    iconPreviewRoot.render(Icon ? react.createElement(Icon, { size: 22, strokeWidth: 1.8 }) : react.createElement("span", null, "?") );
+  };
+  const renderIconOptions = () => {
+    const query = $("profile-icon-search").value.trim().toLocaleLowerCase();
+    const options = terminalIcons.filter((icon) => !query || icon.label.toLocaleLowerCase().includes(query) || icon.id.includes(query));
+    const selected = $("profile-icon").value;
+    $("profile-icon").replaceChildren(...options.map((icon) => new Option(icon.label, icon.id, icon.id === selected, icon.id === selected)));
+    renderIconPreview();
+  };
+  const renderProfiles = (profiles, defaultId) => {
+    const list = $("terminal-profiles"); list.replaceChildren();
+    $("terminal-default").replaceChildren(...profiles.map((profile) => new Option(profile.name, profile.id, profile.id === defaultId, profile.id === defaultId)));
+    for (const profile of profiles) {
+      const card = document.createElement("article"); card.className = "resource-card";
+      const title = document.createElement("strong"); title.textContent = `${profile.icon || "terminal"}  ${profile.name || profile.id}`;
+      const meta = document.createElement("span"); meta.textContent = `${profile.type || "shell"} · ${profile.program || profile.cmd || "—"} ${profile.args || ""}`;
+      const actions = document.createElement("div");
+      actions.append(button("Edit", () => fillProfileForm(profile)), button("Delete", async () => { if (profile.builtin) return status("Built-in presets cannot be deleted", true); try { const next = profiles.filter((item) => item.id !== profile.id); await call("config.terminalProfiles.save", next, defaultId === profile.id ? next[0]?.id : defaultId, next.map((item) => item.id)); await load(); } catch (error) { status(error.message, true); } }));
+      const index = profiles.indexOf(profile);
+      const move = async (offset) => { const target = profiles[index + offset]; if (!target) return; const next = [...profiles]; [next[index], next[index + offset]] = [next[index + offset], next[index]]; try { await call("config.terminalProfiles.save", next, defaultId, next.map((item) => item.id)); await load(); } catch (error) { status(error.message, true); } };
+      actions.prepend(button("↑", () => move(-1)), button("↓", () => move(1)));
+      card.append(title, meta, actions);
+      enableDrag(card, profile.id, profiles, async (sourceId, targetId) => { const sourceIndex = profiles.findIndex((item) => item.id === sourceId); const targetIndex = profiles.findIndex((item) => item.id === targetId); const next = [...profiles]; const [moved] = next.splice(sourceIndex, 1); next.splice(targetIndex, 0, moved); return call("config.terminalProfiles.save", next, defaultId, next.map((item) => item.id)); });
+      list.append(card);
+    }
+  };
+  const syncBindInputs = (system) => {
+    const prefix = system ? "system-bind" : "task-bind";
+    const isFile = $(prefix + "-type").value === "file";
+    $(prefix + "-content").classList.toggle("is-primary", isFile);
+    $(prefix + "-content").rows = isFile ? 10 : 3;
+    $(prefix + "-src").placeholder = isFile ? "Optional source URL" : "Source URL or namespace";
+  };
+  const fillBindForm = (bind, system) => {
+    const prefix = system ? "system-bind" : "task-bind";
+    $(prefix + "-type").value = bind.type || "ns"; $(prefix + "-dst").value = bind.dst || ""; $(prefix + "-src").value = bind.src || ""; $(prefix + "-content").value = bind.content || ""; $(prefix + (system ? "-mode" : "-perm")).value = bind.mode || bind.perm || ""; $(prefix + "-union").value = bind.union || "after";
+    $(prefix + "-form").dataset.editing = bind.id;
+    syncBindInputs(system);
+  };
+  const fillTaskForm = (task) => { $("task-name").value = task.name || ""; $("task-cmd").value = task.cmd || ""; $("task-type").value = task.type || "auto"; $("task-wd").value = task.wd || "."; $("task-env").value = task.env || ""; $("task-term").checked = task.term !== false; $("task-auto").checked = task.autoStart === true; $("task-form").dataset.editing = task.id; };
+  const fillProfileForm = (profile) => { $("profile-name").value = profile.name || ""; $("profile-icon").value = profile.icon || "terminal"; renderIconOptions(); $("profile-program").value = profile.program || ""; $("profile-args").value = profile.args || ""; $("profile-type").value = profile.type || "gojs"; $("profile-wd").value = profile.wd || ""; $("profile-env").value = profile.env || ""; $("terminal-profile-form").dataset.editing = profile.id; };
+  let shell = null;
+  let active = null;
+  async function load() {
+    try {
+      shell = await call("config.getShell");
+      active = await call("config.workspace.getActive");
+      const workspaces = await call("config.workspace.list");
+      const presets = await call("config.presets.list");
+      const system = await call("config.getSystem");
+      const binds = await call("config.binds.list");
+      const taskBinds = await call("config.binds.systemList");
+      const tasks = await call("config.tasks.list");
+      const profiles = await call("config.terminalProfiles.list");
+      terminalIcons = await call("config.terminalIcons.list");
+      renderIconOptions();
+      const activity = await call("config.audit.list");
+      const plugins = await call("config.plugins.list");
+      $("restore-tabs").checked = shell.restoreTabs === true;
+      $("wagi-dog").checked = shell.wagiDogEnabled !== false;
+      $("background-playback").checked = shell.allowBackgroundPlayback !== false;
+      $("widgetbot").checked = shell.widgetbot === true;
+      $("workbench-assets").value = shell.workbenchAssetsUrl || "";
+      $("workspace-list").replaceChildren(...workspaces.map((item) => new Option(item.name, item.id, item.id === active.id, item.id === active.id)));
+      $("workspace-name").value = active.name || "";
+      $("preset-list").replaceChildren(...presets.map((item) => new Option(item.name, item.id)));
+      $("workspace-json").value = json(active);
+      $("runtime-module").value = system.runtime?.moduleUrl || "";
+      $("runtime-wasm").value = system.runtime?.wasmUrl || "";
+      $("runtime-origins").value = system.system?.allowOrigins || "";
+      const shareUrl = new URL(window.location.href);
+      shareUrl.hash = "wanix-system";
+      $("share-url").value = shareUrl.href;
+      renderBindCards("system-binds", system.system?.binds || [], true);
+      renderBindCards("task-binds", binds, false);
+      renderTaskCards(tasks);
+      renderProfiles(profiles, shell.defaultTerminalProfileId || "bash");
+      renderActivity(activity);
+      renderPresets(presets);
+      renderPlugins(plugins);
+      status("Loaded");
+    } catch (error) { status(error.message || String(error), true); }
+  }
+  async function saveBehavior() {
+    try {
+      await call("config.updateShell", {
+        ...shell,
+        restoreTabs: $("restore-tabs").checked,
+        wagiDogEnabled: $("wagi-dog").checked,
+        allowBackgroundPlayback: $("background-playback").checked,
+        widgetbot: $("widgetbot").checked,
+        workbenchAssetsUrl: $("workbench-assets").value,
+      });
+      status("Behavior saved");
+      await load();
+    } catch (error) { status(error.message || String(error), true); }
+  }
+  async function saveRuntime() {
+    try {
+      await call("config.updateRuntime", {
+        moduleUrl: $("runtime-module").value,
+        wasmUrl: $("runtime-wasm").value,
+        allowOrigins: $("runtime-origins").value,
+      });
+      status("Runtime settings saved. Restart to apply.");
+      await load();
+    } catch (error) { status(error.message || String(error), true); }
+  }
+  async function saveWorkspace(action) {
+    try {
+      const value = $("workspace-json").value;
+      await call("config.workspace." + action, value);
+      status("Workspace updated");
+      await load();
+    } catch (error) { status(error.message || String(error), true); }
+  }
+  $("tabs").addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-tab]");
+    if (!tab) return;
+    document.querySelectorAll("[data-section]").forEach((section) => { section.hidden = section.dataset.section !== tab.dataset.tab; });
+    document.querySelectorAll("[data-tab]").forEach((item) => { item.classList.toggle("active", item === tab); });
+  });
+  $("refresh").onclick = load;
+  $("profile-icon-search").oninput = renderIconOptions;
+  $("profile-icon").onchange = renderIconPreview;
+  $("save-behavior").onclick = saveBehavior;
+  $("reset-behavior").onclick = async () => { try { await call("config.reset"); await load(); status("Defaults restored"); } catch (error) { status(error.message || String(error), true); } };
+  $("save-runtime").onclick = saveRuntime;
+  $("copy-share").onclick = async () => { try { await navigator.clipboard.writeText($("share-url").value); status("Share URL copied"); } catch (error) { status(error.message || String(error), true); } };
+  $("system-bind-type").onchange = () => syncBindInputs(true);
+  $("task-bind-type").onchange = () => syncBindInputs(false);
+  syncBindInputs(true);
+  syncBindInputs(false);
+  $("system-bind-form").onsubmit = async (event) => { event.preventDefault(); try { const form = event.currentTarget; const value = { type: $("system-bind-type").value, dst: $("system-bind-dst").value, src: $("system-bind-src").value, content: $("system-bind-content").value, mode: $("system-bind-mode").value, union: $("system-bind-union").value }; const id = form.dataset.editing; await call(id ? "config.binds.systemUpdate" : "config.binds.systemAdd", ...(id ? [id, value] : [value])); delete form.dataset.editing; form.reset(); status("System mount saved. Restart to apply."); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("task-bind-form").onsubmit = async (event) => { event.preventDefault(); try { const form = event.currentTarget; const value = { type: $("task-bind-type").value, dst: $("task-bind-dst").value, src: $("task-bind-src").value, content: $("task-bind-content").value, perm: $("task-bind-perm").value, union: $("task-bind-union").value }; const id = form.dataset.editing; await call(id ? "config.binds.update" : "config.binds.add", ...(id ? [id, value] : [value])); delete form.dataset.editing; form.reset(); status("Task mount saved"); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("task-form").onsubmit = async (event) => { event.preventDefault(); try { const form = event.currentTarget; const value = { name: $("task-name").value.trim() || $("task-cmd").value.trim() || "Task", cmd: $("task-cmd").value, type: $("task-type").value, wd: $("task-wd").value, env: $("task-env").value, term: $("task-term").checked, autoStart: $("task-auto").checked }; const id = form.dataset.editing; await call(id ? "config.tasks.update" : "config.tasks.add", ...(id ? [id, value] : [value])); delete form.dataset.editing; form.reset(); $("task-wd").value = "."; $("task-term").checked = true; status("Workspace task saved"); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("terminal-profile-form").onsubmit = async (event) => { event.preventDefault(); try { const form = event.currentTarget; const current = await call("config.terminalProfiles.list"); const value = { id: form.dataset.editing || "profile-" + Date.now(), name: $("profile-name").value, icon: $("profile-icon").value || "terminal", program: $("profile-program").value, args: $("profile-args").value, type: $("profile-type").value, wd: $("profile-wd").value, env: $("profile-env").value }; const profiles = current.filter((item) => item.id !== value.id).concat(value); await call("config.terminalProfiles.save", profiles, $("terminal-default").value, profiles.map((item) => item.id)); delete form.dataset.editing; form.reset(); status("Terminal preset saved"); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("reload-runtime").onclick = async () => { try { await call("config.reload"); } catch (error) { status(error.message || String(error), true); } };
+  $("workspace-list").onchange = async (event) => { try { await call("config.workspace.select", event.target.value); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("rename-workspace").onclick = async () => { try { await call("config.workspace.rename", active.id, $("workspace-name").value); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("duplicate-workspace").onclick = async () => { try { await call("config.workspace.duplicate", active.id); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("delete-workspace").onclick = async () => { if (!confirm("Delete the current workspace?")) return; try { await call("config.workspace.delete", active.id); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("create-workspace").onclick = async () => { try { await call("config.workspace.createFromPreset", $("preset-list").value); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("reset-workspace-json").onclick = load;
+  $("copy-workspace-json").onclick = async () => { try { await navigator.clipboard.writeText($("workspace-json").value); status("Workspace JSON copied"); } catch (error) { status(error.message || String(error), true); } };
+  $("download-workspace-json").onclick = () => { const blob = new Blob([$("workspace-json").value], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = (active?.name || "workspace") + ".json"; link.click(); URL.revokeObjectURL(link.href); };
+  $("load-workspace-json").onchange = async (event) => { try { $("workspace-json").value = await event.target.files[0].text(); status("Workspace JSON loaded"); } catch (error) { status(error.message || String(error), true); } };
+  $("import-workspace").onclick = () => saveWorkspace("import");
+  $("create-json-workspace").onclick = () => saveWorkspace("import");
+  $("replace-workspace").onclick = () => saveWorkspace("replaceActive");
+  $("save-preset").onclick = async () => { try { const id = $("save-preset").dataset.editing || null; const value = { name: $("preset-name").value, description: $("preset-description").value, workspace: id ? undefined : active }; await call("config.presets.saveCustom", id, value); $("preset-name").value = ""; $("preset-description").value = ""; delete $("save-preset").dataset.editing; $("save-preset").textContent = "Save current as preset"; await load(); status(id ? "Preset updated" : "Preset saved"); } catch (error) { status(error.message || String(error), true); } };
+  $("clear-activity").onclick = async () => { if (!confirm("Clear agent activity history?")) return; try { await call("config.audit.clear"); await load(); } catch (error) { status(error.message || String(error), true); } };
+  $("open-plugin-manager").onclick = async () => { try { await call("panels.open", "plugins"); } catch (error) { status(error.message || String(error), true); } };
+  document.querySelector('[data-tab="behavior"]').classList.add("active");
+  await load();
+})().catch((error) => { document.getElementById("status").textContent = error.message || String(error); });
+</script>
+</body>
+</html>

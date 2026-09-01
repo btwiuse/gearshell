@@ -173,8 +173,17 @@ export const DEFAULT_PLUGINS = [
     name: "Settings",
     version: "1.0.0",
     icon: "Settings",
-    entry: "/plugin/settings/settings-plugin.js",
-    css: ["/plugin/settings/settings.css"],
+    iframe: {
+      src: "/plugin/settings/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    permissions: {
+      api: [
+        "config.*",
+        "panels.*",
+        "events.*",
+      ],
+    },
   },
   {
     id: "launcher",

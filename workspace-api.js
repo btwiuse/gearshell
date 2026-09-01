@@ -76,7 +76,11 @@ function safe(fn) {
 function wrapNamespace(obj) {
   const out = {};
   for (const [key, value] of Object.entries(obj)) {
-    out[key] = typeof value === "function" ? safe(value) : value;
+    out[key] = typeof value === "function"
+      ? safe(value)
+      : value && typeof value === "object"
+      ? wrapNamespace(value)
+      : value;
   }
   return out;
 }

@@ -43,6 +43,8 @@ import {
   redactSecrets,
   undoAuditEntry,
 } from "./workspace-audit.js";
+
+import { settingsConfigApi } from "./workspace-config-settings-api.js";
 import {
   mergePluginStatus,
   registerPlugin,
@@ -336,6 +338,7 @@ export const configApi = {
     remove: removePlugin,
     setEnabled: setPluginEnabled,
   },
+  ...settingsConfigApi,
   getWorkspace: () => redactSecrets(loadActiveWorkspace()),
   getBinds: () => loadActiveWorkspace().system.binds,
   addBind: (bind) => {

@@ -1517,3 +1517,32 @@ extras 重打,gearshell 待推):
   供 v86 在宿主 kernel 跑),自身内联 fallback URL,不再读宿主 VM config。
 - 结论印证:wanix-linux.tgz 是 x86-only(boot/bzImage),rv64 用独立的
   wanix-linux-rv64.tgz,故 VM 面板移除不影响 rv64。
+
+## 四十八、Settings iframe parity 交接(进行中,2026-09-02)
+
+- **目标**:Settings UI 从 builtin React entry 迁为 lazy iframe,所有宿主操作放在
+  `config.*` facade,不新增 `settings.*` namespace。旧 builtin Settings 文件保留作
+  reference;当前 manifest 指向 `/plugin/settings/index.html`。
+- **Core/bridge**:新增 `workspace-config-settings-api.js`,由 `configApi` spread
+  暴露 `config.workspace.*`/`presets.*`/`binds.*`/`tasks.*`/`terminalProfiles.*`/
+  `terminalIcons.*`/`launcher.*`/`reset`;`workspace-api.js:wrapNamespace` 递归
+  safe;`plugins-iframe-api.js:handleCall` await Promise。`app-normalize-plugins.js`
+  用 `def.entry !== undefined` 与 `css: def.css || []` 清掉 builtin→iframe 旧 entry/css。
+- **当前 iframe UI**:`plugin/settings/index.html` + `iframe-settings.css` 已覆盖
+  Behavior、Workspace、Runtime & system、Mounts & tasks、Terminal presets、Agent
+  activity、Plugins。资源区块已从裸 JSON 升级为 cards/forms:system/task bind
+  Add/Edit/Remove、上下移动+原生 drag/drop;file content textarea;tasks Run/Edit/
+  Remove/Add;profiles Add/Edit/Delete、默认项、icon search+真实 Lucide SVG preview;
+  custom presets Load/Edit/Update/Delete;plugins enable/disable(必选保护)。Workspace
+  JSON 仍作为高级 escape hatch,Runtime share URL/copy,Agent activity 为 timeline
+  cards + changed keys + before/after diff + Undo。
+- **已验证**:syntax/static/diff checks;浏览器 Settings iframe `Loaded`,system 7,
+  task mounts 6,profiles 2,presets 4,plugins 28,sections 7;icon 搜索 rocket 得 1
+  项,profile Edit 回填,resource cards draggable。
+- **明确未完/续接顺序**:1)检查并修复真实 Settings iframe 的新增/编辑/排序边界(尤其
+  systemSet/task set 的审计与 normalized return);2)第三方 `registerSettingsSection`
+  目前是 DOM callback,尚无跨 iframe render protocol;3)旧 builtin `app.js` 仍需彻底
+  去掉 `settings-icons.js`/`initSettings` 的 eager 共享依赖(先把 icon picker 抽到
+  独立 shared module,否则 Settings UI 虽 iframe,部分旧 Settings React 依赖仍进 boot);
+  4)确认默认 plugins 归一化后不再保留 Settings entry/css;5)完成浏览器交互回归后再
+  commit/push,不要把当前骨架误标完整 parity。

@@ -256,6 +256,7 @@ export const TERMINAL_PRESET_ICON_OPTIONS = [
   ...Object.entries(LucideIcons).map(([name, icon]) => ({
     id: lucideIconId(name),
     label: lucideIconLabel(name),
+    name,
     icon,
   })),
   ...Object.entries(LEGACY_TERMINAL_PRESET_ICON_NAMES)
@@ -263,6 +264,7 @@ export const TERMINAL_PRESET_ICON_OPTIONS = [
     .map(([id, name]) => ({
       id,
       label: lucideIconLabel(name),
+      name,
       icon: LucideIcons[name],
     })),
 ].filter((option, index, options) =>
