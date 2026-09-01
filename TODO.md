@@ -1205,7 +1205,10 @@ extras 重打,gearshell 待推):
   iframe 注册标题保持一致。
 - Explorer 的 `version` value 通过 bridge 调用 `version.toJSON`，但 manifest
   白名单是 `config.*` 等，导致 permission denied；iframe 现在将 value 作为
-  bridged callable 执行，避免直接访问 Proxy 内部属性。
+  bridged callable执行，避免直接访问 Proxy 内部属性。
+- iframe 文档、根容器及 Explorer 两个滚动容器统一设置
+  `overscroll-behavior: none/contain`，禁止触控板或触摸快速滚动时的弹簧回弹
+  和顶部白边，保留刚性滚动。
 - 注:libv86 resize handler 还写 config-space this.cols=e[0](收 [rows,cols] 时
   config 里 cols/rows 是反的);guest 只走控制消息路径不用 config,故无害,
   但别再依赖 config 空间。
