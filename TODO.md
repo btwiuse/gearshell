@@ -1197,6 +1197,16 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 三十五、Plugin Hotkey API 与 Launcher 快捷键(2026-09-02)
+
+- 新增 `app-hotkeys.js`，提供 `registerHotkey`、`unregisterHotkey`、`listHotkeys`，
+  并监听 shell 全局 `keydown`；当前 action 采用受限的 `panels.open` 结构，避免插件
+  注册任意脚本回调。
+- Plugin module 的 `ctx` 新增 `registerHotkey(spec)` / `unregisterHotkey(id)`，
+  注册项按插件 owner 隔离，插件注销时自动清理。
+- Core 默认注册 `ctrl+shift+p`，执行 `panels.open("launcher")`，因此可直接打开
+  Launcher 页面；GearShell API 暴露 `hotkeys.list/register/unregister` 供受信调用者使用。
+
 ## 三十四、Playground iframe 名称与 Root API 权限修复(2026-09-02)
 
 - Playground 内置 manifest 的 `name`/`label` 统一为 `GearShell API Playground`，

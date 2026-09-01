@@ -37,6 +37,7 @@ import {
   createScopedApi,
   resolveIcon,
 } from "./plugins-scope.js";
+import { registerHotkey, unregisterHotkey, unregisterHotkeysForOwner } from "./app-hotkeys.js";
 import {
   loadEntryModule,
   registerFnOf,
@@ -331,6 +332,8 @@ async function loadComponentPlugin(manifest) {
     registerPanel: (opts) => registerPluginPanel(manifest, opts),
     registerSettingsSection: (opts) => registerSettingsSection(manifest, opts),
     registerOverlay: (opts) => registerOverlay(manifest, opts),
+    registerHotkey: (spec) => registerHotkey(spec, manifest.id),
+    unregisterHotkey: (id) => unregisterHotkey(id, manifest.id),
     api: createScopedApi(
       pluginsDep("workspaceApi"),
       manifest.permissions?.api,
@@ -443,6 +446,7 @@ export function unregisterPlugin(id) {
   removeOverlaysForPlugin(id);
   pluginManifests.delete(id);
   pluginLoadResults.delete(id);
+  unregisterHotkeysForOwner(id);
   removePluginCss(id);
   emitPluginChanged({ id, ok: true, unregistered: true });
   return { ok: true, id };

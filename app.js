@@ -42,6 +42,7 @@ import {
   workspaceApi,
 } from "./workspace-api.js";
 import { initIframePluginApi } from "./plugins-iframe-api.js";
+import { initHotkeys, registerHotkey } from "./app-hotkeys.js";
 import {
   ensurePluginSystemFiles,
   ensurePluginToolBinds,
@@ -463,6 +464,16 @@ initCrushRunner({
 // the kernel's jsfs /js projection) and ensure the active workspace
 // carries the gear bind.
 initWorkspaceApi();
+initHotkeys((action) => {
+  if (action.method === "panels.open") {
+    workspaceApi.panels.open(...action.args);
+  }
+});
+registerHotkey({
+  id: "core:launcher",
+  key: "ctrl+shift+p",
+  action: { method: "panels.open", args: ["launcher"] },
+});
 
 // Wire the iframe plugin bridge: postMessage requests from registered
 // iframe plugins are dispatched against window.GearShell through their

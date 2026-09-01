@@ -59,6 +59,7 @@ import {
   markAgentTaskStatus,
 } from "./workspace-task-registry.js";
 import { ensureGearShellBinds, GEAR_BIND } from "./gear-bind.js";
+import { initHotkeys, listHotkeys, registerHotkey, unregisterHotkey } from "./app-hotkeys.js";
 
 // --- Sync-only wrapper ---
 // The jsfs funcfile surfaces a thrown error as a failed read with no
@@ -89,6 +90,12 @@ function wrapNamespace(obj) {
 const api = {
   version: "0.1.0",
   ping: safe(() => "pong"),
+
+  hotkeys: {
+    list: safe(() => listHotkeys()),
+    register: safe((spec) => registerHotkey(spec, "api")),
+    unregister: safe((id) => unregisterHotkey(id, "api")),
+  },
 
   config: wrapNamespace(configApi),
   panels: wrapNamespace(openApi.panels),
