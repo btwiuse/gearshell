@@ -4,6 +4,10 @@
 
 import { icons as LucideIcons } from "lucide-react";
 import {
+  VM_BACKEND_URL,
+  VM_LINUX_URL,
+} from "./plugin/vm/vm-config.js";
+import {
   DEFAULT_GEAR_BINARY_URL,
   DEFAULT_HUSH_BINARY_URL,
   DEFAULT_PLUGINS,
@@ -113,10 +117,12 @@ export const DEFAULT_CMD = "bash -rcfile /preset/profile";
 export const DEFAULT_WORKBENCH_ASSETS_URL = "/wanix-workbench";
 export const LEGACY_DEFAULT_WORKBENCH_ASSETS_URL =
   "https://wanix.dev/workbench";
-export const DEFAULT_VM_BACKEND_URL =
-  "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc3/v86.tgz";
-export const DEFAULT_VM_LINUX_URL =
-  "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
+// VM panel assets live with the plugin (plugin/vm/vm-config.js). These
+// re-exports are DEPRECATED compatibility aliases so existing config
+// normalization and saved snapshots keep resolving; new code should
+// import from the plugin.
+export { VM_BACKEND_URL as DEFAULT_VM_BACKEND_URL,
+  VM_LINUX_URL as DEFAULT_VM_LINUX_URL } from "./plugin/vm/vm-config.js";
 export const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = [
   "deck",
   "codigo",
