@@ -1204,6 +1204,8 @@ extras 重打,gearshell 待推):
   30 条；点击 `Restore` 直接回写 localStorage，不经过 GearShell API。
 - `/debug/` 左上角增加带 GearShell logo 的主页返回入口，直接链接 `/`；正文
   增加顶部内边距，避免内容与固定定位 logo 重叠。
+- Runtime history 每条记录展开显示完整的 Module URL 与 Wasm URL，再提供 `Restore`，
+  避免只显示时间导致无法判断将要回滚到的版本。
 
 ## 四十、Debug runtime URL escape hatch(2026-09-02)
 

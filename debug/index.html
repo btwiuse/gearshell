@@ -24,8 +24,13 @@ button:hover { background: #2ea043; }
 button.secondary:hover { background: #30363d; }
 #status { min-height: 22px; color: #3fb950; }
 #history { display: grid; gap: 8px; margin-top: 18px; }
-.history-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #30363d; border-radius: 6px; background: #161b22; }
-.history-item code { color: #8b949e; font-size: 12px; }
+.history-item { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid #30363d; border-radius: 6px; background: #161b22; }
+.history-item-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-item code { display: block; overflow-wrap: anywhere; color: #8b949e; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.history-item .history-values { display: grid; gap: 4px; padding: 8px; border-radius: 5px; background: #0d1117; }
+.history-item .history-values strong { color: #8b949e; font-size: 12px; }
+.history-item .history-values code { color: #79c0ff; }
+
 code { color: #79c0ff; }
 </style>
 </head>
@@ -87,10 +92,18 @@ code { color: #79c0ff; }
     history.replaceChildren();
     readHistory(id).forEach(function (entry) {
       var item = document.createElement("div"); item.className = "history-item";
+      var head = document.createElement("div"); head.className = "history-item-head";
       var text = document.createElement("code"); text.textContent = new Date(entry.time).toLocaleString();
       var button = document.createElement("button"); button.className = "secondary"; button.type = "button"; button.textContent = "Restore";
       button.onclick = function () { saveRuntime(id, entry.moduleUrl, entry.wasmUrl, "Restored historical runtime URLs."); };
-      item.append(text, button); history.append(item);
+      head.append(text, button);
+      var values = document.createElement("div"); values.className = "history-values";
+      var moduleLabel = document.createElement("strong"); moduleLabel.textContent = "Module URL";
+      var moduleValue = document.createElement("code"); moduleValue.textContent = entry.moduleUrl;
+      var wasmLabel = document.createElement("strong"); wasmLabel.textContent = "Wasm URL";
+      var wasmValue = document.createElement("code"); wasmValue.textContent = entry.wasmUrl;
+      values.append(moduleLabel, moduleValue, wasmLabel, wasmValue);
+      item.append(head, values); history.append(item);
     });
     if (!history.children.length) history.textContent = "No saved runtime states yet.";
   }
