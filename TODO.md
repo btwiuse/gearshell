@@ -1202,7 +1202,8 @@ extras 重打,gearshell 待推):
 - `/debug/` 增加 `Reset Default`，恢复 wanix v0.4.33 的默认 module/wasm URL。
 - 增加 active workspace 级 runtime 历史，保存和恢复前自动记录当前 URL，最多保留
   30 条；点击 `Restore` 直接回写 localStorage，不经过 GearShell API。
-- `/debug/` 左上角增加带 GearShell logo 的主页返回入口，直接链接 `/`。
+- `/debug/` 左上角增加带 GearShell logo 的主页返回入口，直接链接 `/`；正文
+  增加顶部内边距，避免内容与固定定位 logo 重叠。
 
 ## 四十、Debug runtime URL escape hatch(2026-09-02)
 
