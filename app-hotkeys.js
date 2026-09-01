@@ -1,7 +1,21 @@
 const hotkeys = new Map();
 
+// KeyboardEvent.key for the space bar is a literal " ", which the
+// whitespace-stripping normalizer below would erase entirely ("ctrl+ "
+// becomes "ctrl+"), so a spec can never match the event. Both sides map
+// it to the "space" alias instead.
+function normalizeKeyName(name) {
+  return name === " " ? "space" : name;
+}
+
 function normalizeKey(value) {
-  return String(value || "").trim().toLowerCase().replace(/\s+/g, "");
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .split("+")
+    .map((part) => normalizeKeyName(part.replace(/\s+/g, "") || " "))
+    .filter(Boolean)
+    .join("+");
 }
 
 function eventKey(event) {
@@ -10,7 +24,7 @@ function eventKey(event) {
   if (event.metaKey) parts.push("meta");
   if (event.altKey) parts.push("alt");
   if (event.shiftKey) parts.push("shift");
-  parts.push(String(event.key || "").toLowerCase());
+  parts.push(normalizeKeyName(String(event.key || "").toLowerCase()));
   return parts.join("+");
 }
 

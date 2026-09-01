@@ -18,7 +18,7 @@
 
 import { createScopedApi, permitsPath } from "./plugins-scope.js";
 import { workspaceApi } from "./workspace-api.js";
-import { listPluginIframes } from "./plugins.js";
+import { listOverlayIframes, listPluginIframes } from "./plugins.js";
 import { on as onEvent, off as offEvent } from "./workspace-events.js";
 import { dispatchTerminalCall, dispatchVmCall } from "./workspace-terminal-bridge.js";
 
@@ -46,7 +46,10 @@ function pluginForIframeElement(el) {
   } catch {
     return null;
   }
-  for (const { component, src, manifest } of listPluginIframes()) {
+  // Panel iframes and overlay-hosted iframes (the Spotlight launcher)
+  // are both legitimate senders; they live in separate registries.
+  const candidates = [...listPluginIframes(), ...listOverlayIframes()];
+  for (const { component, src, manifest } of candidates) {
     let entryHref = null;
     try {
       entryHref = new URL(src, window.location.href).href;

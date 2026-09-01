@@ -1,0 +1,88 @@
+/* default-page.css — the empty-workspace landing card.
+ *
+ * Centered, monochrome, intentionally low chrome: the spotlight
+ * overlay is the primary launch surface, so this panel is just an
+ * affordance to say "the workspace is empty and here's how to start".
+ */
+
+.default-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+.default-page-card {
+  width: min(360px, calc(100% - 32px));
+  padding: 24px;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  background: #161b22;
+  text-align: center;
+  outline: none;
+}
+
+.default-page-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.default-page-hint {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: #8b949e;
+}
+
+.default-page-hint kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  margin: 0 1px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.default-page-launches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.default-page-launch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.default-page-launch:hover {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
+.default-page-launch:focus-visible {
+  outline: 2px solid #1f6feb;
+  outline-offset: 2px;
+}

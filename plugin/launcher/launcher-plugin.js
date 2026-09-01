@@ -17,6 +17,9 @@ export const plugin = {
       title: "Launcher",
       render: FallbackPanel,
       open: addFallbackPanel,
+      // Opt-in to the empty-workspace fallback so re-enabling this
+      // plugin brings the Task Launcher card back as the default page.
+      emptyGrid: true,
     });
   },
 };

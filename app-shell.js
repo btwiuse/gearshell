@@ -74,10 +74,20 @@ function handlePanelRemoved(api, panel) {
     destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
   }
   forgetOpenPanel(panel.id);
-  requestAnimationFrame(() => {
-    // Keep the grid from staying empty: reopen the launcher component
-    // through the plugin path (swappable launcher implementations).
-    if (api.panels.length === 0) addPanelByComponent(api, "launcher");
+  // Empty-workspace fallback: open the first plugin panel that opted
+// in via `registerPanel({ emptyGrid: true })` (default-page by default;
+// launcher if the user re-enables it). Skipped silently when no
+// plugin provides one, so a user who disables both defaults sees an
+// empty grid instead of a stale landing page.
+function openEmptyGridFallback(api) {
+  const provider = getEmptyGridPanel();
+  if (!provider) return null;
+  if (provider.open) return provider.open(api);
+  return addPanelByComponent(api, provider.component);
+}
+
+requestAnimationFrame(() => {
+    if (api.panels.length === 0) openEmptyGridFallback(api);
   });
 }
 
@@ -118,7 +128,7 @@ async function openStartupPanels(api) {
       addPanelByComponent(api, component);
     }
   }
-  if (api.panels.length === 0) addPanelByComponent(api, "launcher");
+  if (api.panels.length === 0) openEmptyGridFallback(api);
   return restored;
 }
 
@@ -186,8 +196,8 @@ function tabContextMenuItems({ panel, api }) {
 }
 
 // dockview-enterprise features are opt-in options (the module is
-// registered by the `import { LicenseManager } from
 // "dockview-enterprise"` side-effect import in app.js).
+import { getEmptyGridPanel } from "./plugins.js";
 function dockviewOptions(onReady) {
   return {
     className: "dockview-theme-github-dark",

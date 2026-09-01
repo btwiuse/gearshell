@@ -8,7 +8,15 @@
 
 const pluginOverlays = new Map(); // id -> { manifest, render }
 
-export function registerOverlay(manifest, { id, render }) {
+// Overlay-hosted iframe sources. An overlay may render an iframe instead
+// of in-page DOM (the Spotlight launcher does), and the postMessage
+// bridge whitelists senders by matching the <iframe> element's src
+// against registered plugin iframes. Overlay iframes are not panels, so
+// they need their own registry entry to be reachable by that check —
+// declare it with registerOverlay({ iframe: { src } }).
+const overlayIframes = new Map(); // src -> manifest
+
+export function registerOverlay(manifest, { id, render, iframe }) {
   if (typeof id !== "string" || !id) {
     throw new Error("overlay requires an id");
   }
@@ -20,7 +28,19 @@ export function registerOverlay(manifest, { id, render }) {
   }
   const entry = { manifest, render };
   pluginOverlays.set(id, entry);
+  if (iframe?.src) overlayIframes.set(iframe.src, manifest);
   return entry;
+}
+
+// Bridge lookup: the overlay iframe src -> { component, src, manifest },
+// shaped like listPluginIframes() so plugins-iframe-api.js can treat
+// both registries the same way.
+export function listOverlayIframes() {
+  return [...overlayIframes.entries()].map(([src, manifest]) => ({
+    component: manifest?.id || src,
+    src,
+    manifest,
+  }));
 }
 
 // Overlays for the shell chrome (rendered by app-shell's PluginOverlays,
@@ -37,5 +57,8 @@ export function removeOverlaysForPlugin(id) {
   for (const [overlayId, entry] of [...pluginOverlays]) {
     if (entry.manifest?.id !== id) continue;
     pluginOverlays.delete(overlayId);
+  }
+  for (const [src, manifest] of [...overlayIframes]) {
+    if (manifest?.id === id) overlayIframes.delete(src);
   }
 }

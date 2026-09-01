@@ -43,6 +43,7 @@ import {
 } from "./workspace-api.js";
 import { initIframePluginApi } from "./plugins-iframe-api.js";
 import { initHotkeys, registerHotkey } from "./app-hotkeys.js";
+import { toggleOverlay } from "./app-overlay-toggle.js";
 import {
   ensurePluginSystemFiles,
   ensurePluginToolBinds,
@@ -467,27 +468,25 @@ initWorkspaceApi();
 initHotkeys((action) => {
   if (action.method === "panels.open") {
     workspaceApi.panels.open(...action.args);
+    return;
+  }
+  if (action.method === "overlay.toggle") {
+    toggleOverlay(...action.args);
   }
 });
+// ctrl+shift+p opens the Spotlight overlay since the launcher panel
+// plugin is disabled by default.
 registerHotkey({
   id: "core:launcher",
   key: "ctrl+shift+p",
-  action: { method: "panels.open", args: ["launcher"] },
+  action: { method: "overlay.toggle", args: ["spotlight"] },
 });
 
-// Wire the iframe plugin bridge: postMessage requests from registered
-// iframe plugins are dispatched against window.GearShell through their
-// permissions.api whitelist. Must run after initWorkspaceApi() so the
-// API exists for dispatch.
+// Wire the iframe plugin bridge; must run after initWorkspaceApi.
 initIframePluginApi();
 
-// Dual-mode w9y dependency sync: fire-and-forget `w9y mod apply` for
-// plugins declaring w9y deps that are missing or pinned to another
-// version. Runs AFTER initPanels/initWorkspaceApi — the apply path goes
-// through runHeadlessTask, which calls panelsDep (initPanels) and needs
-// window.GearShell alive; earlier (the pre-runtime block above) it would
-// throw "panels: initPanels() has not been called" and never install.
-// The headless task itself waits for systemReady before waking.
+// Dual-mode w9y dep sync: fire-and-forget `w9y mod apply`. Must run
+// after initPanels/initWorkspaceApi (the apply path needs both).
 ensureW9yDependencies(loadConfig().plugins, W9Y_BINARY_VERSION).catch((error) => {
   console.error("w9y dependency sync failed", error);
 });

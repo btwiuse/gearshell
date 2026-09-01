@@ -1,22 +1,12 @@
-// plugins.js — the runtime plugin kernel (WISHLIST #9, slice 1).
-//
-// Third-party tabs arrive as ES modules and register panels with the
-// shell at runtime: config.plugins: [{ id, name, version, icon, entry,
-// permissions }]. `entry` is a same/cross-origin URL or a vfs:/ path;
-// the module exports `register(ctx)` or `plugin.register(ctx)` with ctx:
-//   registerPanel({ component, label, icon, title, render, open? })
+// plugins.js — the runtime plugin kernel.
+// Third-party tabs register via `register(ctx)` with ctx:
+//   registerPanel({ component, label, icon, title, render, open?, emptyGrid? })
 //   registerSettingsSection({ id, label, render })
-//   registerOverlay({ id, render })
+//   registerOverlay({ id, render, iframe? })
+//   registerHotkey({ key, action }) / unregisterHotkey(id)
 //   api — a permission-scoped view of window.GearShell
-// Iframe plugins are the entry-less form ({ iframe: { src, ... } }),
-// registered synchronously so the boot/restore path can open them
-// before any module import resolves. Registration mutates the live
-// PANEL_COMPONENTS / PANEL_CREATION_OPTIONS maps and appends unknown
-// components to DEFAULT_LAUNCHER_ITEM_ORDER; panels.open and the
-// launcher route plugin panels through openPluginPanel. The scoped api
-// is a capability guardrail (T1, install = full trust); enforcement
-// for untrusted pages (T2 iframe bridge) is a later slice.
-//
+// Iframe plugins are entry-less ({ iframe: { src } }), registered sync
+// so the boot/restore path sees them before any module import resolves.
 
 import { getDockviewApi } from "./app-panels-store.js";
 import { nextPanelId } from "./app-panel-ids.js";
@@ -25,8 +15,6 @@ import {
   DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
 } from "./app-constants.js";
-// Split parts (500-line rule): DI shim + change event, permission
-// scoping + icon resolution, and entry-module loading.
 import {
   emitPluginChanged,
   initPlugins,
@@ -48,13 +36,14 @@ import {
   removePluginCss,
 } from "./plugins-css.js";
 import {
+  listOverlayIframes,
   listOverlays,
   registerOverlay,
   removeOverlaysForPlugin,
 } from "./plugins-overlays.js";
 
 // Re-export the kernel surface importers keep reading from plugins.js.
-export { initPlugins, PLUGIN_CHANGED_EVENT, listOverlays };
+export { initPlugins, listOverlayIframes, PLUGIN_CHANGED_EVENT, listOverlays };
 
 // --- Registry state ---
 const pluginManifests = new Map(); // id -> normalized manifest
@@ -71,6 +60,18 @@ export function getPluginLoadResults() {
 
 export function isPluginPanel(component) {
   return pluginPanels.has(component) || pluginIframes.has(component);
+}
+
+// Empty-grid fallback lookup. First enabled panel that opted in
+// via registerPanel({ emptyGrid: true }) wins; disabled providers
+// are skipped so turning off default-page brings launcher back.
+export function getEmptyGridPanel() {
+  for (const [component, entry] of pluginPanels) {
+    if (!entry.emptyGrid) continue;
+    if (entry.manifest?.enabled === false) continue;
+    return { component, open: entry.open };
+  }
+  return null;
 }
 
 export function listPluginPanels() {
@@ -261,7 +262,7 @@ export function listSettingsSections() {
 
 function registerPluginPanel(
   manifest,
-  { component, label, icon, title, render, open },
+  { component, label, icon, title, render, open, emptyGrid },
 ) {
   if (typeof component !== "string" || !component) {
     throw new Error("plugin panel requires a component name");
@@ -277,10 +278,14 @@ function registerPluginPanel(
     label: label || manifest.name,
     title: title || label || manifest.name,
     render,
-    // Optional custom panel opener (api, group) => panel, for panels
-    // with creation-time behavior the generic opener does not cover
-    // (renderer mode, single-instance semantics, open-panel tracking).
+    // Optional custom opener for panels whose creation needs more
+    // than the generic dockview.addPanel path (single-instance,
+    // open-panel tracking, etc). Panels without `open` fall back to
+    // the standard opener in panels.js.
     open: typeof open === "function" ? open : null,
+    // Opt-in flag for the empty-workspace fallback (see
+    // getEmptyGridPanel). First enabled provider wins.
+    emptyGrid: emptyGrid === true,
   };
   pluginPanels.set(component, entry);
   const components = pluginsDep("PANEL_COMPONENTS");
@@ -400,26 +405,23 @@ export function getPluginBootPromise() {
   return pluginBootPromise;
 }
 
-// Tear down a loaded plugin: drop every panel component it registered
-// (component map, launcher entry, launcher order), close any open panels
-// of those types, and forget the manifest + load result.
+// Tear down a loaded plugin: drop every panel component, close open
+// panels of those types, forget manifest + load result.
 export function unregisterPlugin(id) {
   const manifest = pluginManifests.get(id);
   if (!manifest) {
     return { ok: false, error: `plugin "${id}" is not loaded` };
   }
   const dockview = getDockviewApi();
-  // Drop one panel registration (component panel or iframe panel).
-  // Close open panels BEFORE dropping the registry entry: a re-render of
-  // a still-open panel whose component just vanished would crash the
-  // dockview grid.
+  // Close open panels BEFORE dropping the registry entry: a re-render
+  // of a still-open panel whose component just vanished would crash
+  // the dockview grid.
   const dropRegistration = (component, hasComponentEntry) => {
     for (const panel of dockview?.panels || []) {
       if (panel.params?.panelType === component) panel.api.close();
     }
-    // Iframe panels never touch the component map, but every panel type
-    // (component or iframe) must leave the creation options + launcher
-    // order when its plugin is removed.
+    // Iframe panels never touch the component map; both panel kinds
+    // must leave the creation options + launcher order on removal.
     if (hasComponentEntry) {
       delete pluginsDep("PANEL_COMPONENTS")[component];
     }

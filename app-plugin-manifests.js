@@ -213,6 +213,48 @@ export const DEFAULT_PLUGINS = [
     icon: "Rocket",
     entry: "/plugin/launcher/launcher-plugin.js",
     css: ["/plugin/launcher/launcher.css"],
+    // Spotlight (below) is the default launch surface; the launcher
+    // panel stays around for users who want a permanent tab and a
+    // pinned grid. Disabled by default — re-enable from the Plugins
+    // page to bring back the Task Launcher card and its addPanel hotkey.
+    enabled: false,
+  },
+  // Spotlight: the transient, keyboard-first launcher (ctrl+space). An
+  // overlay whose surface is an iframe page, so it never spends a tab —
+  // it coexists with the launcher panel above, which stays the
+  // empty-workspace fallback. The page drives the shell over the iframe
+  // bridge, so it needs permissions.api like any iframe plugin; the css
+  // entry is the shell-side positioner only (the page inlines its own
+  // styles, so declaring the page's stylesheet here would leak its
+  // body/universal rules into the shell chrome).
+  {
+    id: "spotlight",
+    name: "Spotlight",
+    version: "1.0.0",
+    icon: "Search",
+    entry: "/plugin/spotlight/spotlight-plugin.js",
+    css: ["/plugin/spotlight/spotlight.css"],
+    permissions: {
+      api: [
+        "panels.list",
+        "panels.open",
+        "panels.focus",
+        "config.getShell",
+        "config.plugins.list",
+      ],
+    },
+  },
+  // Default Page: the empty-workspace landing. Activates whenever the
+  // dockview grid has no panels left, with a tiny card that points at
+  // Spotlight and offers a few high-frequency quick launches. Replaces
+  // the launcher panel for users who want a keyboard-first shell.
+  {
+    id: "default-page",
+    name: "Default Page",
+    version: "1.0.0",
+    icon: "Home",
+    entry: "/plugin/default-page/default-page-plugin.js",
+    css: ["/plugin/default-page/default-page.css"],
   },
   {
     id: "crush-runner",

@@ -1,0 +1,67 @@
+/* spotlight.css — the shell-side positioner for the Spotlight overlay.
+ *
+ * Two layers, both inside the host:
+ *   - `.spotlight-glass` paints the full-viewport frosted surface and
+ *     is `pointer-events: none` so dockview stays alive underneath.
+ *   - `.spotlight-frame` is the actual card. It owns the border-radius,
+ *     the translucent background, and the drop-shadow, so any iframe
+ *     subpixel seam shows as a clean edge against the same-colored
+ *     shadow rather than as a white halo.
+ *
+ * The iframe element is rectangular and bleeds a faint white seam no
+ * matter what overflow/border-radius we set on it, so we hide the seam
+ * by making the iframe *larger* than the visible card by 1px on every
+ * side and clipping with `clip-path` to the rounded rectangle. The
+ * card's own border paints over that 1px overhang.
+ *
+ * z-index 2000 sits above the panel-action menu (100) and the plugin
+ * modal (1000) so Spotlight is reachable from anywhere in the shell.
+ */
+
+.spotlight-glass {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 14vh;
+  /* A very light tint is enough — the card itself does the heavy
+     lifting visually; the glass is just a hint that the page is
+     dimmed, not a wall. */
+  background: rgba(1, 4, 9, 0.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  /* Catches mousedown on the surrounding glass so clicking outside
+   * the card closes the overlay (same as Escape). The iframe inside
+   * still has pointer-events: auto, so clicks on the card itself
+   * never reach this layer. Dockview underneath does not respond
+   * while Spotlight is open — that is the macOS Spotlight tradeoff
+   * the user opted into by treating the glass as a click target. */
+  pointer-events: auto;
+  animation: spotlight-fade 0.12s ease-out;
+}
+
+@keyframes spotlight-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.spotlight-frame {
+  display: block;
+  width: min(92vw, 620px);
+  height: 62vh;
+  border: 0;
+  background: transparent;
+  color-scheme: dark;
+  /* Overhang by 2px so the iframe subpixel seam lives inside the
+   * card's own border; the card's border paints over it. */
+  margin: -2px;
+  /* Pull it back to the original size so the visible geometry matches
+   * the card exactly. */
+  width: calc(min(92vw, 620px) + 4px);
+  height: calc(62vh + 4px);
+  /* Clip the iframe's rectangular element to the rounded card shape. */
+  border-radius: 14px;
+  clip-path: inset(0 round 14px);
+}
