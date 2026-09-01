@@ -1481,3 +1481,13 @@ extras 重打,gearshell 待推):
   terminal-frame/bbtex-iframe/iframe-template-plugin)内联 enableTapFocus;
   gearshell pins 升 v0.4.33。
 - 验证:合成 touch tap 聚焦 true、滚动不聚焦 false;v0.4.33 CDN 字节一致。
+
+
+## 四十五、rv64 插件双日志修复 + xterm 路径澄清(2026-09-02)
+
+- 双日志根因:console=ttyS0 console=hvc0 双内核 console,hvc0 注册后每条
+  printk 双份;页面把 console+export 两流都写同一 xterm。修复:页面 hvc0 首字节
+  后丢 ttyS0 流(b4c253b)。wanix adapter 无此问题(仅 console=hvc0)。
+- 澄清:wanix-term 与裸 xterm 是两条独立路径 —— v86 iframe 是 wanix-term(自身
+  import wanix@v0.4.33),rv64 等 4 插件是裸 xterm;修复分别落在 wanix v0.4.33
+  与页面内联 enableTapFocus。v86 wanix-term tap 聚焦已直接合成 touch 验证。
