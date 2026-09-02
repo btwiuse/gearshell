@@ -28,6 +28,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import htm from "htm";
 import { icons as LucideIcons } from "lucide-react";
 import { onOverlayToggle } from "../../app-overlay-toggle.js";
+import { loadStoredSession, saveStoredSession } from "./spotlight-storage.js";
 
 const html = htm.bind(React.createElement);
 
@@ -269,17 +270,22 @@ function SpotlightResults({ results, active, query, error, onActivate, onLaunch 
   });
 }
 
-// Reset the query and active-row on every open. The user's previous
-// query and selection belong to a closed session; the focus picker
-// should land at the top of the list.
-function useSpotlightSession(open) {
-  const [query, setQuery] = useState("");
-  const [active, setActive] = useState(0);
+// Owns the spotlight "session" — query string + cursor (active row).
+// Initial state reads from localStorage so the first open after a
+// reload picks up where the user left off. Subsequent updates write
+// through (one JSON.stringify per keystroke, in the React commit
+// phase) so the next open can resume.
+//
+// The session is NOT reset on every open. The catalog hook reloads
+// when the overlay re-opens, and useSpotlightResults clamps the
+// active row when the list shape changes (filters, plugin
+// install/remove), so stale state never points at a missing row.
+function useSpotlightSession() {
+  const [query, setQuery] = useState(() => loadStoredSession()?.query ?? "");
+  const [active, setActive] = useState(() => loadStoredSession()?.active ?? 0);
   useEffect(() => {
-    if (!open) return;
-    setQuery("");
-    setActive(0);
-  }, [open]);
+    saveStoredSession(query, active);
+  }, [query, active]);
   return { query, setQuery, active, setActive };
 }
 
@@ -413,7 +419,7 @@ function useSpotlightAutoFocus(open, inputRef) {
 
 export function SpotlightOverlay({ api }) {
   const [open, setOpen] = useSpotlightVisibility();
-  const { query, setQuery, active, setActive } = useSpotlightSession(open);
+  const { query, setQuery, active, setActive } = useSpotlightSession();
   const { catalog, error } = useSpotlightCatalog(open, api);
   const closeSpotlight = useCallback(() => setOpen(false), [setOpen]);
   const inputRef = useRef(null);
