@@ -405,7 +405,7 @@ export function startVmSession(session, options = {}) {
     session.term = term;
     // Play the agent-done chime when the wanix kernel's progress
     // tracker transitions back to state 0 (OSC 9;4 edge). wanix-term
-    // fires a `progressdone` CustomEvent; the helper reuses the
+    // fires a `wanix-term-progress-done` CustomEvent; the helper reuses the
     // same audio stack as the iframe terminal helpers.
     wireNativeProgressChime(term);
     session.wrapper.replaceChildren(vm, term);

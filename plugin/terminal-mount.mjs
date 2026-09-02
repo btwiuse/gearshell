@@ -104,8 +104,9 @@ export function playChime(kind = "done") {
 }
 
 // Hook a native `<wanix-term>` (or any element) for OSC 9;4
-// progress-done notifications. The element fires a `progressdone`
-// CustomEvent whenever the agent finishes a turn (wanix kernel:
+// progress-done notifications. The element fires a
+// `wanix-term-progress-done` CustomEvent whenever the agent finishes
+// a turn (wanix kernel:
 // edge-detect on state 0 with a prior non-zero state). Default
 // response is the same "done" chime the iframe terminal uses;
 // pass `onDone` to override (e.g. for a custom UI badge).
@@ -119,12 +120,12 @@ export function wireNativeProgressChime(element, options = {}) {
   // Avoid stacking listeners across reconnects: tag the function on
   // the element so re-invocation clears the previous one.
   if (element.__wanixProgressChimeListener) {
-    element.removeEventListener("progressdone", element.__wanixProgressChimeListener);
+    element.removeEventListener("wanix-term-progress-done", element.__wanixProgressChimeListener);
   }
-  element.addEventListener("progressdone", listener);
+  element.addEventListener("wanix-term-progress-done", listener);
   element.__wanixProgressChimeListener = listener;
   return () => {
-    element.removeEventListener("progressdone", listener);
+    element.removeEventListener("wanix-term-progress-done", listener);
     if (element.__wanixProgressChimeListener === listener) {
       element.__wanixProgressChimeListener = null;
     }

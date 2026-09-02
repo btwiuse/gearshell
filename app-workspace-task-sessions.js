@@ -166,7 +166,8 @@ function createTaskTerminal(task) {
     path=${`#task/${task.id}/term`}
     for="wanix-system"
   />`;
-  // See app-sessions.js: the wanix kernel emits a `progressdone`
+  // See app-sessions.js: the wanix kernel emits a
+  // `wanix-term-progress-done`
   // event when OSC 9;4 transitions back to state 0; we hook the
   // shared chime helper so task terminals sound the same as
   // iframe ones.
