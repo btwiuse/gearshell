@@ -235,6 +235,26 @@ export function reloadPanel(api, panel) {
   return replacement;
 }
 
+// Rename a tab in place. Dockview's setTitle() updates the displayed
+// label and triggers onDidLayoutChange so the new title rides along on
+// the next layout snapshot save — the rename survives a workspace
+// restore. The default title is reconstructed by reading the panel's
+// current title so we can show it as a placeholder; users who want the
+// canonical name back can close and reopen the tab (addPanel mints a
+// fresh id + original title).
+export function renamePanel(api, panel) {
+  const current = panel.title || panel.api.title || panel.id;
+  // window.prompt is blocked inside cross-origin iframes that don't have
+  // allow-modals; this plugin page can opt into it via the manifest's
+  // iframe.allow if it ever needs to expose Rename. For the shell chrome
+  // it just works.
+  const next = window.prompt(`Rename tab (current: "${current}")`, current);
+  if (next === null) return; // user cancelled
+  const trimmed = next.trim();
+  if (!trimmed) return;       // empty input → no-op (use close+reopen)
+  panel.api.setTitle(trimmed);
+}
+
 // Reload every session-bearing panel currently open. Useful when a
 // workspace-wide state change (wanix restart, iframe plugin update)
 // means the user wants a clean slate without hunting tabs. Skips
@@ -270,6 +290,10 @@ function tabContextMenuItems({ panel, api }) {
   items.push({
     label: "Reload",
     action: () => reloadPanel(api, panel),
+  });
+  items.push({
+    label: "Rename",
+    action: () => renamePanel(api, panel),
   });
   items.push("separator", "close", "closeOthers", "closeAll");
   return items;
