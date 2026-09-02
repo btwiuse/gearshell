@@ -135,7 +135,6 @@
   color: #c9d1d9;
 }
 .sl-row-icon svg { display: block; }
-.sl-row-icon-monogram { font-size: 13px; font-weight: 600; }
 .sl-row.is-active .sl-row-icon {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;

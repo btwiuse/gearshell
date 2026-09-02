@@ -46,7 +46,12 @@ export function createScopedApi(api, allow = []) {
 }
 
 // --- Icon resolution (shell-side lucide catalog, plugins never bundle icons) ---
+// lucide-react exports icons as forwardRef objects (not plain functions),
+// so the truthiness check on LucideIcons[name] is the only safe way to
+// discriminate "name exists in the catalog" from "name is missing" —
+// `typeof === "function"` always returns false for forwardRef and breaks
+// every real icon.
 export function resolveIcon(name) {
   const icon = LucideIcons[name];
-  return typeof icon === "function" ? icon : LucideIcons.Wrench;
+  return icon || LucideIcons.Wrench;
 }

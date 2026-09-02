@@ -17,10 +17,12 @@
 // the launcher card's pinned-first ordering.
 //
 // Icons resolve through lucide-react (already bundled in the shell)
-// keyed by the manifest's icon name; anything outside the catalog
-// falls back to a 2-letter monogram so a missing glyph never shows
-// as a literal "?". ICON_ALIASES mirrors the small remap the iframe
-// edition carried (Cpu -> Monitor).
+// keyed by the manifest's icon name, exactly the same shape
+// plugins-cards.iconOf uses: truthiness check + Wrench fallback.
+// lucide-react exports icons as forwardRef objects (not plain
+// functions), so the truthiness check is the only safe discriminator
+// — `typeof === "function"` always returns false and breaks every
+// real icon.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import htm from "htm";
@@ -43,8 +45,6 @@ const EXTRA_APPS = [
   { component: "plugins", name: "Plugins", iconName: "Puzzle" },
 ];
 
-const ICON_ALIASES = { Cpu: "Monitor" };
-
 // Mount state driven by the toggle channel ("toggle" | "open" | "close").
 function useSpotlightVisibility() {
   const [open, setOpen] = useState(false);
@@ -60,38 +60,14 @@ function useSpotlightVisibility() {
   return [open, setOpen];
 }
 
-// Resolve a manifest icon name to a lucide component. Names not in
-// the lucide catalog (or that resolve to non-components) fall back
-// to a Wrench glyph so the UI never blanks out.
-function resolveLucideIcon(name) {
-  if (typeof name !== "string" || !name) return null;
-  const aliased = ICON_ALIASES[name] || name;
-  const Component = LucideIcons[aliased];
-  return typeof Component === "function" ? Component : null;
-}
-
-// Two-letter monogram fallback for icons lucide cannot resolve.
-// Keeps a missing icon from showing as a literal "?" and matches the
-// rough visual weight of a 24px lucide stroke icon.
-function monogram(name) {
-  const words = String(name || "?").trim().split(/[\s-_]+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[1][0]).toUpperCase();
-}
-
 function RowIcon({ item }) {
-  const Icon = resolveLucideIcon(item.iconName);
-  if (Icon) {
-    return html`
-      <span className="sl-row-icon" aria-hidden=${true}>
-        <${Icon} size=${14}/>
-      </span>
-    `;
-  }
+  // Mirrors plugins-cards.iconOf exactly: truthiness check, Wrench as
+  // the missing-icon fallback. Plugin manifests ship lucide names, so
+  // every enabled plugin has a real icon in the catalog.
+  const Icon = LucideIcons[item.iconName] || LucideIcons.Wrench;
   return html`
-    <span className="sl-row-icon sl-row-icon-monogram" aria-hidden=${true}>
-      ${monogram(item.name)}
+    <span className="sl-row-icon" aria-hidden=${true}>
+      <${Icon} size=${14}/>
     </span>
   `;
 }
