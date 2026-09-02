@@ -283,6 +283,45 @@ export const DEFAULT_PLUGINS = [
     icon: "Rocket",
     entry: "/plugin/crush-runner/crush-runner-plugin.js",
     css: ["/plugin/crush-runner/crush-runner.css"],
+    // Disabled by default — the iframe edition below is the canonical
+    // entry point. It declares the `crush` w9y mod dep, which
+    // ensureW9yDependencies skips on boot (iframe plugins install
+    // lazily on first panel open — see addIframePanel in panels.js),
+    // so the iframe opens to a ready-to-launch UI without paying the
+    // install cost for users who never use Crush. Re-enable here if
+    // you want the entry-style panel back.
+    enabled: false,
+  },
+  {
+    id: "crush-runner-iframe",
+    name: "Crush Runner (iframe)",
+    version: "0.1.0",
+    icon: "Rocket",
+    iframe: {
+      src: "/plugin/crush-runner-iframe/index.html",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+    permissions: {
+      api: [
+        "config.crushRunner.*",
+        "tasks.create",
+        "tasks.output",
+        "events.on",
+        "events.off",
+        "terminal.create",
+        "terminal.write",
+        "terminal.resize",
+        "terminal.dispose",
+      ],
+    },
+    // Lazy w9y install: addIframePanel triggers `w9y mod apply crush`
+    // on first panel open, so the iframe opens to a ready-to-launch
+    // UI in the happy path. ensureW9yDependencies skips iframe
+    // plugins on boot, so the install cost is paid only when the
+    // user actually opens the panel. The install button on the page
+    // stays as a recovery path for offline / version-drift scenarios.
+    w9y: { mod: "crush" },
   },
   {
     id: "browser",
