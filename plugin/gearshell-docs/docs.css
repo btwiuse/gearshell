@@ -1,0 +1,309 @@
+/* docs.css — GearShell API Documentation plugin styles.
+   Mirrors the dockview github-dark theme so the docs feel native to
+   the shell. Inline in index.html so it doesn't leak into the shell
+   page chrome (same rule as every other iframe plugin). */
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+.docs-shell {
+  display: grid;
+  grid-template-rows: 44px 1fr;
+  height: 100%;
+  background: #0d1117;
+  color: #c9d1d9;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.docs-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border-bottom: 1px solid #30363d;
+  background: #161b22;
+}
+
+.docs-topbar h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f6fc;
+  letter-spacing: 0.2px;
+}
+
+.docs-topbar h1 .docs-version {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #8b949e;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.docs-search {
+  flex: 1;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #0d1117;
+}
+
+.docs-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #c9d1d9;
+  font: inherit;
+  outline: none;
+}
+
+.docs-search input::placeholder { color: #6e7681; }
+
+.docs-topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.docs-topbar-actions a,
+.docs-topbar-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #21262d;
+  color: #c9d1d9;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.docs-topbar-actions a:hover,
+.docs-topbar-actions button:hover {
+  background: #30363d;
+  color: #f0f6fc;
+}
+
+.docs-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  overflow: hidden;
+}
+
+.docs-sidebar {
+  border-right: 1px solid #30363d;
+  background: #0d1117;
+  overflow: auto;
+  padding: 12px 0;
+}
+
+.docs-sidebar-section {
+  margin: 0 0 4px;
+}
+
+.docs-sidebar-section header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.docs-sidebar-section header:hover { color: #c9d1d9; }
+
+.docs-sidebar-section header .docs-chevron {
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.docs-sidebar-section header .docs-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: #6e7681;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.docs-sidebar-items {
+  display: none;
+}
+
+.docs-sidebar-section.docs-open > .docs-sidebar-items { display: block; }
+
+.docs-sidebar-items a {
+  display: block;
+  padding: 4px 12px 4px 24px;
+  color: #8b949e;
+  text-decoration: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docs-sidebar-items a:hover { color: #f0f6fc; background: #161b22; }
+
+.docs-sidebar-items a.docs-active {
+  color: #f0f6fc;
+  background: #1f6feb33;
+  border-left: 2px solid #1f6feb;
+  padding-left: 22px;
+}
+
+.docs-main {
+  overflow: auto;
+  padding: 28px 40px 80px;
+}
+
+.docs-main h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  color: #f0f6fc;
+  font-weight: 600;
+}
+
+.docs-main h2 {
+  margin: 28px 0 8px;
+  font-size: 18px;
+  color: #f0f6fc;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 6px;
+}
+
+.docs-main h3 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+  color: #c9d1d9;
+}
+
+.docs-main p {
+  margin: 0 0 12px;
+  color: #c9d1d9;
+}
+
+.docs-main a { color: #58a6ff; text-decoration: none; }
+.docs-main a:hover { text-decoration: underline; }
+
+.docs-main ul, .docs-main ol {
+  padding-left: 22px;
+  margin: 0 0 12px;
+}
+
+.docs-main li { margin: 2px 0; }
+
+.docs-main code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #161b22;
+  color: #f0f6fc;
+}
+
+.docs-main pre {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: auto;
+  position: relative;
+}
+
+.docs-main pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #c9d1d9;
+}
+
+.docs-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #21262d;
+  color: #8b949e;
+  cursor: pointer;
+}
+
+.docs-copy:hover { background: #30363d; color: #f0f6fc; }
+
+.docs-main table {
+  border-collapse: collapse;
+  margin: 0 0 14px;
+  width: 100%;
+}
+
+.docs-main th, .docs-main td {
+  text-align: left;
+  padding: 6px 10px;
+  border: 1px solid #30363d;
+  font-size: 13px;
+}
+
+.docs-main th { background: #161b22; color: #f0f6fc; font-weight: 600; }
+.docs-main tr:nth-child(2n) td { background: #0d111780; }
+
+.docs-main blockquote {
+  margin: 0 0 12px;
+  padding: 6px 14px;
+  border-left: 3px solid #1f6feb;
+  background: #1f6feb11;
+  color: #8b949e;
+}
+
+.docs-banner {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: #1f6feb22;
+  border: 1px solid #1f6feb66;
+  border-radius: 8px;
+  color: #79c0ff;
+}
+
+.docs-banner.docs-error { background: #f8514922; border-color: #f8514966; color: #ffa198; }
+
+.docs-anchor {
+  display: block;
+  position: relative;
+  top: -50px;
+  visibility: hidden;
+}
+
+.docs-empty {
+  margin: 60px auto;
+  max-width: 360px;
+  text-align: center;
+  color: #8b949e;
+}
+
+.docs-empty h2 { border: 0; color: #c9d1d9; }
+
+@media (max-width: 720px) {
+  .docs-body { grid-template-columns: 200px 1fr; }
+  .docs-main { padding: 20px 20px 60px; }
+  .docs-main h1 { font-size: 22px; }
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GearShell API Documentation</title>
+<!-- The stylesheet is INLINE (not a manifest css: entry): iframe plugin
+     pages are self-contained apps that load their own CSS, so declaring
+     css: in the manifest would inject it into the SHELL page instead —
+     its body/universal rules would leak into the shell chrome. Keep
+     plugin styling inside the iframe page itself. -->
+<link rel="stylesheet" href="/plugin/gearshell-docs/docs.css" />
+<style>
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html, body { max-height: 100vh; }
+body {
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px !important;
+}
+</style>
+<!-- buildless iframe plugin: importmap resolves React, htm, marked,
+     DOMPurify, and lucide-react from esm.sh. /plugin/gear-bridge.js
+     (loaded as a classic script) installs window.GearShell on this
+     iframe so every method call becomes a postMessage to the parent
+     shell — gated by this plugin's permissions.api whitelist. We
+     request read-only access to the entire API surface plus the kv
+     store so the docs can store the last-opened page. -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "htm": "https://esm.sh/htm@3.1.1",
+    "marked": "https://esm.sh/marked@17.0.0",
+    "dompurify": "https://esm.sh/dompurify@3.2.4?deps=react@18.2.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<script src="/plugin/gear-bridge.js"></script>
+<script type="module" src="/plugin/gearshell-docs/docs-app.js"></script>
+</body>
+</html>

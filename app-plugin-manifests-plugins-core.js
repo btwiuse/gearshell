@@ -187,4 +187,40 @@ export const CORE_PLUGINS = [
     },
     emptyGrid: true,
   },
+  // API Documentation: a buildless iframe plugin that ships every
+  // GearShell API surface as searchable markdown. The catalog index
+  // (content/index.json) and per-method docs live alongside the plugin
+  // page; the iframe loads them via fetch. The plugin is enabled by
+  // default — same shape as the Playground plugin above (full read
+  // access plus the kv store for "last-opened page" persistence).
+  {
+    id: "gearshell-docs",
+    name: "API Documentation",
+    label: "API Documentation",
+    version: "1.0.0",
+    icon: "BookOpen",
+    iframe: {
+      src: "/plugin/gearshell-docs/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    permissions: {
+      api: [
+        "version",
+        "ping",
+        "config.*",
+        "panels.*",
+        "browser.*",
+        "files.*",
+        "tasks.*",
+        "agents.*",
+        "vm.*",
+        "terminal.*",
+        "music.*",
+        "events.*",
+        "w9y.*",
+        "hotkeys.*",
+        "fs.*",
+      ],
+    },
+  },
 ];
