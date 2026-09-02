@@ -68,6 +68,26 @@ export const IFRAME_PLUGINS = [
       ],
     },
   },
+  // Lucide Icons browser: a buildless iframe plugin that uses an
+  // importmap to load lucide-react from esm.sh. The page is fully
+  // self-contained (it doesn't call any GearShell.* bridge API — the
+  // icons ship with the bundle), so no permissions entry is needed.
+  // Features: case-insensitive AND-token search, virtualised listing
+  // (IntersectionObserver grows the render window), grid + list view,
+  // PascalCase ↔ kebab-case name toggle (click an icon to copy the name
+  // in the convention the user picked). Disabled by default — opt in via
+  // the Plugins page; the lucide bundle is heavy (~600 KB esm.sh).
+  {
+    id: "lucide-icons",
+    name: "Lucide Icons",
+    version: "1.0.0",
+    icon: "Sparkles",
+    iframe: {
+      src: "/plugin/lucide-icons/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    enabled: false,
+  },
   {
     id: "crush",
     name: "Crush",

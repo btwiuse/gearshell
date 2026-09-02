@@ -1,0 +1,235 @@
+/* Lucide Icons Browser — iframe plugin stylesheet.
+   Kept inside the iframe page (manifest has no css: entry) so the
+   page is fully self-contained and the GearShell shell chrome stays
+   untouched. */
+
+* { box-sizing: border-box; }
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html, body { max-height: 100vh; }
+
+body {
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  font-size: 14px !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* #app is the React root; it must itself be a flex column so the
+   fixed-height search bar pushes the scrollable list into the remaining
+   viewport. Without `display: flex` here, the body flex column doesn't
+   pass through (the .lic-scroll child grows to fit its content). */
+#app { display: flex; flex-direction: column; min-height: 0; }
+
+.lic-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #21262d;
+  background: #161b22;
+  flex: 0 0 auto;
+}
+
+.lic-bar h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6edf3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lic-search {
+  flex: 1 1 220px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #0d1117;
+}
+
+.lic-search:focus-within { border-color: #58a6ff; }
+
+.lic-search svg { color: #6e7681; flex: 0 0 auto; }
+
+.lic-search input {
+  flex: 1 1 auto;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #c9d1d9;
+  font: inherit;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.lic-search input::placeholder { color: #6e7681; }
+
+.lic-count {
+  font-size: 12px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.lic-view {
+  display: inline-flex;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.lic-view button {
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lic-view button:hover { color: #c9d1d9; }
+.lic-view button.active { background: #21262d; color: #e6edf3; }
+.lic-view button + button { border-left: 1px solid #30363d; }
+
+.lic-clear {
+  background: transparent;
+  border: none;
+  color: #6e7681;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+}
+
+.lic-clear:hover { color: #c9d1d9; }
+
+.lic-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 16px 32px;
+}
+
+/* GRID */
+.lic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.lic-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px 10px;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  background: #161b22;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.lic-card:hover { background: #1c2128; border-color: #30363d; }
+
+.lic-card svg { color: #c9d1d9; }
+
+.lic-card-label {
+  font-size: 11px;
+  color: #8b949e;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+/* LIST */
+.lic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lic-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #c9d1d9;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.lic-row:hover {
+  background: #161b22;
+  border-color: #21262d;
+}
+
+.lic-row svg { color: #c9d1d9; flex: 0 0 auto; }
+
+.lic-row-name {
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: #e6edf3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.lic-row-cta {
+  font-size: 11px;
+  color: #6e7681;
+  white-space: nowrap;
+}
+
+.lic-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 16px;
+  color: #6e7681;
+  gap: 8px;
+  text-align: center;
+}
+
+.lic-empty p { margin: 0; font-size: 13px; }
+
+/* toast */
+.lic-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: #1f6feb;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.lic-toast.show { opacity: 1; }

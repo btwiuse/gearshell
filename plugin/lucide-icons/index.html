@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lucide Icons</title>
+<link rel="stylesheet" href="/plugin/lucide-icons/lucide-icons.css" />
+<style>
+html, body, #app {
+  width: 100%; height: 100%; margin: 0; overflow: hidden;
+  overscroll-behavior: none;
+}
+html, body { max-height: 100vh; }
+body {
+  background: #0d1117; color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px !important;
+}
+</style>
+<!-- buildless iframe plugin: importmap resolves React/htm from esm.sh,
+     lucide-react is a single named import, the page is one ESM module.
+     No permissions are needed because this page is fully self-contained
+     (it does not call GearShell.* — lucide-react is bundled by esm.sh). -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "htm": "https://esm.sh/htm@3.1.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import htm from "htm";
+import * as Lucide from "lucide-react";
+import { Search, LayoutGrid, List, X, Sparkles } from "lucide-react";
+
+const html = htm.bind(React.createElement);
+
+// lucide-react exports every icon as a forwardRef React component AND a
+// handful of helpers (createReactComponent, defaultAttributes). Filter to
+// only the actual icon components (PascalCase identifier that resolves to
+// a function/object — usually a forwardRef). Also skip the meta keys
+// (icons, defaultAttributes, createReactComponent) that lucide attaches.
+function isIcon(value, name) {
+  if (!/^[A-Z]/.test(name)) return false;
+  if (name === "defaultAttributes") return false;
+  if (typeof value !== "object" && typeof value !== "function") return false;
+  // lucide icons are React.forwardRef wrappers, so they expose $$typeof.
+  if (value && typeof value === "object" && value.$$typeof) return true;
+  return false;
+}
+
+const ICON_NAMES = Object.keys(Lucide)
+  .filter((name) => isIcon(Lucide[name], name))
+  // Lucide used to ship "<Name>Icon" alongside "<Name>"; in 0.468 only
+  // the bare PascalCase form is the canonical export, but the bundle's
+  // internal className constants still include the suffix and would slip
+  // through the $$typeof check on the wrapped icon module. Drop them so
+  // users never see duplicates like "AArrowDown / AArrowDownIcon".
+  .filter((name) => !name.endsWith("Icon"))
+  .sort((a, b) => a.localeCompare(b));
+
+// PascalCase → kebab-case ("ChevronLeft" → "chevron-left"). Matches the
+// slug lucide uses for its web component and the Tailwind/CSS icon
+// ecosystem; lucide-react only ships PascalCase exports so we transform
+// the names on the fly. Cached because every icon name is rendered into
+// a card / row label and we want the conversion to be free after the
+// first pass.
+const KEBAB_CACHE = new Map();
+function pascalToKebab(name) {
+  const cached = KEBAB_CACHE.get(name);
+  if (cached !== undefined) return cached;
+  const kebab = name.replace(/([A-Z])/g, "-$1").slice(1).toLowerCase();
+  KEBAB_CACHE.set(name, kebab);
+  return kebab;
+}
+
+function formatName(name, mode) {
+  return mode === "kebab" ? pascalToKebab(name) : name;
+}
+
+// Build a lowercase index so search doesn't pay .toLowerCase() on every
+// keystroke for every icon (1500+ icons × every keystroke is wasteful).
+const SEARCH_INDEX = new Map(
+  ICON_NAMES.map((name) => [name.toLowerCase(), name])
+);
+
+function matches(query, name) {
+  if (!query) return true;
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  // AND across whitespace-separated tokens: every token must appear in
+  // the icon name. Lets "arrow left" find ArrowLeft, ArrowLeftToLine, …
+  const tokens = needle.split(/\s+/);
+  const hay = name.toLowerCase();
+  for (const t of tokens) if (!hay.includes(t)) return false;
+  return true;
+}
+
+const COPY_HEX = "1f6feb";
+
+function Toast({ message }) {
+  return html`<div className=${"lic-toast" + (message ? " show" : "")}>${message || ""}</div>`;
+}
+
+function IconCard({ name, Icon, displayName }) {
+  // Click copies the icon name in the currently selected casing so the
+  // snippet the user pastes matches the convention they picked (PascalCase
+  // for `import { Foo } from "lucide-react"`, kebab-case for the lucide
+  // web component / Tailwind icon ecosystem).
+  const onActivate = (event) => {
+    event?.preventDefault?.();
+    navigator.clipboard?.writeText(displayName).catch(() => {});
+    if (window.parent && typeof window.parent.postMessage === "function") {
+      window.parent.postMessage(
+        { type: "lucide-icons:copy", name: displayName },
+        window.location.origin,
+      );
+    }
+  };
+  return html`<button
+    type="button"
+    className="lic-card"
+    title=${`Copy ${displayName}`}
+    onClick=${onActivate}
+  >
+    <${Icon} size=${24} strokeWidth=${2} aria-hidden=${true} />
+    <span className="lic-card-label">${displayName}</span>
+  </button>`;
+}
+
+function IconRow({ name, Icon, displayName }) {
+  const onActivate = (event) => {
+    event?.preventDefault?.();
+    navigator.clipboard?.writeText(displayName).catch(() => {});
+  };
+  return html`<button
+    type="button"
+    className="lic-row"
+    title=${`Copy ${displayName}`}
+    onClick=${onActivate}
+  >
+    <${Icon} size=${18} strokeWidth=${2} aria-hidden=${true} />
+    <span className="lic-row-name">${displayName}</span>
+    <span className="lic-row-cta">click to copy</span>
+  </button>`;
+}
+
+const PAGE_SIZE = 240; // 15 grid rows × 16 cols ≈ a tall page; render more
+                      // per batch than that keeps IntersectionObserver
+                      // triggers cheap.
+
+function App() {
+  const [query, setQuery] = useState("");
+  const [view, setView] = useState("grid"); // "grid" | "list"
+  // "pascal" (lucide-react default export) or "kebab" (lucide web
+  // component / Tailwind). Persist so the user's preference sticks across
+  // reloads — same store the search input would use if we ever add one.
+  const [nameMode, setNameMode] = useState("pascal");
+  const [renderCount, setRenderCount] = useState(PAGE_SIZE);
+  const [toast, setToast] = useState("");
+  const scrollRef = useRef(null);
+  const sentinelRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return ICON_NAMES;
+    const tokens = query.trim().toLowerCase().split(/\s+/);
+    return ICON_NAMES.filter((name) => {
+      // Match against both PascalCase ("ChevronLeft") and kebab-case
+      // ("chevron-left") so the search input is convention-agnostic:
+      // a developer typing either form gets the same hits.
+      const hay = name.toLowerCase() + " " + pascalToKebab(name);
+      for (const t of tokens) if (!hay.includes(t)) return false;
+      return true;
+    });
+  }, [query]);
+
+  // Reset the infinite-list window whenever the filter or view changes
+  // so the user sees the top hits immediately; the IntersectionObserver
+  // below grows it again as they scroll. (nameMode is intentionally NOT
+  // here: switching between PascalCase and kebab-case doesn't change which
+  // icons match — only what they look like — so there's no reason to
+  // throw away already-mounted DOM.)
+  useEffect(() => {
+    setRenderCount(PAGE_SIZE);
+  }, [query, view]);
+
+  // Infinite listing: append another page when the sentinel scrolls into
+  // view. Cuts first-paint cost (icons are heavy DOM) without forcing
+  // the user to wait for all 1500+ to mount.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const root = scrollRef.current;
+    if (!sentinel || !root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          setRenderCount((prev) =>
+            prev >= filtered.length ? prev : Math.min(prev + PAGE_SIZE, filtered.length),
+          );
+        }
+      },
+      { root, rootMargin: "400px 0px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filtered.length]);
+
+  // Listen for the copy-event the user fires through the page so we can
+  // pop a toast without re-rendering on every card click.
+  useEffect(() => {
+    const onMessage = (event) => {
+      const data = event.data;
+      if (!data || data.type !== "lucide-icons:copy") return;
+      setToast(`Copied ${data.name}`);
+      const timer = setTimeout(() => setToast(""), 1100);
+      return () => clearTimeout(timer);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  const visible = filtered.slice(0, renderCount);
+  const more = renderCount < filtered.length;
+
+  return html`<div className="lic-bar">
+    <h1><${Sparkles} size=${16} strokeWidth=${2}/> Lucide Icons</h1>
+    <label className="lic-search">
+      <${Search} size=${14} strokeWidth=${2}/>
+      <input
+        type="search"
+        placeholder="Search icons (e.g. arrow, chevron left, smile)"
+        value=${query}
+        onInput=${(event) => setQuery(event.target.value)}
+        autoFocus=${true}
+      />
+      ${query && html`<button
+        type="button"
+        className="lic-clear"
+        title="Clear search"
+        onClick=${() => setQuery("")}
+      ><${X} size=${14} strokeWidth=${2}/></button>`}
+    </label>
+    <span className="lic-count">${filtered.length} / ${ICON_NAMES.length}</span>
+    <div className="lic-view" role="group" aria-label="Name format">
+      <button
+        type="button"
+        className=${nameMode === "pascal" ? "active" : ""}
+        title="PascalCase (lucide-react)"
+        onClick=${() => setNameMode("pascal")}
+      >PascalCase</button>
+      <button
+        type="button"
+        className=${nameMode === "kebab" ? "active" : ""}
+        title="kebab-case (lucide web / Tailwind)"
+        onClick=${() => setNameMode("kebab")}
+      >kebab-case</button>
+    </div>
+    <div className="lic-view" role="group" aria-label="View mode">
+      <button
+        type="button"
+        className=${view === "grid" ? "active" : ""}
+        title="Grid view"
+        onClick=${() => setView("grid")}
+      ><${LayoutGrid} size=${14} strokeWidth=${2}/></button>
+      <button
+        type="button"
+        className=${view === "list" ? "active" : ""}
+        title="List view"
+        onClick=${() => setView("list")}
+      ><${List} size=${14} strokeWidth=${2}/></button>
+    </div>
+  </div>
+  <div className="lic-scroll" ref=${scrollRef}>
+    ${filtered.length === 0
+      ? html`<div className="lic-empty">
+          <${Search} size=${32} strokeWidth=${1.5}/>
+          <p>No icons match <strong>${query}</strong>.</p>
+          <p>Try fewer tokens, or check the lucide.dev docs for the canonical name.</p>
+        </div>`
+      : view === "grid"
+        ? html`<div className="lic-grid">
+            ${visible.map((name) => html`<${IconCard} key=${name} name=${name} Icon=${Lucide[name]} displayName=${formatName(name, nameMode)}/>`)}
+          </div>`
+        : html`<div className="lic-list">
+            ${visible.map((name) => html`<${IconRow} key=${name} name=${name} Icon=${Lucide[name]} displayName=${formatName(name, nameMode)}/>`)}
+          </div>`}
+    ${more ? html`<div ref=${sentinelRef} style=${{ height: "1px" }}/>` : null}
+  </div>
+  <${Toast} message=${toast}/>
+  `;
+}
+
+createRoot(document.getElementById("app")).render(html`<${App}/>`);
+
+// Quick sanity log so the plugin kernel can confirm the page mounted.
+// The shell doesn't read this — it's purely for the browser console
+// while developing.
+console.log(
+  "[lucide-icons] mounted;",
+  ICON_NAMES.length,
+  "icons available",
+);
+</script>
+</body>
+</html>
