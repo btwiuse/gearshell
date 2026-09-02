@@ -29,5 +29,11 @@ export const BBTEX_IFRAME_PLUGIN = {
         "w9y.status",
       ],
     },
+    // Disabled by default: the `w9y:` dep pulls 63 binaries (~tens of
+    // MB) on every boot when this plugin is enabled. The iframe page
+    // is opt-in — re-enable from the Plugins page when you want to
+    // actually use the playground. Mirror's per-mod `installed` only
+    // triggers apply when this flips true (see ensureW9yDependencies).
+    enabled: false,
     w9y: { mod: "bbtex", version: "v2.0.12" },
 };
