@@ -43,7 +43,10 @@ import {
   redactSecrets,
   undoAuditEntry,
 } from "./workspace-audit.js";
-import { crushRunnerConfigApi } from "./plugin/crush-playground/preset-api.js";
+import {
+  crushRunnerConfigApi,
+} from "./plugin/crush-playground/preset-api.js";
+import { kvConfigApi } from "./plugin/crush-playground/kv-api.js";
 
 import { settingsConfigApi } from "./workspace-config-settings-api.js";
 import {
@@ -384,6 +387,7 @@ export const configApi = {
     remove: removeModel,
   },
   crushRunner: crushRunnerConfigApi,
+  kv: kvConfigApi,
   plugins: {
     list: listPlugins,
     install: installPlugin,

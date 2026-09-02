@@ -1,23 +1,18 @@
 // preset-api.js — host-side implementation of `config.crushRunner.*`,
 // owned by the Crush Playground iframe plugin. The iframe page calls
 // GearShell.config.crushRunner.{get,list,save,remove,setActive}; this
-// module wires those handlers into the workspace shell config and
-// owns the built-in preset list that ships with the app.
+// module wires those handlers into the generic config.kv namespace
+// (see ./kv-api.js) and owns the built-in preset list that ships
+// with the app.
 //
 // Replaces the legacy `plugin/crush-runner/` facade (deleted when the
 // entry-style Crush Runner panel was retired in favour of the iframe
-// edition). The shell-side service layer
-// (`crushRunnerConfigApi` + `crushRunnerSnapshot` /
-// `saveCrushRunnerConfig`) lives here too, so the iframe page and
-// the host stay in sync through a single module instead of three
-// plugin directories.
+// edition). The shell-side service layer (`crushRunnerConfigApi`)
+// stays put so the iframe page didn't need rewriting when storage
+// moved onto config.kv.
 
 import { loadConfig, saveConfig } from "../../app-workspace.js";
-import { pushAuditEntry, pushEvent, redactSecrets } from "../../workspace-audit.js";
-import {
-  normalizeTerminalProfile,
-  normalizeTerminalProfileOrder,
-} from "../../app-normalize.js";
+import { normalizeTerminalProfile } from "../../app-normalize.js";
 
 // --- Built-in preset data ---
 
@@ -219,140 +214,138 @@ export function normalizeCrushRunnerPreset(preset = {}) {
   };
 }
 
-export function getCrushRunnerPresets(config = loadConfig()) {
-  // Build the live list of built-ins, then layer any user-saved
-  // override with the matching id on top of each one. Empty-string
-  // fields are treated as "user did not set this" so newly introduced
-  // defaults (e.g. a new env= line on a builtin) reach existing
-  // workspaces whose override still stores '' from before the field
-  // existed. The legacy `crush` slot keeps merging into the first
-  // builtin by id, so workspaces pinned to that id keep working.
-  const builtins = getBuiltinCrushRunnerPresets().map((template) => {
-    const merged = { ...template };
-    const configured = (config.crushRunnerPresets || []).find((preset) =>
-      preset.id === template.id
-    );
-    if (configured) {
-      for (const [key, value] of Object.entries(configured)) {
-        if (value === "" || value == null) continue;
-        if (!(key in merged)) continue;
-        merged[key] = value;
-      }
-    }
-    merged.builtin = true;
-    merged.id = template.id;
-    return merged;
-  });
-  // Drop the user-saved entries that we just merged into the builtin
-  // slots so we don't render the same preset twice.
-  const customs = (config.crushRunnerPresets || []).filter(
-    (preset) => !BUILTIN_CRUSH_RUNNER_PRESET_IDS.includes(preset.id),
-  );
-  const all = [...builtins, ...customs];
-  const order = normalizeTerminalProfileOrder(
-    config.crushRunnerPresetOrder,
-    all,
-  );
-  const positions = new Map(order.map((id, index) => [id, index]));
-  return [...all].sort((left, right) =>
-    (positions.get(left.id) ?? 0) - (positions.get(right.id) ?? 0)
-  );
+// Read the Crush Playground state from KV: the user-saved customs +
+// activeId + order. Builtins are not stored here — they ship with the
+// app and the iframe reads them from `crush-playground:builtins` and
+// merges on its side.
+export function getCrushRunnerPresets() {
+  const kv = loadConfig().kv || {};
+  return kv["crush-playground:state"] || {
+    customs: [],
+    activeId: undefined,
+    order: [],
+  };
+}
+
+// Built-in presets ship on a separate, read-only KV key. The host
+// seeds it once per workspace (the iframe treats it as static
+// throughout the session — builtins are code, not user data).
+export const CRUSH_BUILTINS_KV_KEY = "crush-playground:builtins";
+export const CRUSH_STATE_KV_KEY = "crush-playground:state";
+
+export function ensureCrushRunnerBuiltinsKv() {
+  const config = loadConfig();
+  const kv = { ...(config.kv || {}) };
+  if (!kv[CRUSH_BUILTINS_KV_KEY]) {
+    kv[CRUSH_BUILTINS_KV_KEY] = getBuiltinCrushRunnerPresets();
+    saveConfig({ ...config, kv });
+  }
 }
 
 export function saveCrushRunnerPresets(presets, activeId, order) {
   const config = loadConfig();
-  saveConfig({
-    ...config,
-    crushRunnerPresets: presets.map((preset) => ({
-      ...preset,
-      builtin: false,
-    })),
-    crushRunnerPresetOrder: normalizeTerminalProfileOrder(order, presets),
-    crushRunnerActiveId: typeof activeId === "string" && activeId
+  const customs = presets
+    .filter((preset) => !BUILTIN_CRUSH_RUNNER_PRESET_IDS.includes(preset.id))
+    .map((preset) => ({ ...preset, builtin: false }));
+  const kv = { ...(config.kv || {}) };
+  kv[CRUSH_STATE_KV_KEY] = {
+    customs,
+    activeId: typeof activeId === "string" && activeId
       ? activeId
-      : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-  });
+      : undefined,
+    order: Array.isArray(order) ? order.slice() : customs.map((preset) => preset.id),
+  };
+  saveConfig({ ...config, kv });
 }
 
-// --- Iframe-facing config API (GearShell.config.crushRunner.*) ---
+// --- Iframe-facing config API (GearShell.config.kv.* under the hood) ---
+// The Crush Playground iframe keeps talking to its old
+// `GearShell.config.crushRunner.*` shape (get / save / remove /
+// setActive / list) so the page rewrite is minimal. Each handler
+// reads / writes the `crush-playground:state` and `:builtins` keys
+// through the host-side kv module.
 
-function auditOptions(input) {
-  if (typeof input === "string") return { agent: input };
-  return input || {};
-}
-
-function crushRunnerSnapshot(config = loadConfig()) {
+function crushRunnerSnapshot() {
+  const state = (kvGet(CRUSH_STATE_KV_KEY) || {});
+  const builtins = kvGet(CRUSH_BUILTINS_KV_KEY) || [];
+  const customs = Array.isArray(state.customs) ? state.customs : [];
+  const all = [...builtins, ...customs];
+  const order = Array.isArray(state.order) && state.order.length > 0
+    ? state.order
+    : all.map((preset) => preset.id);
+  const positions = new Map(order.map((id, index) => [id, index]));
+  const merged = [...all].sort((left, right) =>
+    (positions.get(left.id) ?? 0) - (positions.get(right.id) ?? 0)
+  );
   return {
-    presets: getCrushRunnerPresets(config),
-    activeId: config.crushRunnerActiveId,
-    order: config.crushRunnerPresetOrder,
+    presets: merged,
+    activeId: state.activeId,
+    order,
   };
 }
 
-function saveCrushRunnerConfig(presets, activeId, order, agentOrOptions = {}) {
-  if (!Array.isArray(presets)) throw new Error("presets must be an array");
-  const prev = loadConfig();
-  const normalized = presets.map(normalizeCrushRunnerPreset);
-  const nextOrder = Array.isArray(order) ? order : normalized.map((preset) => preset.id);
-  saveCrushRunnerPresets(normalized, activeId, nextOrder);
-  const saved = loadConfig();
-  pushAuditEntry({ prev, next: saved, agent: auditOptions(agentOrOptions).agent });
-  pushEvent("config.changed", { result: redactSecrets(saved) });
-  return crushRunnerSnapshot(saved);
+function auditAgent(input) {
+  if (typeof input === "string") return input;
+  return input && typeof input === "object" ? input.agent : undefined;
+}
+
+function writeCrushRunnerState(state, agentOrOptions) {
+  const agent = auditAgent(agentOrOptions);
+  const result = kvSet(CRUSH_STATE_KV_KEY, state, agent ? { agent } : {});
+  return { ok: true, ...result };
 }
 
 function saveCrushRunnerPreset(preset, options = {}) {
-  const current = loadConfig();
   const normalized = normalizeCrushRunnerPreset(preset);
   if (!normalized.id || !normalized.program) {
     throw new Error("preset requires an id and program");
   }
-  const presets = (current.crushRunnerPresets || []).filter((item) =>
-    item.id !== normalized.id
-  );
-  presets.push(normalized);
-  const activeId = options.active === true
-    ? normalized.id
-    : current.crushRunnerActiveId;
-  return saveCrushRunnerConfig(
-    presets,
-    activeId,
-    current.crushRunnerPresetOrder,
-    options,
-  );
+  const snapshot = crushRunnerSnapshot();
+  const customs = snapshot.presets
+    .filter((item) => !BUILTIN_CRUSH_RUNNER_PRESET_IDS.includes(item.id))
+    .filter((item) => item.id !== normalized.id);
+  customs.push(normalized);
+  const nextState = {
+    customs,
+    activeId: options.active === true
+      ? normalized.id
+      : snapshot.activeId,
+    order: snapshot.order,
+  };
+  writeCrushRunnerState(nextState, options);
+  return crushRunnerSnapshot();
 }
 
 function setCrushRunnerActive(id, agentOrOptions = {}) {
-  const current = loadConfig();
-  const presets = getCrushRunnerPresets(current);
-  if (!presets.some((preset) => preset.id === id)) {
+  const snapshot = crushRunnerSnapshot();
+  if (!snapshot.presets.some((preset) => preset.id === id)) {
     throw new Error(`crush runner preset "${id}" not found`);
   }
-  return saveCrushRunnerConfig(
-    current.crushRunnerPresets,
-    id,
-    current.crushRunnerPresetOrder,
-    agentOrOptions,
-  );
+  const nextState = {
+    customs: snapshot.presets
+      .filter((preset) => !BUILTIN_CRUSH_RUNNER_PRESET_IDS.includes(preset.id)),
+    activeId: id,
+    order: snapshot.order,
+  };
+  writeCrushRunnerState(nextState, agentOrOptions);
+  return crushRunnerSnapshot();
 }
 
 function removeCrushRunnerPreset(id, agentOrOptions = {}) {
-  const current = loadConfig();
-  const preset = getCrushRunnerPresets(current).find((item) => item.id === id);
-  if (!preset) throw new Error(`crush runner preset "${id}" not found`);
-  if (preset.builtin) throw new Error("built-in crush runner presets cannot be removed");
-  const presets = (current.crushRunnerPresets || []).filter((item) =>
-    item.id !== id
-  );
-  const activeId = current.crushRunnerActiveId === id
-    ? undefined
-    : current.crushRunnerActiveId;
-  return saveCrushRunnerConfig(
-    presets,
-    activeId,
-    current.crushRunnerPresetOrder,
-    agentOrOptions,
-  );
+  const snapshot = crushRunnerSnapshot();
+  const target = snapshot.presets.find((item) => item.id === id);
+  if (!target) throw new Error(`crush runner preset "${id}" not found`);
+  if (target.builtin) throw new Error("built-in crush runner presets cannot be removed");
+  const customs = snapshot.presets
+    .filter((preset) => !BUILTIN_CRUSH_RUNNER_PRESET_IDS.includes(preset.id))
+    .filter((item) => item.id !== id);
+  const nextState = {
+    customs,
+    activeId: snapshot.activeId === id ? undefined : snapshot.activeId,
+    order: snapshot.order,
+  };
+  writeCrushRunnerState(nextState, agentOrOptions);
+  return crushRunnerSnapshot();
 }
 
 export const crushRunnerConfigApi = {
