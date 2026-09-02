@@ -11,7 +11,7 @@
 
 import { loadConfig, saveConfig } from "../../app-workspace.js";
 import { pushAuditEntry, redactSecrets } from "../../workspace-audit.js";
-import { pushEvent } from "../../workspace-events.js";
+import { emit } from "../../workspace-events.js";
 
 function auditAgent(input) {
   if (typeof input === "string") return input;
@@ -34,7 +34,7 @@ function writeKv(nextKv, agentOrOptions) {
     agent: auditAgent(agentOrOptions),
     kind: "system",
   });
-  pushEvent("config.changed", { result: redactSecrets(next) });
+  emit("config.changed", { result: redactSecrets(next) });
 }
 
 export function kvGet(key) {

@@ -1,46 +1,29 @@
 // notes.js — Apple Notes–style iframe plugin module.
 //
 // Persistence: notes + folders live under the per-workspace config.kv
-// store (see plugin/crush-playground/kv-api.js) so they survive
-// reloads and live-sync across every open Notes panel — the kv
-// store fires "config.changed" on every write, which is the only
-// signal multiple Notes panels need to redraw against the same
-// canonical state.
+// store for metadata (folder list, note index, pin list, id counter)
+// and under /opfs/home/notes/<folder-slug>/<note-slug>.md for bodies
+// (see notes-storage.js). The kv store fires "config.changed" on every
+// write; FileSystemObserver on /opfs/home/notes fires "fs.changed" on
+// every body mutation. Both events flow to useNotesStore which keeps
+// local state in sync.
 //
-// KV layout — three keys, all under the "notes:" prefix. Keeping
-// notes and folders as separate keys means a single edit doesn't
-// re-serialise the entire dataset, and the audit ring records one
-// entry per write. The nextId allocator is a third key so the seed
-// function can reuse the existing IDs on re-runs.
+// KV layout:
 //
 //   notes:_nextId   — monotonic counter for new ids
-//   notes:_folders  — [{id, name, createdAt}]
-//   notes:_notes    — [{id, folderId, title, body, pinned, createdAt, updatedAt}]
-//   notes:_pinned   — [noteId] (kept as a separate index for fast filters)
+//   notes:_folders  — [{id, slug, name, createdAt}]
+//   notes:_notes    — [{id, folderId, slug, title, pinned, createdAt,
+//                      updatedAt, bodyRef}]
+//   notes:_pinned   — [noteId]
+//
+// On first boot notes-storage.js detects legacy entries (records with
+// `body` or folders without `slug`) and migrates them in place,
+// materialising bodies to fs before rewriting the index.
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { createRoot } from "react-dom/client";
 import htm from "htm";
-import {
-  Search,
-  Plus,
-  Trash2,
-  Pencil,
-  Folder,
-  FileText,
-  Pin,
-  X,
-  Check,
-} from "lucide-react";
+import React from "react";
 
 const html = htm.bind(React.createElement);
-
-const KV = {
-  nextId: "notes:_nextId",
-  folders: "notes:_folders",
-  notes: "notes:_notes",
-  pinned: "notes:_pinned",
-};
 
 // --- Shell bridge: the gear-bridge guard skips installation when
 // window.top === window.self, so an iframe plugin host is the only
@@ -48,84 +31,6 @@ const KV = {
 // browser tab for development), GearShell stays undefined and the
 // UI renders an explanatory empty state.
 const bridgeAvailable = typeof GearShell !== "undefined";
-
-async function kvGet(key) {
-  if (!bridgeAvailable) return undefined;
-  try {
-    return await GearShell.config.kv.get(key);
-  } catch {
-    return undefined;
-  }
-}
-
-async function kvSet(key, value) {
-  if (!bridgeAvailable) return { ok: false };
-  try {
-    return await GearShell.config.kv.set(key, value);
-  } catch (error) {
-    return { ok: false, error: error?.message || String(error) };
-  }
-}
-
-async function kvDelete(key) {
-  if (!bridgeAvailable) return { deleted: false };
-  try {
-    return await GearShell.config.kv.delete(key);
-  } catch {
-    return { deleted: false };
-  }
-}
-
-// Seed on first run: a default folder + welcome note so the UI
-// doesn't open empty. Both writes go through kv.set so the audit
-// ring records the bootstrap.
-async function ensureSeed() {
-  const folders = await kvGet(KV.folders);
-  const notes = await kvGet(KV.notes);
-  if (Array.isArray(folders) && folders.length) return { folders, notes: [] };
-  const now = Date.now();
-  const seedFolders = [{ id: "fld_notes", name: "Notes", createdAt: now }];
-  const seedNotes = [
-    {
-      id: "nte_welcome",
-      folderId: "fld_notes",
-      title: "Welcome to Notes",
-      body:
-        "This is a Notes plugin — your notes are saved to the workspace's config.kv store, " +
-        "so they survive reloads and sync live across every open Notes panel.\n\n" +
-        "• Click + above to create a new note\n" +
-        "• Drag notes between folders in the sidebar (right-click a folder to rename)\n" +
-        "• Pin important notes with the pin button\n" +
-        "• Search across all folders from the search box",
-      pinned: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
-  await kvSet(KV.nextId, 2);
-  await kvSet(KV.folders, seedFolders);
-  await kvSet(KV.notes, seedNotes);
-  return { folders: seedFolders, notes: seedNotes };
-}
-
-async function loadAll() {
-  const [folders, notes, nextId, pinned] = await Promise.all([
-    kvGet(KV.folders),
-    kvGet(KV.notes),
-    kvGet(KV.nextId),
-    kvGet(KV.pinned),
-  ]);
-  return {
-    folders: Array.isArray(folders) ? folders : [],
-    notes: Array.isArray(notes) ? notes : [],
-    nextId: typeof nextId === "number" ? nextId : 1,
-    pinned: Array.isArray(pinned) ? pinned : [],
-  };
-}
-
-function genId(prefix, n) {
-  return `${prefix}_${n.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-}
 
 // --- Date helpers — formatted like Apple Notes: "Today 2:34 PM",
 // "Yesterday 9:01 AM", "Monday 5:12 PM" within the past week, then
@@ -161,6 +66,10 @@ function formatTimestamp(ms) {
   return d.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
 }
 
+// Take the markdown body as stored on disk and produce the single
+// preview line shown in the note list. Strips headings, takes the
+// first non-empty line. We deliberately keep this a pure function of
+// the body string — title is rendered separately in the row head.
 function previewBody(body) {
   if (!body) return "No additional text";
   return body
@@ -173,13 +82,6 @@ export {
   bridgeAvailable,
   html,
   React,
-  KV,
-  kvGet,
-  kvSet,
-  kvDelete,
-  ensureSeed,
-  loadAll,
-  genId,
   formatTimestamp,
   previewBody,
 };

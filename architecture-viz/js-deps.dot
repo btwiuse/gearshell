@@ -1,0 +1,206 @@
+digraph gearshell_deps_modules {
+  graph [rankdir=TB, overlap=false, splines=spline,         concentrate=true, nodesep=0.3, ranksep=0.55,         label="GearShell · module-grouped JS graph (28 groups, 198 inter-group imports)", labelloc=t, fontsize=18];
+  node [shape=box, style="rounded,filled", fontname=Helvetica,        fontsize=11, fillcolor="#eef3ff", color="#5b6dab"];
+  edge [color="#7a86b3", arrowsize=0.7];
+
+  // ── top-level module groups ─────────────────────────
+  subgraph cluster_root {
+    label="(root)"; style="rounded,dashed,filled";
+    fillcolor="#fafbfd"; color="#c5cee5"; fontsize=10;
+    "(root)" [label="(root)"];
+    "app-* (shell modules)" [label="app-* (shell modules)"];
+    "panels-* (panel grid)" [label="panels-* (panel grid)"];
+    "plugins-* (registry)" [label="plugins-* (registry)"];
+    "workspace-* (workspace APIs)" [label="workspace-* (workspace APIs)"];
+  }
+
+  // ── plugin families ───────────────────────────────
+  subgraph cluster_p1 {
+    label="plugin:bubbletea-playground";
+    style="rounded,filled";
+    fillcolor="#e8f7ee"; color="#c5cee5"; fontsize=10;
+    "plugin:bubbletea-playground";
+  }
+  subgraph cluster_p2 {
+    label="plugin:crush-playground";
+    style="rounded,filled";
+    fillcolor="#f7e8f4"; color="#c5cee5"; fontsize=10;
+    "plugin:crush-playground";
+  }
+  subgraph cluster_p3 {
+    label="plugin:default-page";
+    style="rounded,filled";
+    fillcolor="#e8f0f7"; color="#c5cee5"; fontsize=10;
+    "plugin:default-page";
+  }
+  subgraph cluster_p4 {
+    label="plugin:files";
+    style="rounded,filled";
+    fillcolor="#f7f4e8"; color="#c5cee5"; fontsize=10;
+    "plugin:files";
+  }
+  subgraph cluster_p5 {
+    label="plugin:files-mounts.js";
+    style="rounded,filled";
+    fillcolor="#f0e8f7"; color="#c5cee5"; fontsize=10;
+    "plugin:files-mounts.js";
+  }
+  subgraph cluster_p6 {
+    label="plugin:files-path.js";
+    style="rounded,filled";
+    fillcolor="#e8f7f4"; color="#c5cee5"; fontsize=10;
+    "plugin:files-path.js";
+  }
+  subgraph cluster_p7 {
+    label="plugin:gear-bridge.js";
+    style="rounded,filled";
+    fillcolor="#f7ece8"; color="#c5cee5"; fontsize=10;
+    "plugin:gear-bridge.js";
+  }
+  subgraph cluster_p8 {
+    label="plugin:gearshell-docs";
+    style="rounded,filled";
+    fillcolor="#e8e8f7"; color="#c5cee5"; fontsize=10;
+    "plugin:gearshell-docs";
+  }
+  subgraph cluster_p9 {
+    label="plugin:glmatrix";
+    style="rounded,filled";
+    fillcolor="#fff4e8"; color="#c5cee5"; fontsize=10;
+    "plugin:glmatrix";
+  }
+  subgraph cluster_p10 {
+    label="plugin:group";
+    style="rounded,filled";
+    fillcolor="#e8f7ee"; color="#c5cee5"; fontsize=10;
+    "plugin:group";
+  }
+  subgraph cluster_p11 {
+    label="plugin:home";
+    style="rounded,filled";
+    fillcolor="#f7e8f4"; color="#c5cee5"; fontsize=10;
+    "plugin:home";
+  }
+  subgraph cluster_p12 {
+    label="plugin:launcher";
+    style="rounded,filled";
+    fillcolor="#e8f0f7"; color="#c5cee5"; fontsize=10;
+    "plugin:launcher";
+  }
+  subgraph cluster_p13 {
+    label="plugin:music";
+    style="rounded,filled";
+    fillcolor="#f7f4e8"; color="#c5cee5"; fontsize=10;
+    "plugin:music";
+  }
+  subgraph cluster_p14 {
+    label="plugin:notes";
+    style="rounded,filled";
+    fillcolor="#f0e8f7"; color="#c5cee5"; fontsize=10;
+    "plugin:notes";
+  }
+  subgraph cluster_p15 {
+    label="plugin:playground";
+    style="rounded,filled";
+    fillcolor="#e8f7f4"; color="#c5cee5"; fontsize=10;
+    "plugin:playground";
+  }
+  subgraph cluster_p16 {
+    label="plugin:runtime";
+    style="rounded,filled";
+    fillcolor="#f7ece8"; color="#c5cee5"; fontsize=10;
+    "plugin:runtime";
+  }
+  subgraph cluster_p17 {
+    label="plugin:settings";
+    style="rounded,filled";
+    fillcolor="#e8e8f7"; color="#c5cee5"; fontsize=10;
+    "plugin:settings";
+  }
+  subgraph cluster_p18 {
+    label="plugin:spotlight";
+    style="rounded,filled";
+    fillcolor="#fff4e8"; color="#c5cee5"; fontsize=10;
+    "plugin:spotlight";
+  }
+  subgraph cluster_p19 {
+    label="plugin:terminal-mount.mjs";
+    style="rounded,filled";
+    fillcolor="#e8f7ee"; color="#c5cee5"; fontsize=10;
+    "plugin:terminal-mount.mjs";
+  }
+  subgraph cluster_p20 {
+    label="plugin:w9y";
+    style="rounded,filled";
+    fillcolor="#f7e8f4"; color="#c5cee5"; fontsize=10;
+    "plugin:w9y";
+  }
+  subgraph cluster_p21 {
+    label="plugin:widgetbot";
+    style="rounded,filled";
+    fillcolor="#e8f0f7"; color="#c5cee5"; fontsize=10;
+    "plugin:widgetbot";
+  }
+  subgraph cluster_p22 {
+    label="plugin:workbench";
+    style="rounded,filled";
+    fillcolor="#f7f4e8"; color="#c5cee5"; fontsize=10;
+    "plugin:workbench";
+  }
+  subgraph cluster_p23 {
+    label="plugin:xterm-bundle.mjs";
+    style="rounded,filled";
+    fillcolor="#f0e8f7"; color="#c5cee5"; fontsize=10;
+    "plugin:xterm-bundle.mjs";
+  }
+
+  "workspace-* (workspace APIs)" -> "app-* (shell modules)" [penwidth=4, label="36" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "app-* (shell modules)" [penwidth=4, label="28" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:settings" -> "(root)" [penwidth=4, label="16" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:files" -> "plugin:files-path.js" [penwidth=3, label="12" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "plugins-* (registry)" [penwidth=2, label="6" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "app-* (shell modules)" -> "(root)" [penwidth=2, label="5" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugins-* (registry)" -> "workspace-* (workspace APIs)" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:crush-playground" -> "app-* (shell modules)" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:crush-playground" -> "workspace-* (workspace APIs)" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:playground" -> "app-* (shell modules)" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:workbench" -> "panels-* (panel grid)" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:files" -> "(root)" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:files" -> "plugin:files-mounts.js" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:files" -> "app-* (shell modules)" [penwidth=2, label="4" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "app-* (shell modules)" -> "plugin:terminal-mount.mjs" [penwidth=1, label="3" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "app-* (shell modules)" -> "plugin:crush-playground" [penwidth=1, label="3" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "app-* (shell modules)" -> "panels-* (panel grid)" [penwidth=1, label="3" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "app-* (shell modules)" -> "workspace-* (workspace APIs)" [penwidth=1, label="3" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "workspace-* (workspace APIs)" -> "(root)" [penwidth=1, label="3" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugins-* (registry)" -> "(root)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "panels-* (panel grid)" -> "app-* (shell modules)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "workspace-* (workspace APIs)" -> "panels-* (panel grid)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "plugin:settings" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "workspace-* (workspace APIs)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:terminal-mount.mjs" -> "plugin:xterm-bundle.mjs" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:music" -> "(root)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:music" -> "app-* (shell modules)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:music" -> "plugin:files-path.js" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:settings" -> "app-* (shell modules)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:settings" -> "workspace-* (workspace APIs)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:home" -> "app-* (shell modules)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:home" -> "plugin:terminal-mount.mjs" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:launcher" -> "app-* (shell modules)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:spotlight" -> "app-* (shell modules)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:playground" -> "workspace-* (workspace APIs)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:runtime" -> "plugin:files-mounts.js" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "plugin:widgetbot" -> "(root)" [penwidth=1, label="2" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "workspace-* (workspace APIs)" -> "plugin:files-mounts.js" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "workspace-* (workspace APIs)" -> "plugin:files" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "workspace-* (workspace APIs)" -> "plugins-* (registry)" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "panels-* (panel grid)" -> "(root)" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "app-* (shell modules)" -> "plugin:launcher" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "workspace-* (workspace APIs)" -> "plugin:crush-playground" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "plugin:home" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "plugin:crush-playground" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "plugin:files" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "plugin:runtime" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "plugin:launcher" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+  "(root)" -> "panels-* (panel grid)" [penwidth=1, label="1" labeldistance=1.6, labelfontsize=8, labelfontcolor="#5b6dab"];
+}

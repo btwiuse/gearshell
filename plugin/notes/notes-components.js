@@ -163,7 +163,7 @@ export function NoteList({ store }) {
   const {
     visibleNotes, activeNoteId, setActiveNoteId,
     query, setQuery, folders, createNote, activeFolderId,
-    goBack, goToView,
+    goBack, goToView, bodyCache,
   } = store;
   const activeFolder = folders.find(
     (f) => f.id === (activeFolderId === "all" || activeFolderId === "pinned" ? null : activeFolderId),
@@ -239,7 +239,7 @@ export function NoteList({ store }) {
               </span>
               <span class="note-row-time">${formatTimestamp(note.updatedAt)}</span>
             </div>
-            <div class="note-row-preview">${previewBody(note.body)}</div>
+            <div class="note-row-preview">${previewBody(bodyCache.get(note.id) || "")}</div>
             <div class="note-row-meta">
               <span class="note-row-folder">
                 ${folders.find((f) => f.id === note.folderId)?.name || "—"}
@@ -257,15 +257,21 @@ export function NoteList({ store }) {
 // (the kv store is a transactional audit-logged write — one write per
 // debounce window keeps the audit ring readable).
 export function Editor({ store }) {
-  const { activeNote, updateNote, deleteNote, togglePin, goBack } = store;
+  const { activeNote, updateNote, deleteNote, togglePin, goBack, notePath } = store;
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const saveTimer = useRef(null);
-
+  // Sync the local draft state when the active note changes OR when
+  // an external fs.changed event replaces the body bytes for the
+  // open note. We compare against the in-flight draft text so a
+  // typing debounce isn't clobbered by the file watcher while the
+  // user is mid-keystroke (the watcher's read happens AFTER the
+  // filesystem write settles, which is already debounced 400ms by
+  // our own scheduler).
   useEffect(() => {
     setTitle(activeNote?.title || "");
     setBody(activeNote?.body || "");
-  }, [activeNote?.id]);
+  }, [activeNote?.id, activeNote?.body]);
 
   const schedule = (patch) => {
     if (!activeNote) return;
@@ -354,6 +360,9 @@ export function Editor({ store }) {
         <span class="editor-meta">
           ${activeNote.body?.length || 0} chars ·
           last edited ${formatTimestamp(activeNote.updatedAt)}
+        </span>
+        <span class="editor-path" title=${activeNote.bodyRef ? `/opfs/home/notes/${activeNote.bodyRef}` : ""}>
+          ${activeNote.bodyRef ? `/opfs/home/notes/${activeNote.bodyRef}` : ""}
         </span>
       </footer>
     </section>

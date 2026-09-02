@@ -1689,3 +1689,60 @@ markdown**(每方法独立 .md,签名 + 参数表 + 返回 + 多个示例 + 权�
 - 提交:`0b1894b`(插件主体) + `5bdfed1`(404 修复 + index.json 自动化)。
 - 关联:`memory/api-docs.md`(新写)、`memory/Home.md`(索引)、
   `memory/playground.md`(末尾 sibling 注释)。
+
+## 五十、GearShell.fs.watch + Notes 插件迁 fs + 事件链根因修复(2026-09-02)
+
+用户要给 Notes 插件做"外部实时编辑→UI 实时刷新"。本以为只是给 fs API 加
+个 watch,结果沿途挖出两个**让所有 iframe 插件从来没收过 live event 的根因
+bug**(Notes / crush-playground / app-store 看起来都在订阅 config.changed,
+运行时永远静默)。详见 `memory/plugins.md` round 60 + `memory/verification-pitfalls.md` §13。
+本节只列交付与 TODO 联动。
+
+### 交付
+
+- **新 API** `GearShell.fs.watch(path, {recursive})` + `unwatch(handle)` +
+  `events.fs.changed` 事件 topic。底层 Chrome `FileSystemObserver`,只支持
+  `/opfs/...` 路径(wanix 内核没 fs.notify)。
+- **Notes 插件从全 kv 迁混合存储**:index 留 kv,body 走 fs markdown 文件
+  (`/opfs/home/notes/<folder-slug>/<slug>.md`)。一次性的 v1→v2 迁移在
+  `notes-storage.js#migrateLegacy`,旧数据首启自动转。
+- **根因 bug A**:kv / config 写用 `pushEvent` 改成 `emit`(11+1 处),
+  `config.changed` 现在真的会触发 events.on。
+- **根因 bug B**:`plugin/gear-bridge.js#bridgeOn` 加 lazy subscribe,iframe
+  `events.on` 现在真的会收到 host 推送的事件。
+- 新插件模块:`notes-storage.js`(463 行)+ 重写 `notes-store.js`(462 行)
+  + 瘦身的 `notes.js`(86 行)。所有文件 ≤500 行规则。
+
+### 联动 / 已知遗留(下轮接)
+
+1. ⬜ **kernel 端 fs.notify**:让 `#task/...` / fetch / archive bind 也能
+   watch(目前只能观察 OPFS)。需要内核 9p 加 notif/watch——文件大但模式
+   已经在 OPFS 侧验证。
+2. ⬜ **Files 面板挂载 Notes markdown 预览/编辑**:`/opfs/home/notes/`
+   现在是真实 fs 树,Files 面板打开 markdown 应该走 Notes 同款 markdown
+   渲染器(目前是裸 Files 自己 render)。共享渲染器 = 跨应用外观一致。
+3. ⬜ **Notes body 审计 + 来源区分**:fs.writeFile 不进 audit ring,
+   外部写(terminal `cat >` / Files 面板编辑器 / agent)与 Notes UI 内的
+   写没法区分。下次需要时把 fs write 也走审计环。
+4. ⬜ **跨 workspace 的 fs.watch 重订阅**:Notes reloadKv 已覆盖,但
+   `useNotesStore` 的 watcher 句柄是 mount-time 一次性的;workspace 切换
+   时 OPFS root 改变需要 `unwatch + watch` 重新初始化。
+5. ⬜ **smoke-test 防回归**:写一个 5 行的 e2e 测,iframe 内 `events.on`
+   + 宿主 `emit` → 断言 cb 触发,跑在 CI。**优先级中**:不是阻塞,但
+   这类根因 bug 一旦再回退又没人能发现。
+
+### 顺带修复的细节
+
+- OPFS `/opfs/home` 不预创建:首启需显式 `mkdir -p`,Notes 的
+  `loadAll` 已做。
+- wanix 不递归 mkdir:写 `/opfs/home/notes/x.md` 前必须 mkdir 父目录,
+  `notes-storage.js#createNote` 已做。
+- chrome `FileSystemObserver` 一次 write 产生 2 条事件(appeared +
+  modified),订阅方 dedup(`setBodyCache` 同 key 多次 set 是 no-op)。
+- stale closure:fs.changed 处理器关在 mount-time 的 notes/folders 上,
+  新建 note 永远查不到。加 `notesRef` / `foldersRef`(沿用 `bodiesRef`
+  模式)。
+- ?v= token:0 匹配。ESM strict check:`node --input-type=module --check`
+  全清白。
+- `verify-static.mjs` 仍有 pre-existing `DeckPanel` marker failure
+  (Deck→iframe 迁移遗留,本轮无关)。

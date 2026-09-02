@@ -22,14 +22,17 @@ body {
      window.GearShell on this iframe; every method call becomes a
      postMessage round-trip to the parent shell — gated by this plugin's
      permissions.api whitelist. The plugin's JS is split across
-     notes.js (utilities), notes-store.js (CRUD hook),
-     notes-components.js (presentational components), and
-     notes-bootstrap.js (entry point), keeping each file under the
-     500-line rule. Persistence: all notes + folders are stored as
-     JSON values in the generic per-workspace config.kv store under
-     the "notes:" key prefix. Live-sync across multiple Notes panels
-     listens for the "config.changed" event the kv store emits on
-     every write. -->
+     notes.js (utilities), notes-storage.js (fs + kv persistence),
+     notes-store.js (CRUD hook), notes-components.js (presentation),
+     and notes-bootstrap.js (entry point), keeping each file under
+     the 500-line rule. Persistence is hybrid: metadata (folders,
+     note index, pin list, id counter) lives in the per-workspace
+     config.kv store and the note bodies are individual markdown
+     files under /opfs/home/notes/<folder-slug>/<slug>.md. Live
+     sync listens for both "config.changed" (kv writes) and
+     "fs.changed" (FileSystemObserver on /opfs/home/notes), so an
+     external editor ("vim foo.md" in a terminal, the Files panel
+     editor, an agent) reflects in the Notes UI without a reload. -->
 <script type="importmap">
 {
   "imports": {

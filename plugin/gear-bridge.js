@@ -136,6 +136,20 @@ if (window.top !== window.self) {
       if (typeof fn !== "function") return;
       if (!this.listeners.has(topic)) this.listeners.set(topic, new Set());
       this.listeners.get(topic).add(fn);
+      // Open the host channel lazily so the very first events.on call
+      // gets subsequent events delivered. Without this the bridge
+      // would silently drop every event push — the old behaviour
+      // required two-step subscribe+on which no plugin actually did,
+      // leaving the entire live-update surface dead. The bridge
+      // dedupes by topic internally so calling subscribe twice is a
+      // no-op.
+      if (!this.subscribed.has(topic)) {
+        this.bridgeSubscribe(topic).catch(() => {
+          // Best-effort: if the host rejects (permission revoked etc.)
+          // we still keep the local listener so re-subscribing later
+          // can succeed without re-adding the handler.
+        });
+      }
       return () => this.bridgeOff(topic, fn);
     }
 

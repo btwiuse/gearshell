@@ -257,6 +257,78 @@ export const panelsCatalog = [
           "Remove a file or empty directory. Resolves { ok, path } on " +
           "success; throws if the path does not exist.",
       },
+      {
+        name: "rename",
+        args: [
+          {
+            key: "path",
+            label: "Current path",
+            type: "string",
+            placeholder: "/opfs/home/old.txt",
+          },
+          {
+            key: "nextPath",
+            label: "New path",
+            type: "string",
+            placeholder: "/opfs/home/new.txt",
+          },
+        ],
+        hint:
+          "Rename or move a file or directory. Resolves { ok, path, nextPath }.",
+      },
+      {
+        name: "mounts",
+        args: [],
+        hint: "List persisted local directory mounts without exposing handles.",
+      },
+      {
+        name: "unmount",
+        args: [{ key: "id", label: "Mount id", type: "string" }],
+        hint: "Unmount and forget a persisted local directory mount.",
+      },
+      {
+        name: "remount",
+        args: [{ key: "id", label: "Mount id", type: "string" }],
+        hint: "Reconnect a stored mount when permission is already granted.",
+      },
+      {
+        name: "watch",
+        args: [
+          {
+            key: "path",
+            label: "Path",
+            type: "string",
+            placeholder: "/opfs/home",
+          },
+          {
+            key: "options",
+            label: "Options",
+            type: "json",
+            default: '{"recursive":true}',
+            placeholder: '{"recursive":true}',
+          },
+        ],
+        hint:
+          "Watch a /opfs/... path. Returns a handle { id, path, recursive }. " +
+          "Mutations are delivered as 'fs.changed' events with payload " +
+          "{ path, type: 'modified|appeared|disappeared', root }. " +
+          "Requires Chromium with FileSystemObserver support.",
+      },
+      {
+        name: "unwatch",
+        args: [
+          {
+            key: "handle",
+            label: "Watch handle",
+            type: "json",
+            default: '{"id":1}',
+            placeholder: '{"id":1}',
+          },
+        ],
+        hint:
+          "Dispose a watcher returned by fs.watch. Pass the full handle " +
+          "object, not just the id.",
+      },
     ],
   },
 ];

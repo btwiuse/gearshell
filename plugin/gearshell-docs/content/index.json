@@ -791,6 +791,16 @@
           "id": "fs.rm",
           "title": "GearShell.fs.rm",
           "path": "fs/rm.md"
+        },
+        {
+          "id": "fs.watch",
+          "title": "GearShell.fs.watch",
+          "path": "fs/watch.md"
+        },
+        {
+          "id": "fs.unwatch",
+          "title": "GearShell.fs.unwatch",
+          "path": "fs/unwatch.md"
         }
       ]
     },

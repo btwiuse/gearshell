@@ -35,7 +35,7 @@ import {
 import { primePluginContentCache } from "./app-plugin-cache.js";
 import { ensureW9yDependencies } from "./app-w9y-registry.js";
 import { DEFAULT_PLUGINS } from "./app-constants.js";
-import { pushEvent } from "./workspace-events.js";
+import { emit } from "./workspace-events.js";
 import {
   clearAuditEntries,
   listAuditEntries,
@@ -84,7 +84,7 @@ function recordSystemChange(prev, agentOrOptions) {
     agent: auditOptions(agentOrOptions).agent,
     kind: "system",
   });
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
 }
 
 // The root (.) bind is the namespace anchor: without it nothing resolves,
@@ -152,7 +152,7 @@ function saveModel(model, agentOrOptions = {}) {
   ) };
   saveConfig(next);
   pushAuditEntry({ prev: config, next, agent: auditOptions(agentOrOptions).agent });
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, model: { providerId, ...nextModel } };
 }
 
@@ -167,7 +167,7 @@ function removeModel(providerId, modelId, agentOrOptions = {}) {
   const next = { ...config, providers: config.providers.map((item) => item.id === providerId ? { ...item, models } : item) };
   saveConfig(next);
   pushAuditEntry({ prev: config, next, agent: auditOptions(agentOrOptions).agent });
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, providerId, removed: modelId };
 }
 
@@ -192,7 +192,7 @@ function saveProvider(provider, agentOrOptions = {}) {
   const next = { ...prev, providers };
   saveConfig(next);
   pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
   const saved = normalizeProviders(providers).find(
     (item) => item.id === normalized.id,
   );
@@ -216,7 +216,7 @@ function removeProvider(id, agentOrOptions = {}) {
   const next = { ...prev, providers };
   saveConfig(next);
   pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, removed: id };
 }
 
@@ -270,7 +270,7 @@ function installPlugin(manifest, agentOrOptions = {}) {
   ensureW9yDependencies(next.plugins).catch((error) => {
     console.error("w9y dependency sync failed", error);
   });
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
   return {
     ok: true,
     id: normalized.id,
@@ -311,7 +311,7 @@ function setPluginEnabled(id, enabled, agentOrOptions = {}) {
       console.error("w9y dependency sync failed", error);
     });
   }
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, id, enabled: enabled === true };
 }
 
@@ -342,7 +342,7 @@ function removePlugin(id, agentOrOptions = {}) {
   primePluginContentCache(next.plugins).catch((error) => {
     console.error("plugin cache priming failed", error);
   });
-  pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+  emit("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, removed: id };
 }
 
@@ -359,7 +359,7 @@ export const configApi = {
     // Audit the agent-facing write path (not UI saveConfig).
     pushAuditEntry({ prev, next, agent: auditOptions(agentOrOptions).agent });
     const result = redactSecrets(loadConfig());
-    pushEvent("config.changed", { result });
+    emit("config.changed", { result });
     return result;
   },
   audit: {
@@ -368,7 +368,7 @@ export const configApi = {
     undo: (id) => {
       const result = undoAuditEntry(id);
       if (result.ok) {
-        pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
+        emit("config.changed", { result: redactSecrets(loadConfig()) });
       }
       return result;
     },

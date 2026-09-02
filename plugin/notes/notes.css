@@ -445,12 +445,24 @@ textarea {
 .editor-footer {
   padding: 8px 24px 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .editor-meta {
   font-size: 11px;
   color: rgba(44, 42, 38, 0.5);
   font-variant-numeric: tabular-nums;
+}
+
+.editor-path {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  color: rgba(44, 42, 38, 0.4);
+  user-select: all;
+  cursor: text;
 }
 
 /* --- Empty states --- */

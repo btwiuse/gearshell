@@ -70,10 +70,13 @@ export const IFRAME_PLUGINS = [
   },
   // Notes: an Apple Notes–style iframe plugin. Three-pane layout
   // (sidebar / list / editor) with folders, pinning, and full-text
-  // search. Persistence is the generic per-workspace config.kv store
-  // (see plugin/crush-playground/kv-api.js), so notes survive reloads
-  // and live-sync across every open Notes panel via the
-  // "config.changed" event the kv store emits on each write.
+  // search. Persistence is the per-workspace config.kv store for
+  // metadata (folder list, note ids, pinning, timestamps) and the
+  // /opfs/home/notes/... filesystem tree for note bodies — kv
+  // remains the source of truth for the index, fs carries the
+  // markdown bodies so external tools can read/write them directly.
+  // Live-sync uses events.fs.changed (FileSystemObserver on OPFS)
+  // for body edits and config.changed for metadata changes.
   // Disabled by default — opt in via the Plugins page.
   {
     id: "notes",
@@ -90,19 +93,22 @@ export const IFRAME_PLUGINS = [
         "config.kv.set",
         "config.kv.delete",
         "config.kv.list",
+        "fs.*",
         "events.on",
         "events.off",
       ],
     },
     enabled: false,
   },
-  // App Store: a buildless iframe plugin that replaces the in-page
-  // Plugins management page with a richer UI (Card + List views,
-  // tag-chip filter, search, "Open" shortcut for enabled plugins).
-  // Talks to the same config.plugins.* / panels.* surface as the
-  // in-page version — the bridge proxies every GearShell.* call across
+  // App Store: the only Apps management surface in the shell. Replaces
+  // the old in-page Plugins manager (plugins-page.js, plugins-panel.js,
+  // settings-plugins.js — removed in round 50). Card + List views,
+  // tag-chip filter, search, "Open" shortcut for enabled plugins. Talks
+  // to the same config.plugins.* / panels.* surface as the old in-page
+  // version — the bridge proxies every GearShell.* call across
   // postMessage, gated by this plugin's permissions.api whitelist.
-  // Disabled by default — opt in via the Plugins page.
+  // Disabled by default — opt in from the Settings > Apps card, then
+  // panels.open("app-store") lands here.
   {
     id: "app-store",
     name: "App Store",

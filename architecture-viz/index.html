@@ -697,6 +697,55 @@
       </div>
     </div>
 
+    <div class="section-title"><span class="n">GRAPH</span> JS module dependency graph (auto-generated)</div>
+    <div class="section-sub">
+      Every arrow is a real ESM <code>import</code> from the repo at
+      <code>HEAD</code> (top-level <code>*.js</code> / <code>*.mjs</code> plus
+      <code>plugin/</code>; submodules and node_modules are skipped).
+      Rebuild with <code>python3 scripts/build-js-deps-graph.py</code>.
+      Three views are emitted:
+    </div>
+    <div class="trees" style="margin-top:10px">
+      <div class="tree" data-accent="blue">
+        <h3>Module groups <span class="count">28 nodes · 206 edges</span></h3>
+        <p class="rule">Recommended first view — one node per directory / plugin family.</p>
+        <p style="color:var(--muted); font-size:12px;">Edge labels show how many imports cross between groups; thicker arrows = heavier traffic.</p>
+      </div>
+      <div class="tree" data-accent="cyan">
+        <h3>App reachable <span class="count">69 files · 246 edges</span></h3>
+        <p class="rule">Everything reachable from <code>app.js</code> in ≤ 2 hops.</p>
+        <p style="color:var(--muted); font-size:12px;">Shows the bootstrap wiring story without the rest of the codebase.</p>
+      </div>
+      <div class="tree" data-accent="purple">
+        <h3>Detailed <span class="count">158 files · 506 edges</span></h3>
+        <p class="rule">Full per-file graph, clustered by directory.</p>
+        <p style="color:var(--muted); font-size:12px;">Dense — open in a new tab for pan/zoom.</p>
+      </div>
+    </div>
+    <div class="layer" data-accent="blue" style="border-left-color: var(--blue);">
+      <div class="layer-head">
+        <span class="tier">SVG · MODULES · 28 NODES · 206 EDGES</span>
+        <h2>module-grouped view</h2>
+        <span class="tagline">pan / zoom the SVG; clusters group files by directory.</span>
+      </div>
+      <div class="layer-body" style="padding:8px; background:#fff; text-align:center;">
+        <img src="js-deps.svg" alt="GearShell JS module dependency graph"
+             style="width:100%; height:auto; display:block; max-height:780px;" />
+      </div>
+      <div class="layer-detail" style="display:block;">
+        <ul>
+          <li>Top-level <code>(root)</code> cluster: <code>app.js</code> bootstrap, plugins registry, terminal bridge, workspace APIs.</li>
+          <li><code>plugin:&lt;name&gt;</code> clusters: each GearShell plugin (settings, files, terminal-mount, launcher, …) is a self-contained cluster of files.</li>
+          <li>Cross-cluster arrows show real imports — e.g. <code>plugin:files</code> pulls from <code>workspace-*</code> &amp; <code>app-*</code>; <code>app-*</code> pulls from every plugin manifest.</li>
+          <li>Other views: <a href="js-deps.app.svg">2-hop from <code>app.js</code></a> · <a href="js-deps.detailed.svg">full per-file</a> ·
+              sources: <a href="js-deps.dot"><code>js-deps.dot</code></a> ·
+              <a href="js-deps.app.dot">app.dot</a> ·
+              <a href="js-deps.detailed.dot">detailed.dot</a> ·
+              generator <a href="../scripts/build-js-deps-graph.py"><code>scripts/build-js-deps-graph.py</code></a>.</li>
+        </ul>
+      </div>
+    </div>
+
     <div class="section-title"><span class="n">RULES</span> Engineering constraints that shape the architecture</div>
     <div class="table-wrap" style="margin-top:10px">
       <table>
