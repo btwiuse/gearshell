@@ -681,6 +681,8 @@ const FS_TABLE = [
   ["exists", "Does the path exist?", [{ name: "path", type: "string", required: true, description: "VFS path." }], "GearShell.fs.exists(\"/opfs/home/notes.md\")", "`{ ok: true, path, exists }`. Returns `{ exists: false }` for ENOENT, throws for real I/O errors."],
   ["mkdir", "Create a directory", [{ name: "path", type: "string", required: true, description: "Directory path." }], "GearShell.fs.mkdir(\"/opfs/home/projects\")", "`{ ok: true, path }`."],
   ["rm", "Remove a path", [{ name: "path", type: "string", required: true, description: "VFS path." }], "GearShell.fs.rm(\"/opfs/home/scratch.txt\")", "`{ ok: true, path }`."],
+  ["watch", "Watch a /opfs/... directory", [{ name: "path", type: "string", required: true, description: "A `/opfs/...` directory path (or `/opfs` for the root)." }, { name: "options", type: "{ recursive?: boolean }", required: false, description: "Pass `{ recursive: true }` to watch the whole subtree." }], "await GearShell.fs.watch(\"/opfs/home/notes\", { recursive: true });", "`{ ok: true, id, path, recursive }`. Mutations are delivered as `fs.changed` events (payload `{ path, type, root }`). Requires a Chromium-based runtime with `FileSystemObserver` support."],
+  ["unwatch", "Dispose a watcher", [{ name: "handle", type: "object", required: true, description: "The full handle object returned by `fs.watch`." }], "await GearShell.fs.unwatch(handle);", "`{ ok: true, id, removed }`. Idempotent — calling twice returns `removed: false` on the second call."],
 ];
 
 for (const [name, summary, args, exampleCode, retDesc] of FS_TABLE) {
@@ -1200,4 +1202,45 @@ for (const record of RECORDS) {
   await writeDoc(record.id.replaceAll(".", "/") + ".md", render(record));
 }
 
-console.log(`Wrote ${RECORDS.length} API docs and ${GUIDES.length} guides under plugin/gearshell-docs/content/`);
+// Regenerate content/index.json from the record list so the path field
+// stays in sync with the on-disk layout. The static file shipped in the
+// repo (the hand-written one) is intentionally overwritten here — the
+// script is the canonical source of truth for the catalog.
+const catalogSections = [
+  { id: "root", title: "Root", methods: RECORDS.filter((r) => r.namespace === null && r.kind !== "guide").map(recordToIndex) },
+  { id: "hotkeys", title: "Hotkeys", methods: RECORDS.filter((r) => r.namespace === "hotkeys").map(recordToIndex) },
+  { id: "config", title: "Config", methods: RECORDS.filter((r) => r.namespace === "config").map(recordToIndex) },
+  { id: "panels", title: "Panels", methods: RECORDS.filter((r) => r.namespace === "panels").map(recordToIndex) },
+  { id: "browser", title: "Browser", methods: RECORDS.filter((r) => r.namespace === "browser").map(recordToIndex) },
+  { id: "files", title: "Files", methods: RECORDS.filter((r) => r.namespace === "files").map(recordToIndex) },
+  { id: "tasks", title: "Tasks", methods: RECORDS.filter((r) => r.namespace === "tasks").map(recordToIndex) },
+  { id: "agents", title: "Agents", methods: RECORDS.filter((r) => r.namespace === "agents").map(recordToIndex) },
+  { id: "music", title: "Music", methods: RECORDS.filter((r) => r.namespace === "music").map(recordToIndex) },
+  { id: "terminal", title: "Terminal", methods: RECORDS.filter((r) => r.namespace === "terminal").map(recordToIndex) },
+  { id: "vm", title: "VM", methods: RECORDS.filter((r) => r.namespace === "vm").map(recordToIndex) },
+  { id: "w9y", title: "W9y", methods: RECORDS.filter((r) => r.namespace === "w9y").map(recordToIndex) },
+  { id: "events", title: "Events", methods: RECORDS.filter((r) => r.namespace === "events").map(recordToIndex) },
+  { id: "fs", title: "FS", methods: RECORDS.filter((r) => r.namespace === "fs").map(recordToIndex) },
+  {
+    id: "guides",
+    title: "Guides",
+    kind: "guides",
+    guides: GUIDES.map(([id, title]) => ({ id: `guide-${id.replace("guide-", "")}`, title, path: `guides/${id}.md` })),
+  },
+];
+
+await writeFile(
+  resolve(ROOT, "index.json"),
+  JSON.stringify({ sections: catalogSections }, null, 2) + "\n",
+  "utf8",
+);
+
+function recordToIndex(r) {
+  return {
+    id: r.id,
+    title: r.title,
+    path: r.id.replaceAll(".", "/") + ".md",
+  };
+}
+
+console.log(`Wrote ${RECORDS.length} API docs, ${GUIDES.length} guides, and index.json under plugin/gearshell-docs/content/`);

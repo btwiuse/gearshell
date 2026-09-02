@@ -1,251 +1,844 @@
 {
   "sections": [
     {
-      "id": "intro",
-      "title": "Introduction",
-      "kind": "intro",
-      "path": null
-    },
-    {
       "id": "root",
       "title": "Root",
       "methods": [
-        { "id": "version", "title": "GearShell.version", "path": "root/version.md" },
-        { "id": "ping", "title": "GearShell.ping", "path": "root/ping.md" }
+        {
+          "id": "version",
+          "title": "GearShell.version",
+          "path": "version.md"
+        },
+        {
+          "id": "ping",
+          "title": "GearShell.ping",
+          "path": "ping.md"
+        }
       ]
     },
     {
       "id": "hotkeys",
       "title": "Hotkeys",
       "methods": [
-        { "id": "hotkeys.list", "title": "GearShell.hotkeys.list", "path": "hotkeys/list.md" },
-        { "id": "hotkeys.register", "title": "GearShell.hotkeys.register", "path": "hotkeys/register.md" },
-        { "id": "hotkeys.unregister", "title": "GearShell.hotkeys.unregister", "path": "hotkeys/unregister.md" }
+        {
+          "id": "hotkeys.list",
+          "title": "GearShell.hotkeys.list",
+          "path": "hotkeys/list.md"
+        },
+        {
+          "id": "hotkeys.register",
+          "title": "GearShell.hotkeys.register",
+          "path": "hotkeys/register.md"
+        },
+        {
+          "id": "hotkeys.unregister",
+          "title": "GearShell.hotkeys.unregister",
+          "path": "hotkeys/unregister.md"
+        }
       ]
     },
     {
       "id": "config",
       "title": "Config",
       "methods": [
-        { "id": "config.getShell", "title": "GearShell.config.getShell", "path": "config/getShell.md" },
-        { "id": "config.updateShell", "title": "GearShell.config.updateShell", "path": "config/updateShell.md" },
-        { "id": "config.getWorkspace", "title": "GearShell.config.getWorkspace", "path": "config/getWorkspace.md" },
-        { "id": "config.getSystem", "title": "GearShell.config.getSystem", "path": "config/getSystem.md" },
-        { "id": "config.getTaskBinds", "title": "GearShell.config.getTaskBinds", "path": "config/getTaskBinds.md" },
-        { "id": "config.getBinds", "title": "GearShell.config.getBinds", "path": "config/getBinds.md" },
-        { "id": "config.addBind", "title": "GearShell.config.addBind", "path": "config/addBind.md" },
-        { "id": "config.updateBind", "title": "GearShell.config.updateBind", "path": "config/updateBind.md" },
-        { "id": "config.removeBind", "title": "GearShell.config.removeBind", "path": "config/removeBind.md" },
-        { "id": "config.setBinds", "title": "GearShell.config.setBinds", "path": "config/setBinds.md" },
-        { "id": "config.updateRuntime", "title": "GearShell.config.updateRuntime", "path": "config/updateRuntime.md" },
-        { "id": "config.reload", "title": "GearShell.config.reload", "path": "config/reload.md" },
-        { "id": "config.audit.list", "title": "GearShell.config.audit.list", "path": "config/audit-list.md" },
-        { "id": "config.audit.clear", "title": "GearShell.config.audit.clear", "path": "config/audit-clear.md" },
-        { "id": "config.audit.undo", "title": "GearShell.config.audit.undo", "path": "config/audit-undo.md" },
-        { "id": "config.kv.get", "title": "GearShell.config.kv.get", "path": "config/kv-get.md" },
-        { "id": "config.kv.set", "title": "GearShell.config.kv.set", "path": "config/kv-set.md" },
-        { "id": "config.kv.delete", "title": "GearShell.config.kv.delete", "path": "config/kv-delete.md" },
-        { "id": "config.kv.list", "title": "GearShell.config.kv.list", "path": "config/kv-list.md" },
-        { "id": "config.reset", "title": "GearShell.config.reset", "path": "config/reset.md" },
-        { "id": "config.workspace.list", "title": "GearShell.config.workspace.list", "path": "config/workspace-list.md" },
-        { "id": "config.workspace.getActive", "title": "GearShell.config.workspace.getActive", "path": "config/workspace-getActive.md" },
-        { "id": "config.workspace.getActiveId", "title": "GearShell.config.workspace.getActiveId", "path": "config/workspace-getActiveId.md" },
-        { "id": "config.workspace.ensure", "title": "GearShell.config.workspace.ensure", "path": "config/workspace-ensure.md" },
-        { "id": "config.workspace.select", "title": "GearShell.config.workspace.select", "path": "config/workspace-select.md" },
-        { "id": "config.workspace.rename", "title": "GearShell.config.workspace.rename", "path": "config/workspace-rename.md" },
-        { "id": "config.workspace.createFromPreset", "title": "GearShell.config.workspace.createFromPreset", "path": "config/workspace-createFromPreset.md" },
-        { "id": "config.workspace.duplicate", "title": "GearShell.config.workspace.duplicate", "path": "config/workspace-duplicate.md" },
-        { "id": "config.workspace.delete", "title": "GearShell.config.workspace.delete", "path": "config/workspace-delete.md" },
-        { "id": "config.workspace.parse", "title": "GearShell.config.workspace.parse", "path": "config/workspace-parse.md" },
-        { "id": "config.workspace.import", "title": "GearShell.config.workspace.import", "path": "config/workspace-import.md" },
-        { "id": "config.workspace.replaceActive", "title": "GearShell.config.workspace.replaceActive", "path": "config/workspace-replaceActive.md" },
-        { "id": "config.workspace.uniqueName", "title": "GearShell.config.workspace.uniqueName", "path": "config/workspace-uniqueName.md" },
-        { "id": "config.presets.list", "title": "GearShell.config.presets.list", "path": "config/presets-list.md" },
-        { "id": "config.presets.getCustom", "title": "GearShell.config.presets.getCustom", "path": "config/presets-getCustom.md" },
-        { "id": "config.presets.saveCustom", "title": "GearShell.config.presets.saveCustom", "path": "config/presets-saveCustom.md" },
-        { "id": "config.presets.removeCustom", "title": "GearShell.config.presets.removeCustom", "path": "config/presets-removeCustom.md" },
-        { "id": "config.presets.uniqueName", "title": "GearShell.config.presets.uniqueName", "path": "config/presets-uniqueName.md" },
-        { "id": "config.binds.list", "title": "GearShell.config.binds.list", "path": "config/binds-list.md" },
-        { "id": "config.binds.add", "title": "GearShell.config.binds.add", "path": "config/binds-add.md" },
-        { "id": "config.binds.update", "title": "GearShell.config.binds.update", "path": "config/binds-update.md" },
-        { "id": "config.binds.remove", "title": "GearShell.config.binds.remove", "path": "config/binds-remove.md" },
-        { "id": "config.binds.reorder", "title": "GearShell.config.binds.reorder", "path": "config/binds-reorder.md" },
-        { "id": "config.binds.set", "title": "GearShell.config.binds.set", "path": "config/binds-set.md" },
-        { "id": "config.binds.systemList", "title": "GearShell.config.binds.systemList", "path": "config/binds-systemList.md" },
-        { "id": "config.binds.systemAdd", "title": "GearShell.config.binds.systemAdd", "path": "config/binds-systemAdd.md" },
-        { "id": "config.binds.systemUpdate", "title": "GearShell.config.binds.systemUpdate", "path": "config/binds-systemUpdate.md" },
-        { "id": "config.binds.systemRemove", "title": "GearShell.config.binds.systemRemove", "path": "config/binds-systemRemove.md" },
-        { "id": "config.binds.systemReorder", "title": "GearShell.config.binds.systemReorder", "path": "config/binds-systemReorder.md" },
-        { "id": "config.binds.systemSet", "title": "GearShell.config.binds.systemSet", "path": "config/binds-systemSet.md" },
-        { "id": "config.tasks.list", "title": "GearShell.config.tasks.list", "path": "config/tasks-list.md" },
-        { "id": "config.tasks.add", "title": "GearShell.config.tasks.add", "path": "config/tasks-add.md" },
-        { "id": "config.tasks.update", "title": "GearShell.config.tasks.update", "path": "config/tasks-update.md" },
-        { "id": "config.tasks.remove", "title": "GearShell.config.tasks.remove", "path": "config/tasks-remove.md" },
-        { "id": "config.tasks.set", "title": "GearShell.config.tasks.set", "path": "config/tasks-set.md" },
-        { "id": "config.terminalIcons.list", "title": "GearShell.config.terminalIcons.list", "path": "config/terminalIcons-list.md" },
-        { "id": "config.terminalProfiles.list", "title": "GearShell.config.terminalProfiles.list", "path": "config/terminalProfiles-list.md" },
-        { "id": "config.terminalProfiles.save", "title": "GearShell.config.terminalProfiles.save", "path": "config/terminalProfiles-save.md" },
-        { "id": "config.terminalProfiles.normalize", "title": "GearShell.config.terminalProfiles.normalize", "path": "config/terminalProfiles-normalize.md" },
-        { "id": "config.terminalProfiles.normalizeOrder", "title": "GearShell.config.terminalProfiles.normalizeOrder", "path": "config/terminalProfiles-normalizeOrder.md" },
-        { "id": "config.terminalProfiles.command", "title": "GearShell.config.terminalProfiles.command", "path": "config/terminalProfiles-command.md" },
-        { "id": "config.launcher.normalizeOrder", "title": "GearShell.config.launcher.normalizeOrder", "path": "config/launcher-normalizeOrder.md" },
-        { "id": "config.runtimeDefaults", "title": "GearShell.config.runtimeDefaults", "path": "config/runtimeDefaults.md" },
-        { "id": "config.plugins.list", "title": "GearShell.config.plugins.list", "path": "config/plugins-list.md" },
-        { "id": "config.plugins.install", "title": "GearShell.config.plugins.install", "path": "config/plugins-install.md" },
-        { "id": "config.plugins.remove", "title": "GearShell.config.plugins.remove", "path": "config/plugins-remove.md" },
-        { "id": "config.plugins.setEnabled", "title": "GearShell.config.plugins.setEnabled", "path": "config/plugins-setEnabled.md" },
-        { "id": "config.providers.list", "title": "GearShell.config.providers.list", "path": "config/providers-list.md" },
-        { "id": "config.models.list", "title": "GearShell.config.models.list", "path": "config/models-list.md" },
-        { "id": "config.models.save", "title": "GearShell.config.models.save", "path": "config/models-save.md" },
-        { "id": "config.models.remove", "title": "GearShell.config.models.remove", "path": "config/models-remove.md" },
-        { "id": "config.providers.save", "title": "GearShell.config.providers.save", "path": "config/providers-save.md" },
-        { "id": "config.providers.remove", "title": "GearShell.config.providers.remove", "path": "config/providers-remove.md" }
+        {
+          "id": "config.getShell",
+          "title": "GearShell.config.getShell",
+          "path": "config/getShell.md"
+        },
+        {
+          "id": "config.updateShell",
+          "title": "GearShell.config.updateShell",
+          "path": "config/updateShell.md"
+        },
+        {
+          "id": "config.getWorkspace",
+          "title": "GearShell.config.getWorkspace",
+          "path": "config/getWorkspace.md"
+        },
+        {
+          "id": "config.getSystem",
+          "title": "GearShell.config.getSystem",
+          "path": "config/getSystem.md"
+        },
+        {
+          "id": "config.getTaskBinds",
+          "title": "GearShell.config.getTaskBinds",
+          "path": "config/getTaskBinds.md"
+        },
+        {
+          "id": "config.getBinds",
+          "title": "GearShell.config.getBinds",
+          "path": "config/getBinds.md"
+        },
+        {
+          "id": "config.addBind",
+          "title": "GearShell.config.addBind",
+          "path": "config/addBind.md"
+        },
+        {
+          "id": "config.updateBind",
+          "title": "GearShell.config.updateBind",
+          "path": "config/updateBind.md"
+        },
+        {
+          "id": "config.removeBind",
+          "title": "GearShell.config.removeBind",
+          "path": "config/removeBind.md"
+        },
+        {
+          "id": "config.setBinds",
+          "title": "GearShell.config.setBinds",
+          "path": "config/setBinds.md"
+        },
+        {
+          "id": "config.updateRuntime",
+          "title": "GearShell.config.updateRuntime",
+          "path": "config/updateRuntime.md"
+        },
+        {
+          "id": "config.reload",
+          "title": "GearShell.config.reload",
+          "path": "config/reload.md"
+        },
+        {
+          "id": "config.audit.list",
+          "title": "GearShell.config.audit.list",
+          "path": "config/audit/list.md"
+        },
+        {
+          "id": "config.audit.clear",
+          "title": "GearShell.config.audit.clear",
+          "path": "config/audit/clear.md"
+        },
+        {
+          "id": "config.audit.undo",
+          "title": "GearShell.config.audit.undo",
+          "path": "config/audit/undo.md"
+        },
+        {
+          "id": "config.kv.get",
+          "title": "GearShell.config.kv.get",
+          "path": "config/kv/get.md"
+        },
+        {
+          "id": "config.kv.set",
+          "title": "GearShell.config.kv.set",
+          "path": "config/kv/set.md"
+        },
+        {
+          "id": "config.kv.delete",
+          "title": "GearShell.config.kv.delete",
+          "path": "config/kv/delete.md"
+        },
+        {
+          "id": "config.kv.list",
+          "title": "GearShell.config.kv.list",
+          "path": "config/kv/list.md"
+        },
+        {
+          "id": "config.reset",
+          "title": "GearShell.config.reset",
+          "path": "config/reset.md"
+        },
+        {
+          "id": "config.workspace.list",
+          "title": "GearShell.config.workspace.list",
+          "path": "config/workspace/list.md"
+        },
+        {
+          "id": "config.workspace.getActive",
+          "title": "GearShell.config.workspace.getActive",
+          "path": "config/workspace/getActive.md"
+        },
+        {
+          "id": "config.workspace.getActiveId",
+          "title": "GearShell.config.workspace.getActiveId",
+          "path": "config/workspace/getActiveId.md"
+        },
+        {
+          "id": "config.workspace.ensure",
+          "title": "GearShell.config.workspace.ensure",
+          "path": "config/workspace/ensure.md"
+        },
+        {
+          "id": "config.workspace.select",
+          "title": "GearShell.config.workspace.select",
+          "path": "config/workspace/select.md"
+        },
+        {
+          "id": "config.workspace.rename",
+          "title": "GearShell.config.workspace.rename",
+          "path": "config/workspace/rename.md"
+        },
+        {
+          "id": "config.workspace.createFromPreset",
+          "title": "GearShell.config.workspace.createFromPreset",
+          "path": "config/workspace/createFromPreset.md"
+        },
+        {
+          "id": "config.workspace.duplicate",
+          "title": "GearShell.config.workspace.duplicate",
+          "path": "config/workspace/duplicate.md"
+        },
+        {
+          "id": "config.workspace.delete",
+          "title": "GearShell.config.workspace.delete",
+          "path": "config/workspace/delete.md"
+        },
+        {
+          "id": "config.workspace.parse",
+          "title": "GearShell.config.workspace.parse",
+          "path": "config/workspace/parse.md"
+        },
+        {
+          "id": "config.workspace.import",
+          "title": "GearShell.config.workspace.import",
+          "path": "config/workspace/import.md"
+        },
+        {
+          "id": "config.workspace.replaceActive",
+          "title": "GearShell.config.workspace.replaceActive",
+          "path": "config/workspace/replaceActive.md"
+        },
+        {
+          "id": "config.workspace.uniqueName",
+          "title": "GearShell.config.workspace.uniqueName",
+          "path": "config/workspace/uniqueName.md"
+        },
+        {
+          "id": "config.presets.list",
+          "title": "GearShell.config.presets.list",
+          "path": "config/presets/list.md"
+        },
+        {
+          "id": "config.presets.getCustom",
+          "title": "GearShell.config.presets.getCustom",
+          "path": "config/presets/getCustom.md"
+        },
+        {
+          "id": "config.presets.saveCustom",
+          "title": "GearShell.config.presets.saveCustom",
+          "path": "config/presets/saveCustom.md"
+        },
+        {
+          "id": "config.presets.removeCustom",
+          "title": "GearShell.config.presets.removeCustom",
+          "path": "config/presets/removeCustom.md"
+        },
+        {
+          "id": "config.presets.uniqueName",
+          "title": "GearShell.config.presets.uniqueName",
+          "path": "config/presets/uniqueName.md"
+        },
+        {
+          "id": "config.binds.list",
+          "title": "GearShell.config.binds.list",
+          "path": "config/binds/list.md"
+        },
+        {
+          "id": "config.binds.add",
+          "title": "GearShell.config.binds.add",
+          "path": "config/binds/add.md"
+        },
+        {
+          "id": "config.binds.update",
+          "title": "GearShell.config.binds.update",
+          "path": "config/binds/update.md"
+        },
+        {
+          "id": "config.binds.remove",
+          "title": "GearShell.config.binds.remove",
+          "path": "config/binds/remove.md"
+        },
+        {
+          "id": "config.binds.reorder",
+          "title": "GearShell.config.binds.reorder",
+          "path": "config/binds/reorder.md"
+        },
+        {
+          "id": "config.binds.set",
+          "title": "GearShell.config.binds.set",
+          "path": "config/binds/set.md"
+        },
+        {
+          "id": "config.binds.systemList",
+          "title": "GearShell.config.binds.systemList",
+          "path": "config/binds/systemList.md"
+        },
+        {
+          "id": "config.binds.systemAdd",
+          "title": "GearShell.config.binds.systemAdd",
+          "path": "config/binds/systemAdd.md"
+        },
+        {
+          "id": "config.binds.systemUpdate",
+          "title": "GearShell.config.binds.systemUpdate",
+          "path": "config/binds/systemUpdate.md"
+        },
+        {
+          "id": "config.binds.systemRemove",
+          "title": "GearShell.config.binds.systemRemove",
+          "path": "config/binds/systemRemove.md"
+        },
+        {
+          "id": "config.binds.systemReorder",
+          "title": "GearShell.config.binds.systemReorder",
+          "path": "config/binds/systemReorder.md"
+        },
+        {
+          "id": "config.binds.systemSet",
+          "title": "GearShell.config.binds.systemSet",
+          "path": "config/binds/systemSet.md"
+        },
+        {
+          "id": "config.tasks.list",
+          "title": "GearShell.config.tasks.list",
+          "path": "config/tasks/list.md"
+        },
+        {
+          "id": "config.tasks.add",
+          "title": "GearShell.config.tasks.add",
+          "path": "config/tasks/add.md"
+        },
+        {
+          "id": "config.tasks.update",
+          "title": "GearShell.config.tasks.update",
+          "path": "config/tasks/update.md"
+        },
+        {
+          "id": "config.tasks.remove",
+          "title": "GearShell.config.tasks.remove",
+          "path": "config/tasks/remove.md"
+        },
+        {
+          "id": "config.tasks.set",
+          "title": "GearShell.config.tasks.set",
+          "path": "config/tasks/set.md"
+        },
+        {
+          "id": "config.terminalIcons.list",
+          "title": "GearShell.config.terminalIcons.list",
+          "path": "config/terminalIcons/list.md"
+        },
+        {
+          "id": "config.terminalProfiles.list",
+          "title": "GearShell.config.terminalProfiles.list",
+          "path": "config/terminalProfiles/list.md"
+        },
+        {
+          "id": "config.terminalProfiles.save",
+          "title": "GearShell.config.terminalProfiles.save",
+          "path": "config/terminalProfiles/save.md"
+        },
+        {
+          "id": "config.terminalProfiles.normalize",
+          "title": "GearShell.config.terminalProfiles.normalize",
+          "path": "config/terminalProfiles/normalize.md"
+        },
+        {
+          "id": "config.terminalProfiles.normalizeOrder",
+          "title": "GearShell.config.terminalProfiles.normalizeOrder",
+          "path": "config/terminalProfiles/normalizeOrder.md"
+        },
+        {
+          "id": "config.terminalProfiles.command",
+          "title": "GearShell.config.terminalProfiles.command",
+          "path": "config/terminalProfiles/command.md"
+        },
+        {
+          "id": "config.launcher.normalizeOrder",
+          "title": "GearShell.config.launcher.normalizeOrder",
+          "path": "config/launcher/normalizeOrder.md"
+        },
+        {
+          "id": "config.runtimeDefaults",
+          "title": "GearShell.config.runtimeDefaults",
+          "path": "config/runtimeDefaults.md"
+        },
+        {
+          "id": "config.plugins.list",
+          "title": "GearShell.config.plugins.list",
+          "path": "config/plugins/list.md"
+        },
+        {
+          "id": "config.plugins.install",
+          "title": "GearShell.config.plugins.install",
+          "path": "config/plugins/install.md"
+        },
+        {
+          "id": "config.plugins.remove",
+          "title": "GearShell.config.plugins.remove",
+          "path": "config/plugins/remove.md"
+        },
+        {
+          "id": "config.plugins.setEnabled",
+          "title": "GearShell.config.plugins.setEnabled",
+          "path": "config/plugins/setEnabled.md"
+        },
+        {
+          "id": "config.providers.list",
+          "title": "GearShell.config.providers.list",
+          "path": "config/providers/list.md"
+        },
+        {
+          "id": "config.models.list",
+          "title": "GearShell.config.models.list",
+          "path": "config/models/list.md"
+        },
+        {
+          "id": "config.models.save",
+          "title": "GearShell.config.models.save",
+          "path": "config/models/save.md"
+        },
+        {
+          "id": "config.models.remove",
+          "title": "GearShell.config.models.remove",
+          "path": "config/models/remove.md"
+        },
+        {
+          "id": "config.providers.save",
+          "title": "GearShell.config.providers.save",
+          "path": "config/providers/save.md"
+        },
+        {
+          "id": "config.providers.remove",
+          "title": "GearShell.config.providers.remove",
+          "path": "config/providers/remove.md"
+        }
       ]
     },
     {
       "id": "panels",
       "title": "Panels",
       "methods": [
-        { "id": "panels.list", "title": "GearShell.panels.list", "path": "panels/list.md" },
-        { "id": "panels.open", "title": "GearShell.panels.open", "path": "panels/open.md" },
-        { "id": "panels.close", "title": "GearShell.panels.close", "path": "panels/close.md" },
-        { "id": "panels.focus", "title": "GearShell.panels.focus", "path": "panels/focus.md" }
+        {
+          "id": "panels.list",
+          "title": "GearShell.panels.list",
+          "path": "panels/list.md"
+        },
+        {
+          "id": "panels.open",
+          "title": "GearShell.panels.open",
+          "path": "panels/open.md"
+        },
+        {
+          "id": "panels.close",
+          "title": "GearShell.panels.close",
+          "path": "panels/close.md"
+        },
+        {
+          "id": "panels.focus",
+          "title": "GearShell.panels.focus",
+          "path": "panels/focus.md"
+        }
       ]
     },
     {
       "id": "browser",
       "title": "Browser",
       "methods": [
-        { "id": "browser.open", "title": "GearShell.browser.open", "path": "browser/open.md" }
+        {
+          "id": "browser.open",
+          "title": "GearShell.browser.open",
+          "path": "browser/open.md"
+        }
       ]
     },
     {
       "id": "files",
       "title": "Files",
       "methods": [
-        { "id": "files.open", "title": "GearShell.files.open", "path": "files/open.md" }
+        {
+          "id": "files.open",
+          "title": "GearShell.files.open",
+          "path": "files/open.md"
+        }
       ]
     },
     {
       "id": "tasks",
       "title": "Tasks",
       "methods": [
-        { "id": "tasks.list", "title": "GearShell.tasks.list", "path": "tasks/list.md" },
-        { "id": "tasks.create", "title": "GearShell.tasks.create", "path": "tasks/create.md" },
-        { "id": "tasks.cancel", "title": "GearShell.tasks.cancel", "path": "tasks/cancel.md" },
-        { "id": "tasks.output", "title": "GearShell.tasks.output", "path": "tasks/output.md" }
+        {
+          "id": "tasks.list",
+          "title": "GearShell.tasks.list",
+          "path": "tasks/list.md"
+        },
+        {
+          "id": "tasks.create",
+          "title": "GearShell.tasks.create",
+          "path": "tasks/create.md"
+        },
+        {
+          "id": "tasks.cancel",
+          "title": "GearShell.tasks.cancel",
+          "path": "tasks/cancel.md"
+        },
+        {
+          "id": "tasks.output",
+          "title": "GearShell.tasks.output",
+          "path": "tasks/output.md"
+        }
       ]
     },
     {
       "id": "agents",
       "title": "Agents",
       "methods": [
-        { "id": "agents.list", "title": "GearShell.agents.list", "path": "agents/list.md" },
-        { "id": "agents.prompt", "title": "GearShell.agents.prompt", "path": "agents/prompt.md" },
-        { "id": "agents.read", "title": "GearShell.agents.read", "path": "agents/read.md" },
-        { "id": "agents.interrupt", "title": "GearShell.agents.interrupt", "path": "agents/interrupt.md" }
+        {
+          "id": "agents.list",
+          "title": "GearShell.agents.list",
+          "path": "agents/list.md"
+        },
+        {
+          "id": "agents.prompt",
+          "title": "GearShell.agents.prompt",
+          "path": "agents/prompt.md"
+        },
+        {
+          "id": "agents.read",
+          "title": "GearShell.agents.read",
+          "path": "agents/read.md"
+        },
+        {
+          "id": "agents.interrupt",
+          "title": "GearShell.agents.interrupt",
+          "path": "agents/interrupt.md"
+        }
       ]
     },
     {
       "id": "music",
       "title": "Music",
       "methods": [
-        { "id": "music.play", "title": "GearShell.music.play", "path": "music/play.md" },
-        { "id": "music.playQueue", "title": "GearShell.music.playQueue", "path": "music/playQueue.md" },
-        { "id": "music.enqueue", "title": "GearShell.music.enqueue", "path": "music/enqueue.md" },
-        { "id": "music.next", "title": "GearShell.music.next", "path": "music/next.md" },
-        { "id": "music.prev", "title": "GearShell.music.prev", "path": "music/prev.md" },
-        { "id": "music.setLoop", "title": "GearShell.music.setLoop", "path": "music/setLoop.md" },
-        { "id": "music.setShuffle", "title": "GearShell.music.setShuffle", "path": "music/setShuffle.md" },
-        { "id": "music.seek", "title": "GearShell.music.seek", "path": "music/seek.md" },
-        { "id": "music.reorderQueue", "title": "GearShell.music.reorderQueue", "path": "music/reorderQueue.md" },
-        { "id": "music.removeFromQueue", "title": "GearShell.music.removeFromQueue", "path": "music/removeFromQueue.md" },
-        { "id": "music.clearQueue", "title": "GearShell.music.clearQueue", "path": "music/clearQueue.md" },
-        { "id": "music.listPlaylists", "title": "GearShell.music.listPlaylists", "path": "music/listPlaylists.md" },
-        { "id": "music.savePlaylist", "title": "GearShell.music.savePlaylist", "path": "music/savePlaylist.md" },
-        { "id": "music.renamePlaylist", "title": "GearShell.music.renamePlaylist", "path": "music/renamePlaylist.md" },
-        { "id": "music.deletePlaylist", "title": "GearShell.music.deletePlaylist", "path": "music/deletePlaylist.md" },
-        { "id": "music.loadPlaylist", "title": "GearShell.music.loadPlaylist", "path": "music/loadPlaylist.md" },
-        { "id": "music.pause", "title": "GearShell.music.pause", "path": "music/pause.md" },
-        { "id": "music.resume", "title": "GearShell.music.resume", "path": "music/resume.md" },
-        { "id": "music.stop", "title": "GearShell.music.stop", "path": "music/stop.md" },
-        { "id": "music.nowPlaying", "title": "GearShell.music.nowPlaying", "path": "music/nowPlaying.md" }
+        {
+          "id": "music.play",
+          "title": "GearShell.music.play",
+          "path": "music/play.md"
+        },
+        {
+          "id": "music.playQueue",
+          "title": "GearShell.music.playQueue",
+          "path": "music/playQueue.md"
+        },
+        {
+          "id": "music.enqueue",
+          "title": "GearShell.music.enqueue",
+          "path": "music/enqueue.md"
+        },
+        {
+          "id": "music.next",
+          "title": "GearShell.music.next",
+          "path": "music/next.md"
+        },
+        {
+          "id": "music.prev",
+          "title": "GearShell.music.prev",
+          "path": "music/prev.md"
+        },
+        {
+          "id": "music.setLoop",
+          "title": "GearShell.music.setLoop",
+          "path": "music/setLoop.md"
+        },
+        {
+          "id": "music.setShuffle",
+          "title": "GearShell.music.setShuffle",
+          "path": "music/setShuffle.md"
+        },
+        {
+          "id": "music.seek",
+          "title": "GearShell.music.seek",
+          "path": "music/seek.md"
+        },
+        {
+          "id": "music.reorderQueue",
+          "title": "GearShell.music.reorderQueue",
+          "path": "music/reorderQueue.md"
+        },
+        {
+          "id": "music.removeFromQueue",
+          "title": "GearShell.music.removeFromQueue",
+          "path": "music/removeFromQueue.md"
+        },
+        {
+          "id": "music.clearQueue",
+          "title": "GearShell.music.clearQueue",
+          "path": "music/clearQueue.md"
+        },
+        {
+          "id": "music.listPlaylists",
+          "title": "GearShell.music.listPlaylists",
+          "path": "music/listPlaylists.md"
+        },
+        {
+          "id": "music.savePlaylist",
+          "title": "GearShell.music.savePlaylist",
+          "path": "music/savePlaylist.md"
+        },
+        {
+          "id": "music.renamePlaylist",
+          "title": "GearShell.music.renamePlaylist",
+          "path": "music/renamePlaylist.md"
+        },
+        {
+          "id": "music.deletePlaylist",
+          "title": "GearShell.music.deletePlaylist",
+          "path": "music/deletePlaylist.md"
+        },
+        {
+          "id": "music.loadPlaylist",
+          "title": "GearShell.music.loadPlaylist",
+          "path": "music/loadPlaylist.md"
+        },
+        {
+          "id": "music.pause",
+          "title": "GearShell.music.pause",
+          "path": "music/pause.md"
+        },
+        {
+          "id": "music.resume",
+          "title": "GearShell.music.resume",
+          "path": "music/resume.md"
+        },
+        {
+          "id": "music.stop",
+          "title": "GearShell.music.stop",
+          "path": "music/stop.md"
+        },
+        {
+          "id": "music.nowPlaying",
+          "title": "GearShell.music.nowPlaying",
+          "path": "music/nowPlaying.md"
+        }
       ]
     },
     {
       "id": "terminal",
       "title": "Terminal",
       "methods": [
-        { "id": "terminal.list", "title": "GearShell.terminal.list", "path": "terminal/list.md" },
-        { "id": "terminal.create", "title": "GearShell.terminal.create", "path": "terminal/create.md" },
-        { "id": "terminal.write", "title": "GearShell.terminal.write", "path": "terminal/write.md" },
-        { "id": "terminal.resize", "title": "GearShell.terminal.resize", "path": "terminal/resize.md" },
-        { "id": "terminal.dispose", "title": "GearShell.terminal.dispose", "path": "terminal/dispose.md" },
-        { "id": "terminal.onData", "title": "GearShell.terminal.onData", "path": "terminal/onData.md" },
-        { "id": "terminal.offData", "title": "GearShell.terminal.offData", "path": "terminal/offData.md" },
-        { "id": "terminal.onExit", "title": "GearShell.terminal.onExit", "path": "terminal/onExit.md" },
-        { "id": "terminal.offExit", "title": "GearShell.terminal.offExit", "path": "terminal/offExit.md" }
+        {
+          "id": "terminal.list",
+          "title": "GearShell.terminal.list",
+          "path": "terminal/list.md"
+        },
+        {
+          "id": "terminal.create",
+          "title": "GearShell.terminal.create",
+          "path": "terminal/create.md"
+        },
+        {
+          "id": "terminal.write",
+          "title": "GearShell.terminal.write",
+          "path": "terminal/write.md"
+        },
+        {
+          "id": "terminal.resize",
+          "title": "GearShell.terminal.resize",
+          "path": "terminal/resize.md"
+        },
+        {
+          "id": "terminal.dispose",
+          "title": "GearShell.terminal.dispose",
+          "path": "terminal/dispose.md"
+        },
+        {
+          "id": "terminal.onData",
+          "title": "GearShell.terminal.onData",
+          "path": "terminal/onData.md"
+        },
+        {
+          "id": "terminal.offData",
+          "title": "GearShell.terminal.offData",
+          "path": "terminal/offData.md"
+        },
+        {
+          "id": "terminal.onExit",
+          "title": "GearShell.terminal.onExit",
+          "path": "terminal/onExit.md"
+        },
+        {
+          "id": "terminal.offExit",
+          "title": "GearShell.terminal.offExit",
+          "path": "terminal/offExit.md"
+        }
       ]
     },
     {
       "id": "vm",
       "title": "VM",
       "methods": [
-        { "id": "vm.list", "title": "GearShell.vm.list", "path": "vm/list.md" },
-        { "id": "vm.create", "title": "GearShell.vm.create", "path": "vm/create.md" }
+        {
+          "id": "vm.list",
+          "title": "GearShell.vm.list",
+          "path": "vm/list.md"
+        },
+        {
+          "id": "vm.create",
+          "title": "GearShell.vm.create",
+          "path": "vm/create.md"
+        }
       ]
     },
     {
       "id": "w9y",
       "title": "W9y",
       "methods": [
-        { "id": "w9y.list", "title": "GearShell.w9y.list", "path": "w9y/list.md" },
-        { "id": "w9y.status", "title": "GearShell.w9y.status", "path": "w9y/status.md" },
-        { "id": "w9y.refresh", "title": "GearShell.w9y.refresh", "path": "w9y/refresh.md" },
-        { "id": "w9y.apply", "title": "GearShell.w9y.apply", "path": "w9y/apply.md" },
-        { "id": "w9y.remove", "title": "GearShell.w9y.remove", "path": "w9y/remove.md" }
+        {
+          "id": "w9y.list",
+          "title": "GearShell.w9y.list",
+          "path": "w9y/list.md"
+        },
+        {
+          "id": "w9y.status",
+          "title": "GearShell.w9y.status",
+          "path": "w9y/status.md"
+        },
+        {
+          "id": "w9y.refresh",
+          "title": "GearShell.w9y.refresh",
+          "path": "w9y/refresh.md"
+        },
+        {
+          "id": "w9y.apply",
+          "title": "GearShell.w9y.apply",
+          "path": "w9y/apply.md"
+        },
+        {
+          "id": "w9y.remove",
+          "title": "GearShell.w9y.remove",
+          "path": "w9y/remove.md"
+        }
       ]
     },
     {
       "id": "events",
       "title": "Events",
       "methods": [
-        { "id": "events.on", "title": "GearShell.events.on", "path": "events/on.md" },
-        { "id": "events.off", "title": "GearShell.events.off", "path": "events/off.md" },
-        { "id": "events.emit", "title": "GearShell.events.emit", "path": "events/emit.md" },
-        { "id": "events.drain", "title": "GearShell.events.drain", "path": "events/drain.md" },
-        { "id": "events.pending", "title": "GearShell.events.pending", "path": "events/pending.md" }
+        {
+          "id": "events.on",
+          "title": "GearShell.events.on",
+          "path": "events/on.md"
+        },
+        {
+          "id": "events.off",
+          "title": "GearShell.events.off",
+          "path": "events/off.md"
+        },
+        {
+          "id": "events.emit",
+          "title": "GearShell.events.emit",
+          "path": "events/emit.md"
+        },
+        {
+          "id": "events.drain",
+          "title": "GearShell.events.drain",
+          "path": "events/drain.md"
+        },
+        {
+          "id": "events.pending",
+          "title": "GearShell.events.pending",
+          "path": "events/pending.md"
+        }
       ]
     },
     {
       "id": "fs",
       "title": "FS",
       "methods": [
-        { "id": "fs.readFile", "title": "GearShell.fs.readFile", "path": "fs/readFile.md" },
-        { "id": "fs.readFileText", "title": "GearShell.fs.readFileText", "path": "fs/readFileText.md" },
-        { "id": "fs.writeFile", "title": "GearShell.fs.writeFile", "path": "fs/writeFile.md" },
-        { "id": "fs.writeFileText", "title": "GearShell.fs.writeFileText", "path": "fs/writeFileText.md" },
-        { "id": "fs.readDir", "title": "GearShell.fs.readDir", "path": "fs/readDir.md" },
-        { "id": "fs.stat", "title": "GearShell.fs.stat", "path": "fs/stat.md" },
-        { "id": "fs.exists", "title": "GearShell.fs.exists", "path": "fs/exists.md" },
-        { "id": "fs.mkdir", "title": "GearShell.fs.mkdir", "path": "fs/mkdir.md" },
-        { "id": "fs.rm", "title": "GearShell.fs.rm", "path": "fs/rm.md" }
+        {
+          "id": "fs.readFile",
+          "title": "GearShell.fs.readFile",
+          "path": "fs/readFile.md"
+        },
+        {
+          "id": "fs.readFileText",
+          "title": "GearShell.fs.readFileText",
+          "path": "fs/readFileText.md"
+        },
+        {
+          "id": "fs.writeFile",
+          "title": "GearShell.fs.writeFile",
+          "path": "fs/writeFile.md"
+        },
+        {
+          "id": "fs.writeFileText",
+          "title": "GearShell.fs.writeFileText",
+          "path": "fs/writeFileText.md"
+        },
+        {
+          "id": "fs.readDir",
+          "title": "GearShell.fs.readDir",
+          "path": "fs/readDir.md"
+        },
+        {
+          "id": "fs.stat",
+          "title": "GearShell.fs.stat",
+          "path": "fs/stat.md"
+        },
+        {
+          "id": "fs.exists",
+          "title": "GearShell.fs.exists",
+          "path": "fs/exists.md"
+        },
+        {
+          "id": "fs.mkdir",
+          "title": "GearShell.fs.mkdir",
+          "path": "fs/mkdir.md"
+        },
+        {
+          "id": "fs.rm",
+          "title": "GearShell.fs.rm",
+          "path": "fs/rm.md"
+        }
       ]
     },
     {
       "id": "guides",
       "title": "Guides",
       "kind": "guides",
-      "path": null,
       "guides": [
-        { "id": "guide-overview", "title": "GearShell API overview", "path": "guides/overview.md" },
-        { "id": "guide-iframe-bridge", "title": "Calling the API from an iframe plugin", "path": "guides/iframe-bridge.md" },
-        { "id": "guide-gear-cli", "title": "Calling the API from the gear CLI", "path": "guides/gear-cli.md" },
-        { "id": "guide-permissions", "title": "Permissions & capability gating", "path": "guides/permissions.md" },
-        { "id": "guide-events", "title": "Working with the event ring buffer", "path": "guides/events.md" },
-        { "id": "guide-fs", "title": "Reading and writing the wanix filesystem", "path": "guides/fs.md" },
-        { "id": "guide-tasks-agents", "title": "Tasks vs Agents: when to use which", "path": "guides/tasks-agents.md" },
-        { "id": "guide-config-audit", "title": "Config changes, audit, and undo", "path": "guides/config-audit.md" }
+        {
+          "id": "guide-overview",
+          "title": "GearShell API overview",
+          "path": "guides/overview.md"
+        },
+        {
+          "id": "guide-iframe-bridge",
+          "title": "Calling the API from an iframe plugin",
+          "path": "guides/iframe-bridge.md"
+        },
+        {
+          "id": "guide-gear-cli",
+          "title": "Calling the API from the gear CLI",
+          "path": "guides/gear-cli.md"
+        },
+        {
+          "id": "guide-permissions",
+          "title": "Permissions & capability gating",
+          "path": "guides/permissions.md"
+        },
+        {
+          "id": "guide-events",
+          "title": "Working with the event ring buffer",
+          "path": "guides/events.md"
+        },
+        {
+          "id": "guide-fs",
+          "title": "Reading and writing the wanix filesystem",
+          "path": "guides/fs.md"
+        },
+        {
+          "id": "guide-tasks-agents",
+          "title": "Tasks vs Agents: when to use which",
+          "path": "guides/tasks-agents.md"
+        },
+        {
+          "id": "guide-config-audit",
+          "title": "Config changes, audit, and undo",
+          "path": "guides/config-audit.md"
+        }
       ]
     }
   ]
