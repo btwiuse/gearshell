@@ -13,6 +13,7 @@
 
 import { loadConfig, saveConfig } from "../../app-workspace.js";
 import { normalizeTerminalProfile } from "../../app-normalize.js";
+import { kvGet, kvSet } from "./kv-api.js";
 
 // --- Built-in preset data ---
 

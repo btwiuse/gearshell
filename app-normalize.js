@@ -18,7 +18,6 @@ export {
   normalizeRuntimeConfig,
   normalizePlugin,
   normalizePlugins,
-  normalizeCrushRunnerPreset,
 };
 
 import {
@@ -51,12 +50,7 @@ import {
 } from "./app-constants.js";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
-  DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
 } from "./plugin/crush-playground/preset-api.js";
-import {
-  getCrushRunnerPresets,
-  normalizeCrushRunnerPreset,
-} from "./app-workspace.js";
 import { createWorkspaceId } from "./app-storage.js";
 import {
   clone,
@@ -167,11 +161,6 @@ function normalizeProfileLists(config) {
         migrateLegacyHushTerminalProfile,
       ).filter((profile) => profile.program)
       : [],
-    crushRunnerPresets: Array.isArray(config?.crushRunnerPresets)
-      ? config.crushRunnerPresets.map(normalizeCrushRunnerPreset).filter((
-        preset,
-      ) => preset.program)
-      : [],
   };
 }
 
@@ -229,9 +218,7 @@ function normalizeModel(model) {
 // /same-origin path, or a vfs:/... path (see plugins.js).
 
 export function normalizeShellConfig(config) {
-  const { terminalProfiles, crushRunnerPresets } = normalizeProfileLists(
-    config,
-  );
+  const { terminalProfiles } = normalizeProfileLists(config);
   const normalized = {
     cmd: typeof config?.cmd === "string" && config.cmd.trim()
       ? config.cmd.trim()
@@ -257,16 +244,44 @@ export function normalizeShellConfig(config) {
       terminalProfiles,
     ),
     defaultTerminalProfileId: normalizeDefaultTerminalProfileId(config),
-    crushRunnerPresets,
-    crushRunnerPresetOrder: normalizeTerminalProfileOrder(
-      config?.crushRunnerPresetOrder,
-      crushRunnerPresets,
-    ),
-    crushRunnerActiveId: typeof config?.crushRunnerActiveId === "string"
-      ? config.crushRunnerActiveId
-      : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
+    // Per-workspace generic JSON key-value store (see plugin/crush-playground/kv-api.js).
+    // Any plugin can read / write through `GearShell.config.kv.*`.
+    kv: normalizeKv(config?.kv),
   };
   return remapLegacyShellCommand(normalized);
+}
+
+// Whitelist normalize the per-workspace kv store: every value must be
+// JSON-serialisable (object / array / primitive). Drops entries whose
+// value is `undefined` / a function / DOM nodes. Keys are kept
+// verbatim — domain semantics live in the consumer (e.g. the Crush
+// Playground treats `crush-playground:state` as its user-state document).
+function normalizeKv(kv) {
+  if (!kv || typeof kv !== "object") return {};
+  const out = {};
+  for (const [key, value] of Object.entries(kv)) {
+    if (typeof key !== "string" || !key) continue;
+    if (value === undefined) continue;
+    if (
+      value === null ||
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      Array.isArray(value)
+    ) {
+      out[key] = value;
+      continue;
+    }
+    if (typeof value === "object") {
+      try {
+        JSON.stringify(value);
+        out[key] = value;
+      } catch {
+        // skip non-serialisable objects
+      }
+    }
+  }
+  return out;
 }
 
 // The shell used to be mounted as `hush`, and the rc file used to live at
@@ -280,44 +295,6 @@ function remapLegacyShellCommand(normalized) {
     normalized.cmd === "bash -rcfile /profile"
   ) normalized.cmd = DEFAULT_CMD;
   return normalized;
-}
-
-// Built-in Crush Runner presets ship in crush-runner.js; getCrushRunnerPresets
-
-export function getActiveCrushRunnerPreset(config = loadConfig()) {
-  const presets = getCrushRunnerPresets(config);
-  return presets.find((preset) =>
-    preset.id === (config.crushRunnerActiveId || DEFAULT_CRUSH_RUNNER_ACTIVE_ID)
-  ) ||
-    presets[0];
-}
-
-export function saveCrushRunnerPresets(presets, activeId, order) {
-  const config = loadConfig();
-  saveConfig({
-    ...config,
-    crushRunnerPresets: presets.map((preset) => ({
-      ...preset,
-      builtin: false,
-    })),
-    crushRunnerPresetOrder: normalizeTerminalProfileOrder(order, presets),
-    crushRunnerActiveId: typeof activeId === "string" && activeId
-      ? activeId
-      : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-  });
-}
-
-export function blankCrushRunnerPresetDraft() {
-  return {
-    name: "",
-    icon: "bot",
-    program: "crush",
-    args: "",
-    type: "gojs",
-    wd: "",
-    env: "",
-    crushrc: "",
-  };
 }
 
 export function normalizeTerminalProfileOrder(order, profiles = []) {

@@ -27,12 +27,8 @@ import {
 export {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
+  ensureCrushRunnerBuiltinsKv,
   getBuiltinCrushRunnerPresets,
-  getCrushRunnerCrushrcFor,
-  getCrushRunnerDefaults,
-  getCrushRunnerPresets,
-  normalizeCrushRunnerPreset,
-  saveCrushRunnerPresets,
 } from "./plugin/crush-playground/preset-api.js";
 // --- Config ---
 export function loadConfig() {
