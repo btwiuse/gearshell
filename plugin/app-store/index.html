@@ -92,7 +92,7 @@ function useStore() {
   const [notice, setNotice] = useState(null); // {kind, text}
   const [modal, setModal] = useState(null); // {mode, plugin?}
 
-  const refresh = () => {
+  const refresh = async () => {
     // The gear bridge only installs window.GearShell inside an iframe
     // (window.top !== window.self). When this page is opened directly in
     // a browser tab for development, the bridge guard skips installation
@@ -102,8 +102,16 @@ function useStore() {
       setPlugins([]);
       return;
     }
-    const result = GearShell.config.plugins.list();
-    setPlugins(Array.isArray(result) ? result : []);
+    // The bridge Proxy turns every GearShell.* call into an async
+    // postMessage round-trip, so `list()` returns a Promise, not an
+    // array. Await it — the in-page Plugins page can read configApi
+    // synchronously, but an iframe plugin has to await the round-trip.
+    try {
+      const result = await GearShell.config.plugins.list();
+      setPlugins(Array.isArray(result) ? result : []);
+    } catch {
+      setPlugins([]);
+    }
   };
   // Track bridge presence so the empty-state card can hint at it.
   const bridgeAvailable = typeof GearShell !== "undefined";
@@ -188,9 +196,9 @@ function useStore() {
 function useActions(store) {
   const { flash, refresh, setModal } = store;
 
-  const onToggle = (plugin) => {
+  const onToggle = async (plugin) => {
     try {
-      const result = GearShell.config.plugins.setEnabled(
+      const result = await GearShell.config.plugins.setEnabled(
         plugin.id,
         !plugin.enabled,
       );
@@ -201,10 +209,10 @@ function useActions(store) {
     }
   };
 
-  const onRemove = (plugin) => {
+  const onRemove = async (plugin) => {
     if (!window.confirm(`Remove "${plugin.name}"?`)) return;
     try {
-      const result = GearShell.config.plugins.remove(plugin.id);
+      const result = await GearShell.config.plugins.remove(plugin.id);
       flash(result, `${plugin.name} removed.`);
       refresh();
     } catch (error) {
@@ -230,7 +238,7 @@ function useActions(store) {
     }
   };
 
-  const onSubmit = (values, kind) => {
+  const onSubmit = async (values, kind) => {
     const manifest = {
       id: values.id.trim(),
       name: values.name.trim(),
@@ -266,7 +274,7 @@ function useActions(store) {
       return;
     }
     try {
-      const result = GearShell.config.plugins.install(manifest);
+      const result = await GearShell.config.plugins.install(manifest);
       flash(
         result,
         result?.ok === false ? null : `${manifest.name} installed. Loading…`,
