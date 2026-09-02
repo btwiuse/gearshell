@@ -21,11 +21,6 @@ import {
   initPlugins,
   registerSyncPlugins,
 } from "./plugins.js";
-import { registerPluginsSettingsSection } from "./settings-plugins.js";
-import {
-  addPluginsPanel,
-  initPluginsPanel,
-} from "./plugins-panel.js";
 import { initLauncher } from "./plugin/launcher/launcher.js";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
@@ -274,7 +269,6 @@ initPanels({
   // settings, files, runtime, playground, workbench, vm, music, deck,
   // group, launcher, crush-runner, ...) fall through to openPluginPanel.
   addLandingPanel,
-  addPluginsPanel,
   // Lazy w9y install trigger for iframe plugins: ensureW9yDependencies
   // skips iframe plugins on boot, so addIframePanel calls this with the
   // manifest's `w9y: { mod, version? }` on first open. Routed through
@@ -316,15 +310,12 @@ initPlugins({
 });
 // Entry-less iframe plugins (Browser / Bonsai / Codigo / Crush / Rick
 // Roll) register synchronously so the boot/restore path can open them
-// immediately; component plugins load asynchronously below.
+// immediately; component plugins load asynchronously below. The
+// App Store replaces the old in-page Plugins manager — install /
+// enable / remove flows live behind panels.open("app-store"), and
+// the Settings > Apps card just opens that panel.
 registerSyncPlugins();
 getPluginBootPromise();
-registerPluginsSettingsSection();
-
-// Initialise the Plugins manager panel (same shape as Playground).
-initPluginsPanel({
-  rememberOpenPanel,
-});
 
 // Initialise the Files submodule with the helpers it needs at
 // runtime. The panel only reads the wanix filesystem root and

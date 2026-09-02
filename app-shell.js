@@ -9,7 +9,6 @@ import htm from "htm";
 
 const html = htm.bind(React.createElement);
 import { DockviewReact } from "dockview-react";
-import { PluginsPanel } from "./plugins-panel.js";
 import { AddTerminalButton } from "./plugin/launcher/launcher.js";
 import {
   IframePanel,
@@ -151,7 +150,6 @@ const DUPLICATABLE_PANEL_TYPES = new Set([
   "runtime",
   "music",
   "playground",
-  "plugins",
   "launcher",
 ]);
 
@@ -337,7 +335,6 @@ function dockviewOptions(onReady) {
 // component names against (dockview reads components[name] at addPanel
 // time — no snapshot — so in-place registration works).
 export const PANEL_COMPONENTS = {
-  plugins: PluginsPanel,
   task: WorkspaceTaskPanel,
   terminal: TerminalPanel,
   console: TerminalPanel,

@@ -20,7 +20,6 @@ import {
   addWorkspaceTaskPanel as addWorkspaceTaskPanelFromPanels,
 } from "./panels.js";
 import {
-  Puzzle,
   Terminal,
 } from "lucide-react";
 
@@ -56,7 +55,6 @@ export function autoStartWorkspaceTasks(api) {
 
 export const PANEL_CREATION_OPTIONS = [
   { component: "console", label: "Console", icon: Terminal },
-  { component: "plugins", label: "Plugins", icon: Puzzle },
 ];
 
 function addRestoredPanel(api, panel) {

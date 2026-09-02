@@ -1746,3 +1746,85 @@ bug**(Notes / crush-playground / app-store 看起来都在订阅 config.changed,
   全清白。
 - `verify-static.mjs` 仍有 pre-existing `DeckPanel` marker failure
   (Deck→iframe 迁移遗留,本轮无关)。
+
+## 五十一、Settings Plugins → Apps + 砍掉 in-page Plugins 代码(2026-09-03)
+
+### 背景
+
+Settings 页一直有"Plugins"卡片 + 单独的 Plugins 面板;后者是
+`plugin-panel.js`(react 组件) + `plugins-page.js`(卡片/弹窗/查询/启用
+列表)的组合,通过 `panels.open("plugins")` 走 `PluginsPanel` 通道。
+2026 早期 App Store iframe 插件上线后,`plugin/app-store/` 已经能完成
+同样的 install/enable/remove/搜索/标签筛选,**所有能力都 API 化**了,
+没有 in-page 版独有的特性。所以 Plugins 这套 in-page 代码可以全部删掉,
+Settings 那一栏改成 "Apps" 并把 App Store 作为唯一入口。
+
+### 改动
+
+**删除(5 个文件,共 761 行):**
+
+- `settings-plugins.js`(72 行)—— Settings 卡片的 in-page 注册,
+  `registerPluginsSettingsSection()` 一并删。
+- `plugins-page.js`(274 行) —— `PluginsPage` 主体。
+- `plugins-panel.js`(54 行) —— `PluginsPanel` dockview 壳。
+- `plugins-cards.js` / `plugins-modal.js` —— 500-line split,跟
+  `plugins-page.js` 一起无引用,**一并清掉**。
+- `PluginsPanel` 在 `app-shell.js` 的 `PANEL_COMPONENTS` 注册
+  (`plugins: PluginsPanel`)删除;`panels.js#PANEL_ADDERS.plugins`
+  分发删除。
+- `app-panels.js#PANEL_CREATION_OPTIONS` 的 `{ component: "plugins",
+  label: "Plugins", icon: Puzzle }` 删;`Puzzle` 的 lucide import 删。
+- `app-constants.js#DEFAULT_LAUNCHER_ITEM_ORDER` 和
+  `STARTUP_PANEL_TYPES` 里的 `"plugins"` 字符串删。
+- `app-shell.js#DUPLICATABLE_PANEL_TYPES` 删 `"plugins"`。
+
+**保留(插件内核的工具,与 Plugins panel 无关,其它插件/iframe 桥还要用):**
+
+- `plugins.js`, `plugins-deps.js`, `plugins-overlays.js`,
+  `plugins-css.js`, `plugins-loading.js`, `plugins-scope.js`,
+  `plugins-iframe-api.js` —— 全部还在,registry / DI / CSS 注入 /
+  iframe bridge 都是通用层。
+
+**改写:**
+
+- `plugin/settings/index.html`:
+  - 顶部 tab `[data-tab="plugins"]` → `[data-tab="apps"]`,文案 "Plugins"
+    → "Apps"。
+  - 整个 `<section data-section="plugins">`(标题 + plugin-list 卡片 +
+    "Open plugins page" 按钮)替换成 `<section data-section="apps">`:
+    一段说明 + 一个 "Open App Store" 按钮 + 一行 `<span id="apps-count">`
+    显示 `N enabled of M installed`(同源 `GearShell.config.plugins.list`,
+    不重复实现 toggle 控件)。
+  - `renderPlugins` 函数体换成 `renderApps`,只算 enabled 总数写
+    `#apps-count`。
+  - `#open-plugin-manager.onclick` → `#open-app-store.onclick`,
+    `panels.open("plugins")` → `panels.open("app-store")`。
+- `plugin/spotlight/spotlight-overlay.js#EXTRA_APPS`:
+  `{ component: "plugins", name: "Plugins", iconName: "Puzzle" }` →
+  `{ component: "app-store", name: "App Store", iconName: "Store" }`。
+- `app-plugin-manifests-iframes.js` 的 app-store manifest 注释更新
+  (明确 "唯一 Apps 管理面,替换 round 50 之前的 in-page Plugins")。
+- `plugins.js` 里"built-in Plugins link card"那段注释同步改写。
+
+### 验证(浏览器实测,localhost:8080)
+
+- `panels.open("settings")` → 新 iframe 加载 OK;`[data-tab="apps"]`
+  命中,`[data-tab="plugins"]` 不存在。
+- 切到 Apps tab → 标题 "Apps",文案 "The App Store is the single source
+  of truth for plugin state." + "Open App Store" 按钮 + 实时计数
+  ("18 enabled of 33 installed — manage from the App Store.")。
+- 点 "Open App Store" → `panels.open("app-store")` 触发 → 出现
+  `iframe[title="App Store"]`,正确 iframe 加载。
+- ESM 全清白(`node --input-type=module --check`,所有动过的文件 0
+  错误)。
+- `verify-static.mjs` 的 `DeckPanel` marker 失败是 pre-existing
+  (Deck → iframe 迁移的遗留,跟本轮无关)。
+
+### 用户体验差异
+
+- 启用/禁用 plugin 的流程从「Settings 里 toggle」变成「Settings > Apps
+  > Open App Store > 在 App Store 里 toggle」。少一次点击,但多了一次
+  进入 App Store 的强引导(用户更容易发现 App Store 的搜索/标签/列表
+  视图这些老 Plugins 页没有的功能)。
+- Spotlight 搜索 "app" 或 "store" 直接出 App Store(原来是 "plugins"
+  → Plugins panel)。

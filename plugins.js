@@ -227,9 +227,11 @@ export function getPluginIframeConfig(component) {
 // preferences / management UI live inside the shell's settings. The
 // section render is a DOM function `(root, ctx) => disposeFn`; ctx.api
 // is the same permission-scoped view plugins already get for panels.
-// The built-in Plugins link card in Settings registers through this
-// same path (see settings-plugins.js), so third parties get a working
-// template to copy.
+// The built-in Settings > Apps card lives in the iframe settings
+// plugin (plugin/settings/index.html) and is the canonical example of
+// a settings-section consumer: third parties that want their own
+// card in the shell's Settings page can register one through this
+// same path, in either the host shell or an iframe.
 
 const pluginSettingsSections = new Map(); // id -> { manifest, label, render, ctx }
 

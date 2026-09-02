@@ -222,7 +222,6 @@ const PANEL_ADDERS = {
   terminal: (api, group, options) =>
     addTerminalPanel(api, group, options?.profile),
   "workspace-task": addWorkspaceTaskPanel,
-  plugins: (api, group) => panelsDep("addPluginsPanel")(api, group),
 };
 
 function addPanelByComponent(api, component, group, options) {

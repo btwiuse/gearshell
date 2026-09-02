@@ -26,7 +26,7 @@
     <button type="button" data-tab="binds">Mounts &amp; tasks</button>
     <button type="button" data-tab="terminal">Terminal presets</button>
     <button type="button" data-tab="activity">Agent activity</button>
-    <button type="button" data-tab="plugins">Plugins</button>
+    <button type="button" data-tab="apps">Apps</button>
   </nav>
   <p id="status" class="settings-status" role="status" aria-live="polite"></p>
   <section data-section="behavior" class="settings-section">
@@ -124,11 +124,14 @@
     <div id="activity-list"></div>
     <button id="clear-activity" type="button">Clear history</button>
   </section>
-  <section data-section="plugins" class="settings-section" hidden>
-    <h2>Plugins</h2>
-    <p>Enable or disable extensions that add tabs, tools, and integrations.</p>
-    <div id="plugin-list" class="item-list"></div>
-    <button id="open-plugin-manager" type="button">Open plugins page</button>
+  <section data-section="apps" class="settings-section" hidden>
+    <h2>Apps</h2>
+    <p>Install, enable and remove the apps that extend the shell — tabs, tools, sandboxes.</p>
+    <p class="hint">The App Store is the single source of truth for plugin state. Open it to browse the catalog, search by tag, install from a manifest, or toggle anything on.</p>
+    <div class="apps-actions">
+      <button id="open-app-store" type="button">Open App Store</button>
+      <span class="apps-count" id="apps-count"></span>
+    </div>
   </section>
 </main>
 <script src="/plugin/gear-bridge.js"></script>
@@ -318,30 +321,14 @@
     }
     if (!tasks.length) list.textContent = "No tasks configured.";
   };
-  const renderPlugins = (plugins) => {
-    const list = $("plugin-list"); list.replaceChildren();
-    for (const plugin of plugins) {
-      const card = document.createElement("article"); card.className = "resource-card";
-      const title = document.createElement("strong"); title.textContent = plugin.name || plugin.id;
-      const meta = document.createElement("span"); meta.textContent = `${plugin.version || ""} · ${plugin.iframe ? "iframe" : "builtin"}`;
-      const actions = document.createElement("div");
-      const toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className = "plugin-switch";
-      toggle.setAttribute("role", "switch");
-      toggle.setAttribute("aria-checked", plugin.enabled ? "true" : "false");
-      toggle.setAttribute("aria-label", plugin.enabled ? `Disable ${plugin.name || plugin.id}` : `Enable ${plugin.name || plugin.id}`);
-      toggle.title = plugin.enabled ? `Disable ${plugin.name || plugin.id}` : `Enable ${plugin.name || plugin.id}`;
-      toggle.disabled = plugin.required === true;
-      toggle.onclick = async () => { try { await call("config.plugins.setEnabled", plugin.id, !plugin.enabled); await load(); status("Plugin state saved"); } catch (error) { status(error.message || String(error), true); } };
-      if (plugin.enabled && (plugin.panels || []).length > 0) {
-        const open = document.createElement("button"); open.type = "button"; open.textContent = "Open"; open.title = "Open this plugin like Launcher";
-        open.onclick = async () => { try { await call("panels.open", plugin.panels[0]); } catch (error) { status(error.message || String(error), true); } };
-        actions.append(open);
-      }
-      actions.append(toggle); card.append(title, meta, actions); list.append(card);
-    }
-    if (!plugins.length) list.textContent = "No plugins configured.";
+  const renderApps = (apps) => {
+    const list = Array.isArray(apps) ? apps : [];
+    const enabled = list.filter((app) => app.enabled).length;
+    const total = list.length;
+    const summary = $("apps-count");
+    if (summary) summary.textContent = total === 0
+      ? "No apps installed yet."
+      : `${enabled} enabled of ${total} installed — manage from the App Store.`;
   };
   const renderPresets = (presets) => {
     const list = $("preset-library"); list.replaceChildren();
@@ -439,7 +426,7 @@
       renderProfiles(profiles, shell.defaultTerminalProfileId || "bash");
       renderActivity(activity);
       renderPresets(presets);
-      renderPlugins(plugins);
+      renderApps(plugins);
       status("Loaded");
     } catch (error) { status(error.message || String(error), true); }
   }
@@ -513,7 +500,7 @@
   $("replace-workspace").onclick = () => saveWorkspace("replaceActive");
   $("save-preset").onclick = async () => { try { const id = $("save-preset").dataset.editing || null; const value = { name: $("preset-name").value, description: $("preset-description").value, workspace: id ? undefined : active }; await call("config.presets.saveCustom", id, value); $("preset-name").value = ""; $("preset-description").value = ""; delete $("save-preset").dataset.editing; $("save-preset").textContent = "Save current as preset"; await load(); status(id ? "Preset updated" : "Preset saved"); } catch (error) { status(error.message || String(error), true); } };
   $("clear-activity").onclick = async () => { if (!confirm("Clear agent activity history?")) return; try { await call("config.audit.clear"); await load(); } catch (error) { status(error.message || String(error), true); } };
-  $("open-plugin-manager").onclick = async () => { try { await call("panels.open", "plugins"); } catch (error) { status(error.message || String(error), true); } };
+  $("open-app-store").onclick = async () => { try { await call("panels.open", "app-store"); } catch (error) { status(error.message || String(error), true); } };
   document.querySelector('[data-tab="behavior"]').classList.add("active");
   await load();
 })().catch((error) => { document.getElementById("status").textContent = error.message || String(error); });

@@ -43,7 +43,7 @@ export const SPOTLIGHT_OVERLAY_ID = "spotlight";
 const EXTRA_APPS = [
   { component: "console", name: "Console", iconName: "Terminal" },
   { component: "launcher", name: "Launcher", iconName: "Rocket" },
-  { component: "plugins", name: "Plugins", iconName: "Puzzle" },
+  { component: "app-store", name: "App Store", iconName: "Store" },
 ];
 
 // Mount state driven by the toggle channel ("toggle" | "open" | "close").
