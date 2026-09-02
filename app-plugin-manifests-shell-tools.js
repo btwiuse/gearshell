@@ -60,7 +60,7 @@ function ensure_home() {
 }
 ensure_home
 cd $HOME
-|w9y_detect
+w9y_detect
 `;
 
 // The per-task shell toolset. Required: disabling it would leave every
