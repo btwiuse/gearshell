@@ -359,6 +359,17 @@ async function closeTerminal() {
   elements["terminal-actions"].hidden = true;
 }
 
+async function closeCurrentAndReopen() {
+  if (!state.terminal) return;
+  const presetId = state.terminal.preset.id;
+  state.terminal.handle.dispose();
+  state.terminals.delete(presetId);
+  state.terminal = null;
+  elements["terminal-placeholder"].hidden = false;
+  elements["terminal-actions"].hidden = true;
+  await launch();
+}
+
 function disposeAllTerminals() {
   for (const entry of state.terminals.values()) entry.handle.dispose();
   state.terminals.clear();
@@ -370,7 +381,7 @@ function toggleFullscreen() {
 }
 
 elements["terminal-placeholder"].addEventListener("click", () => launch());
-elements["close-terminal"].addEventListener("click", closeTerminal);
+elements["close-terminal"].addEventListener("click", closeCurrentAndReopen);
 window.addEventListener("pagehide", disposeAllTerminals);
 elements["restart-terminal"].addEventListener("click", async () => {
   await closeTerminal();
