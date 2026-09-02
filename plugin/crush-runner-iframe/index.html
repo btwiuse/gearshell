@@ -15,7 +15,7 @@
       <h1>Crush Runner</h1>
       <p class="lede">Configure a Crush profile, mount its private crushrc, and launch it in a live terminal.</p>
     </div>
-    <div class="status" id="status" role="status" aria-live="polite">Checking installation…</div>
+    <div class="status" id="status" role="status" aria-live="polite">Loading Crush status…</div>
   </header>
   <main class="layout">
     <aside class="sidebar">
@@ -35,6 +35,7 @@
 <span class="muted">Crush Runner is ready.</span>
 <span class="muted">Click to start a live Crush session.</span>
 <span class="prompt">$ ▌</span></pre></button>
+        <div id="term-progress" class="term-progress" hidden><div id="term-progress-fill" class="term-progress-fill"></div></div>
         <div id="terminal" class="terminal" hidden></div>
       </section>
     </section>
@@ -45,7 +46,7 @@
 import { iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
 
 const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), taskTopic: false, fullscreen: false };
-const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
+const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "term-progress", "term-progress-fill", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
 
 function setStatus(message, error = false) {
   elements.status.textContent = message;
@@ -204,17 +205,18 @@ async function waitForTask(spec) {
 
 async function detect() {
   try {
-    const output = await waitForTask({ name: "Detect Crush", cmd: "command -v crush", term: false });
-    const path = output.trim();
-    setStatus(path ? `Installed at ${path}` : "Crush is not installed");
-    if (path && !state.selected?.program) elements.program.value = path;
-    if (!path) {
-      const install = document.createElement("button");
-      install.type = "button";
-      install.textContent = "Install Crush";
-      install.addEventListener("click", installCrush);
-      showBanner("Crush is not installed.", install);
+    const status = await GearShell.w9y.status("crush");
+    if (status?.installed) {
+      setStatus(`Crush ${status.installed} is installed`);
+      showBanner("");
+      return;
     }
+    setStatus("Crush is not installed");
+    const install = document.createElement("button");
+    install.type = "button";
+    install.textContent = "Install Crush";
+    install.addEventListener("click", installCrush);
+    showBanner("Crush is not installed.", install);
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -226,8 +228,8 @@ async function installCrush() {
   try {
     await waitForTask({ name: "Install Crush", cmd: "w9y mod apply crush", term: false });
     showBanner("");
-    elements.program.value = "/opfs/wanix/crush";
     setStatus("Crush installed. You can launch it now.");
+    await refresh();
   } catch (error) {
     showBanner(error.message);
     setStatus("Crush installation failed", true);
@@ -259,10 +261,14 @@ async function removeCard(card) {
 function profileFor(preset) {
   const env = preset.env || "";
   const configEnv = "CRUSH_GLOBAL_CONFIG=/preset";
+  const program = !preset.program || preset.program === "crush"
+    ? "/opfs/wanix/crush"
+    : preset.program;
+  const args = preset.args || "";
   return {
     name: preset.name || "Crush",
-    program: preset.program || "/opfs/wanix/crush",
-    args: preset.args || "",
+    program,
+    args,
     type: preset.type || "gojs",
     wd: preset.wd || "/opfs/home",
     env: [env.trim(), configEnv].filter(Boolean).join("\n"),
@@ -274,20 +280,48 @@ function profileFor(preset) {
 }
 
 async function switchTerminal(preset) {
-  if (state.terminal) state.terminal.host.hidden = true;
-  const cached = state.terminals.get(preset.id);
-  if (cached) {
-    cached.host.hidden = false;
-    state.terminal = cached;
-    setStatus(`Running ${preset.name}`);
-    return;
-  }
+  if (!preset) return;
   await launch(preset);
 }
 
+function updateProgress(progress) {
+  const bar = elements["term-progress"];
+  const fill = elements["term-progress-fill"];
+  if (!bar || !fill) return;
+  const stateValue = progress && progress.state;
+  const value = Math.max(0, Math.min(100, Number(progress && progress.value) || 0));
+  bar.hidden = stateValue === 0 || stateValue == null;
+  bar.dataset.state = String(stateValue == null ? 0 : stateValue);
+  fill.style.width = value + "%";
+  if (stateValue === 3) {
+    bar.removeAttribute("aria-valuenow");
+  } else {
+    bar.setAttribute("aria-valuenow", String(value));
+  }
+}
+
 async function launch(preset = activePreset()) {
-  if (state.terminal || !preset) return;
+  preset = preset || activePreset();
+  if (!preset) return;
+  if (state.terminal?.preset.id === preset.id) {
+    state.terminal.handle.term.focus();
+    return;
+  }
+  const existing = state.terminals.get(preset.id);
+  if (existing) {
+    if (state.terminal) state.terminal.host.hidden = true;
+    existing.host.hidden = false;
+    state.terminal = existing;
+    existing.handle.term.focus();
+    setStatus(`Running ${preset.name}`);
+    return;
+  }
+  if (state.terminal) {
+    state.terminal.host.hidden = true;
+    state.terminal = null;
+  }
   elements["terminal-placeholder"].hidden = true;
+  elements.terminal.hidden = false;
   elements["terminal-actions"].hidden = false;
   const session = iframeSession(GearShell);
   session.create = () => GearShell.terminal.create(profileFor(preset));
@@ -296,13 +330,19 @@ async function launch(preset = activePreset()) {
     host.className = "terminal-instance";
     elements.terminal.append(host);
     const handle = await mountTerminal(host, session, {
-      terminal: { termName: "ghostty", fontSize: 13, scrollback: 12000, theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" } },
+      terminal: { termName: "ghostty", fontSize: 13, scrollback: 12000, scrollbar: { showScrollbar: false }, theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" } },
       transformInput: (data) => data.replace("\\u001bP>|xterm.js(", "\\u001bP>|ghostty("),
+      setupAddons: (term, libs) => {
+        const addon = new libs.ProgressAddon();
+        term.loadAddon(addon);
+        addon.onChange(updateProgress);
+      },
       onExit: (payload) => setStatus(payload.error ? payload.error : `Crush exited (${payload.code ?? "?"})`),
     });
     const entry = { host, handle, preset };
     state.terminals.set(preset.id, entry);
     state.terminal = entry;
+    handle.term.focus();
     setStatus(`Running ${preset.name}`);
   } catch (error) {
     elements["terminal-placeholder"].hidden = false;
@@ -329,7 +369,7 @@ function toggleFullscreen() {
   elements["terminal-frame"].classList.toggle("is-fullscreen", state.fullscreen);
 }
 
-elements["terminal-placeholder"].addEventListener("click", launch);
+elements["terminal-placeholder"].addEventListener("click", () => launch());
 elements["close-terminal"].addEventListener("click", closeTerminal);
 window.addEventListener("pagehide", disposeAllTerminals);
 elements["restart-terminal"].addEventListener("click", async () => {
