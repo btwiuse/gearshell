@@ -304,6 +304,7 @@ export const DEFAULT_PLUGINS = [
     permissions: {
       api: [
         "config.crushRunner.*",
+        "w9y.status",
         "tasks.create",
         "tasks.output",
         "events.on",

@@ -63,9 +63,16 @@ textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, SFMono
 .terminal-placeholder:hover { background: #0d1117; }
 .terminal-placeholder pre { margin: 0; padding: 22px 24px; color: #e6edf3; font: 13.5px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
 .prompt { color: #58a6ff; } .muted { color: #8b949e; }
-.terminal { position: relative; flex: 1; min-height: 420px; height: 52vh; min-width: 0; padding: 0; overflow: hidden; background: #0a0e14; }
-.terminal-instance { position: absolute; inset: 0; padding: 0; }
+.terminal { display: flex; flex: 1; min-height: 0; min-width: 0; padding: 0; overflow: hidden; background: #0a0e14; }
+.terminal-instance { display: flex; flex: 1; min-width: 0; min-height: 0; padding: 0; overflow: hidden; }
 .terminal-instance .xterm { width: 100%; height: 100%; padding: 0; }
-.terminal .xterm-viewport, .terminal .xterm-screen { background: #0a0e14; }
+.terminal-instance .xterm-viewport, .terminal-instance .xterm-screen { background: #0a0e14; }
+.term-progress { flex: none; height: 3px; background: #21262d; overflow: hidden; }
+.term-progress[hidden] { display: none; }
+.term-progress-fill { height: 100%; width: 0; background: #58a6ff; transition: width 160ms ease-out; }
+.term-progress[data-state="2"] .term-progress-fill { background: #f85149; }
+.term-progress[data-state="4"] .term-progress-fill { background: #d29922; }
+.term-progress[data-state="3"] .term-progress-fill { width: 32% !important; background: linear-gradient(90deg, transparent, #58a6ff, transparent); animation: term-progress-indeterminate 1.2s ease-in-out infinite; }
+@keyframes term-progress-indeterminate { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
 [hidden] { display: none !important; }
 @media (max-width: 700px) { .hero { display: block; padding: 22px 18px; } .status { margin-top: 12px; text-align: left; } .layout { display: block; } .sidebar { border-right: 0; border-bottom: 1px solid #263241; } .content { padding: 18px; } .form-grid { grid-template-columns: 1fr; } }
