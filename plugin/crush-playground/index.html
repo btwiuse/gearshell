@@ -51,6 +51,48 @@
 <script type="module">
 import { ghosttyIdentity, iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
 
+const CRUSH_STATE_KEY = "crush-playground:state";
+const CRUSH_BUILTINS_KEY = "crush-playground:builtins";
+const CRUSH_DEFAULT_ACTIVE_ID = "crush";
+
+// Build the page snapshot from the two generic-kv keys the host
+// owns: a read-only `crush-playground:builtins` seeded once per
+// workspace, and `crush-playground:state` (customs + activeId +
+// order) the user mutates through this UI.
+async function loadSnapshot() {
+  const [state, builtins] = await Promise.all([
+    GearShell.config.kv.get(CRUSH_STATE_KEY),
+    GearShell.config.kv.get(CRUSH_BUILTINS_KEY),
+  ]);
+  const builtinsList = Array.isArray(builtins) ? builtins : [];
+  const customs = state && Array.isArray(state.customs) ? state.customs : [];
+  const all = [...builtinsList, ...customs];
+  const order = state && Array.isArray(state.order) && state.order.length > 0
+    ? state.order
+    : all.map((preset) => preset.id);
+  const positions = new Map(order.map((id, index) => [id, index]));
+  return {
+    presets: [...all].sort((left, right) =>
+      (positions.get(left.id) ?? 0) - (positions.get(right.id) ?? 0)
+    ),
+    activeId: state && typeof state.activeId === "string"
+      ? state.activeId
+      : CRUSH_DEFAULT_ACTIVE_ID,
+    order,
+  };
+}
+
+// Patch `crush-playground:state` and return the refreshed page
+// snapshot. The iframe merges on top of whatever's already in KV,
+// so callers can change just the keys they care about (e.g. only
+// `activeId`).
+async function writeState(patch, agent = "crush-playground") {
+  const current = (await GearShell.config.kv.get(CRUSH_STATE_KEY)) || {};
+  const next = { ...current, ...patch };
+  await GearShell.config.kv.set(CRUSH_STATE_KEY, next, { agent });
+  return loadSnapshot();
+}
+
 const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), notified: new Set(), sidebarOpen: false, sidebarWidth: 240, taskTopic: false, fullscreen: false };
 const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset-rail", "sidebar", "sidebar-strip", "sidebar-toggle", "sidebar-rail-toggle", "sidebar-resize"].map((id) => [id, document.getElementById(id)]));
 
@@ -163,7 +205,7 @@ async function selectPreset(preset, editor) {
   }
   if (changed) {
     editor.hidden = true;
-    await GearShell.config.crushRunner.setActive(preset.id);
+    await writeState({ activeId: preset.id });
     // Switching presets only swaps the visible terminal (cached if
     // present, placeholder otherwise) — it does NOT start a new
     // session. The user clicks the placeholder (or a cached host's
@@ -261,7 +303,7 @@ function writeForm(preset) {
 }
 
 async function refresh() {
-  state.snapshot = await GearShell.config.crushRunner.get();
+  state.snapshot = await loadSnapshot();
   const selected = state.snapshot.presets.find((preset) => preset.id === state.selected?.id) || activePreset();
   writeForm(selected);
   renderPresets();
@@ -341,8 +383,14 @@ async function installCrush() {
 async function saveCard(event, card) {
   event.preventDefault();
   try {
-    state.snapshot = await GearShell.config.crushRunner.save(readCard(card), { active: true, agent: "crush-playground" });
-    state.selected = readCard(card);
+    const preset = readCard(card);
+    const current = state.snapshot || await loadSnapshot();
+    const customs = current.presets
+      .filter((p) => p.builtin !== true)
+      .filter((p) => p.id !== preset.id);
+    customs.push({ ...preset, builtin: false });
+    state.snapshot = await writeState({ customs, activeId: preset.id });
+    state.selected = preset;
     renderPresets();
     setStatus("Preset saved");
   } catch (error) {
@@ -352,7 +400,12 @@ async function saveCard(event, card) {
 
 async function removeCard(card) {
   try {
-    state.snapshot = await GearShell.config.crushRunner.remove(card.dataset.id, "crush-playground");
+    const id = card.dataset.id;
+    const current = state.snapshot || await loadSnapshot();
+    const customs = current.presets
+      .filter((p) => p.builtin === true || p.id !== id);
+    const nextActiveId = current.activeId === id ? undefined : current.activeId;
+    state.snapshot = await writeState({ customs, activeId: nextActiveId });
     await refresh();
     setStatus("Preset removed");
   } catch (error) {

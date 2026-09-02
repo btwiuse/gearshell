@@ -7,7 +7,7 @@
 // (iframe plugins install lazily on first panel open — see
 // addIframePanel in panels.js). The iframe template is grouped
 // here too because it's the canonical "copy me" starting point
-// that ships `config.crushRunner.*` in its example permissions
+// that ships `config.kv.*` in its example permissions
 // list — keeping it next to the real Crush keeps the example
 // honest.
 
@@ -24,7 +24,6 @@ export const CRUSH_PLUGINS = [
     },
     permissions: {
       api: [
-        "config.crushRunner.*",
         "config.kv.*",
         "w9y.status",
         "tasks.create",
@@ -90,7 +89,6 @@ export const CRUSH_PLUGINS = [
         "events.on",
         "events.off",
         "config.getShell",
-        "config.crushRunner.*",
         "config.kv.*",
         // The iframe terminal data bridge: create a kernel session and
         // stream bytes (the iframe renders xterm itself). Only add these

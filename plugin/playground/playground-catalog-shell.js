@@ -178,55 +178,9 @@ export const shellCatalog = [
         hint: "Restore the config snapshot saved before that change.",
       },
       {
-        name: "crushRunner.get",
-        args: [],
-        hint: "Read the Crush Playground snapshot — presets, active id, display order. Backed by the generic config.kv store (`crush-playground:state` + `:builtins`).",
-      },
-      {
-        name: "crushRunner.list",
-        args: [],
-        hint: "List the merged built-in and custom Crush Playground presets.",
-      },
-      {
-        name: "crushRunner.save",
-        args: [
-          {
-            key: "preset",
-            label: "Preset",
-            type: "json",
-            placeholder:
-              '{"id":"custom","name":"Custom Crush","program":"/opfs/wanix/crush","type":"gojs","env":"","wd":"/opfs/home","crushrc":""}',
-          },
-          {
-            key: "options",
-            label: "Options",
-            type: "json",
-            default: "{}",
-            placeholder: '{"active":true,"agent":"playground"}',
-          },
-        ],
-        hint: "Save or replace one custom preset; optionally make it active.",
-      },
-      {
-        name: "crushRunner.remove",
-        args: [
-          { key: "id", label: "Preset id", type: "string" },
-          { key: "agent", label: "Agent", type: "string", optional: true },
-        ],
-        hint: "Remove a custom preset; built-in presets are protected.",
-      },
-      {
-        name: "crushRunner.setActive",
-        args: [
-          { key: "id", label: "Preset id", type: "string" },
-          { key: "agent", label: "Agent", type: "string", optional: true },
-        ],
-        hint: "Set the active Crush Playground preset.",
-      },
-      {
         name: "kv.get",
         args: [{ key: "key", label: "Key", type: "string" }],
-        hint: "Read any per-workspace JSON value by key. Returns undefined when absent. Plugins opt in via `config.kv.*` permission.",
+        hint: "Read any per-workspace JSON value by key. Returns undefined when absent. Plugins opt in via `config.kv.*` permission. The Crush Playground iframe merges the `crush-playground:state` and `crush-playground:builtins` keys itself.",
       },
       {
         name: "kv.set",
