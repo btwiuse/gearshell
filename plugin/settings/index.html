@@ -34,6 +34,7 @@
     <label><input id="restore-tabs" type="checkbox"> Restore open tabs</label>
     <label><input id="wagi-dog" type="checkbox"> Show Wagi Dog</label>
     <label><input id="background-playback" type="checkbox"> Allow background playback</label>
+    <label><input id="progress-done-sound" type="checkbox"> Play sound when progress is done</label>
     <label><input id="widgetbot" type="checkbox"> Enable Widgetbot</label>
     <label>Workbench assets URL<input id="workbench-assets" type="text"></label>
     <button id="save-behavior" type="button">Save behavior</button>
@@ -419,6 +420,7 @@
       $("restore-tabs").checked = shell.restoreTabs === true;
       $("wagi-dog").checked = shell.wagiDogEnabled !== false;
       $("background-playback").checked = shell.allowBackgroundPlayback !== false;
+      $("progress-done-sound").checked = shell.playProgressDoneSound !== false;
       $("widgetbot").checked = shell.widgetbot === true;
       $("workbench-assets").value = shell.workbenchAssetsUrl || "";
       $("workspace-list").replaceChildren(...workspaces.map((item) => new Option(item.name, item.id, item.id === active.id, item.id === active.id)));
@@ -448,6 +450,7 @@
         restoreTabs: $("restore-tabs").checked,
         wagiDogEnabled: $("wagi-dog").checked,
         allowBackgroundPlayback: $("background-playback").checked,
+        playProgressDoneSound: $("progress-done-sound").checked,
         widgetbot: $("widgetbot").checked,
         workbenchAssetsUrl: $("workbench-assets").value,
       });
