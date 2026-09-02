@@ -324,7 +324,14 @@
       const title = document.createElement("strong"); title.textContent = plugin.name || plugin.id;
       const meta = document.createElement("span"); meta.textContent = `${plugin.version || ""} · ${plugin.iframe ? "iframe" : "builtin"}`;
       const actions = document.createElement("div");
-      const toggle = document.createElement("button"); toggle.type = "button"; toggle.textContent = plugin.enabled ? "Disable" : "Enable"; toggle.disabled = plugin.required === true;
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "plugin-switch";
+      toggle.setAttribute("role", "switch");
+      toggle.setAttribute("aria-checked", plugin.enabled ? "true" : "false");
+      toggle.setAttribute("aria-label", plugin.enabled ? `Disable ${plugin.name || plugin.id}` : `Enable ${plugin.name || plugin.id}`);
+      toggle.title = plugin.enabled ? `Disable ${plugin.name || plugin.id}` : `Enable ${plugin.name || plugin.id}`;
+      toggle.disabled = plugin.required === true;
       toggle.onclick = async () => { try { await call("config.plugins.setEnabled", plugin.id, !plugin.enabled); await load(); status("Plugin state saved"); } catch (error) { status(error.message || String(error), true); } };
       if (plugin.enabled && (plugin.panels || []).length > 0) {
         const open = document.createElement("button"); open.type = "button"; open.textContent = "Open"; open.title = "Open this plugin like Launcher";

@@ -41,8 +41,79 @@ body { overflow: visible; overscroll-behavior: none; }
 .resource-card { display: grid; grid-template-columns: minmax(130px, .7fr) minmax(0, 1.5fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; }
 .resource-card strong { color: #f0f6fc; overflow-wrap: anywhere; }
 .resource-card > span { color: #8b949e; overflow-wrap: anywhere; }
-.resource-card button { border: 1px solid #30363d; border-radius: 5px; padding: 5px 9px; background: #21262d; color: #c9d1d9; cursor: pointer; }
+.resource-card > button,
+.resource-card > div:last-child > button:not([role="switch"]) { border: 1px solid #30363d; border-radius: 5px; padding: 5px 9px; background: #21262d; color: #c9d1d9; cursor: pointer; }
 .resource-card > div:last-child { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+
+/* iOS-style toggle for the Plugins section: replaces the Enable/Disable
+   button pair on each plugin card. The button is a real <button
+   role="switch"> so it stays keyboard-activatable and screen-reader
+   friendly; the visual is a 36×20 track with a 16-px circular thumb
+   that slides between the off (left, grey) and on (right, accent
+   green) positions. Disabled state is reached with the standard
+   `disabled` attribute — the track dims and the thumb refuses to slide.
+
+   Specificity note: the buttons live inside .resource-card which sets
+   `background: #21262d; color: #c9d1d9; padding/border` for every
+   `.resource-card button`. To override that we use the compound
+   `.resource-card .plugin-switch` selector so the cascade falls the
+   right way regardless of rule order. */
+.resource-card .plugin-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex: 0 0 auto;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  vertical-align: middle;
+  -webkit-tap-highlight-color: transparent;
+  /* Push the (empty) button text out of the visible area so the
+     track+thumb combo does all the visual work. `font-size: 0` would
+     zero the line box and collapse the button height to 0, which is
+     why this uses overflow + text-indent instead. */
+  overflow: hidden;
+  text-indent: -9999px;
+  color: transparent;
+}
+.resource-card .plugin-switch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #30363d;
+  transition: background-color 0.15s ease;
+}
+.resource-card .plugin-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #c9d1d9;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.resource-card .plugin-switch[aria-checked="true"]::before { background: #2da44e; }
+.resource-card .plugin-switch[aria-checked="true"]::after {
+  transform: translateX(16px);
+  background: #ffffff;
+}
+.resource-card .plugin-switch:focus-visible {
+  outline: 2px solid #58a6ff;
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+.resource-card .plugin-switch[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.resource-card .plugin-switch[disabled]::after { background: #6e7681; }
 .editor-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; }
 .editor-form input, .editor-form select, .editor-form textarea { min-width: 0; padding: 7px 9px; border: 1px solid #30363d; border-radius: 5px; background: #161b22; color: #c9d1d9; font: inherit; }
 .icon-picker { display: grid; grid-template-columns: 42px minmax(0, 1fr) minmax(150px, 1fr); grid-column: span 2; gap: 8px; align-items: center; }
