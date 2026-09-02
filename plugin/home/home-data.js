@@ -50,7 +50,7 @@ export const steps = [
   {
     n: "03",
     h: "Browser-native shell",
-    p: "xterm.js-driven PTY, tiling window manager, and a built-in browser. CLI agents like Claude Code or Crush run unmodified.",
+    p: "xterm.js-driven PTY, tiling workspace, and a built-in browser. CLI agents like Claude Code or Crush run unmodified.",
   },
 ];
 
