@@ -25,6 +25,7 @@ import {
 import { nextPanelIndex } from "./app-panel-ids.js";
 import {
   getPluginBootPromise,
+  getEmptyGridPanel,
   listOverlays,
   PLUGIN_CHANGED_EVENT,
 } from "./plugins.js";
@@ -74,7 +75,9 @@ function handlePanelRemoved(api, panel) {
     destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
   }
   forgetOpenPanel(panel.id);
-  // Empty-workspace fallback: open the first plugin panel that opted
+}
+
+// Empty-workspace fallback: open the first plugin panel that opted
 // in via `registerPanel({ emptyGrid: true })` (default-page by default;
 // launcher if the user re-enables it). Skipped silently when no
 // plugin provides one, so a user who disables both defaults sees an
@@ -84,11 +87,6 @@ function openEmptyGridFallback(api) {
   if (!provider) return null;
   if (provider.open) return provider.open(api);
   return addPanelByComponent(api, provider.component);
-}
-
-requestAnimationFrame(() => {
-    if (api.panels.length === 0) openEmptyGridFallback(api);
-  });
 }
 
 function trackActivePanel(api) {
@@ -197,7 +195,6 @@ function tabContextMenuItems({ panel, api }) {
 
 // dockview-enterprise features are opt-in options (the module is
 // "dockview-enterprise"` side-effect import in app.js).
-import { getEmptyGridPanel } from "./plugins.js";
 function dockviewOptions(onReady) {
   return {
     className: "dockview-theme-github-dark",
