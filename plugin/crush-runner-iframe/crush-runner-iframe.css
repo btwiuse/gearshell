@@ -4,12 +4,13 @@ body { background: #0d1117; color: #c9d1d9; font: 14px -apple-system, BlinkMacSy
 * { box-sizing: border-box; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-.hero { display: flex; justify-content: space-between; gap: 20px; padding: 28px 32px 22px; border-bottom: 1px solid #263241; background: linear-gradient(135deg, #111b2a, #0d1117); }
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 32px; border-bottom: 1px solid #263241; background: linear-gradient(135deg, #111b2a, #0d1117); }
+.hero-title { display: flex; align-items: center; gap: 12px; }
+.hero-logo { width: 36px; height: 36px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
 .eyebrow { margin: 0 0 5px; color: #58a6ff; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; }
 h1, h2 { margin: 0; color: #f0f6fc; }
-h1 { font-size: 26px; }
+h1 { font-size: 24px; }
 h2 { font-size: 15px; }
-.lede { max-width: 650px; margin: 8px 0 0; color: #8b949e; }
 .status { align-self: center; color: #8b949e; text-align: right; }
 .status[data-error="true"] { color: #ff7b72; }
 .layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: calc(100% - 125px); }
@@ -38,7 +39,6 @@ h2 { font-size: 15px; }
 .preset-actions .danger { color: #ff7b72; }
 .preset-actions button:disabled { opacity: .45; cursor: not-allowed; }
 .content { min-width: 0; padding: 24px 30px 40px; }
-.content-hint { margin: 0 0 18px; color: #8b949e; }
 .banner { margin-bottom: 18px; padding: 11px 14px; border: 1px solid #8b6d2c; border-radius: 6px; color: #e3b341; background: #211b0b; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
 label { display: grid; gap: 6px; margin-bottom: 16px; color: #8b949e; font-size: 12px; }

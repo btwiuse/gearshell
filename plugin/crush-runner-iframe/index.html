@@ -3,17 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Crush Runner</title>
+<title>Crush Playground</title>
 <link rel="stylesheet" href="/plugin/crush-runner-iframe/crush-runner-iframe.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css" />
 </head>
 <body>
 <div id="app">
   <header class="hero">
-    <div>
-      <p class="eyebrow">GearShell plugin</p>
-      <h1>Crush Runner</h1>
-      <p class="lede">Configure a Crush profile, mount its private crushrc, and launch it in a live terminal.</p>
+    <div class="hero-title">
+      <img class="hero-logo" src="/plugin/crush-runner-iframe/assets/crush-icon.png" alt="" />
+      <h1>Crush Playground</h1>
     </div>
     <div class="status" id="status" role="status" aria-live="polite">Loading Crush status…</div>
   </header>
@@ -24,7 +23,6 @@
     </aside>
     <section class="content">
       <div id="install-banner" class="banner" hidden></div>
-      <p class="content-hint">Expand a preset to edit it. Use the play button on any card to open that configuration in the terminal.</p>
       <section class="terminal-frame" id="terminal-frame">
         <div class="terminal-bar">
           <span class="terminal-dot terminal-dot-red"></span><span class="terminal-dot terminal-dot-yellow"></span><span class="terminal-dot terminal-dot-green"></span>
@@ -142,12 +140,52 @@ async function selectPreset(preset, editor) {
   if (changed) {
     editor.hidden = true;
     await GearShell.config.crushRunner.setActive(preset.id);
-    await switchTerminal(preset);
+    // Switching presets only swaps the visible terminal (cached if
+    // present, placeholder otherwise) — it does NOT start a new
+    // session. The user clicks the placeholder (or a cached host's
+    // own restart button) to actually launch Crush.
+    switchPresetView(preset);
     return;
   }
   editor.hidden = !editor.hidden;
   editor.closest(".preset-card").querySelector(".preset-toggle")
     .setAttribute("aria-expanded", String(!editor.hidden));
+}
+
+// Show a preset's view: re-attach its cached terminal if any, or
+// show the placeholder. Does not create a new session — call
+// launch() for that.
+function switchPresetView(preset) {
+  if (!preset) return;
+  clearPresetChime(preset.id);
+  if (state.terminal && state.terminal.preset.id !== preset.id) {
+    state.terminal.host.hidden = true;
+  }
+  const cached = state.terminals.get(preset.id);
+  if (cached) {
+    if (!cached.host.parentNode) elements.terminal.append(cached.host);
+    cached.host.hidden = false;
+    state.terminal = cached;
+    requestAnimationFrame(() => {
+      try { cached.handle.fitTerminal?.(); } catch {}
+      try { cached.handle.term.focus(); } catch {}
+    });
+    elements["terminal-placeholder"].hidden = true;
+    elements.terminal.hidden = false;
+    elements["terminal-actions"].hidden = false;
+    setStatus(`Running ${preset.name}`);
+  } else {
+    // No session yet for this preset — show the placeholder and let
+    // the user start one with a click.
+    state.terminal = null;
+    for (const host of Array.from(elements.terminal.querySelectorAll(".terminal-instance"))) {
+      host.hidden = true;
+    }
+    elements.terminal.hidden = true;
+    elements["terminal-placeholder"].hidden = false;
+    elements["terminal-actions"].hidden = true;
+    setStatus("Idle");
+  }
 }
 
 function renderPresets() {
