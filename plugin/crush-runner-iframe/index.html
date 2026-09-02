@@ -44,7 +44,7 @@
 <script type="module">
 import { ghosttyIdentity, iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
 
-const state = { snapshot: null, selected: null, terminal: null, taskTopic: false, fullscreen: false };
+const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), notified: new Set(), taskTopic: false, fullscreen: false };
 const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
 
 function setStatus(message, error = false) {
@@ -105,6 +105,32 @@ function setCardSelected(id) {
   }
 }
 
+function setPresetDot(presetId, on) {
+  const card = elements["preset-list"].querySelector(`.preset-card[data-id="${presetId}"]`);
+  const dot = card && card.querySelector(".preset-dot");
+  if (dot) dot.hidden = !on;
+}
+
+function setPresetLive(presetId, on) {
+  const head = elements["preset-list"].querySelector(
+    `.preset-card[data-id="${presetId}"] .preset-head`
+  );
+  if (head) head.classList.toggle("preset-live", on);
+}
+
+function markPresetChime(presetId) {
+  // If the user is already looking at this preset's terminal, the
+  // chime itself is the signal — no need to mark the card.
+  if (state.terminal?.preset.id === presetId) return;
+  state.notified.add(presetId);
+  setPresetDot(presetId, true);
+}
+
+function clearPresetChime(presetId) {
+  state.notified.delete(presetId);
+  setPresetDot(presetId, false);
+}
+
 async function selectPreset(preset, editor) {
   const changed = state.snapshot.activeId !== preset.id;
   state.selected = preset;
@@ -124,28 +150,17 @@ async function selectPreset(preset, editor) {
     .setAttribute("aria-expanded", String(!editor.hidden));
 }
 
-async function activatePreset(preset) {
-  state.selected = preset;
-  state.snapshot.activeId = preset.id;
-  setCardSelected(preset.id);
-  await GearShell.config.crushRunner.setActive(preset.id);
-  await switchTerminal(preset);
-}
-
 function renderPresets() {
   elements["preset-list"].textContent = "";
   for (const preset of state.snapshot?.presets || []) {
     const card = document.createElement("article");
     card.className = "preset-card" + (preset.id === state.snapshot.activeId ? " selected" : "");
     card.dataset.id = preset.id;
-    card.innerHTML = `<div class="preset-head"><button class="preset-toggle" type="button" aria-expanded="false"><span class="preset-icon">${presetIconSvg(preset.icon)}</span><span>${escapeHtml(preset.name)}</span></button><button class="preset-play" type="button" title="Open ${escapeHtml(preset.name)} in terminal" aria-label="Play ${escapeHtml(preset.name)}">▶</button></div><div class="preset-editor" hidden><form class="preset-form">${presetFields(preset)}<div class="preset-actions"><button class="save-preset" type="submit">Save</button><button class="remove-preset danger" type="button" ${preset.builtin ? "disabled" : ""}>Remove</button></div></form></div>`;
+        card.innerHTML = `<div class="preset-head${state.terminals.has(preset.id) ? " preset-live" : ""}"><button class="preset-toggle" type="button" aria-expanded="false"><span class="preset-icon">${presetIconSvg(preset.icon)}</span><span>${escapeHtml(preset.name)}</span></button><span class="preset-dot"${state.notified.has(preset.id) ? "" : " hidden"}></span></div><div class="preset-editor" hidden><form class="preset-form">${presetFields(preset)}<div class="preset-actions"><button class="save-preset" type="submit">Save</button><button class="remove-preset danger" type="button" ${preset.builtin ? "disabled" : ""}>Remove</button></div></form></div>`;
     card.querySelector('[data-field="type"]').value = preset.type || "gojs";
     const editor = card.querySelector(".preset-editor");
     card.querySelector(".preset-toggle").addEventListener("click", () => {
       selectPreset(preset, editor).catch(showError);
-    });
-    card.querySelector(".preset-play").addEventListener("click", () => {
-      activatePreset(readCard(card)).catch(showError);
     });
     card.querySelector(".preset-form").addEventListener("submit", (event) => saveCard(event, card));
     card.querySelector(".remove-preset").addEventListener("click", () => removeCard(card));
@@ -303,17 +318,45 @@ function renderProgress(progress, bar, fill) {
 async function launch(preset = activePreset()) {
   preset = preset || activePreset();
   if (!preset) return;
-  // Tear down the existing terminal instance before mounting a new
-  // one. Caching hidden siblings inside #terminal compresses the
-  // active host into a fraction of the available flex width, and a
-  // cached host whose parentNode has been removed would silently fail
-  // to re-show on a later switch.
-  if (state.terminal) {
-    try { state.terminal.handle.dispose(); } catch {}
-    const oldHost = state.terminal.host;
-    state.terminal = null;
-    if (oldHost && oldHost.parentNode) oldHost.parentNode.removeChild(oldHost);
+  // Switching to this preset — clear any pending "agent finished" dot
+  // for it. The chime itself is the notification for the case where
+  // the preset is already active (handled inside markPresetChime).
+  clearPresetChime(preset.id);
+  // Already showing this preset — just focus it.
+  if (state.terminal?.preset.id === preset.id) {
+    requestAnimationFrame(() => state.terminal.handle.term.focus());
+    return;
   }
+  // Hide the current terminal host before showing anything else, so
+  // #terminal never holds two visible .terminal-instance siblings
+  // (which its default flex-direction:row would lay out side by
+  // side). The cached handle stays alive with its session + xterm +
+  // scrollback; we only detach it from the flex layout.
+  if (state.terminal) {
+    state.terminal.host.hidden = true;
+  }
+  // A cached session for this preset still exists — switch back to it
+  // without tearing the kernel session down.
+  const cached = state.terminals.get(preset.id);
+  if (cached) {
+    elements["terminal-placeholder"].hidden = true;
+    elements.terminal.hidden = false;
+    elements["terminal-actions"].hidden = false;
+    // If the host was detached (e.g. by closeTerminal) re-append it.
+    if (!cached.host.parentNode) elements.terminal.append(cached.host);
+    cached.host.hidden = false;
+    state.terminal = cached;
+    // Defer focus + fit until after layout flushes, otherwise
+    // xterm.focus() on a host that just went from display:none to
+    // flex has no measurable size yet and the textarea grab misses.
+    requestAnimationFrame(() => {
+      try { cached.handle.fitTerminal?.(); } catch {}
+      try { cached.handle.term.focus(); } catch {}
+    });
+    setStatus(`Running ${preset.name}`);
+    return;
+  }
+  // Nothing cached — mount a fresh terminal for this preset.
   elements["terminal-placeholder"].hidden = true;
   elements.terminal.hidden = false;
   elements["terminal-actions"].hidden = false;
@@ -322,6 +365,7 @@ async function launch(preset = activePreset()) {
   try {
     const host = document.createElement("div");
     host.className = "terminal-instance";
+    host.hidden = false;
     const progressBar = document.createElement("div");
     progressBar.className = "term-progress";
     progressBar.hidden = true;
@@ -337,10 +381,14 @@ async function launch(preset = activePreset()) {
         term.loadAddon(addon);
         addon.onChange((progress) => renderProgress(progress, progressBar, progressFill));
       },
+      onProgressDone: () => markPresetChime(preset.id),
       onExit: (payload) => setStatus(payload.error ? payload.error : `Crush exited (${payload.code ?? "?"})`),
     });
-    state.terminal = { host, handle, preset };
-    handle.term.focus();
+    const entry = { host, handle, preset };
+    state.terminals.set(preset.id, entry);
+    state.terminal = entry;
+    setPresetLive(preset.id, true);
+    requestAnimationFrame(() => handle.term.focus());
     setStatus(`Running ${preset.name}`);
   } catch (error) {
     elements["terminal-placeholder"].hidden = false;
@@ -354,9 +402,12 @@ async function closeTerminal() {
   // placeholder. The user can re-open the same preset (or a different
   // one) by clicking the placeholder or another preset card.
   if (!state.terminal) return;
+  const presetId = state.terminal.preset.id;
   try {
     state.terminal.handle.dispose();
   } catch {}
+  state.terminals.delete(presetId);
+  setPresetLive(presetId, false);
   const oldHost = state.terminal.host;
   state.terminal = null;
   if (oldHost && oldHost.parentNode) oldHost.parentNode.removeChild(oldHost);
@@ -365,12 +416,14 @@ async function closeTerminal() {
 }
 
 function disposeAllTerminals() {
-  if (state.terminal) {
-    try { state.terminal.handle.dispose(); } catch {}
-    const oldHost = state.terminal.host;
-    state.terminal = null;
-    if (oldHost && oldHost.parentNode) oldHost.parentNode.removeChild(oldHost);
+  for (const entry of state.terminals.values()) {
+    try { entry.handle.dispose(); } catch {}
+    if (entry.host && entry.host.parentNode) entry.host.parentNode.removeChild(entry.host);
   }
+  state.terminals.clear();
+  state.terminal = null;
+  elements["terminal-placeholder"].hidden = false;
+  elements["terminal-actions"].hidden = true;
 }
 
 function toggleFullscreen() {

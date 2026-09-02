@@ -20,7 +20,10 @@ h2 { font-size: 15px; }
 #preset-list { display: grid; gap: 8px; }
 .preset-card { overflow: hidden; border: 1px solid #263241; border-radius: 7px; background: #111821; }
 .preset-card.selected { border-color: #2f81f7; }
-.preset-head { padding: 4px; }
+.preset-dot { position: absolute; top: 13px; right: 12px; width: 9px; height: 9px; border-radius: 50%; background: #58a6ff; box-shadow: 0 0 0 2px #111821; }
+.preset-dot[hidden] { display: none; }
+.preset-head { padding: 4px; position: relative; }
+.preset-head.preset-live .preset-toggle { font-weight: 600; color: #e6edf3; }
 .preset-toggle, .preset-play { border: 0; color: #c9d1d9; background: transparent; cursor: pointer; }
 .preset-toggle { display: flex; align-items: center; min-width: 0; flex: 1; gap: 8px; padding: 7px 6px; text-align: left; }
 .preset-icon { display: inline-flex; width: 16px; height: 16px; color: #8b949e; }

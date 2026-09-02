@@ -34,6 +34,7 @@
 //     setupAddons: (term, libs) => {},                   // extra addon setup (called last)
 //     onData: (bytes) => {},                             // observe each output chunk
 //     onExit: (payload) => {},                           // observe session exit
+//     onProgressDone: () => {},                          // fired when the agent finishes a turn (before the chime)
 //     exitMessage: "\x1b[33m[Process exited]\x1b[0m",      // line on exit; false to skip
 //   });
 
@@ -229,6 +230,7 @@ export async function mountTerminal(anchor, session, options = {}) {
         if (chimeTimer == null) {
           chimeTimer = setTimeout(() => {
             chimeTimer = null;
+            options.onProgressDone?.();
             playChime("done");
           }, 400);
         }
@@ -269,6 +271,21 @@ export async function mountTerminal(anchor, session, options = {}) {
     term,
     fit,
     sessionId,
+    // Resize the terminal to its current container. Wrapped in a
+    // closure so callers do not depend on which xterm FitAddon version
+    // is loaded (older ones expose fit.fit, newer ones expose
+    // proposeDimensions + term.resize). The implementation also no-throws
+    // so a partially-torn-down handle does not break the caller.
+    fitTerminal() {
+      try {
+        if (typeof fit?.fit === "function") {
+          fit.fit();
+        } else if (typeof fit?.proposeDimensions === "function" && term?.resize) {
+          const dims = fit.proposeDimensions();
+          if (dims) term.resize(dims.cols || 80, dims.rows || 24);
+        }
+      } catch {}
+    },
     dispose: () => {
       observer.disconnect();
       window.removeEventListener("resize", refitAndResize);
