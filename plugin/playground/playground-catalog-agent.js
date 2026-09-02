@@ -15,6 +15,38 @@ export const agentCatalog = [
       { name: "write", args: [{ key: "id", label: "Session id", type: "string" }, { key: "data", label: "Data", type: "json", default: '"ls\\n"' }], hint: "Write input data to a terminal session." },
       { name: "resize", args: [{ key: "id", label: "Session id", type: "string" }, { key: "cols", label: "Columns", type: "number", default: "80" }, { key: "rows", label: "Rows", type: "number", default: "24" }], hint: "Update terminal dimensions." },
       { name: "dispose", args: [{ key: "id", label: "Session id", type: "string" }], hint: "Dispose a terminal session." },
+      {
+        name: "onData",
+        args: [
+          { key: "id", label: "Session id", type: "string" },
+          { key: "listener", label: "Listener", type: "handler" },
+        ],
+        hint: "Subscribe to terminal output. The Explorer registers a no-op handler.",
+      },
+      {
+        name: "offData",
+        args: [
+          { key: "id", label: "Session id", type: "string" },
+          { key: "listener", label: "Listener", type: "handler" },
+        ],
+        hint: "Unsubscribe a terminal output handler.",
+      },
+      {
+        name: "onExit",
+        args: [
+          { key: "id", label: "Session id", type: "string" },
+          { key: "listener", label: "Listener", type: "handler" },
+        ],
+        hint: "Subscribe to terminal exit events. The Explorer registers a no-op handler.",
+      },
+      {
+        name: "offExit",
+        args: [
+          { key: "id", label: "Session id", type: "string" },
+          { key: "listener", label: "Listener", type: "handler" },
+        ],
+        hint: "Unsubscribe a terminal exit handler.",
+      },
     ],
   },
   {

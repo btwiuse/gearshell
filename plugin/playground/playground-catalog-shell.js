@@ -224,6 +224,266 @@ export const shellCatalog = [
         hint: "List all kv keys (optionally filtered by prefix), sorted.",
       },
       {
+        name: "reset",
+        args: [],
+        hint: "Reset the active workspace shell configuration to defaults.",
+      },
+      {
+        name: "workspace.list",
+        args: [],
+        hint: "List workspaces.",
+      },
+      {
+        name: "workspace.getActive",
+        args: [],
+        hint: "Read the active workspace.",
+      },
+      {
+        name: "workspace.getActiveId",
+        args: [],
+        hint: "Read the active workspace id.",
+      },
+      {
+        name: "workspace.ensure",
+        args: [],
+        hint: "Ensure the workspace store exists.",
+      },
+      {
+        name: "workspace.select",
+        args: [{ key: "id", label: "Workspace id", type: "string" }],
+        hint: "Select the active workspace.",
+      },
+      {
+        name: "workspace.rename",
+        args: [
+          { key: "id", label: "Workspace id", type: "string" },
+          { key: "name", label: "Name", type: "string" },
+        ],
+        hint: "Rename a workspace.",
+      },
+      {
+        name: "workspace.createFromPreset",
+        args: [{ key: "presetId", label: "Preset id", type: "string" }],
+        hint: "Create a workspace from a preset.",
+      },
+      {
+        name: "workspace.duplicate",
+        args: [{ key: "id", label: "Workspace id", type: "string" }],
+        hint: "Duplicate a workspace.",
+      },
+      {
+        name: "workspace.delete",
+        args: [{ key: "id", label: "Workspace id", type: "string" }],
+        hint: "Delete a workspace.",
+      },
+      {
+        name: "workspace.parse",
+        args: [{ key: "serialized", label: "Workspace JSON", type: "string" }],
+        hint: "Parse and normalize workspace JSON.",
+      },
+      {
+        name: "workspace.import",
+        args: [{ key: "serialized", label: "Workspace JSON", type: "string" }],
+        hint: "Import workspace JSON as a new workspace.",
+      },
+      {
+        name: "workspace.replaceActive",
+        args: [{ key: "serialized", label: "Workspace JSON", type: "string" }],
+        hint: "Replace the active workspace with workspace JSON.",
+      },
+      {
+        name: "workspace.uniqueName",
+        args: [
+          { key: "name", label: "Name", type: "string" },
+          { key: "excludedId", label: "Excluded id", type: "string", optional: true },
+        ],
+        hint: "Find an unused workspace name.",
+      },
+      {
+        name: "presets.list",
+        args: [],
+        hint: "List workspace presets.",
+      },
+      {
+        name: "presets.getCustom",
+        args: [{ key: "id", label: "Preset id", type: "string" }],
+        hint: "Read a custom workspace preset.",
+      },
+      {
+        name: "presets.saveCustom",
+        args: [
+          { key: "preset", label: "Preset", type: "json", default: "{}" },
+        ],
+        hint: "Save a custom workspace preset.",
+      },
+      {
+        name: "presets.removeCustom",
+        args: [{ key: "id", label: "Preset id", type: "string" }],
+        hint: "Remove a custom workspace preset.",
+      },
+      {
+        name: "presets.uniqueName",
+        args: [{ key: "name", label: "Name", type: "string" }],
+        hint: "Find an unused workspace preset name.",
+      },
+      {
+        name: "binds.list",
+        args: [],
+        hint: "List workspace task binds.",
+      },
+      {
+        name: "binds.add",
+        args: [{ key: "bind", label: "Bind", type: "json", default: "{}" }],
+        hint: "Add a workspace task bind.",
+      },
+      {
+        name: "binds.update",
+        args: [
+          { key: "id", label: "Bind id", type: "string" },
+          { key: "bind", label: "Bind", type: "json", default: "{}" },
+        ],
+        hint: "Update a workspace task bind.",
+      },
+      {
+        name: "binds.remove",
+        args: [{ key: "id", label: "Bind id", type: "string" }],
+        hint: "Remove a workspace task bind.",
+      },
+      {
+        name: "binds.reorder",
+        args: [{ key: "ids", label: "Bind ids", type: "json", default: "[]" }],
+        hint: "Reorder workspace task binds.",
+      },
+      {
+        name: "binds.set",
+        args: [{ key: "binds", label: "Binds", type: "json", default: "[]" }],
+        hint: "Replace workspace task binds.",
+      },
+      {
+        name: "binds.systemList",
+        args: [],
+        hint: "List shared system binds.",
+      },
+      {
+        name: "binds.systemAdd",
+        args: [{ key: "bind", label: "Bind", type: "json", default: "{}" }],
+        hint: "Add a shared system bind.",
+      },
+      {
+        name: "binds.systemUpdate",
+        args: [
+          { key: "id", label: "Bind id", type: "string" },
+          { key: "bind", label: "Bind", type: "json", default: "{}" },
+        ],
+        hint: "Update a shared system bind.",
+      },
+      {
+        name: "binds.systemRemove",
+        args: [{ key: "id", label: "Bind id", type: "string" }],
+        hint: "Remove a shared system bind.",
+      },
+      {
+        name: "binds.systemReorder",
+        args: [{ key: "ids", label: "Bind ids", type: "json", default: "[]" }],
+        hint: "Reorder shared system binds.",
+      },
+      {
+        name: "binds.systemSet",
+        args: [{ key: "binds", label: "Binds", type: "json", default: "[]" }],
+        hint: "Replace shared system binds.",
+      },
+      {
+        name: "tasks.list",
+        args: [],
+        hint: "List saved workspace tasks.",
+      },
+      {
+        name: "tasks.add",
+        args: [{ key: "task", label: "Task", type: "json", default: "{}" }],
+        hint: "Add a saved workspace task.",
+      },
+      {
+        name: "tasks.update",
+        args: [
+          { key: "id", label: "Task id", type: "string" },
+          { key: "task", label: "Task", type: "json", default: "{}" },
+        ],
+        hint: "Update a saved workspace task.",
+      },
+      {
+        name: "tasks.remove",
+        args: [{ key: "id", label: "Task id", type: "string" }],
+        hint: "Remove a saved workspace task.",
+      },
+      {
+        name: "tasks.set",
+        args: [{ key: "tasks", label: "Tasks", type: "json", default: "[]" }],
+        hint: "Replace saved workspace tasks.",
+      },
+      {
+        name: "terminalIcons.list",
+        args: [],
+        hint: "List icons available for Console profiles.",
+      },
+      {
+        name: "terminalProfiles.list",
+        args: [],
+        hint: "List normalized Console profiles.",
+      },
+      {
+        name: "terminalProfiles.save",
+        args: [{ key: "profiles", label: "Profiles", type: "json", default: "[]" }],
+        hint: "Save Console profiles.",
+      },
+      {
+        name: "terminalProfiles.normalize",
+        args: [{ key: "profile", label: "Profile", type: "json", default: "{}" }],
+        hint: "Normalize a Console profile without saving it.",
+      },
+      {
+        name: "terminalProfiles.normalizeOrder",
+        args: [{ key: "order", label: "Profile ids", type: "json", default: "[]" }],
+        hint: "Normalize Console profile ordering.",
+      },
+      {
+        name: "terminalProfiles.command",
+        args: [{ key: "profile", label: "Profile", type: "json", default: "{}" }],
+        hint: "Build the command specification for a Console profile.",
+      },
+      {
+        name: "launcher.normalizeOrder",
+        args: [{ key: "order", label: "Component ids", type: "json", default: "[]" }],
+        hint: "Normalize launcher ordering.",
+      },
+      {
+        name: "runtimeDefaults",
+        args: [],
+        hint: "Read the built-in Wanix runtime defaults.",
+      },
+      {
+        name: "plugins.list",
+        args: [],
+        hint: "List installed plugins and enabled state.",
+      },
+      {
+        name: "plugins.install",
+        args: [{ key: "manifest", label: "Manifest", type: "json", default: "{}" }],
+        hint: "Install a plugin from a manifest.",
+      },
+      {
+        name: "plugins.remove",
+        args: [{ key: "id", label: "Plugin id", type: "string" }],
+        hint: "Remove an installed plugin.",
+      },
+      {
+        name: "plugins.setEnabled",
+        args: [
+          { key: "id", label: "Plugin id", type: "string" },
+          { key: "enabled", label: "Enabled", type: "boolean", default: true },
+        ],
+        hint: "Enable or disable an installed plugin.",
+      },
+      {
         name: "providers.list",
         args: [],
         hint: "Model providers; apiKey is returned empty with hasApiKey.",
