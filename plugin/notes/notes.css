@@ -1,0 +1,873 @@
+/* notes.css — Apple Notes visual style for the Notes iframe plugin.
+   Three-pane layout (sidebar / list / editor) over the warm #fbf9f4
+   background Apple Notes uses on macOS. System font stack, soft
+   shadows, hairline borders — the same visual rhythm as the shell's
+   panel chrome so the iframe feels native rather than webby. */
+
+* { box-sizing: border-box; }
+
+html, body, #app {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+input, textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  padding: 0;
+}
+
+textarea {
+  resize: none;
+}
+
+/* --- Layout shell --- */
+.notes-shell {
+  display: grid;
+  grid-template-columns: 240px 320px 1fr;
+  height: 100vh;
+  background: #fbf9f4;
+  color: #2c2a26;
+}
+
+/* --- Sidebar (left) --- */
+.sidebar {
+  background: linear-gradient(180deg, #efece5 0%, #e9e6df 100%);
+  border-right: 1px solid rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 18px 14px;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-brand-icon {
+  color: #d49a3a;
+}
+
+.sidebar-brand-title {
+  font-size: 17px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 8px 12px;
+}
+
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(44, 42, 38, 0.55);
+}
+
+.sidebar-item,
+.folder-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: left;
+  color: #2c2a26;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.sidebar-item:hover,
+.folder-row:hover .folder-row-main {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-item.is-active,
+.folder-row.is-active .folder-row-main {
+  background: #f5c143;
+  color: #1a1a1a;
+}
+
+.sidebar-item.is-active .sidebar-item-icon,
+.folder-row.is-active .sidebar-item-icon {
+  color: #1a1a1a;
+}
+
+.sidebar-item-icon {
+  flex: 0 0 auto;
+  color: rgba(44, 42, 38, 0.55);
+}
+
+.sidebar-item.is-active .sidebar-item-icon,
+.folder-row.is-active .sidebar-item-icon {
+  color: #1a1a1a;
+}
+
+.sidebar-item-label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item-count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: rgba(44, 42, 38, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar-item.is-active .sidebar-item-count,
+.folder-row.is-active .sidebar-item-count {
+  color: rgba(26, 26, 26, 0.7);
+}
+
+.folder-row {
+  position: relative;
+}
+
+.folder-row-actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  gap: 2px;
+  padding: 2px;
+  background: rgba(245, 193, 67, 0.95);
+  border-radius: 6px;
+}
+
+.folder-row:hover .folder-row-actions {
+  display: flex;
+}
+
+.folder-rename {
+  flex: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: rgba(44, 42, 38, 0.55);
+  transition: background 100ms ease, color 100ms ease;
+}
+
+.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #2c2a26;
+}
+
+.folder-row.is-active .icon-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.icon-btn.is-pinned {
+  color: #d49a3a;
+}
+
+/* --- Note list (middle) --- */
+.note-list {
+  background: #f6f3ec;
+  border-right: 1px solid rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.note-list-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.note-list-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.note-list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+  padding: 4px 8px 4px 26px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  color: rgba(44, 42, 38, 0.5);
+}
+
+.search-input {
+  flex: 1;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: rgba(44, 42, 38, 0.45);
+}
+
+.search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  color: #fff;
+}
+
+.compose-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #f5c143;
+  color: #1a1a1a;
+  transition: background 100ms ease;
+}
+
+.compose-btn:hover {
+  background: #f0b830;
+}
+
+.note-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.note-row {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-left: 3px solid transparent;
+  transition: background 100ms ease;
+  cursor: pointer;
+}
+
+.note-row:hover {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.note-row.is-active {
+  background: #f5c143;
+  border-left-color: #1a1a1a;
+}
+
+.note-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.note-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pin-mini {
+  color: #d49a3a;
+  flex: 0 0 auto;
+}
+
+.note-row.is-active .pin-mini {
+  color: #1a1a1a;
+}
+
+.note-row-time {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: rgba(44, 42, 38, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.note-row.is-active .note-row-time {
+  color: rgba(26, 26, 26, 0.7);
+}
+
+.note-row-preview {
+  font-size: 12px;
+  color: rgba(44, 42, 38, 0.65);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-row.is-active .note-row-preview {
+  color: rgba(26, 26, 26, 0.85);
+}
+
+.note-row-meta {
+  margin-top: 6px;
+}
+
+.note-row-folder {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(44, 42, 38, 0.5);
+}
+
+.note-row.is-active .note-row-folder {
+  color: rgba(26, 26, 26, 0.65);
+}
+
+/* --- Editor (right) --- */
+.editor {
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.empty-editor {
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 24px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.editor-time {
+  font-size: 11px;
+  color: rgba(44, 42, 38, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.editor-title {
+  flex: 0 0 auto;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 16px 24px 8px;
+  width: 100%;
+  color: #1a1a1a;
+}
+
+.editor-title::placeholder {
+  color: rgba(44, 42, 38, 0.35);
+}
+
+.editor-body {
+  flex: 1;
+  padding: 0 24px 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #2c2a26;
+  overflow-y: auto;
+}
+
+.editor-body::placeholder {
+  color: rgba(44, 42, 38, 0.35);
+}
+
+.editor-footer {
+  padding: 8px 24px 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.editor-meta {
+  font-size: 11px;
+  color: rgba(44, 42, 38, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Empty states --- */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(44, 42, 38, 0.45);
+  text-align: center;
+  padding: 24px;
+}
+
+.empty-icon {
+  margin-bottom: 12px;
+  color: rgba(44, 42, 38, 0.25);
+}
+
+.empty-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(44, 42, 38, 0.7);
+}
+
+.empty-hint {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(44, 42, 38, 0.5);
+}
+
+.empty-bridge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #fbf9f4;
+  text-align: center;
+  padding: 32px;
+}
+
+.empty-bridge-icon {
+  color: #d49a3a;
+  margin-bottom: 16px;
+}
+
+.empty-bridge h2 {
+  margin: 0 0 8px;
+  font-weight: 600;
+  font-size: 18px;
+  color: #2c2a26;
+}
+
+.empty-bridge p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: rgba(44, 42, 38, 0.65);
+  max-width: 420px;
+}
+
+.empty-bridge code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.loading-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #fbf9f4;
+  color: rgba(44, 42, 38, 0.55);
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-top-color: #d49a3a;
+  border-radius: 50%;
+  animation: notes-spin 800ms linear infinite;
+}
+
+@keyframes notes-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Notice (toast) --- */
+.notice {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  animation: notes-slide-in 180ms ease;
+}
+
+.notice-ok {
+  background: #2c2a26;
+  color: #fbf9f4;
+}
+
+.notice-error {
+  background: #c44141;
+  color: #fff;
+}
+
+@keyframes notes-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Dark theme: respect the OS preference so the iframe matches the
+   shell when the user has dark mode on. Apple Notes auto-does the
+   same thing; mirror that. --- */
+@media (prefers-color-scheme: dark) {
+  .notes-shell {
+    background: #1c1c1e;
+    color: #f2f2f7;
+  }
+  .sidebar {
+    background: linear-gradient(180deg, #232325 0%, #1c1c1e 100%);
+    border-right-color: rgba(255, 255, 255, 0.08);
+  }
+  .sidebar-section-header,
+  .sidebar-item,
+  .folder-row-main {
+    color: #f2f2f7;
+  }
+  .sidebar-item:hover,
+  .folder-row:hover .folder-row-main {
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .sidebar-item-icon {
+    color: rgba(242, 242, 247, 0.55);
+  }
+  .sidebar-item-count,
+  .sidebar-item.is-active .sidebar-item-count,
+  .folder-row.is-active .sidebar-item-count {
+    color: rgba(242, 242, 247, 0.5);
+  }
+  .sidebar-divider {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .sidebar-item.is-active,
+  .folder-row.is-active .folder-row-main {
+    background: #f5c143;
+    color: #1a1a1a;
+  }
+  .sidebar-item.is-active .sidebar-item-icon,
+  .folder-row.is-active .sidebar-item-icon {
+    color: #1a1a1a;
+  }
+  .icon-btn {
+    color: rgba(242, 242, 247, 0.55);
+  }
+  .icon-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f2f2f7;
+  }
+  .folder-rename {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #f2f2f7;
+  }
+  .note-list {
+    background: #2c2c2e;
+    border-right-color: rgba(255, 255, 255, 0.08);
+  }
+  .note-list-header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+  .search {
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .search-icon {
+    color: rgba(242, 242, 247, 0.5);
+  }
+  .search-input::placeholder {
+    color: rgba(242, 242, 247, 0.4);
+  }
+  .compose-btn {
+    background: #f5c143;
+    color: #1a1a1a;
+  }
+  .compose-btn:hover {
+    background: #f0b830;
+  }
+  .note-row {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+  .note-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .note-row.is-active {
+    background: #f5c143;
+    border-left-color: #fbf9f4;
+  }
+  .note-row.is-active .note-row-title,
+  .note-row.is-active .note-row-time,
+  .note-row.is-active .note-row-preview,
+  .note-row.is-active .note-row-folder {
+    color: #1a1a1a;
+  }
+  .note-row.is-active .pin-mini {
+    color: #1a1a1a;
+  }
+  .note-row-title {
+    color: #fbf9f4;
+  }
+  .note-row-time,
+  .note-row-folder {
+    color: rgba(242, 242, 247, 0.5);
+  }
+  .note-row-preview {
+    color: rgba(242, 242, 247, 0.65);
+  }
+  .editor {
+    background: #1c1c1e;
+  }
+  .editor-toolbar {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+  .editor-time {
+    color: rgba(242, 242, 247, 0.55);
+  }
+  .editor-title {
+    color: #fbf9f4;
+  }
+  .editor-title::placeholder {
+    color: rgba(242, 242, 247, 0.35);
+  }
+  .editor-body {
+    color: #f2f2f7;
+  }
+  .editor-body::placeholder {
+    color: rgba(242, 242, 247, 0.35);
+  }
+  .editor-footer {
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+  .editor-meta {
+    color: rgba(242, 242, 247, 0.5);
+  }
+  .empty,
+  .empty-title,
+  .empty-hint {
+    color: rgba(242, 242, 247, 0.5);
+  }
+  .empty-icon {
+    color: rgba(242, 242, 247, 0.25);
+  }
+  .loading-shell {
+    background: #1c1c1e;
+    color: rgba(242, 242, 247, 0.55);
+  }
+  .loading-spinner {
+    border-color: rgba(255, 255, 255, 0.08);
+    border-top-color: #f5c143;
+  }
+  .empty-bridge {
+    background: #1c1c1e;
+    color: rgba(242, 242, 247, 0.65);
+  }
+  .empty-bridge h2 {
+    color: #f2f2f7;
+  }
+  .empty-bridge code {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .notice-ok {
+    background: #f2f2f7;
+    color: #1c1c1e;
+  }
+}
+
+/* --- Responsive: Apple Notes stack navigation ---
+   Wide screens (>= 900px): three panes side by side (sidebar /
+   list / editor). Below 900px we collapse to a phone-style stack:
+   the [data-view="..."] attribute on .notes-shell selects which
+   pane fills the viewport, with slide-in transitions on each push
+   so it feels like a native stack. Back chevrons live in the
+   NoteList and Editor toolbars (the Sidebar has no back — it's the
+   root). Below 500px we additionally hide the title text in the
+   nav row to free space for the back button + search. */
+
+.nav-back {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+@media (max-width: 899px) {
+  /* Phone / narrow tablet: stack navigation. Sidebar stays
+     mounted so its scroll position is preserved when the user
+     returns to it. The visible pane is selected via [data-view]
+     on the shell. */
+  .notes-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 100vh;
+  }
+  .sidebar,
+  .note-list,
+  .editor {
+    grid-row: 1;
+    grid-column: 1;
+    width: 100%;
+    height: 100%;
+    /* Slide animation between views — 220ms matches iOS native
+       push transitions. ease-out keeps the entering pane from
+       feeling sluggish. */
+    transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+                opacity 180ms ease-out;
+    will-change: transform, opacity;
+  }
+  /* Default: hidden off-screen to the left (the previous screen
+     in the stack). Apple Notes keeps the previous pane barely
+     visible during the transition; we set opacity to 0 so only
+     the active pane is shown once the transition settles. */
+  .sidebar,
+  .note-list,
+  .editor {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+  .notes-shell[data-view="sidebar"] .sidebar,
+  .notes-shell[data-view="list"] .note-list,
+  .notes-shell[data-view="editor"] .editor {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+  }
+  /* Pane that's *behind* the active one (peek-through effect).
+     Apple Notes shows a sliver of the previous pane during push,
+     so we leave the previous pane (sidebar when going to list,
+     list when going to editor) anchored just off-screen but
+     visible. We don't bother with peek-through on the way back —
+     ease-out is enough — so we always push forward and pop back
+     from the same transform direction. */
+  .notes-shell[data-view="list"] .sidebar,
+  .notes-shell[data-view="editor"] .note-list {
+    transform: translateX(-30%);
+    opacity: 0;
+    visibility: hidden;
+  }
+  /* Reveal back chevrons on narrow screens. The Sidebar has no
+     back button — it's the stack root. */
+  .nav-back {
+    display: inline-flex;
+  }
+  /* Hide the editor footer on very narrow screens to free vertical
+     space for the title + body. The toolbar already shows the
+     last-edited time. */
+  .editor-footer {
+    display: none;
+  }
+  /* The editor toolbar's timestamp is now redundant with the
+     nav-back + title, so drop it on narrow screens. */
+  .editor-toolbar .editor-time {
+    display: none;
+  }
+}
+
+@media (max-width: 500px) {
+  /* Phone-sized: tighter padding, smaller headings. The composer
+     button grows to be the primary affordance. */
+  .note-list-header {
+    padding: 10px 12px 8px;
+  }
+  .editor {
+    padding-top: 0;
+  }
+  .editor-title {
+    font-size: 19px;
+    padding: 12px 16px 6px;
+  }
+  .editor-body {
+    padding: 0 16px 8px;
+    font-size: 15px;
+  }
+  .search {
+    padding-left: 22px;
+  }
+  .search-icon {
+    left: 6px;
+  }
+}
