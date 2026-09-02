@@ -155,6 +155,7 @@ const DUPLICATABLE_PANEL_TYPES = new Set([
   "launcher",
 ]);
 
+
 function panelTypeOf(panel) {
   return panel.params?.panelType || panel.id.replace(/-\d+$/, "");
 }
@@ -188,16 +189,89 @@ export function duplicatePanel(api, panel) {
   return dup;
 }
 
+// Rebuild a session-bearing panel in place: spawn a same-type panel
+// right after the source tab carrying the original params, then close
+// the source. dockview's onDidRemovePanel → handlePanelRemoved takes
+// care of tearing down the old session (wanix-term / iframe / workbench
+// / vm / task / crush-runner), and the new panel's mount effect attaches
+// a fresh session from the same params — exactly what a user means by
+// "reload this tab".
+//
+// The new panel is created BEFORE the old one closes so the same group
+// never empties (otherwise the empty-grid fallback could fire).
+// The new panel gets a fresh id suffix via nextPanelIndex; we
+// re-register its openPanel snapshot so workspace.ui.openPanels tracks
+// the new id, and the full layout save (wireLayoutPersistence) picks up
+// the position via onDidLayoutChange.
+export function reloadPanel(api, panel) {
+  const type = panelTypeOf(panel);
+  const n = nextPanelIndex(type);
+  const params = { ...(panel.params || {}) };
+  // Refresh any *Id params to the new session id the same way
+  // duplicatePanel does, so the new React subtree binds to its own
+  // session and we don't leak the old session into the new mount.
+  for (const key of Object.keys(params)) {
+    if (key.endsWith("Id")) params[key] = n;
+  }
+  params.panelType = type;
+  const sourceIndex = panel.group?.panels?.indexOf(panel) ?? -1;
+  const replacement = api.addPanel({
+    id: `${type}-${n}`,
+    component: type,
+    params,
+    ...(panel.title ? { title: panel.title } : {}),
+    position: {
+      referencePanel: panel.id,
+      direction: "within",
+      ...(sourceIndex >= 0 ? { index: sourceIndex + 1 } : {}),
+    },
+  });
+  // Re-register the openPanel snapshot for the new id so the workspace
+  // restore path can re-open it. The old id is dropped naturally by
+  // handlePanelRemoved (via forgetOpenPanel).
+  rememberOpenPanel(replacement, { component: type });
+  replacement.api.setActive();
+  panel.api.close();
+  return replacement;
+}
+
+// Reload every session-bearing panel currently open. Useful when a
+// workspace-wide state change (wanix restart, iframe plugin update)
+// means the user wants a clean slate without hunting tabs. Skips
+// non-reloadable content panels for the same reason as reloadPanel.
+export function reloadAllPanels(api) {
+  // Snapshot the list before iterating — reloadPanel closes the source
+  // panel, which mutates api.panels and would shift indices if we
+  // walked it live.
+  const panels = [...api.panels];
+  for (const panel of panels) reloadPanel(api, panel);
+  return panels.length;
+}
+
 function tabContextMenuItems({ panel, api }) {
   const items = [];
-  if (DUPLICATABLE_PANEL_TYPES.has(panelTypeOf(panel))) {
+  const type = panelTypeOf(panel);
+  // Every panel gets both Duplicate and Reload so the right-click menu
+  // is stable across the whole grid. Session-bearing panels (terminal /
+  // vm / workbench / task / crush-runner / iframe) get a real "refresh":
+  // closing the source tab fires handlePanelRemoved which destroys the
+  // wanix-term / iframe / workbench / vm / task session, and the new
+  // panel's mount effect attaches a fresh one. Content-only panels
+  // (home / settings / files / runtime / music / playground / plugins /
+  // launcher) won't visibly change — React diffs the new tree against
+  // the old and reuses every DOM node — but the menu item is still
+  // there for muscle memory.
+  if (DUPLICATABLE_PANEL_TYPES.has(type)) {
     items.push({
       label: "Duplicate",
       action: () => duplicatePanel(api, panel),
     });
-    items.push("separator");
   }
-  items.push("close", "closeOthers", "closeAll");
+  items.push({
+    label: "Reload",
+    action: () => reloadPanel(api, panel),
+  });
+  items.push("separator", "close", "closeOthers", "closeAll");
   return items;
 }
 
@@ -208,8 +282,9 @@ function dockviewOptions(onReady) {
     className: "dockview-theme-github-dark",
     onReady,
     // Tab right-click menu: the built-in Pin item is auto-prepended by
-    // the ContextMenu module; this supplies Duplicate (content panels
-    // only) plus the close family.
+    // the ContextMenu module; this supplies Duplicate + Reload (both
+    // available on every panel — see tabContextMenuItems) plus the
+    // close family.
     getTabContextMenuItems: tabContextMenuItems,
     // 固定标签: 独立第二行 + VS Code 式跨边界拖拽翻转
     pinnedTabs: {
@@ -243,6 +318,7 @@ export const PANEL_COMPONENTS = {
   plugins: PluginsPanel,
   task: WorkspaceTaskPanel,
   terminal: TerminalPanel,
+  console: TerminalPanel,
   iframe: IframePanel,
 };
 
