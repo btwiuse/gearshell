@@ -161,6 +161,22 @@ export async function mountTerminal(anchor, session, options = {}) {
   };
 }
 
+// Present the terminal to the guest as ghostty. Guests like Crush/Claude
+// gate OSC 9;4 progress reporting on the identity advertised in the DCS
+// ">|" handshake, so without this rewrite they never emit the progress
+// sequence. Spread the returned object into mountTerminal's options; it
+// supplies the ghostty termName and a transformInput that rewrites the
+// handshake, composing with any transformInput already in `options`.
+export function ghosttyIdentity(options = {}) {
+  const base = options.transformInput;
+  const rewrite = (data) =>
+    data.replace("\u001bP>|xterm.js(", "\u001bP>|ghostty(");
+  return {
+    terminal: { ...(options.terminal || {}), termName: "ghostty" },
+    transformInput: base ? (data) => base(rewrite(data)) : rewrite,
+  };
+}
+
 // Adapter for the same-document terminal API (window.GearShell.terminal,
 // workspace-terminal-api.js): output/exit ride local onData/onExit.
 export function sameDocSession(api) {

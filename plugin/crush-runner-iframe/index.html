@@ -43,7 +43,7 @@
 </div>
 <script src="/plugin/gear-bridge.js"></script>
 <script type="module">
-import { iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
+import { ghosttyIdentity, iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
 
 const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), taskTopic: false, fullscreen: false };
 const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "term-progress", "term-progress-fill", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
@@ -330,8 +330,7 @@ async function launch(preset = activePreset()) {
     host.className = "terminal-instance";
     elements.terminal.append(host);
     const handle = await mountTerminal(host, session, {
-      terminal: { termName: "ghostty", fontSize: 13, scrollback: 12000, scrollbar: { showScrollbar: false }, theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" } },
-      transformInput: (data) => data.replace("\\u001bP>|xterm.js(", "\\u001bP>|ghostty("),
+      ...ghosttyIdentity({ terminal: { fontSize: 13, scrollback: 12000, scrollbar: { showScrollbar: false }, theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" } } }),
       setupAddons: (term, libs) => {
         const addon = new libs.ProgressAddon();
         term.loadAddon(addon);

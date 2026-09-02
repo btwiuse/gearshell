@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, BookOpen, Github, LayoutGrid, Zap } from "lucide-react";
 import { localFirstChips } from "./home-data.js";
 import htm from "htm";
-import { mountTerminal, sameDocSession } from "../terminal-mount.mjs";
+import { ghosttyIdentity, mountTerminal, sameDocSession } from "../terminal-mount.mjs";
 
 const html = htm.bind(React.createElement);
 
@@ -206,21 +206,10 @@ function wireProgress(term, libs, bar) {
 // the session, xterm, observers, progress and listeners down.
 async function openDemoTerminal(anchor, terminalApi, prog) {
   const handle = await mountTerminal(anchor, sameDocSession(terminalApi), {
-    terminal: {
-      termName: "ghostty",
+    ...ghosttyIdentity({ terminal: {
       fontSize: 13,
       theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" },
-    },
-    // Present the terminal as ghostty (same as the terminal-frame/v86
-    // plugins): guests like Crush/Claude gate OSC progress reporting on the
-    // terminal identity advertised in the DCS ">|" handshake, so without
-    // this rewrite they never emit the OSC 9;4 progress the addon renders.
-    transformInput(data) {
-      return data.replace(
-        "\u001bP>|xterm.js(",
-        "\u001bP>|ghostty(",
-      );
-    },
+    } }),
     setupAddons: (term, libs) => {
       wireProgress(term, libs, prog);
     },

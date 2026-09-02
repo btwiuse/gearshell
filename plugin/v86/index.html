@@ -91,7 +91,7 @@
         setStatus("loading", "starting…");
         import(MOUNT_BUNDLE).then(function (m) {
           return m.mountTerminal($("v86-term"), vmSession(m), {
-            terminal: {
+            ...m.ghosttyIdentity({ terminal: {
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
               fontSize: 13,
               scrollback: 10000,
@@ -101,13 +101,7 @@
                 cursor: "#58a6ff",
                 selectionBackground: "#1f6feb66",
               },
-            },
-            transformInput: function (data) {
-              return data.replace(
-                "\u001bP>|xterm.js(",
-                "\u001bP>|ghostty(",
-              );
-            },
+            } }),
             onData: function () {
               if ($("v86-status").dataset.mode === "loading") {
                 setStatus("ready", "ready · network connected");

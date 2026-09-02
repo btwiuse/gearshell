@@ -151,8 +151,7 @@
         $("term-host").innerHTML = "";
         import(MOUNT_BUNDLE).then(function (m) {
           return m.mountTerminal($("term-host"), m.iframeSession(GearShell), {
-            terminal: {
-              termName: "ghostty",
+            ...m.ghosttyIdentity({ terminal: {
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
               fontSize: 14,
               lineHeight: 1.25,
@@ -163,7 +162,7 @@
                 cursor: "#58a6ff",
                 selectionBackground: "#1f6feb66",
               },
-            },
+            } }),
             // The helper already loads the shared ProgressAddon (a pure OSC
             // 9;4 escape listener that renders nothing). This page loads its
             // own so it can onChange() the bar; xterm chains multiple handlers
@@ -174,12 +173,6 @@
               state.progressChange = state.progress.onChange(function (progress) {
                 updateProgress(progress);
               });
-            },
-            transformInput: function (data) {
-              return data.replace(
-                "\u001bP>|xterm.js(",
-                "\u001bP>|ghostty(",
-              );
             },
             onData: function () {
               state.sawData = true;
