@@ -147,7 +147,7 @@ function useLauncherCollapsedState() {
 function renderLauncherRow(
   { option, containerApi, addPanel, pinned, onTogglePin },
 ) {
-  const control = option.component === "terminal"
+  const control = option.component === "console"
     ? html`<${TerminalLaunchPicker}
       key=${option.component}
       className="empty-terminal-launch"

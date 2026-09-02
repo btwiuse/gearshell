@@ -120,7 +120,7 @@ export const DEFAULT_COLLAPSED_LAUNCHER_ITEMS = [
   "rickroll",
 ];
 export const DEFAULT_LAUNCHER_ITEM_ORDER = [
-  "terminal",
+  "console",
   "home",
   "deck",
   "workbench",
@@ -193,7 +193,7 @@ export const SUPPORTED_TASK_TYPES = ["auto", "gojs", "wasi", "js"];
 export const STARTUP_PANEL_TYPES = [
   "home",
   "deck",
-  "terminal",
+  "console",
   "workbench",
   "settings",
   "files",

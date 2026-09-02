@@ -123,7 +123,7 @@ function renderWagiDogItem({ wagiDogEnabled }) {
 
 function renderPanelOptionItems({ containerApi, group, setMenuOpen }) {
   return launcherDep("PANEL_CREATION_OPTIONS").filter((option) =>
-    option.component !== "terminal"
+    option.component !== "console"
   ).map((option) =>
     html`
       <button

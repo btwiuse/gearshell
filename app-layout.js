@@ -50,8 +50,9 @@ let restoringLayout = false;
 function panelSnapshotFor(panel) {
   const params = panel.params || {};
   switch (params.panelType || panel.id.replace(/-\d+$/, "")) {
+    case "console":
     case "terminal":
-      return { component: "terminal", profile: clone(params.profile) };
+      return { component: "console", profile: clone(params.profile) };
     case "workbench":
       return { component: "workbench", config: clone(params.config) };
     case "task":

@@ -55,12 +55,13 @@ export function autoStartWorkspaceTasks(api) {
 }
 
 export const PANEL_CREATION_OPTIONS = [
-  { component: "terminal", label: "Terminal", icon: Terminal },
+  { component: "console", label: "Console", icon: Terminal },
   { component: "plugins", label: "Plugins", icon: Puzzle },
 ];
 
 function addRestoredPanel(api, panel) {
-  if (panel.component === "terminal") {
+  if (panel.component === "console" || panel.component === "terminal") {
+    panel.component = "console";
     addTerminalPanelFromPanels(
       api,
       undefined,

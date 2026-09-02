@@ -113,7 +113,7 @@ function IframePanel({ api, params }) {
 
 // === PanelTab ===
 function PanelTab(props) {
-  const Icon = props.params.panelType === "terminal"
+  const Icon = (props.params.panelType === "console" || props.params.panelType === "terminal")
     ? panelsDep("getTerminalPresetIcon")(props.params.profile)
     : getPanelIcons()[props.params.panelType] ||
       LucideIcons[getPluginIcon(props.params.panelType)] || Terminal;
@@ -134,17 +134,17 @@ function addTerminalPanel(
   const id = nextPanelIndex("terminal");
   const panel = api.addPanel({
     id: `terminal-${id}`,
-    component: "terminal",
+    component: "console",
     params: {
       terminalId: id,
-      panelType: "terminal",
+      panelType: "console",
       profile: panelsDep("clone")(profile),
     },
     title: `${profile.name || "Terminal"} ${id}`,
     ...(group && { position: { referenceGroup: group } }),
   });
   panelsDep("rememberOpenPanel")(panel, {
-    component: "terminal",
+    component: "console",
     profile: panelsDep("clone")(profile),
   });
   panel.api.setActive();
@@ -217,7 +217,10 @@ function addIframePanel(api, config, group) {
 // through the dep shim so panels.js never has to import them and so
 // initPanels becomes the single wiring point for the whole shell.
 const PANEL_ADDERS = {
-  terminal: addTerminalPanel,
+  console: (api, group, options) =>
+    addTerminalPanel(api, group, options?.profile),
+  terminal: (api, group, options) =>
+    addTerminalPanel(api, group, options?.profile),
   "workspace-task": addWorkspaceTaskPanel,
   plugins: (api, group) => panelsDep("addPluginsPanel")(api, group),
 };

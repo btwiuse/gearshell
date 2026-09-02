@@ -16,7 +16,7 @@ import { Terminal as TerminalIcon, Folder as FolderIcon, Settings as SettingsIco
 const html = htm.bind(React.createElement);
 
 const QUICK_LAUNCHES = [
-  { component: "terminal", label: "Terminal", Icon: TerminalIcon },
+  { component: "console", label: "Console", Icon: TerminalIcon },
   { component: "files", label: "Files", Icon: FolderIcon },
   { component: "home", label: "Home", Icon: HomeIcon },
   { component: "settings", label: "Settings", Icon: SettingsIcon },

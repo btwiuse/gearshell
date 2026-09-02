@@ -42,7 +42,7 @@ export function HomeNav({ scrollToId, GH }) {
 function HeroButtons({ openPanel, openExternal, scrollToId, GH }) {
   return html`
     <div className="mkt-cta">
-      <button className="mkt-btn mkt-btn-primary" type="button" onClick=${() => openPanel("terminal")}>
+      <button className="mkt-btn mkt-btn-primary" type="button" onClick=${() => openPanel("console")}>
         <${Zap} size=${16} aria-hidden=${true}/>
         <span>Open Terminal</span>
         <${ArrowRight} size=${14} aria-hidden=${true}/>
@@ -403,7 +403,7 @@ export function HomeFooter({ openPanel, scrollToId, GH }) {
       <h2>Your machine is wherever you open a tab.</h2>
       <p>Free, open source, self-hostable.</p>
       <div className="mkt-cta" style=${{ justifyContent: "center" }}>
-        <button className="mkt-btn mkt-btn-primary" type="button" onClick=${() => openPanel("terminal")}>
+        <button className="mkt-btn mkt-btn-primary" type="button" onClick=${() => openPanel("console")}>
           <${Zap} size=${16} aria-hidden=${true}/>
           <span>Open Terminal</span>
           <${ArrowRight} size=${14} aria-hidden=${true}/>

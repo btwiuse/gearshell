@@ -41,7 +41,7 @@ export const SPOTLIGHT_OVERLAY_ID = "spotlight";
 // has them pinned, because they're the two most-launched built-ins
 // alongside a keyboard-first launcher.
 const EXTRA_APPS = [
-  { component: "terminal", name: "Terminal", iconName: "Terminal" },
+  { component: "console", name: "Console", iconName: "Terminal" },
   { component: "launcher", name: "Launcher", iconName: "Rocket" },
   { component: "plugins", name: "Plugins", iconName: "Puzzle" },
 ];
@@ -124,10 +124,25 @@ function pluginApps(plugins) {
 function dedupeApps(apps) {
   const seen = new Set();
   return apps.filter((app) => {
-    if (seen.has(app.component)) return false;
-    seen.add(app.component);
+    const key = app.kind === "preset"
+      ? `preset:${app.preset.id}`
+      : `app:${app.component}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
+}
+
+function consolePresetApps(shell) {
+  return (shell.terminalProfiles || [])
+    .filter((profile) => profile && profile.builtin !== true && profile.id)
+    .map((profile) => ({
+      kind: "preset",
+      component: "console",
+      name: `Console · ${profile.name || profile.id}`,
+      iconName: typeof profile.icon === "string" ? profile.icon : "Terminal",
+      preset: profile,
+    }));
 }
 
 // Pinned first, then the launcher's configured order, then the rest.
@@ -158,7 +173,7 @@ function useSpotlightCatalog(open, api) {
   const [error, setError] = useState(null);
   useEffect(() => {
     if (!open || !api) return undefined;
-    let stopped = true;
+    let stopped = false;
     setError(null);
     Promise.all([
       api.config.getShell(),
@@ -166,10 +181,11 @@ function useSpotlightCatalog(open, api) {
       api.panels.list(),
     ]).then(
       ([shell, plugins, panels]) => {
-        if (!stopped) return;
+        if (stopped) return;
         const apps = dedupeApps([
           ...pluginApps(Array.isArray(plugins) ? plugins : []),
           ...EXTRA_APPS.map((app) => ({ ...app, kind: "app" })),
+          ...consolePresetApps(shell || {}),
         ]);
         setCatalog({
           apps: sortApps(apps, shell || {}),
@@ -182,7 +198,7 @@ function useSpotlightCatalog(open, api) {
         });
       },
       (failure) => {
-        if (!stopped) return;
+        if (stopped) return;
         setError(failure?.message || String(failure));
       },
     );
@@ -315,7 +331,9 @@ function useSpotlightLaunch({ results, close, api }) {
           await api.panels.focus(item.id);
           return;
         }
-        await api.panels.open(item.component);
+        await api.panels.open(item.component, item.kind === "preset"
+          ? { profile: item.preset }
+          : undefined);
       } catch (failure) {
         console.warn("spotlight: launch failed", failure);
       }
@@ -411,7 +429,10 @@ function useSpotlightAutoFocus(open, inputRef) {
   useEffect(() => {
     if (!open) return undefined;
     const raf = requestAnimationFrame(() => {
-      inputRef.current?.focus();
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      input.select();
     });
     return () => cancelAnimationFrame(raf);
   }, [open, inputRef]);

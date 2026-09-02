@@ -134,7 +134,7 @@ export const SETTINGS_TEMPLATE_HTML =
             </div>
           </details>
           <details class="terminal-profile-form" open>
-            <summary><span>Terminal launch presets</span></summary>
+            <summary><span>Console</span></summary>
             <div class="body">
               <div data-terminal-profile-editor></div>
             </div>
