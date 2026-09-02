@@ -219,14 +219,13 @@ export const DEFAULT_PLUGINS = [
     // page to bring back the Task Launcher card and its addPanel hotkey.
     enabled: false,
   },
-  // Spotlight: the transient, keyboard-first launcher (ctrl+space). An
-  // overlay whose surface is an iframe page, so it never spends a tab —
-  // it coexists with the launcher panel above, which stays the
-  // empty-workspace fallback. The page drives the shell over the iframe
-  // bridge, so it needs permissions.api like any iframe plugin; the css
-  // entry is the shell-side positioner only (the page inlines its own
-  // styles, so declaring the page's stylesheet here would leak its
-  // body/universal rules into the shell chrome).
+  // Spotlight: the transient, keyboard-first launcher (ctrl+shift+/).
+  // A component plugin (no iframe, no postMessage roundtrip) whose
+  // overlay surface is rendered directly into the shell DOM. Coexists
+  // with the launcher panel above, which stays the empty-workspace
+  // fallback. Talks to the shell through ctx.api (scoped to this
+  // manifest's permissions.api); the css entry is the shell-side
+  // positioner for the glass + card.
   {
     id: "spotlight",
     name: "Spotlight",

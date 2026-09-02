@@ -16,7 +16,7 @@ const pluginOverlays = new Map(); // id -> { manifest, render }
 // declare it with registerOverlay({ iframe: { src } }).
 const overlayIframes = new Map(); // src -> manifest
 
-export function registerOverlay(manifest, { id, render, iframe }) {
+export function registerOverlay(manifest, { id, render, iframe, props }) {
   if (typeof id !== "string" || !id) {
     throw new Error("overlay requires an id");
   }
@@ -26,7 +26,7 @@ export function registerOverlay(manifest, { id, render, iframe }) {
   if (pluginOverlays.has(id)) {
     throw new Error(`overlay "${id}" already registered`);
   }
-  const entry = { manifest, render };
+  const entry = { manifest, render, props };
   pluginOverlays.set(id, entry);
   if (iframe?.src) overlayIframes.set(iframe.src, manifest);
   return entry;
@@ -49,6 +49,7 @@ export function listOverlays() {
   return [...pluginOverlays.entries()].map(([id, entry]) => ({
     id,
     render: entry.render,
+    props: entry.props,
   }));
 }
 

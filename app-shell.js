@@ -291,8 +291,8 @@ function PluginOverlays() {
   }, []);
   return html`
     <${React.Fragment}>
-      ${listOverlays().map(({ id, render }) =>
-        html`<${render} key=${id}/>`,
+      ${listOverlays().map(({ id, render, props }) =>
+        html`<${render} key=${id} ...${props || {}}/>`,
       )}
     </${React.Fragment}>
   `;

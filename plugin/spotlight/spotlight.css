@@ -1,21 +1,20 @@
-/* spotlight.css — the shell-side positioner for the Spotlight overlay.
+/* spotlight.css — the shell-side styles for the Spotlight overlay.
  *
- * Two layers, both inside the host:
- *   - `.spotlight-glass` paints the full-viewport frosted surface and
- *     is `pointer-events: none` so dockview stays alive underneath.
- *   - `.spotlight-frame` is the actual card. It owns the border-radius,
- *     the translucent background, and the drop-shadow, so any iframe
- *     subpixel seam shows as a clean edge against the same-colored
- *     shadow rather than as a white halo.
+ * The card lives inside the shell DOM (no iframe), so the geometry
+ * matches the .sl-* classes painted by spotlight-overlay.js
+ * directly — no iframe subpixel-seam workarounds, no overhang.
  *
- * The iframe element is rectangular and bleeds a faint white seam no
- * matter what overflow/border-radius we set on it, so we hide the seam
- * by making the iframe *larger* than the visible card by 1px on every
- * side and clipping with `clip-path` to the rounded rectangle. The
- * card's own border paints over that 1px overhang.
- *
- * z-index 2000 sits above the panel-action menu (100) and the plugin
- * modal (1000) so Spotlight is reachable from anywhere in the shell.
+ * .spotlight-glass: full-viewport frosted backdrop, dims dockview
+ *   underneath. Catches mousedown so a click outside the card
+ *   closes the overlay (same as Escape). z-index 2000 sits above
+ *   the panel-action menu (100) and the plugin modal (1000) so
+ *   Spotlight is reachable from anywhere in the shell.
+ * .spotlight-card: the visible card. Owns the border-radius,
+ *   translucent background, and drop-shadow.
+ * .sl-*: card contents (search row, hint, results, rows). Owned by
+ *   the component; here only because shell stylesheets don't reach
+ *   htm-rendered children, and a component-scoped style block would
+ *   leak the page's body rules into the shell chrome.
  */
 
 .spotlight-glass {
@@ -32,12 +31,6 @@
   background: rgba(1, 4, 9, 0.06);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  /* Catches mousedown on the surrounding glass so clicking outside
-   * the card closes the overlay (same as Escape). The iframe inside
-   * still has pointer-events: auto, so clicks on the card itself
-   * never reach this layer. Dockview underneath does not respond
-   * while Spotlight is open — that is the macOS Spotlight tradeoff
-   * the user opted into by treating the glass as a click target. */
   pointer-events: auto;
   animation: spotlight-fade 0.12s ease-out;
 }
@@ -47,21 +40,133 @@
   to { opacity: 1; }
 }
 
-.spotlight-frame {
-  display: block;
+.spotlight-card {
   width: min(92vw, 620px);
   height: 62vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(48, 54, 61, 0.6);
+  background: rgba(22, 27, 34, 0.78);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  animation: spotlight-rise 0.14s ease-out;
+  box-sizing: border-box;
+  color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@keyframes spotlight-rise {
+  from { opacity: 0; transform: translateY(-8px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.sl-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #21262d;
+  flex: 0 0 auto;
+}
+.sl-search svg { flex: 0 0 auto; color: #8b949e; }
+.sl-search input {
+  flex: 1 1 auto;
+  min-width: 0;
   border: 0;
+  outline: 0;
   background: transparent;
-  color-scheme: dark;
-  /* Overhang by 2px so the iframe subpixel seam lives inside the
-   * card's own border; the card's border paints over it. */
-  margin: -2px;
-  /* Pull it back to the original size so the visible geometry matches
-   * the card exactly. */
-  width: calc(min(92vw, 620px) + 4px);
-  height: calc(62vh + 4px);
-  /* Clip the iframe's rectangular element to the rounded card shape. */
-  border-radius: 14px;
-  clip-path: inset(0 round 14px);
+  color: #e6edf3;
+  font-size: 19px;
+  font-family: inherit;
+}
+.sl-search input::placeholder { color: #6e7681; }
+.sl-hint {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #6e7681;
+  font-size: 11px;
+}
+
+.sl-results {
+  overflow-y: auto;
+  padding: 6px;
+  flex: 1 1 auto;
+}
+.sl-group-label {
+  padding: 8px 10px 4px;
+  color: #6e7681;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #c9d1d9;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.sl-row:hover { background: #21262d; }
+.sl-row.is-active { background: #1f6feb; color: #fff; }
+.sl-row.is-active .sl-row-sub { color: rgba(255, 255, 255, 0.72); }
+.sl-row-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(110, 118, 129, 0.18);
+  color: #c9d1d9;
+}
+.sl-row-icon svg { display: block; }
+.sl-row-icon-monogram { font-size: 13px; font-weight: 600; }
+.sl-row.is-active .sl-row-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+.sl-row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sl-row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-row-sub { color: #8b949e; font-size: 12px; }
+.sl-row-pin {
+  flex: 0 0 auto;
+  color: #d29922;
+  font-size: 12px;
+}
+.sl-empty {
+  padding: 26px 16px;
+  color: #8b949e;
+  text-align: center;
+  font-size: 14px;
+}
+.sl-error {
+  padding: 26px 16px;
+  color: #f85149;
+  text-align: center;
+  font-size: 13px;
 }
