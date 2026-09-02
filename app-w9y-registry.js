@@ -97,6 +97,13 @@ export async function ensureW9yDependencies(plugins, cliVersion) {
     // installs: their entry/iframe/wasm fetch nothing, so a w9y
     // dependency must not either.
     if (plugin?.enabled === false) continue;
+    // iframe plugins install lazily, on first panel open
+    // (addIframePanel in panels.js triggers `w9y mod apply` once the
+    // user actually opens the page). Boot stays lean for users who
+    // never open the iframe — the page's own JS handles the
+    // missing-mod case (a status banner / install button) and the
+    // iframe registry read races the install like the boot path.
+    if (plugin?.iframe) continue;
     const dep = plugin?.w9y;
     if (!dep || typeof dep.mod !== "string" || !dep.mod) continue;
     const status = installedModStatus(dep.mod);

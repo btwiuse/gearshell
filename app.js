@@ -50,7 +50,7 @@ import {
   ensurePluginToolBinds,
 } from "./app-plugin-binds.js";
 import { primePluginContentCache } from "./app-plugin-cache.js";
-import { loadW9yRegistry, ensureW9yDependencies } from "./app-w9y-registry.js";
+import { loadW9yRegistry, ensureW9yDependencies, applyW9yMod } from "./app-w9y-registry.js";
 import {
   clearAuditEntries,
   listAuditEntries,
@@ -283,6 +283,13 @@ initPanels({
   // group, launcher, crush-runner, ...) fall through to openPluginPanel.
   addLandingPanel,
   addPluginsPanel,
+  // Lazy w9y install trigger for iframe plugins: ensureW9yDependencies
+  // skips iframe plugins on boot, so addIframePanel calls this with the
+  // manifest's `w9y: { mod, version? }` on first open. Routed through
+  // the dep shim so panels.js does not directly import
+  // app-w9y-registry.js (which would loop through workspace-tasks-api
+  // -> panels.js).
+  triggerPluginW9yInstall: (w9y) => applyW9yMod(w9y.mod, w9y.version || null),
 });
 
 // Initialise the Deck submodule with the helpers it needs at

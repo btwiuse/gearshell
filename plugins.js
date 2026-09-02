@@ -210,6 +210,14 @@ export function getPluginIframeConfig(component) {
     panelType: component,
     ...(entry.allow ? { allow: entry.allow } : {}),
     ...(entry.allowFullscreen ? { allowFullscreen: true } : {}),
+    // Iframe plugins with a w9y dep install lazily on first open
+    // (see addIframePanel in panels.js). ensureW9yDependencies skips
+    // iframe plugins on boot so the install cost is paid only when
+    // the user actually opens the panel — the page renders an
+    // "install on first run" affordance if the registry still shows
+    // missing when it mounts. Pinned-version parity with the boot
+    // path is preserved: the apply uses dep.version when set.
+    ...(entry.manifest?.w9y ? { w9y: entry.manifest.w9y } : {}),
   };
 }
 

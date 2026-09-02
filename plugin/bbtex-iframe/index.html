@@ -343,7 +343,7 @@
             var hint = $("bbtex-hint");
             if (status && !status.installed) {
               hint.textContent =
-                "bbtex is not installed — examples will fail until `w9y mod apply bbtex@v2.0.12` runs (the shell installs it automatically on boot).";
+                "bbtex is not installed — examples will fail until `w9y mod apply bbtex@v2.0.12` runs (the shell installs it on first open).";
               hint.hidden = false;
             } else {
               hint.hidden = true;
