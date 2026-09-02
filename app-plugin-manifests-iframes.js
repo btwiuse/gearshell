@@ -76,6 +76,12 @@ export const IFRAME_PLUGINS = [
     iframe: {
       src: "https://justwasm.github.io/crush/",
     },
+    // Disabled by default — the upstream justwasm.io/crush demo is the
+    // upstream of the same agent but isn't wired into the shell's
+    // preset/snapshot system. Use the canonical "Crush Playground"
+    // iframe plugin instead, which integrates config.crushRunner.*,
+    // w9y mod install on first open, and the terminal data bridge.
+    enabled: false,
   },
   {
     id: "rickroll",
