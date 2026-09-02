@@ -14,12 +14,21 @@
       <img class="hero-logo" src="/plugin/crush-runner-iframe/assets/crush-icon.png" alt="" />
       <h1>Crush Playground</h1>
     </div>
-    <div class="status" id="status" role="status" aria-live="polite">Loading Crush status…</div>
+    <div class="hero-actions">
+      <div class="status" id="status" role="status" aria-live="polite">Loading Crush status…</div>
+      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Toggle presets panel" aria-expanded="false" aria-controls="sidebar">☰</button>
+    </div>
   </header>
   <main class="layout">
-    <aside class="sidebar">
-      <div class="sidebar-head"><h2>Presets</h2><button id="new-preset" type="button">New</button></div>
+    <aside class="sidebar" id="sidebar" data-state="strip">
+      <div class="sidebar-head"><h2>Presets</h2></div>
       <div id="preset-list"></div>
+      <div class="sidebar-strip" id="sidebar-strip"></div>
+      <div class="sidebar-rail-actions">
+        <button class="new-preset-rail" id="new-preset-rail" type="button" aria-label="New preset" title="New preset">+</button>
+        <button id="sidebar-rail-toggle" class="sidebar-rail-toggle" type="button" aria-label="Expand presets" title="Expand">»</button>
+      </div>
+      <div class="sidebar-resize" id="sidebar-resize" aria-label="Resize sidebar"></div>
     </aside>
     <section class="content">
       <div id="install-banner" class="banner" hidden></div>
@@ -42,8 +51,8 @@
 <script type="module">
 import { ghosttyIdentity, iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
 
-const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), notified: new Set(), taskTopic: false, fullscreen: false };
-const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
+const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), notified: new Set(), sidebarOpen: false, sidebarWidth: 240, taskTopic: false, fullscreen: false };
+const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset-rail", "sidebar", "sidebar-strip", "sidebar-toggle", "sidebar-rail-toggle", "sidebar-resize"].map((id) => [id, document.getElementById(id)]));
 
 function setStatus(message, error = false) {
   elements.status.textContent = message;
@@ -107,6 +116,19 @@ function setPresetDot(presetId, on) {
   const card = elements["preset-list"].querySelector(`.preset-card[data-id="${presetId}"]`);
   const dot = card && card.querySelector(".preset-dot");
   if (dot) dot.hidden = !on;
+  // Mirror onto the strip rail button (the icon column shows the
+  // same notification dot as the expanded card).
+  const icon = elements["sidebar-strip"] && elements["sidebar-strip"].querySelector(`.sidebar-rail-icon[data-id="${presetId}"]`);
+  if (icon) {
+    let railDot = icon.querySelector(".rail-dot");
+    if (on && !railDot) {
+      railDot = document.createElement("span");
+      railDot.className = "rail-dot";
+      icon.append(railDot);
+    } else if (!on && railDot) {
+      railDot.remove();
+    }
+  }
 }
 
 function setPresetLive(presetId, on) {
@@ -114,6 +136,8 @@ function setPresetLive(presetId, on) {
     `.preset-card[data-id="${presetId}"] .preset-head`
   );
   if (head) head.classList.toggle("preset-live", on);
+  const icon = elements["sidebar-strip"] && elements["sidebar-strip"].querySelector(`.sidebar-rail-icon[data-id="${presetId}"]`);
+  if (icon) icon.classList.toggle("selected", on);
 }
 
 function markPresetChime(presetId) {
@@ -204,6 +228,32 @@ function renderPresets() {
     card.querySelector(".remove-preset").addEventListener("click", () => removeCard(card));
     elements["preset-list"].append(card);
   }
+  renderStrip();
+}
+
+function renderStrip() {
+  const strip = elements["sidebar-strip"];
+  if (!strip) return;
+  strip.textContent = "";
+  for (const preset of state.snapshot?.presets || []) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sidebar-rail-icon" + (preset.id === state.snapshot.activeId ? " selected" : "");
+    btn.title = preset.name;
+    btn.setAttribute("aria-label", preset.name);
+    btn.dataset.id = preset.id;
+    btn.innerHTML = presetIconSvg(preset.icon) + (state.notified.has(preset.id) ? '<span class="rail-dot"></span>' : "");
+    btn.addEventListener("click", () => {
+      // Clicking an icon from the strip expands the sidebar and
+      // switches to that preset — the strip never edits in place.
+      if (!state.sidebarOpen) {
+        state.sidebarOpen = true;
+        applySidebarState();
+      }
+      selectPreset(preset).catch(showError);
+    });
+    strip.append(btn);
+  }
 }
 
 function writeForm(preset) {
@@ -259,7 +309,7 @@ async function detect() {
   try {
     const status = await GearShell.w9y.status("crush");
     if (status?.installed) {
-      setStatus(`Crush ${status.installed} is installed`);
+      setStatus(status.installed);
       showBanner("");
       return;
     }
@@ -469,6 +519,84 @@ function toggleFullscreen() {
   elements["terminal-frame"].classList.toggle("is-fullscreen", state.fullscreen);
 }
 
+function applySidebarState() {
+  const layout = document.querySelector(".layout");
+  const open = state.sidebarOpen;
+  const isMobile = window.matchMedia("(max-width: 720px)").matches;
+  layout.classList.toggle("sidebar-open", open);
+  // In strip / open desktop modes the sidebar stays in the layout
+  // (data-state="strip" or "open"). In mobile drawer mode it
+  // is moved out of the layout via the small-viewport media
+  // query (position: absolute).
+  // The data-state attribute drives the CSS switch between
+  // desktop strip / open and the mobile drawer.
+  //   desktop closed -> "strip"  (48 px icon rail)
+  //   desktop open   -> "open"   (240 px panel, default width)
+  //   mobile  closed -> hidden=true
+  //   mobile  open   -> "open" + position: absolute (drawer)
+  elements["sidebar"].dataset.state = open ? "open" : "strip";
+  elements["sidebar"].hidden = isMobile && !open;
+  // Apply the saved width when open on desktop. The CSS default
+  // 240 px kicks in for users that have never dragged the handle.
+  const sidebar = elements["sidebar"];
+  if (!isMobile && open) {
+    sidebar.style.flex = `0 0 ${state.sidebarWidth}px`;
+    sidebar.style.width = `${state.sidebarWidth}px`;
+  } else {
+    sidebar.style.flex = "";
+    sidebar.style.width = "";
+  }
+  elements["sidebar-toggle"].setAttribute("aria-expanded", String(open));
+  const railBtn = elements["sidebar-rail-toggle"];
+  if (railBtn) {
+    if (isMobile) {
+      // On mobile the sidebar is an overlay drawer; the toggle
+      // dismisses it, so show a close icon.
+      railBtn.textContent = "×";
+      railBtn.setAttribute("aria-label", open ? "Close presets" : "Open presets");
+    } else {
+      railBtn.textContent = open ? "«" : "»";
+      railBtn.setAttribute("aria-label", open ? "Collapse presets" : "Expand presets");
+    }
+  }
+}
+
+// Drag the right edge of the sidebar to resize it. The new width is
+// kept in state so it persists across toggle / preset switches.
+function initSidebarResize() {
+  const handle = elements["sidebar-resize"];
+  if (!handle) return;
+  let startX = 0;
+  let startWidth = 0;
+  const onMove = (event) => {
+    const dx = event.clientX - startX;
+    const next = Math.min(420, Math.max(160, startWidth + dx));
+    state.sidebarWidth = next;
+    const sidebar = elements["sidebar"];
+    sidebar.style.flex = `0 0 ${next}px`;
+    sidebar.style.width = `${next}px`;
+  };
+  const onUp = () => {
+    handle.classList.remove("dragging");
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  };
+  handle.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+    startX = event.clientX;
+    startWidth = state.sidebarWidth;
+    handle.classList.add("dragging");
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  });
+}
+
+function toggleSidebar(force) {
+  const open = force != null ? force : !state.sidebarOpen;
+  state.sidebarOpen = open;
+  applySidebarState();
+}
+
 elements["terminal-placeholder"].addEventListener("click", () => launch());
 elements["close-terminal"].addEventListener("click", closeTerminal);
 window.addEventListener("pagehide", disposeAllTerminals);
@@ -477,14 +605,33 @@ elements["restart-terminal"].addEventListener("click", async () => {
   launch();
 });
 elements["fullscreen-terminal"].addEventListener("click", toggleFullscreen);
-elements["new-preset"].addEventListener("click", () => {
+elements["sidebar-toggle"].addEventListener("click", () => toggleSidebar());
+elements["sidebar-rail-toggle"].addEventListener("click", () => toggleSidebar());
+elements["new-preset-rail"].addEventListener("click", createPreset);
+
+function createPreset() {
   const preset = { id: "custom-" + Date.now(), name: "Custom Crush", program: "/opfs/wanix/crush", type: "gojs", wd: "/opfs/home", icon: "bot", env: "", crushrc: "" };
   state.snapshot.presets.push(preset);
   state.selected = preset;
+  // Open the sidebar so the new preset is visible and editable.
+  if (!state.sidebarOpen) {
+    state.sidebarOpen = true;
+    applySidebarState();
+  }
   renderPresets();
   const card = elements["preset-list"].lastElementChild;
   card.querySelector(".preset-toggle").click();
-});
+}
+
+// Sidebar starts hidden on every viewport; the user opens it via
+// the hamburger toggle. (It is drawn as a fixed/absolute drawer on
+// small screens and an in-flow column on wide screens.)
+initSidebarResize();
+toggleSidebar(false);
+// Keep sidebar visibility in sync when the viewport crosses the
+// mobile/desktop breakpoint (the user can resize or rotate the
+// window without ever clicking the toggle).
+window.matchMedia("(max-width: 720px)").addEventListener("change", () => applySidebarState());
 
 await refresh();
 detect();

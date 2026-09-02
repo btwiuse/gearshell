@@ -1,25 +1,76 @@
 html, body, #app { width: 100%; height: 100%; margin: 0; }
 html, body { overflow: auto; overscroll-behavior: none; }
+#app { display: flex; flex-direction: column; }
 body { background: #0d1117; color: #c9d1d9; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 * { box-sizing: border-box; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-.hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 32px; border-bottom: 1px solid #263241; background: linear-gradient(135deg, #111b2a, #0d1117); }
-.hero-title { display: flex; align-items: center; gap: 12px; }
-.hero-logo { width: 36px; height: 36px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 22px; border-bottom: 1px solid #263241; background: linear-gradient(135deg, #111b2a, #0d1117); flex: none; }
+.hero-title { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.hero-title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-actions { display: flex; align-items: center; gap: 10px; }
+@media (min-width: 721px) {
+  /* On desktop the hamburger in the hero is replaced by the rail
+     toggle inside the sidebar itself. */
+  .hero-actions .sidebar-toggle { display: none; }
+}
+.hero-logo { width: 28px; height: 28px; border-radius: 7px; box-shadow: 0 3px 10px rgba(0, 0, 0, .35); }
 .eyebrow { margin: 0 0 5px; color: #58a6ff; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; }
 h1, h2 { margin: 0; color: #f0f6fc; }
-h1 { font-size: 24px; }
+h1 { font-size: 20px; }
 h2 { font-size: 15px; }
-.status { align-self: center; color: #8b949e; text-align: right; }
+.sidebar-toggle { display: inline-block; font-size: 16px; line-height: 1; background: transparent; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; padding: 4px 9px; }
+/* Default collapsed state — a 48 px wide icon strip. The rail always
+   shows preset icons (truncated from each card) and a bottom toggle
+   to switch between the strip and the full 240 px panel. */
+.layout { display: flex; flex: 1; min-height: 0; position: relative; }
+/* The sidebar is always in the layout on desktop, but its width and
+   which children are visible depend on data-state:
+     strip: 48 px icon rail (default on desktop)
+     open : 240 px full panel
+   The small-viewport media below overrides it as an absolute
+   drawer when hidden, anchored to the layout's top-left. */
+.sidebar { flex: 0 0 48px; width: 48px; min-width: 0; padding: 12px 6px; border-right: 1px solid #263241; background: #0a0f16; display: flex; flex-direction: column; gap: 6px; align-items: center; overflow: hidden auto; }
+.sidebar[hidden] { display: none; }
+.sidebar-head, .sidebar-head-actions { display: none; }
+.sidebar-strip { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+.sidebar[data-state="open"] { flex: 0 0 240px; width: 240px; padding: 20px 14px; align-items: stretch; }
+.sidebar[data-state="open"] .sidebar-head, .sidebar[data-state="open"] .sidebar-head-actions { display: flex; }
+.sidebar[data-state="open"] .sidebar-strip { display: none; }
+.sidebar-rail-toggle { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #30363d; border-radius: 6px; background: transparent; color: #c9d1d9; cursor: pointer; font-size: 16px; line-height: 1; align-self: center; }
+.sidebar-rail-actions { margin-top: auto; display: flex; flex-direction: column; gap: 6px; align-items: center; width: 100%; padding: 10px 0 8px; border-top: 1px solid #21262d; }
+.sidebar[data-state="open"] .sidebar-rail-actions { flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; padding: 6px 8px; margin-top: auto; border-top: 1px solid #21262d; }
+.sidebar-rail-actions .new-preset-rail { width: 32px; height: 32px; border: 1px solid #30363d; border-radius: 6px; background: transparent; color: #c9d1d9; font-size: 16px; line-height: 1; cursor: pointer; padding: 0; }
+.sidebar[data-state="open"] .sidebar-rail-actions .new-preset-rail { flex: 1; width: auto; }
+.sidebar-resize { position: absolute; top: 0; right: 0; bottom: 0; width: 6px; cursor: ew-resize; display: none; }
+.sidebar[data-state="open"] .sidebar-resize { display: block; }
+.sidebar-resize:hover, .sidebar-resize.dragging { background: rgba(88, 166, 255, 0.25); }
+.sidebar-rail-icon { position: relative; display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 8px; color: #c9d1d9; background: #161b22; cursor: pointer; border: 0; }
+.sidebar-rail-icon.selected { background: #1b3656; color: #c9d1d9; box-shadow: inset 0 0 0 1px #2f81f7; }
+.sidebar-rail-icon:hover { background: #1f2a3a; }
+.sidebar-rail-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.sidebar-rail-icon .rail-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: #58a6ff; }
+@media (max-width: 720px) {
+  /* On small viewports the sidebar leaves the flex layout entirely
+     and becomes an absolute drawer anchored to the layout's top-left
+     corner. data-state="drawer" forces the drawer; data-state="open"
+     just means it is visible (same drawer look). */
+  /* Mobile drawer: hidden when closed, slides in as a full-width
+     overlay when data-state="open". The same "open" state used on
+     desktop (240 px panel) is repurposed here as a 100 % overlay. */
+  .sidebar[data-state="open"] { position: absolute; top: 0; left: 0; right: 0; width: 100%; flex: none; padding: 20px 14px; background: #0a0f16; border-right: 0; border-bottom: 1px solid #263241; border-radius: 0 0 8px 8px; overflow: auto; box-shadow: 0 6px 24px rgba(0, 0, 0, .4); align-items: stretch; z-index: 9000; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+.status { align-self: center; color: #8b949d; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; font-variant-numeric: tabular-nums; }
 .status[data-error="true"] { color: #ff7b72; }
-.layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: calc(100% - 125px); }
-.sidebar { padding: 20px 14px; border-right: 1px solid #263241; background: #0a0f16; }
-.sidebar-head, .preset-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.sidebar-head { margin: 0 4px 12px; }
-.sidebar-head button, .banner button { border: 1px solid #3b4b61; border-radius: 5px; padding: 5px 9px; color: #c9d1d9; background: #172235; }
+
+.sidebar-head, .sidebar-head-actions { display: none; }
+.sidebar-strip { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
 #preset-list { display: grid; gap: 8px; }
+.sidebar[data-state="strip"] #preset-list { display: none; }
+.sidebar[data-state="open"] #preset-list { display: grid; }
 .preset-card { overflow: hidden; border: 1px solid #263241; border-radius: 7px; background: #111821; }
+.preset-card .preset-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .preset-card.selected { border-color: #2f81f7; }
 .preset-dot { position: absolute; top: 13px; right: 12px; width: 9px; height: 9px; border-radius: 50%; background: #58a6ff; box-shadow: 0 0 0 2px #111821; }
 .preset-dot[hidden] { display: none; }
@@ -38,7 +89,7 @@ h2 { font-size: 15px; }
 .preset-actions button { border: 1px solid #3b4b61; border-radius: 5px; padding: 6px 9px; color: #c9d1d9; background: #172235; }
 .preset-actions .danger { color: #ff7b72; }
 .preset-actions button:disabled { opacity: .45; cursor: not-allowed; }
-.content { min-width: 0; padding: 24px 30px 40px; }
+.content { min-width: 0; min-height: 0; padding: 24px 30px 40px; display: flex; flex-direction: column; flex: 1; }
 .banner { margin-bottom: 18px; padding: 11px 14px; border: 1px solid #8b6d2c; border-radius: 6px; color: #e3b341; background: #211b0b; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
 label { display: grid; gap: 6px; margin-bottom: 16px; color: #8b949e; font-size: 12px; }
@@ -50,7 +101,7 @@ textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, SFMono
 .actions .primary { border-color: #238636; color: #fff; background: #238636; }
 .actions .danger { border-color: #6e3030; color: #ff7b72; }
 .actions button:disabled { opacity: .45; cursor: not-allowed; }
-.terminal-frame { display: flex; flex-direction: column; min-height: 480px; overflow: hidden; border: 1px solid #30363d; border-radius: 10px; background: #0a0e14; box-shadow: 0 12px 40px rgba(0, 0, 0, .4); }
+.terminal-frame { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; border: 1px solid #30363d; border-radius: 10px; background: #0a0e14; box-shadow: 0 12px 40px rgba(0, 0, 0, .4); }
 .terminal-frame.is-fullscreen { position: fixed; inset: 0; z-index: 10000; border: 0; border-radius: 0; }
 .terminal-bar { display: flex; align-items: center; gap: 12px; flex: none; padding: 10px 14px; border-bottom: 1px solid #30363d; background: linear-gradient(#161b22, #141920); }
 .terminal-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
@@ -78,4 +129,3 @@ textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, SFMono
 .term-progress[data-state="3"] .term-progress-fill { width: 32% !important; background: linear-gradient(90deg, transparent, #58a6ff, transparent); animation: term-progress-indeterminate 1.2s ease-in-out infinite; }
 @keyframes term-progress-indeterminate { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
 [hidden] { display: none !important; }
-@media (max-width: 700px) { .hero { display: block; padding: 22px 18px; } .status { margin-top: 12px; text-align: left; } .layout { display: block; } .sidebar { border-right: 0; border-bottom: 1px solid #263241; } .content { padding: 18px; } .form-grid { grid-template-columns: 1fr; } }

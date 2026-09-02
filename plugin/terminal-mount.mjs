@@ -181,11 +181,18 @@ export async function mountTerminal(anchor, session, options = {}) {
     } catch {}
   };
   // fit to the anchor then forward (anchor ResizeObserver / window resize).
+  // rAF wrapping: xterm reads host.offsetWidth/Height when sizing its
+  // viewport, but those are stale for a frame after the observer fires
+  // (e.g. just after a fullscreen toggle exits and the layout is
+  // shrinking). Defer the actual fit to the next frame so the
+  // measured size matches the new container.
   const refitAndResize = () => {
-    try {
-      fit.fit();
-      forwardSize();
-    } catch {}
+    requestAnimationFrame(() => {
+      try {
+        fit.fit();
+        forwardSize();
+      } catch {}
+    });
   };
 
   // Detect OSC 9;4 state transitions on the raw output stream. We do
@@ -277,14 +284,17 @@ export async function mountTerminal(anchor, session, options = {}) {
     // proposeDimensions + term.resize). The implementation also no-throws
     // so a partially-torn-down handle does not break the caller.
     fitTerminal() {
-      try {
-        if (typeof fit?.fit === "function") {
-          fit.fit();
-        } else if (typeof fit?.proposeDimensions === "function" && term?.resize) {
-          const dims = fit.proposeDimensions();
-          if (dims) term.resize(dims.cols || 80, dims.rows || 24);
-        }
-      } catch {}
+      requestAnimationFrame(() => {
+        try {
+          if (typeof fit?.fit === "function") {
+            fit.fit();
+          } else if (typeof fit?.proposeDimensions === "function" && term?.resize) {
+            const dims = fit.proposeDimensions();
+            if (dims) term.resize(dims.cols || 80, dims.rows || 24);
+          }
+          forwardSize();
+        } catch {}
+      });
     },
     dispose: () => {
       observer.disconnect();
