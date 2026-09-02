@@ -22,7 +22,7 @@
 // write the shared VFS natively with cat/echo instead.
 //
 // This entry module only assembles the API from the per-domain parts
-// (events / open / config / tasks / agents / registry / gear bind) and
+// (events / open / config / fs / tasks / agents / registry / gear bind) and
 // re-exports the boot hooks; the 500-line rule is enforced across the
 // split.
 
@@ -47,6 +47,7 @@ import {
 import { agentsApi } from "./workspace-agents-api.js";
 import { musicApi } from "./music-engine.js";
 import { terminalApi } from "./workspace-terminal-api.js";
+import { fsApi } from "./workspace-fs-api.js";
 import {
   applyW9yMod,
   installedModStatus,
@@ -101,6 +102,7 @@ const api = {
   panels: wrapNamespace(openApi.panels),
   browser: wrapNamespace(openApi.browser),
   files: wrapNamespace(openApi.files),
+  fs: wrapNamespace(fsApi),
   tasks: wrapNamespace(tasksApi),
   agents: wrapNamespace(agentsApi),
   music: wrapNamespace(musicApi),
