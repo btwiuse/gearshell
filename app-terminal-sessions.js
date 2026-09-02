@@ -17,6 +17,7 @@ import { DEFAULT_CMD } from "./app-constants.js";
 import { loadActiveWorkspace } from "./app-workspace.js";
 import { cachedBlobUrl } from "./app-plugin-cache.js";
 import { html } from "./dom-html.js";
+import { wireNativeProgressChime } from "./plugin/terminal-mount.mjs";
 
 export function hideTerminalLayer() {
   terminalLayer?.classList.add("dragging");
@@ -69,6 +70,7 @@ export function createTerminalSession(
     ${term}
   </div>`;
   terminalLayer?.appendChild(wrapper);
+  wireNativeProgressChime(term);
 
   const session = {
     id,

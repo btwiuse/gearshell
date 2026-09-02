@@ -229,6 +229,10 @@ export const SETTINGS_TEMPLATE_HTML =
                   <input data-config="allow-background-playback" type="checkbox">
                 </label>
                 <label class="cfg-toggle">
+                  <span>Play sound when progress is done</span>
+                  <input data-config="play-progress-done-sound" type="checkbox">
+                </label>
+                <label class="cfg-toggle">
                   <span>Show Discord community widget</span>
                   <input data-config="widgetbot" type="checkbox">
                 </label>

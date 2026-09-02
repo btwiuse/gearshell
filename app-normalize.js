@@ -227,6 +227,7 @@ export function normalizeShellConfig(config) {
     startupPanels: normalizeStartupPanels(config),
     restoreTabs: config?.restoreTabs === true,
     allowBackgroundPlayback: config?.allowBackgroundPlayback !== false,
+    playProgressDoneSound: config?.playProgressDoneSound !== false,
     workbenchAssetsUrl: normalizeWorkbenchAssetsUrl(config?.workbenchAssetsUrl),
     wagiDogEnabled: config?.wagiDogEnabled === true,
     widgetbot: config?.widgetbot === true,

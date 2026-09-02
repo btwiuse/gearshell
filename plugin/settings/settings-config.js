@@ -29,6 +29,9 @@ function queryConfigElements(settingsContent) {
     allowBgPlaybackEl: settingsContent.querySelector(
       '[data-config="allow-background-playback"]',
     ),
+    playProgressDoneSoundEl: settingsContent.querySelector(
+      '[data-config="play-progress-done-sound"]',
+    ),
     widgetbotEl: settingsContent.querySelector(
       '[data-config="widgetbot"]',
     ),
@@ -45,6 +48,9 @@ function fillConfigFields(els, cfg) {
   if (els.wagiDogEnabledEl) els.wagiDogEnabledEl.checked = cfg.wagiDogEnabled;
   if (els.allowBgPlaybackEl) {
     els.allowBgPlaybackEl.checked = cfg.allowBackgroundPlayback !== false;
+  }
+  if (els.playProgressDoneSoundEl) {
+    els.playProgressDoneSoundEl.checked = cfg.playProgressDoneSound !== false;
   }
   if (els.widgetbotEl) els.widgetbotEl.checked = cfg.widgetbot === true;
   for (const input of els.integrationEls) {
@@ -69,6 +75,7 @@ function wireConfigSave(settingsContent, els, showConfigStatus) {
       restoreTabs: els.restoreTabsEl?.checked === true,
       wagiDogEnabled: els.wagiDogEnabledEl?.checked !== false,
       allowBackgroundPlayback: els.allowBgPlaybackEl?.checked !== false,
+      playProgressDoneSound: els.playProgressDoneSoundEl?.checked !== false,
       widgetbot: els.widgetbotEl?.checked === true,
       ...Object.fromEntries(
         els.integrationEls.map((

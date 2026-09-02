@@ -152,6 +152,7 @@ export const DEFAULT_CONFIG = {
   startupPanels: ["home"],
   restoreTabs: false,
   allowBackgroundPlayback: true,
+  playProgressDoneSound: true,
   workbenchAssetsUrl: DEFAULT_WORKBENCH_ASSETS_URL,
   wagiDogEnabled: false,
   widgetbot: false,

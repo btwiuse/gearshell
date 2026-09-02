@@ -70,6 +70,16 @@ function chimeMarkUnlocked() {
   try { localStorage.setItem(CHIME_AUTOPLAY_UNLOCK, "1"); }
   catch {}
 }
+function progressDoneSoundEnabled(options) {
+  if (typeof options.playSound === "boolean") return options.playSound;
+  try {
+    return globalThis.GearShell?.config?.getShell?.()
+      ?.playProgressDoneSound !== false;
+  } catch {
+    return true;
+  }
+}
+
 export function playChime(kind = "done") {
   const ctx = ensureChimeAudioContext();
   if (!ctx) return false;
@@ -267,7 +277,7 @@ export async function mountTerminal(anchor, session, options = {}) {
           chimeTimer = setTimeout(() => {
             chimeTimer = null;
             options.onProgressDone?.();
-            playChime("done");
+            if (progressDoneSoundEnabled(options)) playChime("done");
           }, 400);
         }
       }
