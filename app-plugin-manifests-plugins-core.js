@@ -38,14 +38,6 @@ export const CORE_PLUGINS = [
     },
   },
   {
-    id: "group",
-    name: "Group",
-    version: "1.0.0",
-    icon: "UsersRound",
-    entry: "/plugin/group/group-plugin.js",
-    enabled: false,
-  },
-  {
     id: "runtime",
     name: "Runtime",
     version: "1.0.0",

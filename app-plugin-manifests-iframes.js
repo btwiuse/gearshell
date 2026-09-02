@@ -160,6 +160,16 @@ export const IFRAME_PLUGINS = [
     enabled: false,
   },
   {
+    id: "group",
+    name: "Group",
+    version: "1.0.0",
+    icon: "UsersRound",
+    iframe: {
+      src: "/plugin/group/index.html",
+    },
+    enabled: false,
+  },
+  {
     id: "crush",
     name: "Crush",
     version: "1.0.0",
