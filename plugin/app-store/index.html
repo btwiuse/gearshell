@@ -53,8 +53,7 @@ import {
   Store,
   Pencil,
   Trash2,
-  Power,
-  X,
+  ExternalLink,
   AlertTriangle,
   Check,
 } from "lucide-react";
@@ -357,12 +356,13 @@ function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen }) {
     <${Badges} plugin=${plugin}/>
     ${plugin.loadError ? html`<div className="as-card-desc" style=${{ color: "#f85149" }}>${plugin.loadError}</div>` : null}
     <div className="as-card-actions">
-      ${plugin.enabled ? html`<button
+      <button
         type="button"
         className="as-btn primary"
-        title="Open this plugin in a new dockview tab"
+        disabled=${!plugin.enabled}
+        title=${plugin.enabled ? `Open ${plugin.name} in a new tab` : `Enable ${plugin.name} first`}
         onClick=${() => onOpen(plugin)}
-      ><${Power} size=${12} aria-hidden=${true}/> Open</button>` : null}
+      ><${ExternalLink} size=${12} aria-hidden=${true}/> Open</button>
       <button
         type="button"
         className="as-btn"
@@ -397,11 +397,13 @@ function PluginRowList({ plugin, onToggle, onEdit, onRemove, onOpen }) {
         onChange=${() => onToggle(plugin)}
         label=${plugin.enabled ? `Disable ${plugin.name}` : `Enable ${plugin.name}`}
       />
-      ${plugin.enabled ? html`<button
+      <button
         type="button"
         className="as-btn primary"
+        disabled=${!plugin.enabled}
+        title=${plugin.enabled ? `Open ${plugin.name} in a new tab` : `Enable ${plugin.name} first`}
         onClick=${() => onOpen(plugin)}
-      >Open</button>` : null}
+      ><${ExternalLink} size=${12} aria-hidden=${true}/></button>
       <button type="button" className="as-btn" disabled=${plugin.required} onClick=${() => onEdit(plugin)}><${Pencil} size=${12} aria-hidden=${true}/></button>
       <button type="button" className="as-btn danger" disabled=${plugin.builtin} onClick=${() => onRemove(plugin)}><${Trash2} size=${12} aria-hidden=${true}/></button>
     </div>

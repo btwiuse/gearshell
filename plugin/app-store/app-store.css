@@ -24,7 +24,7 @@ body {
   flex-direction: column;
 }
 
-/#app { display: flex; flex-direction: column; min-height: 0; }
+#app { display: flex; flex-direction: column; min-height: 0; }
 
 /* --- Top bar --- */
 .as-bar {
@@ -333,7 +333,11 @@ body {
 
 .as-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) auto;
+  /* Table-like columns: icon | name/id | tags | actions. The name column
+     is capped at 220px (overflow ellipsizes) so the tags column's left
+     edge stays aligned across every row — otherwise a long plugin name
+     would shove the tags to the right and break the column look. */
+  grid-template-columns: 32px minmax(0, 220px) minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 10px;
@@ -358,8 +362,21 @@ body {
 }
 .as-row.is-disabled .as-row-icon { background: #21262d; color: #6e7681; }
 
-.as-row-name { font-weight: 600; color: #f0f6fc; }
-.as-row-id { font-size: 11px; color: #8b949e; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.as-row-name {
+  font-weight: 600;
+  color: #f0f6fc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.as-row-id {
+  font-size: 11px;
+  color: #8b949e;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .as-row-tags {
   display: flex;
@@ -371,6 +388,8 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  justify-content: flex-end;
+  white-space: nowrap;
 }
 
 /* --- Empty / no-match --- */
