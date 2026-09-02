@@ -22,6 +22,13 @@ model add minimax-china/MiniMax-M3 \
      --can-reason true \
      --supports-images true
 
+model add deepseek/deepseek-v4-flash \
+     --name "DeepSeek V4 Flash 163840" \
+     --context-window 1000000 \
+     --default-max-tokens 163840 \
+     --can-reason true \
+     --supports-images false
+
 model small deepseek/deepseek-v4-flash
 model large deepseek/deepseek-v4-flash
 model small stepfun/step-3.7-flash
