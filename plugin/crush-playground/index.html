@@ -4,14 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Crush Playground</title>
-<link rel="stylesheet" href="/plugin/crush-runner-iframe/crush-runner-iframe.css" />
+<link rel="stylesheet" href="/plugin/crush-playground/crush-playground.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css" />
 </head>
 <body>
 <div id="app">
   <header class="hero">
     <div class="hero-title">
-      <img class="hero-logo" src="/plugin/crush-runner-iframe/assets/crush-icon.png" alt="" />
+      <img class="hero-logo" src="/plugin/crush-playground/assets/crush-icon.png" alt="" />
       <h1>Crush Playground</h1>
     </div>
     <div class="hero-actions">
@@ -341,7 +341,7 @@ async function installCrush() {
 async function saveCard(event, card) {
   event.preventDefault();
   try {
-    state.snapshot = await GearShell.config.crushRunner.save(readCard(card), { active: true, agent: "crush-runner-iframe" });
+    state.snapshot = await GearShell.config.crushRunner.save(readCard(card), { active: true, agent: "crush-playground" });
     state.selected = readCard(card);
     renderPresets();
     setStatus("Preset saved");
@@ -352,7 +352,7 @@ async function saveCard(event, card) {
 
 async function removeCard(card) {
   try {
-    state.snapshot = await GearShell.config.crushRunner.remove(card.dataset.id, "crush-runner-iframe");
+    state.snapshot = await GearShell.config.crushRunner.remove(card.dataset.id, "crush-playground");
     await refresh();
     setStatus("Preset removed");
   } catch (error) {
