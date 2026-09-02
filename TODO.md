@@ -1658,3 +1658,34 @@ extras 重打,gearshell 待推):
   独立 shared module,否则 Settings UI 虽 iframe,部分旧 Settings React 依赖仍进 boot);
   4)确认默认 plugins 归一化后不再保留 Settings entry/css;5)完成浏览器交互回归后再
   commit/push,不要把当前骨架误标完整 parity。
+
+## 四十九、GearShell API Documentation plugin(2026-09-02,已提交 0b1894b + 5bdfed1)
+
+用户要"比 Playground 更详尽的 GearShell API 文档组件"。Playground 是
+**可执行 catalog**(每方法 React form + Run),Documentation 是**可读
+markdown**(每方法独立 .md,签名 + 参数表 + 返回 + 多个示例 + 权限片段)。
+
+- 新插件 `plugin/gearshell-docs/`:index.html(importmap + bridge +
+  entry)、docs.css(inline,github-dark 主题,不漏到 shell chrome)、
+  docs-app.js(React + htm + marked@17 + DOMPurify + lucide-react)。
+- 142 个 API 文档 + 8 个跨切 guides(overview / iframe-bridge /
+  gear-cli / permissions / events / fs / tasks-agents / config-audit),
+  共 150 个 markdown 文件。
+- `scripts/build-docs-content.mjs` 是 canonical source:从 RECORDS +
+  CONFIG_TABLE / MUSIC_TABLE / TERMINAL_TABLE / FS_TABLE + GUIDES
+  生成所有 .md 与 `content/index.json`。**index.json 的 path 字段由
+  生成器派生**(record.id.replaceAll(".", "/") + ".md"),不再手维护,
+  避免第一次发货时 `version.md` / `ping.md` 被错指到 `root/` 子目录
+  导致 404(详见 memory/api-docs.md 的 "first-iteration 404" 一节)。
+- manifest 注册到 `app-plugin-manifests-plugins-core.js`,权限集与
+  Playground 相同(全 root + 14 namespace 全读 + fs.*);icon `BookOpen`。
+- UI:侧栏 TOC 按 namespace 分组(每组显示条目数)、全局搜索过滤、
+  hash 路由(`#/terminal.create`)、代码块 copy 按钮、最后访问页面
+  通过 `config.kv` 持久化(localStorage 兜底)。
+- 已用 Chrome MCP 实测:打开面板正常渲染、Config 73 个方法侧栏正确
+  显示、`#/version` 不再 404、代码块 4 个 copy 按钮 payload 正确、
+  `config.kv.get("gearshell-docs:last-page")` 返回 `"agents.prompt"`、
+  控制台零错误。
+- 提交:`0b1894b`(插件主体) + `5bdfed1`(404 修复 + index.json 自动化)。
+- 关联:`memory/api-docs.md`(新写)、`memory/Home.md`(索引)、
+  `memory/playground.md`(末尾 sibling 注释)。
