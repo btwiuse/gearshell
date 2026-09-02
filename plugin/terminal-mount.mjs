@@ -103,6 +103,34 @@ export function playChime(kind = "done") {
   return true;
 }
 
+// Hook a native `<wanix-term>` (or any element) for OSC 9;4
+// progress-done notifications. The element fires a `progressdone`
+// CustomEvent whenever the agent finishes a turn (wanix kernel:
+// edge-detect on state 0 with a prior non-zero state). Default
+// response is the same "done" chime the iframe terminal uses;
+// pass `onDone` to override (e.g. for a custom UI badge).
+//
+// Returns a teardown function that removes the listener. Idempotent
+// across calls — re-binding replaces the previous handler.
+export function wireNativeProgressChime(element, options = {}) {
+  if (!element) return () => {};
+  const handler = options.onDone || (() => playChime("done"));
+  const listener = (event) => handler(event?.detail);
+  // Avoid stacking listeners across reconnects: tag the function on
+  // the element so re-invocation clears the previous one.
+  if (element.__wanixProgressChimeListener) {
+    element.removeEventListener("progressdone", element.__wanixProgressChimeListener);
+  }
+  element.addEventListener("progressdone", listener);
+  element.__wanixProgressChimeListener = listener;
+  return () => {
+    element.removeEventListener("progressdone", listener);
+    if (element.__wanixProgressChimeListener === listener) {
+      element.__wanixProgressChimeListener = null;
+    }
+  };
+}
+
 // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
 // xterm listens for after the terminal lost focus, so a tap would never
 // reopen the keyboard. Focus directly on a tap; scrolls are ignored.

@@ -13,6 +13,7 @@ import { normalizeTask } from "./app-normalize.js";
 import { buildEnv } from "./app-terminal-profiles.js";
 import { attachOverlayTerminalSession } from "./app-terminal-sessions.js";
 import { html } from "./dom-html.js";
+import { wireNativeProgressChime } from "./plugin/terminal-mount.mjs";
 
 export function createBindElement(bind) {
   return html`<wanix-bind
@@ -159,12 +160,18 @@ function createTaskTerminal(task) {
   task.appendChild(
     html`<wanix-bind dst="winch" src="#task/self/term/winch" />`,
   );
-  return html`<wanix-term
+  const term = html`<wanix-term
     raw=""
     no-scrollbar=""
     path=${`#task/${task.id}/term`}
     for="wanix-system"
   />`;
+  // See app-sessions.js: the wanix kernel emits a `progressdone`
+  // event when OSC 9;4 transitions back to state 0; we hook the
+  // shared chime helper so task terminals sound the same as
+  // iframe ones.
+  wireNativeProgressChime(term);
+  return term;
 }
 
 export function createWorkspaceTaskSession(id, taskDefinition, workspace) {

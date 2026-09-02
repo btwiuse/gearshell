@@ -20,6 +20,7 @@ import { DEFAULT_CMD } from "./app-constants.js";
 import { wanixSystem } from "./app-state.js";
 import { createWanixBindElement } from "./app-wanix.js";
 import { html } from "./dom-html.js";
+import { wireNativeProgressChime } from "./plugin/terminal-mount.mjs";
 
 export const DEFAULT_IFRAME_ALLOW = "clipboard-read; clipboard-write";
 
@@ -402,6 +403,11 @@ export function startVmSession(session, options = {}) {
       no-scrollbar=""
     />`;
     session.term = term;
+    // Play the agent-done chime when the wanix kernel's progress
+    // tracker transitions back to state 0 (OSC 9;4 edge). wanix-term
+    // fires a `progressdone` CustomEvent; the helper reuses the
+    // same audio stack as the iframe terminal helpers.
+    wireNativeProgressChime(term);
     session.wrapper.replaceChildren(vm, term);
   }).catch((error) => {
     if (session.destroyed) return;
