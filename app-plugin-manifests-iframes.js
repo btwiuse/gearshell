@@ -68,6 +68,38 @@ export const IFRAME_PLUGINS = [
       ],
     },
   },
+  // App Store: a buildless iframe plugin that replaces the in-page
+  // Plugins management page with a richer UI (Card + List views,
+  // tag-chip filter, search, "Open" shortcut for enabled plugins).
+  // Talks to the same config.plugins.* / panels.* surface as the
+  // in-page version — the bridge proxies every GearShell.* call across
+  // postMessage, gated by this plugin's permissions.api whitelist.
+  // Disabled by default — opt in via the Plugins page.
+  {
+    id: "app-store",
+    name: "App Store",
+    version: "1.0.0",
+    icon: "Store",
+    iframe: {
+      src: "/plugin/app-store/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    permissions: {
+      api: [
+        "config.plugins.list",
+        "config.plugins.install",
+        "config.plugins.remove",
+        "config.plugins.setEnabled",
+        "panels.list",
+        "panels.open",
+        "panels.close",
+        "panels.focus",
+        "events.on",
+        "events.off",
+      ],
+    },
+    enabled: false,
+  },
   // Lucide Icons browser: a buildless iframe plugin that uses an
   // importmap to load lucide-react from esm.sh. The page is fully
   // self-contained (it doesn't call any GearShell.* bridge API — the

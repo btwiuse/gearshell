@@ -101,6 +101,13 @@ export function normalizePlugin(plugin = {}) {
   const files = normalizeFilesList(plugin?.files);
   const systemFiles = normalizeFilesList(plugin?.systemFiles);
   const css = normalizeStringList(plugin?.css);
+  // Manifest-declared tags get unioned with derived ones so the App
+  // Store / Settings UI can filter by kind without each manifest having
+  // to spell out the obvious ("iframe", "builtin", "component").
+  const derivedTags = [];
+  if (iframeSrc) derivedTags.push("iframe");
+  else if (String(plugin.entry || "").trim()) derivedTags.push("component");
+  else derivedTags.push("builtin");
   return {
     id,
     name: String(plugin.name || id).trim(),
@@ -111,6 +118,13 @@ export function normalizePlugin(plugin = {}) {
     // Required plugins (e.g. the shell-tools toolset) cannot be disabled
     // or removed: the config API refuses those writes.
     required: plugin.required === true,
+    // Free-form tags surfaced to the App Store. Authors declare whatever
+    // they want ("terminal", "agent", "media", "demo") and union with
+    // the derived kind tag; the UI lets users multi-select.
+    tags: Array.from(new Set([
+      ...derivedTags,
+      ...normalizeStringList(plugin.tags),
+    ])),
     permissions: {
       api: normalizeStringList(plugin.permissions?.api),
       origins: normalizeStringList(plugin.permissions?.origins),

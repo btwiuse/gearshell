@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>App Store</title>
+<link rel="stylesheet" href="/plugin/app-store/app-store.css" />
+<style>
+html, body, #app {
+  width: 100%; height: 100%; margin: 0; overflow: hidden;
+  overscroll-behavior: none;
+}
+html, body { max-height: 100vh; }
+body {
+  background: #0d1117; color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px !important;
+}
+</style>
+<!-- buildless iframe plugin: the importmap resolves React, htm, and
+     lucide-react from esm.sh, and /plugin/gear-bridge.js (loaded as a
+     classic script) installs window.GearShell on this iframe so every
+     method call becomes a postMessage to the parent shell — gated by
+     this plugin's permissions.api whitelist. The shell's
+     config.plugins.{list, install, remove, setEnabled} and
+     panels.{list, open, close, focus} are already exposed; this page
+     adds tag-filter and List/Card view on top. -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "htm": "https://esm.sh/htm@3.1.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.468.0?deps=react@18.2.0"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<script src="/plugin/gear-bridge.js"></script>
+<script type="module">
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import htm from "htm";
+import * as Lucide from "lucide-react";
+import {
+  Search,
+  LayoutGrid,
+  List,
+  Plus,
+  Store,
+  Pencil,
+  Trash2,
+  Power,
+  X,
+  AlertTriangle,
+  Check,
+} from "lucide-react";
+
+const html = htm.bind(React.createElement);
+
+// Every prop name returned by lucide-react forwardRef icons is
+// PascalCase. We strip the deprecated "XIcon" suffix aliases and any
+// non-icon helper exports (defaultAttributes, icons, etc.) so the
+// App Store's icon picker shows canonical names only.
+const LUCIDE_ICONS = Object.keys(Lucide)
+  .filter((name) => /^[A-Z]/.test(name) && name !== "defaultAttributes")
+  .filter((name) => !name.endsWith("Icon"))
+  .sort();
+
+function iconOf(name) {
+  return Lucide[name] || Lucide.Wrench;
+}
+
+// Plugin kind tag (matches normalizePlugin's derived "iframe" /
+// "component" / "builtin"). Used for the badge color and the always-on
+// kind chip at the top of the filter bar.
+function kindOf(plugin) {
+  if (plugin.iframe) return "iframe";
+  if (plugin.entry) return "component";
+  return "builtin";
+}
+
+// --- Filter / view state ---
+function useStore() {
+  const [plugins, setPlugins] = useState([]);
+  const [view, setView] = useState("grid");
+  const [query, setQuery] = useState("");
+  const [activeTags, setActiveTags] = useState([]); // string[]
+  const [notice, setNotice] = useState(null); // {kind, text}
+  const [modal, setModal] = useState(null); // {mode, plugin?}
+
+  const refresh = () => {
+    // The gear bridge only installs window.GearShell inside an iframe
+    // (window.top !== window.self). When this page is opened directly in
+    // a browser tab for development, the bridge guard skips installation
+    // and GearShell stays undefined — fall back to an empty state so the
+    // React tree still renders an explanatory empty card.
+    if (typeof GearShell === "undefined") {
+      setPlugins([]);
+      return;
+    }
+    const result = GearShell.config.plugins.list();
+    setPlugins(Array.isArray(result) ? result : []);
+  };
+  // Track bridge presence so the empty-state card can hint at it.
+  const bridgeAvailable = typeof GearShell !== "undefined";
+  useEffect(() => {
+    refresh();
+    // Re-render when the kernel hot-installs/loads/disables a plugin
+    // and when config changes anywhere (Settings toggle etc.).
+    const reload = () => refresh();
+    if (typeof GearShell === "undefined") return;
+    GearShell.events.on("plugin.changed", reload);
+    GearShell.events.on("config.changed", reload);
+    return () => {
+      GearShell.events.off("plugin.changed", reload);
+      GearShell.events.off("config.changed", reload);
+    };
+  }, []);
+
+  const allTags = useMemo(() => {
+    const counts = new Map();
+    for (const p of plugins) for (const t of p.tags || []) {
+      counts.set(t, (counts.get(t) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [plugins]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return plugins.filter((p) => {
+      if (q) {
+        const hay = [p.name, p.id, p.description]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (activeTags.length) {
+        const have = new Set(p.tags || []);
+        for (const t of activeTags) if (!have.has(t)) return false;
+      }
+      return true;
+    });
+  }, [plugins, query, activeTags]);
+
+  const toggleTag = (tag) => {
+    setActiveTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
+  const flash = (result, okText) => {
+    if (result && result.ok === false) {
+      setNotice({ kind: "error", text: result.error || "Failed." });
+    } else if (result?.error) {
+      setNotice({ kind: "error", text: result.error });
+    } else {
+      setNotice({ kind: "ok", text: okText });
+    }
+    setTimeout(() => setNotice(null), 2400);
+  };
+
+  return {
+    plugins,
+    visible,
+    view,
+    setView,
+    query,
+    setQuery,
+    activeTags,
+    toggleTag,
+    allTags,
+    notice,
+    setNotice,
+    modal,
+    setModal,
+    flash,
+    refresh,
+  };
+}
+
+// --- Actions: enable/disable, remove, open, submit ---
+function useActions(store) {
+  const { flash, refresh, setModal } = store;
+
+  const onToggle = (plugin) => {
+    try {
+      const result = GearShell.config.plugins.setEnabled(
+        plugin.id,
+        !plugin.enabled,
+      );
+      flash(result, `${plugin.name} ${plugin.enabled ? "disabled" : "enabled"}.`);
+      refresh();
+    } catch (error) {
+      flash({ error: error?.message || String(error) });
+    }
+  };
+
+  const onRemove = (plugin) => {
+    if (!window.confirm(`Remove "${plugin.name}"?`)) return;
+    try {
+      const result = GearShell.config.plugins.remove(plugin.id);
+      flash(result, `${plugin.name} removed.`);
+      refresh();
+    } catch (error) {
+      flash({ error: error?.message || String(error) });
+    }
+  };
+
+  const onOpen = async (plugin) => {
+    // The plugin exposes one or more panels via plugin.panels; opening
+    // the first one is the Launcher-equivalent behavior.
+    if (!plugin.enabled) {
+      flash({ error: "Enable the plugin before opening it." });
+      return;
+    }
+    const id = (plugin.panels && plugin.panels[0]) || plugin.id;
+    try {
+      const result = await GearShell.panels.open(id);
+      if (result?.ok === false) {
+        flash({ error: result.error || "Could not open plugin." });
+      }
+    } catch (error) {
+      flash({ error: error?.message || String(error) });
+    }
+  };
+
+  const onSubmit = (values, kind) => {
+    const manifest = {
+      id: values.id.trim(),
+      name: values.name.trim(),
+      version: values.version.trim() || "1.0.0",
+      icon: values.icon.trim() || "Wrench",
+      tags: values.tags
+        .split(/[,\n]+/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+    };
+    const permissions = values.permissions
+      .split(/\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (permissions.length) manifest.permissions = { api: permissions };
+    if (kind === "iframe") {
+      const src = values.src.trim();
+      if (!src) {
+        flash({ error: "Iframe src is required." });
+        return;
+      }
+      manifest.iframe = { src };
+      if (values.allow.trim()) manifest.iframe.allow = values.allow.trim();
+      if (values.allowFullscreen) manifest.iframe.allowFullscreen = true;
+    } else if (kind === "component") {
+      if (!values.entry.trim()) {
+        flash({ error: "Component entry URL is required." });
+        return;
+      }
+      manifest.entry = values.entry.trim();
+    } else {
+      flash({ error: "Pick a kind first." });
+      return;
+    }
+    try {
+      const result = GearShell.config.plugins.install(manifest);
+      flash(
+        result,
+        result?.ok === false ? null : `${manifest.name} installed. Loading…`,
+      );
+      setModal(null);
+      refresh();
+    } catch (error) {
+      flash({ error: error?.message || String(error) });
+    }
+  };
+
+  return { onToggle, onRemove, onOpen, onSubmit };
+}
+
+// --- Components ---
+function NoticeBar({ notice }) {
+  return html`<div className=${"as-notice " + (notice?.kind || "") + (notice ? " show" : "")}>
+    ${notice?.kind === "error"
+      ? html`<${AlertTriangle} size=${13} aria-hidden=${true}/>`
+      : html`<${Check} size=${13} aria-hidden=${true}/>`}
+    <span style=${{ marginLeft: 6 }}>${notice?.text || ""}</span>
+  </div>`;
+}
+
+function TagChips({ allTags, activeTags, onToggle }) {
+  if (!allTags.length) return null;
+  return html`<div className="as-tags">
+    ${allTags.map(([tag, count]) => html`<button
+      key=${tag}
+      type="button"
+      className=${"as-tag " + (activeTags.includes(tag) ? "active" : "")}
+      onClick=${() => onToggle(tag)}
+    >${tag}<span className="as-tag-count">${count}</span></button>`)}
+  </div>`;
+}
+
+function ToggleSwitch({ checked, disabled, onChange, label }) {
+  return html`<button
+    type="button"
+    className="as-switch"
+    role="switch"
+    aria-checked=${checked ? "true" : "false"}
+    aria-label=${label}
+    title=${label}
+    disabled=${disabled}
+    onClick=${onChange}
+  ></button>`;
+}
+
+function Badges({ plugin }) {
+  const kind = kindOf(plugin);
+  const tags = (plugin.tags || []).filter((t) => t !== kind);
+  return html`<div className="as-card-badges">
+    <span className=${"as-badge " + kind}>${kind}</span>
+    <span className=${"as-badge " + (plugin.enabled ? "enabled" : "disabled")}>${plugin.enabled ? "enabled" : "disabled"}</span>
+    ${plugin.required ? html`<span className="as-badge required">required</span>` : null}
+    ${plugin.builtin ? html`<span className="as-badge builtin">built-in</span>` : null}
+    ${plugin.loadError ? html`<span className="as-badge load-error">load-error</span>` : null}
+    ${tags.map((t) => html`<span key=${t} className="as-badge">${t}</span>`)}
+  </div>`;
+}
+
+function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen }) {
+  const Icon = iconOf(plugin.icon);
+  return html`<article className=${"as-card " + (plugin.enabled ? "" : "is-disabled") + (plugin.loadError ? " has-error" : "")}>
+    <div className="as-card-top">
+      <div className="as-card-icon"><${Icon} size=${18} aria-hidden=${true}/></div>
+      <div className="as-card-head">
+        <div className="as-card-name">${plugin.name || plugin.id}</div>
+        <div className="as-card-id">${plugin.id} · v${plugin.version}</div>
+      </div>
+      <${ToggleSwitch}
+        checked=${plugin.enabled}
+        disabled=${plugin.required}
+        onChange=${() => onToggle(plugin)}
+        label=${plugin.enabled ? `Disable ${plugin.name}` : `Enable ${plugin.name}`}
+      />
+    </div>
+    ${plugin.description ? html`<div className="as-card-desc">${plugin.description}</div>` : null}
+    <${Badges} plugin=${plugin}/>
+    ${plugin.loadError ? html`<div className="as-card-desc" style=${{ color: "#f85149" }}>${plugin.loadError}</div>` : null}
+    <div className="as-card-actions">
+      ${plugin.enabled ? html`<button
+        type="button"
+        className="as-btn primary"
+        title="Open this plugin in a new dockview tab"
+        onClick=${() => onOpen(plugin)}
+      ><${Power} size=${12} aria-hidden=${true}/> Open</button>` : null}
+      <button
+        type="button"
+        className="as-btn"
+        disabled=${plugin.required}
+        onClick=${() => onEdit(plugin)}
+      ><${Pencil} size=${12} aria-hidden=${true}/> Edit</button>
+      <button
+        type="button"
+        className="as-btn danger"
+        disabled=${plugin.builtin}
+        onClick=${() => onRemove(plugin)}
+      ><${Trash2} size=${12} aria-hidden=${true}/> Remove</button>
+    </div>
+  </article>`;
+}
+
+function PluginRowList({ plugin, onToggle, onEdit, onRemove, onOpen }) {
+  const Icon = iconOf(plugin.icon);
+  return html`<div className=${"as-row " + (plugin.enabled ? "" : "is-disabled") + (plugin.required ? "is-required " : "")}>
+    <div className="as-row-icon"><${Icon} size=${16} aria-hidden=${true}/></div>
+    <div>
+      <div className="as-row-name">${plugin.name || plugin.id}</div>
+      <div className="as-row-id">${plugin.id} · v${plugin.version}</div>
+    </div>
+    <div className="as-row-tags">
+      ${(plugin.tags || []).slice(0, 6).map((t) => html`<span key=${t} className="as-badge">${t}</span>`)}
+    </div>
+    <div className="as-row-actions">
+      <${ToggleSwitch}
+        checked=${plugin.enabled}
+        disabled=${plugin.required}
+        onChange=${() => onToggle(plugin)}
+        label=${plugin.enabled ? `Disable ${plugin.name}` : `Enable ${plugin.name}`}
+      />
+      ${plugin.enabled ? html`<button
+        type="button"
+        className="as-btn primary"
+        onClick=${() => onOpen(plugin)}
+      >Open</button>` : null}
+      <button type="button" className="as-btn" disabled=${plugin.required} onClick=${() => onEdit(plugin)}><${Pencil} size=${12} aria-hidden=${true}/></button>
+      <button type="button" className="as-btn danger" disabled=${plugin.builtin} onClick=${() => onRemove(plugin)}><${Trash2} size=${12} aria-hidden=${true}/></button>
+    </div>
+  </div>`;
+}
+
+function PluginModal({ mode, plugin, onCancel, onSubmit }) {
+  const initial = plugin || {
+    id: "",
+    name: "",
+    version: "1.0.0",
+    icon: "Wrench",
+    tags: [],
+    iframe: { src: "" },
+    entry: "",
+    permissions: { api: [] },
+  };
+  const [kind, setKind] = useState(
+    plugin ? (plugin.iframe ? "iframe" : plugin.entry ? "component" : "iframe") : "iframe",
+  );
+  const [values, setValues] = useState({
+    id: initial.id,
+    name: initial.name,
+    version: initial.version,
+    icon: initial.icon,
+    tags: (initial.tags || []).join(", "),
+    src: initial.iframe?.src || "",
+    allow: initial.iframe?.allow || "",
+    allowFullscreen: initial.iframe?.allowFullscreen === true,
+    entry: initial.entry || "",
+    permissions: (initial.permissions?.api || []).join("\n"),
+  });
+  const update = (key) => (event) => {
+    const value = event?.target?.type === "checkbox"
+      ? event.target.checked
+      : event.target.value;
+    setValues((prev) => ({ ...prev, [key]: value }));
+  };
+  return html`<div className="as-modal-back" onClick=${onCancel}>
+    <div className="as-modal" onClick=${(e) => e.stopPropagation()}>
+      <h2>${mode === "edit" ? "Edit plugin" : "Install plugin"}</h2>
+      <div className="as-modal-tabs">
+        <button type="button" className=${kind === "iframe" ? "active" : ""} onClick=${() => setKind("iframe")}>iframe</button>
+        <button type="button" className=${kind === "component" ? "active" : ""} onClick=${() => setKind("component")}>component</button>
+      </div>
+      <label>Id<input value=${values.id} onInput=${update("id")} placeholder="my-plugin"/></label>
+      <label>Name<input value=${values.name} onInput=${update("name")} placeholder="My Plugin"/></label>
+      <label>Version<input value=${values.version} onInput=${update("version")}/></label>
+      <label>Icon (lucide-react)<input value=${values.icon} onInput=${update("icon")} placeholder="Wrench"/></label>
+      <label>Tags (comma-separated)<input value=${values.tags} onInput=${update("tags")} placeholder="terminal, agent, media"/></label>
+      ${kind === "iframe"
+        ? html`<label>Iframe src<input value=${values.src} onInput=${update("src")} placeholder="/path/to/index.html or https://..."/></label>
+           <label>allow (Permissions Policy)<input value=${values.allow} onInput=${update("allow")} placeholder="clipboard-read; clipboard-write; fullscreen"/></label>
+           <label><input type="checkbox" checked=${values.allowFullscreen} onChange=${update("allowFullscreen")}/> allowFullscreen</label>`
+        : html`<label>Entry URL<input value=${values.entry} onInput=${update("entry")} placeholder="/plugin/my/plugin.js"/></label>`}
+      <label>Permissions (one API name per line)<textarea onInput=${update("permissions")} placeholder=${"panels.list\nevents.on"}>${values.permissions}</textarea></label>
+      <div className="as-modal-actions">
+        <button type="button" className="as-btn" onClick=${onCancel}>Cancel</button>
+        <button type="button" className="as-btn primary" onClick=${() => onSubmit(values, kind)}>${mode === "edit" ? "Save" : "Install"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function App() {
+  const store = useStore();
+  const { onToggle, onRemove, onOpen, onSubmit } = useActions(store);
+  const editing = store.modal?.mode === "edit" ? store.modal.plugin : null;
+  return html`<div className="as-bar">
+    <h1><${Store} size=${16} aria-hidden=${true}/> App Store</h1>
+    <label className="as-search">
+      <${Search} size=${14} aria-hidden=${true}/>
+      <input
+        type="search"
+        placeholder="Search plugins by name or id"
+        value=${store.query}
+        onInput=${(e) => store.setQuery(e.target.value)}
+      />
+    </label>
+    <span className="as-count">${store.visible.length} / ${store.plugins.length}</span>
+    <div className="as-view" role="group" aria-label="View mode">
+      <button
+        type="button"
+        className=${store.view === "grid" ? "active" : ""}
+        title="Card view"
+        onClick=${() => store.setView("grid")}
+      ><${LayoutGrid} size=${14} aria-hidden=${true}/></button>
+      <button
+        type="button"
+        className=${store.view === "list" ? "active" : ""}
+        title="List view"
+        onClick=${() => store.setView("list")}
+      ><${List} size=${14} aria-hidden=${true}/></button>
+    </div>
+    <button
+      type="button"
+      className="as-add"
+      onClick=${() => store.setModal({ mode: "add" })}
+    ><${Plus} size=${14} aria-hidden=${true}/> Install</button>
+  </div>
+  <${TagChips} allTags=${store.allTags} activeTags=${store.activeTags} onToggle=${store.toggleTag}/>
+  <div className="as-scroll">
+    ${store.plugins.length === 0
+      ? html`<div className="as-empty">
+          <${Store} size=${32} aria-hidden=${true}/>
+          <p>${typeof GearShell === "undefined"
+              ? "The App Store needs the gear bridge."
+              : "No plugins installed."}</p>
+          <p className="as-empty-hint">${typeof GearShell === "undefined"
+              ? "Open this plugin from the dockview grid — the bridge installs window.GearShell on this iframe."
+              : html`Click <strong>Install</strong> to add your first plugin.`}</p>
+        </div>`
+      : store.visible.length === 0
+        ? html`<div className="as-empty">
+            <${Search} size=${28} aria-hidden=${true}/>
+            <p>No plugins match the current filters.</p>
+            <p className="as-empty-hint">Try clearing tags or the search box.</p>
+          </div>`
+        : store.view === "grid"
+          ? html`<div className="as-grid">
+              ${store.visible.map((plugin) => html`<${PluginCardGrid}
+                key=${plugin.id}
+                plugin=${plugin}
+                onToggle=${onToggle}
+                onEdit=${(p) => store.setModal({ mode: "edit", plugin: p })}
+                onRemove=${onRemove}
+                onOpen=${onOpen}
+              />`)}
+            </div>`
+          : html`<div className="as-list">
+              ${store.visible.map((plugin) => html`<${PluginRowList}
+                key=${plugin.id}
+                plugin=${plugin}
+                onToggle=${onToggle}
+                onEdit=${(p) => store.setModal({ mode: "edit", plugin: p })}
+                onRemove=${onRemove}
+                onOpen=${onOpen}
+              />`)}
+            </div>`}
+  </div>
+  <${NoticeBar} notice=${store.notice}/>
+  ${store.modal ? html`<${PluginModal}
+    mode=${store.modal.mode}
+    plugin=${editing}
+    onCancel=${() => store.setModal(null)}
+    onSubmit=${onSubmit}
+  />` : null}
+  `;
+}
+
+createRoot(document.getElementById("app")).render(html`<${App}/>`);
+console.log("[app-store] mounted");
+</script>
+</body>
+</html>
