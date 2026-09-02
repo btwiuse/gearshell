@@ -178,6 +178,52 @@ export const shellCatalog = [
         hint: "Restore the config snapshot saved before that change.",
       },
       {
+        name: "crushRunner.get",
+        args: [],
+        hint: "Read Crush Runner presets, active preset id, and display order.",
+      },
+      {
+        name: "crushRunner.list",
+        args: [],
+        hint: "List the merged built-in and custom Crush Runner presets.",
+      },
+      {
+        name: "crushRunner.save",
+        args: [
+          {
+            key: "preset",
+            label: "Preset",
+            type: "json",
+            placeholder:
+              '{"id":"custom","name":"Custom Crush","program":"/opfs/wanix/crush","type":"gojs","env":"","wd":"/opfs/home","crushrc":""}',
+          },
+          {
+            key: "options",
+            label: "Options",
+            type: "json",
+            default: "{}",
+            placeholder: '{"active":true,"agent":"playground"}',
+          },
+        ],
+        hint: "Save or replace one custom preset; optionally make it active.",
+      },
+      {
+        name: "crushRunner.remove",
+        args: [
+          { key: "id", label: "Preset id", type: "string" },
+          { key: "agent", label: "Agent", type: "string", optional: true },
+        ],
+        hint: "Remove a custom preset; built-in presets are protected.",
+      },
+      {
+        name: "crushRunner.setActive",
+        args: [
+          { key: "id", label: "Preset id", type: "string" },
+          { key: "agent", label: "Agent", type: "string", optional: true },
+        ],
+        hint: "Set the active Crush Runner preset.",
+      },
+      {
         name: "providers.list",
         args: [],
         hint: "Model providers; apiKey is returned empty with hasApiKey.",

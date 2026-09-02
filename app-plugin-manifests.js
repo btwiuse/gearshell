@@ -454,6 +454,7 @@ export const DEFAULT_PLUGINS = [
         "events.on",
         "events.off",
         "config.getShell",
+        "config.crushRunner.*",
         // The iframe terminal data bridge: create a kernel session and
         // stream bytes (the iframe renders xterm itself). Only add these
         // to plugins you trust — terminal.write is keyboard injection.
