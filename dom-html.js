@@ -13,7 +13,7 @@
 // node that gets moved, not duplicated. Any template that must produce a
 // fresh node per call (loop items, remounts) needs a dynamic part that
 // evaluates to nothing, e.g. `<section>${null}</section>` (see
-// plugin/deck/deck.js freshSection).
+// the Deck iframe's dynamic slide sections).
 
 import htm from "htm";
 

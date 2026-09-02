@@ -26,7 +26,6 @@ import {
   addPluginsPanel,
   initPluginsPanel,
 } from "./plugins-panel.js";
-import { initDeck } from "./plugin/deck/deck.js";
 import { initLauncher } from "./plugin/launcher/launcher.js";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
@@ -283,19 +282,6 @@ initPanels({
   // app-w9y-registry.js (which would loop through workspace-tasks-api
   // -> panels.js).
   triggerPluginW9yInstall: (w9y) => applyW9yMod(w9y.mod, w9y.version || null),
-});
-
-// Initialise the Deck submodule with the helpers it needs at
-// runtime. The deck panel only needs the debug-overlay helpers and
-// the CDN-loaded Reveal + marked globals (passed through the dep
-// shim so deck.js never reaches into the global scope directly).
-initDeck({
-  Reveal: typeof window !== "undefined" ? window.Reveal : undefined,
-  marked: typeof window !== "undefined" ? window.marked : undefined,
-  reportHomeError,
-  dismissHomeDebugErrors,
-  showHomeDebugErrors,
-  rememberOpenPanel,
 });
 
 // Initialise the Runtime submodule with the helpers it needs at

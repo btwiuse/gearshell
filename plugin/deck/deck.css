@@ -1,10 +1,8 @@
 /* === Deck panel ===
- * Styles for the `deck` dockview panel: the reveal.js slides
- * renderer plus the dev-error overlay. Split out of app.css so
- * this feature can ship its own stylesheet alongside deck.js without
- * bloating the main bundle.
+ * Styles for the Deck iframe: the reveal.js slides renderer.
  */
 .home-content { height: 100%; overflow: hidden; position: relative; }
+body { height: 100vh; overflow: hidden; margin: 0; }
 .dv-view.home-view { overflow: hidden !important; }
 .home-debug-panel { position: absolute; right: 8px; bottom: 8px; left: 8px; z-index: 30; max-height: 40%; }
 .home-debug-errors { max-height: 100%; margin: 0; overflow: auto; padding: 8px 36px 8px 8px; border: 1px solid #f85149; border-radius: 4px; background: rgba(13, 17, 23, 0.96); color: #ff7b72; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; }

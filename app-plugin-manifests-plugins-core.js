@@ -38,23 +38,6 @@ export const CORE_PLUGINS = [
     },
   },
   {
-    id: "deck",
-    name: "Deck",
-    version: "1.0.0",
-    icon: "LayoutDashboard",
-    entry: "/plugin/deck/deck-plugin.js",
-    // Reveal.js library + black theme come from the CDN (the reveal.js JS
-    // is also a CDN script in index.html); deck.css / reveal.css are the
-    // local overrides and must load after the library styles.
-    css: [
-      "https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.css",
-      "https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/black.css",
-      "/plugin/deck/deck.css",
-      "/plugin/deck/reveal.css",
-    ],
-    enabled: false,
-  },
-  {
     id: "group",
     name: "Group",
     version: "1.0.0",

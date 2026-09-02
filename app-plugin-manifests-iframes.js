@@ -68,6 +68,34 @@ export const IFRAME_PLUGINS = [
       ],
     },
   },
+  // Notes: an Apple Notes–style iframe plugin. Three-pane layout
+  // (sidebar / list / editor) with folders, pinning, and full-text
+  // search. Persistence is the generic per-workspace config.kv store
+  // (see plugin/crush-playground/kv-api.js), so notes survive reloads
+  // and live-sync across every open Notes panel via the
+  // "config.changed" event the kv store emits on each write.
+  // Disabled by default — opt in via the Plugins page.
+  {
+    id: "notes",
+    name: "Notes",
+    version: "1.0.0",
+    icon: "NotebookPen",
+    iframe: {
+      src: "/plugin/notes/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    permissions: {
+      api: [
+        "config.kv.get",
+        "config.kv.set",
+        "config.kv.delete",
+        "config.kv.list",
+        "events.on",
+        "events.off",
+      ],
+    },
+    enabled: false,
+  },
   // App Store: a buildless iframe plugin that replaces the in-page
   // Plugins management page with a richer UI (Card + List views,
   // tag-chip filter, search, "Open" shortcut for enabled plugins).
@@ -116,6 +144,17 @@ export const IFRAME_PLUGINS = [
     icon: "Sparkles",
     iframe: {
       src: "/plugin/lucide-icons/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    enabled: false,
+  },
+  {
+    id: "deck",
+    name: "Deck",
+    version: "1.0.0",
+    icon: "LayoutDashboard",
+    iframe: {
+      src: "/plugin/deck/index.html",
       allow: "clipboard-read; clipboard-write",
     },
     enabled: false,
