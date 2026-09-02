@@ -13,7 +13,6 @@ import {
   getSavedOpenPanels,
   parseCrushRunnerPanelId,
 } from "./app-panels-store.js";
-import { reserveCrushRunnerIds } from "./plugin/crush-runner/crush-runner.js";
 import {
   addPanelByComponent as addPanelByComponentFromPanels,
   addTerminalPanel as addTerminalPanelFromPanels,
@@ -60,23 +59,6 @@ export const PANEL_CREATION_OPTIONS = [
   { component: "plugins", label: "Plugins", icon: Puzzle },
 ];
 
-function reserveMaxCrushRunnerId(panels) {
-  // Make sure the Crush Runner id counter never collides with a
-  // restored panel id. Legacy snapshots did not record panelId, so
-  // lifting the counter past the largest id we can derive from any
-  // stored panel id still protects against collisions when the user
-  // opens a fresh Crush Runner panel after a reload.
-  let maxCrushRunnerId = 0;
-  for (const panel of panels) {
-    if (panel.component !== "crush-runner") continue;
-    const parsed = parseCrushRunnerPanelId(panel.panelId);
-    if (Number.isFinite(parsed) && parsed > maxCrushRunnerId) {
-      maxCrushRunnerId = parsed;
-    }
-  }
-  reserveCrushRunnerIds(maxCrushRunnerId);
-}
-
 function addRestoredPanel(api, panel) {
   if (panel.component === "terminal") {
     addTerminalPanelFromPanels(
@@ -97,14 +79,13 @@ function addRestoredPanel(api, panel) {
       loadWorkspace(panel.workspaceId) || loadActiveWorkspace(),
     );
   } else if (panel.component === "crush-runner") {
-    // Restore the original Crush Runner panel id so the tab title
-    // ("Crush Runner N") and the linked terminal launch ids stay
-    // stable across reloads; otherwise the module-level counter in
-    // crush-runner.js would mint fresh numbers and the previous
-    // session's panels would silently disappear or collide.
-    const restoredId = parseCrushRunnerPanelId(panel.panelId);
+    // Legacy: old workspaces stored crush-runner panels before the
+    // iframe edition replaced them. Routing them through
+    // addPanelByComponentFromPanels gracefully falls through to the
+    // "component not registered" path, so the user just sees the
+    // panel missing rather than the workspace failing to restore.
     addPanelByComponentFromPanels(api, panel.component, undefined, {
-      id: restoredId,
+      id: parseCrushRunnerPanelId(panel.panelId),
     });
   } else {
     addPanelByComponentFromPanels(api, panel.component);
@@ -128,7 +109,6 @@ function reactivateSavedPanel(api) {
 
 export function restoreSavedPanels(api) {
   const panels = getSavedOpenPanels();
-  reserveMaxCrushRunnerId(panels);
   for (const panel of panels) {
     addRestoredPanel(api, panel);
   }

@@ -29,12 +29,10 @@ import {
 } from "./app-workspace.js";
 import {
   openPanelSnapshots,
-  parseCrushRunnerPanelId,
   rememberOpenPanel,
 } from "./app-panels-store.js";
 import { clone } from "./app-normalize.js";
 import { reservePanelIds } from "./app-panel-ids.js";
-import { reserveCrushRunnerIds } from "./plugin/crush-runner/crush-runner.js";
 
 const LAYOUT_SAVE_DELAY = 400;
 let layoutSaveTimer = null;
@@ -146,17 +144,6 @@ export function restoreSavedLayout(api) {
   try {
     api.fromJSON(layout);
     reservePanelIds(api.panels);
-    // Crush Runner ids come from a separate counter with its own
-    // reservation API; lift it past the largest restored id so a later
-    // open cannot collide with a restored panel.
-    let maxCrushRunnerId = 0;
-    for (const panel of api.panels) {
-      const parsed = parseCrushRunnerPanelId(panel.id);
-      if (Number.isFinite(parsed) && parsed > maxCrushRunnerId) {
-        maxCrushRunnerId = parsed;
-      }
-    }
-    if (maxCrushRunnerId > 0) reserveCrushRunnerIds(maxCrushRunnerId);
     for (const panel of api.panels) {
       const snapshot = panelSnapshotFor(panel);
       if (snapshot) rememberOpenPanel(panel, snapshot);

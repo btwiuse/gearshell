@@ -9,10 +9,8 @@ import { createRoot } from "react-dom/client";
 // packages to the same module URL). Kept deliberately, do not remove.
 import { LicenseManager } from "dockview-enterprise";
 
-import {
-  initCrushRunner,
-} from "./plugin/crush-runner/crush-runner.js";
 import { addLandingPanel, initHome } from "./plugin/home/home.js";
+import { ensureCrushRunnerBuiltinsKv } from "./plugin/crush-playground/preset-api.js";
 import { initSettings } from "./plugin/settings/settings-deps.js";
 import { TerminalPresetIconPicker } from "./plugin/settings/settings-icons.js";
 
@@ -78,13 +76,11 @@ import {
   duplicateWorkspace,
   ensureWorkspaceStore,
   getActiveWorkspaceId,
-  getCrushRunnerPresets,
   importWorkspace,
   loadActiveWorkspace,
   loadConfig,
   loadWorkspace,
   makeBindItemDraggable,
-  normalizeCrushRunnerPreset,
   parseWorkspaceJson,
   removeWorkspaceBind,
   removeWorkspaceSystemBind,
@@ -95,7 +91,6 @@ import {
   replaceActiveWorkspace,
   resetConfig,
   saveConfig,
-  saveCrushRunnerPresets,
   saveWorkspaceSystemSettings,
   setActiveWorkspaceId,
   setWagiDogEnabled,
@@ -111,9 +106,7 @@ import {
   uniqueWorkspacePresetName,
 } from "./app-workspace-presets.js";
 import {
-  blankCrushRunnerPresetDraft,
   clone,
-  getActiveCrushRunnerPreset,
   getTerminalPresetIcon,
   normalizeLauncherOrder,
   normalizePlugin,
@@ -437,42 +430,15 @@ initHome({
   rememberOpenPanel,
 });
 
-// Initialise the CrushRunner submodule with the helpers it needs at
-// runtime. Done at the bottom of the module so every helper defined
-// above is available as a dependency.
-initCrushRunner({
-  HOME,
-  WANIX,
-  workspaceApi,
-  WORKSPACE_TASK_STATUS_EVENT,
-  createTerminalSession,
-  attachOverlayTerminalSession,
-  destroyTerminalSession,
-  addTerminalPanel: addTerminalPanelFromPanels,
-  waitForWanixSystem,
-  getWanixRoot,
-  buildEnv,
-  getTerminalProfiles,
-  loadConfig,
-  saveTerminalProfiles,
-  normalizeTerminalProfile,
-  normalizeTerminalProfileOrder,
-  TerminalPresetIconPicker,
-  getCrushRunnerPresets,
-  getActiveCrushRunnerPreset,
-  saveCrushRunnerPresets,
-  normalizeCrushRunnerPreset,
-  blankCrushRunnerPresetDraft,
-  getTerminalPresetIcon,
-  TERMINAL_PRESET_ICON_BY_ID,
-  WORKSPACE_CHANGED_EVENT,
-  rememberOpenPanel,
-});
-
 // Initialise the Workspace API: expose window.GearShell to agents (via
 // the kernel's jsfs /js projection) and ensure the active workspace
 // carries the gear bind.
 initWorkspaceApi();
+// Seed the Crush Playground built-in presets into the per-workspace
+// KV store once per workspace, so the iframe plugin can read them
+// through `config.kv.get("crush-playground:builtins")` like any
+// other JSON value.
+ensureCrushRunnerBuiltinsKv();
 initHotkeys((action) => {
   if (action.method === "panels.open") {
     workspaceApi.panels.open(...action.args);
