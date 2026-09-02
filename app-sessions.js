@@ -33,7 +33,7 @@ const IFRAME_POPOUT_ICON =
 
 export function createIframeSession(
   id,
-  { src, title, allow = DEFAULT_IFRAME_ALLOW, allowFullscreen = false },
+  { src, title, icon, allow = DEFAULT_IFRAME_ALLOW, allowFullscreen = false },
 ) {
   const popout = html`<button
     type="button"
@@ -47,6 +47,7 @@ export function createIframeSession(
   const wrapper = html`<div className="iframe-session">
     <iframe
       className="iframe-panel"
+      data-plugin-icon=${icon || ""}
       src=${src}
       title=${title}
       allow=${allow}
@@ -67,6 +68,7 @@ export function getIframeSession(id, params) {
   const session = iframeSessions.get(id);
   if (session) {
     if (params.title) session.iframe.title = params.title;
+    if (params.icon) session.iframe.dataset.pluginIcon = params.icon;
     if (params.allow) session.iframe.allow = params.allow;
     session.iframe.allowFullscreen = !!params.allowFullscreen;
     return session;

@@ -196,12 +196,17 @@ export function listPluginIframes() {
 // Returns the addIframePanel-shaped config ({ title, src, panelType,
 // allow, allowFullscreen }) or null when the component is not a
 // plugin-provided iframe panel.
+export function getPluginIcon(component) {
+  return pluginPanels.get(component)?.manifest?.icon || pluginIframes.get(component)?.manifest?.icon || null;
+}
+
 export function getPluginIframeConfig(component) {
   const entry = pluginIframes.get(component);
   if (!entry) return null;
   return {
     title: entry.title,
     src: entry.src,
+    icon: entry.manifest.icon,
     panelType: component,
     ...(entry.allow ? { allow: entry.allow } : {}),
     ...(entry.allowFullscreen ? { allowFullscreen: true } : {}),

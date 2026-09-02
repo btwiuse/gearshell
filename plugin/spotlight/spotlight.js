@@ -23,6 +23,8 @@
 
 import { ICON_PATHS } from "./spotlight-icons.js";
 
+const ICON_ALIASES = { Cpu: "Monitor", SlidersHorizontal: "SlidersHorizontal" };
+
 const CLOSE_MESSAGE = { spotlight: "close" };
 
 // Panel types that exist in the shell but are not installable plugins:
@@ -112,7 +114,9 @@ function pluginApps(plugins) {
       name: plugin.name || plugin.id,
       // Icon name from the manifest (lucide-react component name).
       // Resolved to an SVG path inside this iframe via ICON_PATHS.
-      iconName: typeof plugin.icon === "string" ? plugin.icon : null,
+      iconName: typeof plugin.icon === "string"
+        ? (ICON_PATHS[plugin.icon] ? plugin.icon : ICON_ALIASES[plugin.icon] || null)
+        : null,
     }));
 }
 

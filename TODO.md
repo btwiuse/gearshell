@@ -1197,6 +1197,18 @@ extras 重打,gearshell 待推):
   `DEFAULT_VM_BACKEND_URL` 指向新版本(当前仍 0.4.0-rc2 旧 tgz)。
 - ⬜ 推 gearshell 待推提交(bbtex-iframe 系列 + memory)
 
+## 四十四、统一 Plugin 图标来源(2026-09-02)
+
+- Plugins 页面、Spotlight 与 Dockview `PanelTab` 统一以 manifest 的 Lucide icon name
+  为唯一来源；iframe panel 传递 plugin icon，v86/rv64 的 `Cpu` 图标补入 Spotlight
+  字典，不再被 fallback/别名替代。
+
+## 四十三、统一 Plugin 图标来源(2026-09-02)
+
+- Plugins 页面使用 manifest 的 Lucide icon；Spotlight 与 Dockview tab 现在也从同一
+  manifest icon 字段取值，iframe panel 将 icon 传到 `PanelTab`，不再让 v86/rv64 等
+  iframe 使用 fallback 图标。
+
 ## 四十二、模型 API 与 Settings 滚动修复(2026-09-02)
 
 - `config.models.list/save/remove` 已加入 GearShell，模型存储在对应 provider 的

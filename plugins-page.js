@@ -24,7 +24,7 @@ import {
 import { PLUGIN_CHANGED_EVENT } from "./plugins.js";
 import { configApi } from "./workspace-config-api.js";
 import { WORKSPACE_CHANGED_EVENT } from "./app-constants.js";
-import { PluginCard } from "./plugins-cards.js";
+import { PluginCard, iconOf } from "./plugins-cards.js";
 import { PluginModal } from "./plugins-modal.js";
 import htm from "htm";
 

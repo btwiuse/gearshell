@@ -17,7 +17,7 @@ import React, { useEffect, useRef, useState } from "react";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
-import { Play, Terminal } from "lucide-react";
+import { Play, Terminal, icons as LucideIcons } from "lucide-react";
 import { DockviewDefaultTab } from "dockview-react";
 import { nextPanelIndex } from "./app-panel-ids.js";
 import {
@@ -26,6 +26,7 @@ import {
 } from "./panels-task.js";
 import {
   getPluginIframeConfig,
+  getPluginIcon,
   openPluginPanel,
 } from "./plugins.js";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
@@ -114,7 +115,8 @@ function IframePanel({ api, params }) {
 function PanelTab(props) {
   const Icon = props.params.panelType === "terminal"
     ? panelsDep("getTerminalPresetIcon")(props.params.profile)
-    : getPanelIcons()[props.params.panelType] || Terminal;
+    : getPanelIcons()[props.params.panelType] ||
+      LucideIcons[getPluginIcon(props.params.panelType)] || Terminal;
   return html`
     <div className="panel-tab">
       <${Icon} className="panel-tab-icon" size=${14} aria-hidden=${true}/>
@@ -188,7 +190,7 @@ function addIframePanel(api, config, group) {
   const panel = api.addPanel({
     id: `iframe-${id}`,
     component: "iframe",
-    params: { iframeId: id, panelType: config.panelType, ...config },
+    params: { iframeId: id, panelType: config.panelType, pluginIcon: config.icon, ...config },
     title: config.title,
     ...(group && { position: { referenceGroup: group } }),
   });
