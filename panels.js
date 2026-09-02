@@ -191,7 +191,7 @@ function addIframePanel(api, config, group) {
   // on its manifest; ensureW9yDependencies skips iframe plugins on boot
   // so this is the first chance to fire the apply. The page may mount
   // before the install completes — its JS polls w9y.status / listens
-  // for w9y.changed (see plugin/bbtex-iframe for the canonical pattern).
+  // for w9y.changed (see plugin/bubbletea-playground for the canonical pattern).
   if (config?.w9y && typeof config.w9y.mod === "string" && config.w9y.mod) {
     panelsDep("triggerPluginW9yInstall")(config.w9y);
   }
