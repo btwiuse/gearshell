@@ -42,6 +42,7 @@ import {
   workspaceApi,
 } from "./workspace-api.js";
 import { initIframePluginApi } from "./plugins-iframe-api.js";
+import { startIframeKeyForwarder } from "./app-iframe-key-forwarder.js";
 import { initHotkeys, registerHotkey } from "./app-hotkeys.js";
 import { toggleOverlay } from "./app-overlay-toggle.js";
 import {
@@ -484,6 +485,10 @@ registerHotkey({
 
 // Wire the iframe plugin bridge; must run after initWorkspaceApi.
 initIframePluginApi();
+// Forward keydowns fired inside iframe plugin panels back to the
+// shell window so Spotlight and other host-level hotkeys keep
+// working while focus is in Browser / Bonsai / glmatrix / etc.
+startIframeKeyForwarder();
 
 // Dual-mode w9y dep sync: fire-and-forget `w9y mod apply`. Must run
 // after initPanels/initWorkspaceApi (the apply path needs both).
