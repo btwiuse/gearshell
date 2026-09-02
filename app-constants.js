@@ -135,7 +135,6 @@ export const DEFAULT_LAUNCHER_ITEM_ORDER = [
   "bonsai",
   "codigo",
   "crush",
-  "crush-runner",
   "rickroll",
 ];
 export const CONFIG_KEY = "gear-shell-config";
@@ -161,13 +160,18 @@ export const DEFAULT_CONFIG = {
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   launcherOrder: DEFAULT_LAUNCHER_ITEM_ORDER,
   pinnedLauncherItems: [],
+  // Generic per-workspace key-value store. Keys are arbitrary strings;
+  // values are JSON-serialisable. Plugin manifests opt in via the
+  // `config.kv.*` permission, and host code may special-case known
+  // keys (e.g. `crush-playground:state`).
+  kv: {},
 };
 export const WORKSPACE_INDEX_KEY = "gear-shell-workspace-index";
 export const WORKSPACE_ACTIVE_KEY = "gear-shell-active-workspace";
 export const WORKSPACE_KEY_PREFIX = "gear-shell-workspace:";
 export const WORKSPACE_PRESET_INDEX_KEY = "gear-shell-workspace-preset-index";
 export const WORKSPACE_PRESET_KEY_PREFIX = "gear-shell-workspace-preset:";
-export const WORKSPACE_SCHEMA_VERSION = 4;
+export const WORKSPACE_SCHEMA_VERSION = 5;
 export const WORKSPACE_CHANGED_EVENT = "gear-shell-workspace-change";
 export const WORKSPACE_TASK_STATUS_EVENT = "gear-shell-task-status";
 export const SUPPORTED_BIND_TYPES = [
@@ -201,7 +205,6 @@ export const STARTUP_PANEL_TYPES = [
   "bonsai",
   "codigo",
   "crush",
-  "crush-runner",
   "rickroll",
 ];
 export const LAUNCHER_COLLAPSIBLE_PANEL_TYPES = STARTUP_PANEL_TYPES;

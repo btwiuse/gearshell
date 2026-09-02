@@ -13,7 +13,13 @@ import {
 // Runtime + plugin normalizers live in app-normalize-runtime.js /
 // app-normalize-plugins.js; re-exported so existing importers (app.js,
 // workspace-config-api, app-workspace-presets) keep working unchanged.
-export { isLegacyWanixRuntimeUrl, normalizeRuntimeConfig, normalizePlugin, normalizePlugins, normalizeCrushRunnerPreset };
+export {
+  isLegacyWanixRuntimeUrl,
+  normalizeRuntimeConfig,
+  normalizePlugin,
+  normalizePlugins,
+  normalizeCrushRunnerPreset,
+};
 
 import {
   BUILTIN_TERMINAL_PROFILES,
@@ -46,7 +52,7 @@ import {
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-} from "./plugin/crush-runner/crush-runner.js";
+} from "./plugin/crush-playground/preset-api.js";
 import {
   getCrushRunnerPresets,
   normalizeCrushRunnerPreset,

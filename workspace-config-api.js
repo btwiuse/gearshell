@@ -12,12 +12,10 @@
 // take effect on reload — every write returns a note saying so.
 
 import {
-  getCrushRunnerPresets,
   loadActiveWorkspace,
   loadConfig,
   removeWorkspaceSystemBind,
   saveConfig,
-  saveCrushRunnerPresets,
   saveWorkspace,
   saveWorkspaceSystemSettings,
   updateWorkspaceIndex,
@@ -25,7 +23,6 @@ import {
   validateSystemBind,
 } from "./app-workspace.js";
 import {
-  normalizeCrushRunnerPreset,
   normalizePlugin,
   normalizeProviders,
   normalizeSystemBind,
@@ -46,6 +43,7 @@ import {
   redactSecrets,
   undoAuditEntry,
 } from "./workspace-audit.js";
+import { crushRunnerConfigApi } from "./plugin/crush-playground/preset-api.js";
 
 import { settingsConfigApi } from "./workspace-config-settings-api.js";
 import {
@@ -221,88 +219,6 @@ function removeProvider(id, agentOrOptions = {}) {
   pushEvent("config.changed", { result: redactSecrets(loadConfig()) });
   return { ok: true, removed: id };
 }
-
-function crushRunnerSnapshot(config = loadConfig()) {
-  return {
-    presets: getCrushRunnerPresets(config),
-    activeId: config.crushRunnerActiveId,
-    order: config.crushRunnerPresetOrder,
-  };
-}
-
-function saveCrushRunnerConfig(presets, activeId, order, agentOrOptions = {}) {
-  if (!Array.isArray(presets)) throw new Error("presets must be an array");
-  const prev = loadConfig();
-  const normalized = presets.map(normalizeCrushRunnerPreset);
-  const nextOrder = Array.isArray(order) ? order : normalized.map((preset) => preset.id);
-  saveCrushRunnerPresets(normalized, activeId, nextOrder);
-  const saved = loadConfig();
-  pushAuditEntry({ prev, next: saved, agent: auditOptions(agentOrOptions).agent });
-  pushEvent("config.changed", { result: redactSecrets(saved) });
-  return crushRunnerSnapshot(saved);
-}
-
-function saveCrushRunnerPreset(preset, options = {}) {
-  const current = loadConfig();
-  const normalized = normalizeCrushRunnerPreset(preset);
-  if (!normalized.id || !normalized.program) {
-    throw new Error("preset requires an id and program");
-  }
-  const presets = (current.crushRunnerPresets || []).filter((item) =>
-    item.id !== normalized.id
-  );
-  presets.push(normalized);
-  const activeId = options.active === true
-    ? normalized.id
-    : current.crushRunnerActiveId;
-  return saveCrushRunnerConfig(
-    presets,
-    activeId,
-    current.crushRunnerPresetOrder,
-    options,
-  );
-}
-
-function setCrushRunnerActive(id, agentOrOptions = {}) {
-  const current = loadConfig();
-  const presets = getCrushRunnerPresets(current);
-  if (!presets.some((preset) => preset.id === id)) {
-    throw new Error(`crush runner preset "${id}" not found`);
-  }
-  return saveCrushRunnerConfig(
-    current.crushRunnerPresets,
-    id,
-    current.crushRunnerPresetOrder,
-    agentOrOptions,
-  );
-}
-
-function removeCrushRunnerPreset(id, agentOrOptions = {}) {
-  const current = loadConfig();
-  const preset = getCrushRunnerPresets(current).find((item) => item.id === id);
-  if (!preset) throw new Error(`crush runner preset "${id}" not found`);
-  if (preset.builtin) throw new Error("built-in crush runner presets cannot be removed");
-  const presets = (current.crushRunnerPresets || []).filter((item) =>
-    item.id !== id
-  );
-  const activeId = current.crushRunnerActiveId === id
-    ? undefined
-    : current.crushRunnerActiveId;
-  return saveCrushRunnerConfig(
-    presets,
-    activeId,
-    current.crushRunnerPresetOrder,
-    agentOrOptions,
-  );
-}
-
-const crushRunnerConfigApi = {
-  get: () => crushRunnerSnapshot(),
-  list: () => crushRunnerSnapshot().presets,
-  save: saveCrushRunnerPreset,
-  remove: removeCrushRunnerPreset,
-  setActive: setCrushRunnerActive,
-};
 
 // --- Plugin management (WISHLIST #9) ---
 // config.plugins mirrors config.providers: manifests live in the shell

@@ -1,15 +1,16 @@
 // Workspace module facade (500-line rule split). Re-exports the workspace
 // CRUD and bind/task CRUD layers from app-workspace-store.js /
-// app-workspace-binds.js and keeps the Crush Runner preset config layer and
-// the shell config load/save here. app.js keeps importing everything from
-// this facade so its import line stays stable.
+// app-workspace-binds.js and re-exports the Crush Playground preset
+// layer from plugin/crush-playground/preset-api.js. app.js keeps
+// importing everything from this facade so its import line stays
+// stable.
 
 import { CONFIG_KEY, DEFAULT_CONFIG } from "./app-constants.js";
 import {
   BUILTIN_CRUSH_RUNNER_PRESET_IDS,
   DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
   getBuiltinCrushRunnerPresets,
-} from "./plugin/crush-runner/crush-runner.js";
+} from "./plugin/crush-playground/preset-api.js";
 import {
   normalizeShellConfig,
   normalizeTerminalProfile,
@@ -23,69 +24,16 @@ import {
   updateWorkspaceIndex,
 } from "./app-workspace-store.js";
 
-export function normalizeCrushRunnerPreset(preset = {}) {
-  const base = normalizeTerminalProfile(preset);
-  return {
-    ...base,
-    crushrc: typeof preset.crushrc === "string" ? preset.crushrc : "",
-    builtin: preset.builtin === true,
-  };
-}
-
-export function getCrushRunnerPresets(config = loadConfig()) {
-  // Build the live list of built-ins, then layer any user-saved
-  // override with the matching id on top of each one. Empty-string
-  // fields are treated as "user did not set this" so newly introduced
-  // defaults (e.g. a new env= line on a builtin) reach existing
-  // workspaces whose override still stores '' from before the field
-  // existed. The legacy `crush` slot keeps merging into the first
-  // builtin by id, so workspaces pinned to that id keep working.
-  const builtins = getBuiltinCrushRunnerPresets().map((template) => {
-    const merged = { ...template };
-    const configured = (config.crushRunnerPresets || []).find((preset) =>
-      preset.id === template.id
-    );
-    if (configured) {
-      for (const [key, value] of Object.entries(configured)) {
-        if (value === "" || value == null) continue;
-        if (!(key in merged)) continue;
-        merged[key] = value;
-      }
-    }
-    merged.builtin = true;
-    merged.id = template.id;
-    return merged;
-  });
-  // Drop the user-saved entries that we just merged into the builtin
-  // slots so we don't render the same preset twice.
-  const customs = (config.crushRunnerPresets || []).filter(
-    (preset) => !BUILTIN_CRUSH_RUNNER_PRESET_IDS.includes(preset.id),
-  );
-  const all = [...builtins, ...customs];
-  const order = normalizeTerminalProfileOrder(
-    config.crushRunnerPresetOrder,
-    all,
-  );
-  const positions = new Map(order.map((id, index) => [id, index]));
-  return [...all].sort((left, right) =>
-    (positions.get(left.id) ?? 0) - (positions.get(right.id) ?? 0)
-  );
-}
-
-export function saveCrushRunnerPresets(presets, activeId, order) {
-  const config = loadConfig();
-  saveConfig({
-    ...config,
-    crushRunnerPresets: presets.map((preset) => ({
-      ...preset,
-      builtin: false,
-    })),
-    crushRunnerPresetOrder: normalizeTerminalProfileOrder(order, presets),
-    crushRunnerActiveId: typeof activeId === "string" && activeId
-      ? activeId
-      : DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
-  });
-}
+export {
+  BUILTIN_CRUSH_RUNNER_PRESET_IDS,
+  DEFAULT_CRUSH_RUNNER_ACTIVE_ID,
+  getBuiltinCrushRunnerPresets,
+  getCrushRunnerCrushrcFor,
+  getCrushRunnerDefaults,
+  getCrushRunnerPresets,
+  normalizeCrushRunnerPreset,
+  saveCrushRunnerPresets,
+} from "./plugin/crush-playground/preset-api.js";
 // --- Config ---
 export function loadConfig() {
   return normalizeShellConfig(loadActiveWorkspace().shell);

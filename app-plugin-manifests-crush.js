@@ -1,31 +1,17 @@
-// app-plugin-manifests-crush.js — the Crush-family plugin manifests
-// (legacy entry plugin + the iframe "Crush Playground" + the iframe
-// template). Split out of app-plugin-manifests.js (500-line rule).
+// app-plugin-manifests-crush.js — the Crush Playground plugin manifest
+// + the iframe plugin template. Split out of app-plugin-manifests.js
+// (500-line rule).
 //
-// The two Crush entry points share the same w9y mod dep (`crush`),
-// so any new Crush derivative belongs next to them. The iframe
-// template is grouped here too because it's the canonical "copy me"
-// starting point that ships `config.crushRunner.*` in its example
-// permissions list — keeping it next to the real Crush keeps the
-// example honest.
+// Crush Playground is the iframe entry point; it declares the
+// `crush` w9y mod dep which ensureW9yDependencies skips on boot
+// (iframe plugins install lazily on first panel open — see
+// addIframePanel in panels.js). The iframe template is grouped
+// here too because it's the canonical "copy me" starting point
+// that ships `config.crushRunner.*` in its example permissions
+// list — keeping it next to the real Crush keeps the example
+// honest.
 
 export const CRUSH_PLUGINS = [
-  {
-    id: "crush-runner",
-    name: "Crush Runner",
-    version: "1.0.0",
-    icon: "Rocket",
-    entry: "/plugin/crush-runner/crush-runner-plugin.js",
-    css: ["/plugin/crush-runner/crush-runner.css"],
-    // Disabled by default — the iframe edition below is the canonical
-    // entry point. It declares the `crush` w9y mod dep, which
-    // ensureW9yDependencies skips on boot (iframe plugins install
-    // lazily on first panel open — see addIframePanel in panels.js),
-    // so the iframe opens to a ready-to-launch UI without paying the
-    // install cost for users who never use Crush. Re-enable here if
-    // you want the entry-style panel back.
-    enabled: false,
-  },
   {
     id: "crush-playground",
     name: "Crush Playground",

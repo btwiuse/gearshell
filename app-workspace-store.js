@@ -55,6 +55,38 @@ export function migrateWorkspace(workspace) {
       );
     }
   }
+  if (workspace.version < 5) {
+    // Pre-v5 workspaces stored Crush Playground presets/active/order
+    // on dedicated shell.crushRunner* fields. Move them into the
+    // generic shell.kv namespace under "crush-playground:state" and
+    // strip the legacy fields.
+    const shell = migrated.shell || {};
+    const hasLegacy =
+      Array.isArray(shell.crushRunnerPresets) ||
+      typeof shell.crushRunnerActiveId === "string" ||
+      Array.isArray(shell.crushRunnerPresetOrder);
+    if (hasLegacy) {
+      const kv = { ...(shell.kv || {}) };
+      if (!kv["crush-playground:state"]) {
+        kv["crush-playground:state"] = {
+          customs: (shell.crushRunnerPresets || []).filter((preset) =>
+            preset && typeof preset.id === "string"
+          ).map((preset) => ({ ...preset, builtin: false })),
+          activeId: typeof shell.crushRunnerActiveId === "string"
+            ? shell.crushRunnerActiveId
+            : undefined,
+          order: Array.isArray(shell.crushRunnerPresetOrder)
+            ? shell.crushRunnerPresetOrder.slice()
+            : undefined,
+        };
+      }
+      const nextShell = { ...shell, kv };
+      delete nextShell.crushRunnerPresets;
+      delete nextShell.crushRunnerActiveId;
+      delete nextShell.crushRunnerPresetOrder;
+      migrated.shell = nextShell;
+    }
+  }
   if (!("activeOpenPanelIndex" in (migrated.ui || {}))) {
     migrated.ui = { ...(migrated.ui || {}), activeOpenPanelIndex: null };
   }
