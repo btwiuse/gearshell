@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crush Runner</title>
+<link rel="stylesheet" href="/plugin/crush-runner-iframe/crush-runner-iframe.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css" />
+</head>
+<body>
+<div id="app">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">GearShell plugin</p>
+      <h1>Crush Runner</h1>
+      <p class="lede">Configure a Crush profile, mount its private crushrc, and launch it in a live terminal.</p>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite">Checking installation…</div>
+  </header>
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-head"><h2>Presets</h2><button id="new-preset" type="button">New</button></div>
+      <div id="preset-list"></div>
+    </aside>
+    <section class="content">
+      <div id="install-banner" class="banner" hidden></div>
+      <p class="content-hint">Expand a preset to edit it. Use the play button on any card to open that configuration in the terminal.</p>
+      <section class="terminal-frame" id="terminal-frame">
+        <div class="terminal-bar">
+          <span class="terminal-dot terminal-dot-red"></span><span class="terminal-dot terminal-dot-yellow"></span><span class="terminal-dot terminal-dot-green"></span>
+          <span class="terminal-title">crush@gear: /opfs/home</span>
+          <span class="terminal-actions" id="terminal-actions" hidden><span class="terminal-status"><span class="terminal-status-dot"></span>session live</span><button id="close-terminal" class="terminal-button" type="button">×</button><button id="restart-terminal" class="terminal-button" type="button">↻</button><button id="fullscreen-terminal" class="terminal-button" type="button">⛶</button></span>
+        </div>
+        <button id="terminal-placeholder" class="terminal-placeholder" type="button" aria-label="Open Crush terminal"><pre><span class="prompt">$ crush</span>
+<span class="muted">Crush Runner is ready.</span>
+<span class="muted">Click to start a live Crush session.</span>
+<span class="prompt">$ ▌</span></pre></button>
+        <div id="terminal" class="terminal" hidden></div>
+      </section>
+    </section>
+  </main>
+</div>
+<script src="/plugin/gear-bridge.js"></script>
+<script type="module">
+import { iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
+
+const state = { snapshot: null, selected: null, terminal: null, taskTopic: false, fullscreen: false };
+const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
+
+function setStatus(message, error = false) {
+  elements.status.textContent = message;
+  elements.status.dataset.error = error ? "true" : "false";
+}
+
+function showBanner(message, action = null) {
+  elements["install-banner"].hidden = !message;
+  elements["install-banner"].textContent = "";
+  if (!message) return;
+  elements["install-banner"].append(message);
+  if (action) elements["install-banner"].append(" ", action);
+}
+
+function activePreset() {
+  return state.snapshot?.presets.find((preset) => preset.id === state.snapshot.activeId) || state.snapshot?.presets[0] || null;
+}
+
+function presetFields(preset) {
+  return `
+    <label>Name<input data-field="name" value="${escapeHtml(preset.name || "")}" /></label>
+    <label>Program<input data-field="program" value="${escapeHtml(preset.program || "")}" /></label>
+    <label>Arguments<input data-field="args" value="${escapeHtml(preset.args || "")}" /></label>
+    <label>Runtime<select data-field="type"><option value="auto">Auto</option><option value="gojs">Go + JavaScript</option><option value="wasi">WASI</option><option value="js">JavaScript</option></select></label>
+    <label>Working directory<input data-field="wd" value="${escapeHtml(preset.wd || "")}" /></label>
+    <label>Icon<input data-field="icon" value="${escapeHtml(preset.icon || "bot")}" /></label>
+    <label>Environment<textarea data-field="env" rows="3">${escapeHtml(preset.env || "")}</textarea></label>
+    <label>crushrc<textarea data-field="crushrc" rows="8">${escapeHtml(preset.crushrc || "")}</textarea></label>
+  `;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;", "'": "&#39;" }[char]));
+}
+
+function readCard(card) {
+  const preset = { id: card.dataset.id };
+  for (const field of card.querySelectorAll("[data-field]")) preset[field.dataset.field] = field.value;
+  return preset;
+}
+
+const PRESET_ICON_PATHS = {
+  bot: "<rect x=\"4\" y=\"6\" width=\"16\" height=\"13\" rx=\"3\"/><path d=\"M12 2v4M8 12h.01M16 12h.01M8 16h8\"/>",
+  ghost: "<path d=\"M5 20V10a7 7 0 0 1 14 0v10l-3-2-4 2-4-2-3 2Z\"/><path d=\"M9 11h.01M15 11h.01\"/>",
+  fish: "<path d=\"M20 12s-3-5-9-5c-3 0-5 2-7 5 2 3 4 5 7 5 6 0 9-5 9-5Z\"/><path d=\"M4 12H2M16 10h.01M16 14h.01\"/>",
+  footprints: "<path d=\"M8 20c-2 0-3-1-3-3 0-2 1-4 3-4s3 2 3 4c0 2-1 3-3 3ZM16 12c-2 0-3-1-3-3 0-2 1-4 3-4s3 2 3 4c0 2-1 3-3 3Z\"/><path d=\"M6 10c-1-1-1-3 0-4s3-1 4 1M14 17c-1-1-1-3 0-4s3-1 4 1\"/>",
+};
+
+function presetIconSvg(icon) {
+  const path = PRESET_ICON_PATHS[icon] || PRESET_ICON_PATHS.bot;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
+}
+
+function setCardSelected(id) {
+  for (const card of elements["preset-list"].querySelectorAll(".preset-card")) {
+    card.classList.toggle("selected", card.dataset.id === id);
+  }
+}
+
+async function selectPreset(preset, editor) {
+  const changed = state.snapshot.activeId !== preset.id;
+  state.selected = preset;
+  state.snapshot.activeId = preset.id;
+  setCardSelected(preset.id);
+  for (const other of elements["preset-list"].querySelectorAll(".preset-editor")) {
+    if (other !== editor) other.hidden = true;
+  }
+  if (changed) {
+    editor.hidden = true;
+    await GearShell.config.crushRunner.setActive(preset.id);
+    await switchTerminal(preset);
+    return;
+  }
+  editor.hidden = !editor.hidden;
+  editor.closest(".preset-card").querySelector(".preset-toggle")
+    .setAttribute("aria-expanded", String(!editor.hidden));
+}
+
+async function activatePreset(preset) {
+  state.selected = preset;
+  state.snapshot.activeId = preset.id;
+  setCardSelected(preset.id);
+  await GearShell.config.crushRunner.setActive(preset.id);
+  await switchTerminal(preset);
+}
+
+function renderPresets() {
+  elements["preset-list"].textContent = "";
+  for (const preset of state.snapshot?.presets || []) {
+    const card = document.createElement("article");
+    card.className = "preset-card" + (preset.id === state.snapshot.activeId ? " selected" : "");
+    card.dataset.id = preset.id;
+    card.innerHTML = `<div class="preset-head"><button class="preset-toggle" type="button" aria-expanded="false"><span class="preset-icon">${presetIconSvg(preset.icon)}</span><span>${escapeHtml(preset.name)}</span></button><button class="preset-play" type="button" title="Open ${escapeHtml(preset.name)} in terminal" aria-label="Play ${escapeHtml(preset.name)}">▶</button></div><div class="preset-editor" hidden><form class="preset-form">${presetFields(preset)}<div class="preset-actions"><button class="save-preset" type="submit">Save</button><button class="remove-preset danger" type="button" ${preset.builtin ? "disabled" : ""}>Remove</button></div></form></div>`;
+    card.querySelector('[data-field="type"]').value = preset.type || "gojs";
+    const editor = card.querySelector(".preset-editor");
+    card.querySelector(".preset-toggle").addEventListener("click", () => {
+      selectPreset(preset, editor).catch(showError);
+    });
+    card.querySelector(".preset-play").addEventListener("click", () => {
+      activatePreset(readCard(card)).catch(showError);
+    });
+    card.querySelector(".preset-form").addEventListener("submit", (event) => saveCard(event, card));
+    card.querySelector(".remove-preset").addEventListener("click", () => removeCard(card));
+    elements["preset-list"].append(card);
+  }
+}
+
+function writeForm(preset) {
+  state.selected = preset;
+}
+
+async function refresh() {
+  state.snapshot = await GearShell.config.crushRunner.get();
+  const selected = state.snapshot.presets.find((preset) => preset.id === state.selected?.id) || activePreset();
+  writeForm(selected);
+  renderPresets();
+}
+
+function showError(error) {
+  setStatus(error?.message || String(error), true);
+}
+
+async function waitForTask(spec) {
+  if (!state.taskTopic) {
+    await GearShell.subscribe("task.status");
+    state.taskTopic = true;
+  }
+  return new Promise((resolve, reject) => {
+    let taskId = null;
+    const onStatus = async (detail) => {
+      if (taskId == null || Number(detail?.taskId) !== Number(taskId)) return;
+      if (!["succeeded", "failed", "cancelled"].includes(detail.status)) return;
+      GearShell.off("task.status", onStatus);
+      try {
+        const output = await GearShell.tasks.output(taskId);
+        if (detail.status !== "succeeded") reject(new Error(output?.output?.trim() || `Task ${detail.status}`));
+        else resolve(output?.output || "");
+      } catch (error) {
+        reject(error);
+      }
+    };
+    GearShell.on("task.status", onStatus);
+    GearShell.tasks.create(spec, { background: true }).then((started) => {
+      if (!started?.ok || started.taskId == null) {
+        GearShell.off("task.status", onStatus);
+        reject(new Error(started?.error || "Could not start task"));
+        return;
+      }
+      taskId = started.taskId;
+    }).catch((error) => {
+      GearShell.off("task.status", onStatus);
+      reject(error);
+    });
+  });
+}
+
+async function detect() {
+  try {
+    const output = await waitForTask({ name: "Detect Crush", cmd: "command -v crush", term: false });
+    const path = output.trim();
+    setStatus(path ? `Installed at ${path}` : "Crush is not installed");
+    if (path && !state.selected?.program) elements.program.value = path;
+    if (!path) {
+      const install = document.createElement("button");
+      install.type = "button";
+      install.textContent = "Install Crush";
+      install.addEventListener("click", installCrush);
+      showBanner("Crush is not installed.", install);
+    }
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+async function installCrush() {
+  showBanner("Installing Crush…");
+  setStatus("Running w9y mod apply crush…");
+  try {
+    await waitForTask({ name: "Install Crush", cmd: "w9y mod apply crush", term: false });
+    showBanner("");
+    elements.program.value = "/opfs/wanix/crush";
+    setStatus("Crush installed. You can launch it now.");
+  } catch (error) {
+    showBanner(error.message);
+    setStatus("Crush installation failed", true);
+  }
+}
+
+async function saveCard(event, card) {
+  event.preventDefault();
+  try {
+    state.snapshot = await GearShell.config.crushRunner.save(readCard(card), { active: true, agent: "crush-runner-iframe" });
+    state.selected = readCard(card);
+    renderPresets();
+    setStatus("Preset saved");
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function removeCard(card) {
+  try {
+    state.snapshot = await GearShell.config.crushRunner.remove(card.dataset.id, "crush-runner-iframe");
+    await refresh();
+    setStatus("Preset removed");
+  } catch (error) {
+    showError(error);
+  }
+}
+
+function profileFor(preset) {
+  const env = preset.env || "";
+  const configEnv = "CRUSH_GLOBAL_CONFIG=/preset";
+  return {
+    name: preset.name || "Crush",
+    program: preset.program || "/opfs/wanix/crush",
+    args: preset.args || "",
+    type: preset.type || "gojs",
+    wd: preset.wd || "/opfs/home",
+    env: [env.trim(), configEnv].filter(Boolean).join("\n"),
+    extraBinds: [
+      { type: "ns", dst: "preset", src: "#ramfs/new" },
+      { type: "file", dst: "preset/crushrc", content: preset.crushrc || "" },
+    ],
+  };
+}
+
+async function switchTerminal(preset) {
+  await closeTerminal();
+  if (state.snapshot.activeId === preset.id) launch(preset);
+}
+
+async function launch(preset = activePreset()) {
+  if (state.terminal || !preset) return;
+  elements["terminal-placeholder"].hidden = true;
+  elements.terminal.hidden = false;
+  elements["terminal-actions"].hidden = false;
+  const session = iframeSession(GearShell);
+  session.create = () => GearShell.terminal.create(profileFor(preset));
+  try {
+    state.terminal = await mountTerminal(elements.terminal, session, {
+      terminal: { termName: "ghostty", fontSize: 13, scrollback: 12000, theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" } },
+      transformInput: (data) => data.replace("\\u001bP>|xterm.js(", "\\u001bP>|ghostty("),
+      onExit: (payload) => setStatus(payload.error ? payload.error : `Crush exited (${payload.code ?? "?"})`),
+    });
+    setStatus(`Running ${preset.name}`);
+  } catch (error) {
+    elements["terminal-placeholder"].hidden = false;
+    elements.terminal.hidden = true;
+    elements["terminal-actions"].hidden = true;
+    showError(error);
+  }
+}
+
+async function closeTerminal() {
+  state.terminal?.dispose();
+  state.terminal = null;
+  elements["terminal-placeholder"].hidden = false;
+  elements.terminal.hidden = true;
+  elements["terminal-actions"].hidden = true;
+}
+
+function toggleFullscreen() {
+  state.fullscreen = !state.fullscreen;
+  elements["terminal-frame"].classList.toggle("is-fullscreen", state.fullscreen);
+}
+
+elements["terminal-placeholder"].addEventListener("click", launch);
+elements["close-terminal"].addEventListener("click", closeTerminal);
+elements["restart-terminal"].addEventListener("click", async () => {
+  await closeTerminal();
+  launch();
+});
+elements["fullscreen-terminal"].addEventListener("click", toggleFullscreen);
+elements["new-preset"].addEventListener("click", () => {
+  const preset = { id: "custom-" + Date.now(), name: "Custom Crush", program: "/opfs/wanix/crush", type: "gojs", wd: "/opfs/home", icon: "bot", env: "", crushrc: "" };
+  state.snapshot.presets.push(preset);
+  state.selected = preset;
+  renderPresets();
+  const card = elements["preset-list"].lastElementChild;
+  card.querySelector(".preset-toggle").click();
+});
+
+await refresh();
+detect();
+</script>
+</body>
+</html>
