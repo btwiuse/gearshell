@@ -75,6 +75,14 @@ function handlePanelRemoved(api, panel) {
     destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
   }
   forgetOpenPanel(panel.id);
+  // Empty-workspace fallback: when the user closes the last panel,
+  // wait one frame for dockview to finish tearing the tab down, then
+  // re-open the empty-grid provider so the grid is never stranded
+  // empty. Deferred so `api.panels.length` reflects the post-removal
+  // state at read time.
+  requestAnimationFrame(() => {
+    if (api.panels.length === 0) openEmptyGridFallback(api);
+  });
 }
 
 // Empty-workspace fallback: open the first plugin panel that opted
