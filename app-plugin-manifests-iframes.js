@@ -105,6 +105,7 @@ export const IFRAME_PLUGINS = [
     version: "1.0.0",
     icon: "Dog",
     entry: "/plugin/web-pet/web-pet-plugin.js",
+    enabled: false,
   },
   {
     id: "widgetbot",
@@ -112,5 +113,6 @@ export const IFRAME_PLUGINS = [
     version: "1.0.0",
     icon: "MessageSquare",
     entry: "/plugin/widgetbot/widgetbot-plugin.js",
+    enabled: false,
   },
 ];

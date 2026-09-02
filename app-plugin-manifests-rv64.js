@@ -26,4 +26,5 @@ export const RV64_IFRAME_PLUGIN = {
       "events.off",
     ],
   },
+  enabled: false,
 };

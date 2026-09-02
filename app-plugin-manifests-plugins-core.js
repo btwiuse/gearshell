@@ -52,6 +52,7 @@ export const CORE_PLUGINS = [
       "/plugin/deck/deck.css",
       "/plugin/deck/reveal.css",
     ],
+    enabled: false,
   },
   {
     id: "group",
@@ -59,6 +60,7 @@ export const CORE_PLUGINS = [
     version: "1.0.0",
     icon: "UsersRound",
     entry: "/plugin/group/group-plugin.js",
+    enabled: false,
   },
   {
     id: "runtime",
@@ -122,6 +124,7 @@ export const CORE_PLUGINS = [
     version: "1.0.0",
     icon: "Monitor",
     entry: "/plugin/workbench/workbench-plugin.js",
+    enabled: false,
   },
   {
     id: "settings",
