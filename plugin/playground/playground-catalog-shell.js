@@ -180,12 +180,12 @@ export const shellCatalog = [
       {
         name: "crushRunner.get",
         args: [],
-        hint: "Read Crush Runner presets, active preset id, and display order.",
+        hint: "Read the Crush Playground snapshot — presets, active id, display order. Backed by the generic config.kv store (`crush-playground:state` + `:builtins`).",
       },
       {
         name: "crushRunner.list",
         args: [],
-        hint: "List the merged built-in and custom Crush Runner presets.",
+        hint: "List the merged built-in and custom Crush Playground presets.",
       },
       {
         name: "crushRunner.save",
@@ -221,7 +221,53 @@ export const shellCatalog = [
           { key: "id", label: "Preset id", type: "string" },
           { key: "agent", label: "Agent", type: "string", optional: true },
         ],
-        hint: "Set the active Crush Runner preset.",
+        hint: "Set the active Crush Playground preset.",
+      },
+      {
+        name: "kv.get",
+        args: [{ key: "key", label: "Key", type: "string" }],
+        hint: "Read any per-workspace JSON value by key. Returns undefined when absent. Plugins opt in via `config.kv.*` permission.",
+      },
+      {
+        name: "kv.set",
+        args: [
+          { key: "key", label: "Key", type: "string" },
+          { key: "value", label: "Value", type: "json" },
+          {
+            key: "options",
+            label: "Options",
+            type: "json",
+            optional: true,
+            placeholder: '{"agent":"playground"}',
+          },
+        ],
+        hint: "Upsert a JSON value. Writes are audited (kind:\"system\") and emit `config.changed`.",
+      },
+      {
+        name: "kv.delete",
+        args: [
+          { key: "key", label: "Key", type: "string" },
+          {
+            key: "options",
+            label: "Options",
+            type: "json",
+            optional: true,
+            placeholder: '{"agent":"playground"}',
+          },
+        ],
+        hint: "Remove a key. Returns `{deleted:false}` when absent.",
+      },
+      {
+        name: "kv.list",
+        args: [
+          {
+            key: "prefix",
+            label: "Prefix filter",
+            type: "string",
+            optional: true,
+          },
+        ],
+        hint: "List all kv keys (optionally filtered by prefix), sorted.",
       },
       {
         name: "providers.list",
