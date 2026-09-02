@@ -41,6 +41,7 @@ function winchPath(id) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 function emit(entry, type, payload) {
   const listeners = entry.listeners[type];
   if (listeners.size === 0) {

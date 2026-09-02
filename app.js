@@ -497,6 +497,15 @@ initIframePluginApi();
 // working while focus is in Browser / Bonsai / glmatrix / etc.
 startIframeKeyForwarder();
 
+// Pre-warm the chime AudioContext for in-page terminals so the first
+// agent-done chime of this session needs no fresh user gesture.
+// Iframe plugin pages run terminal-mount.mjs in their own document
+// and pre-warm independently.
+// (No host pre-warm: terminal-mount.mjs creates the AudioContext on
+// its first mountTerminal call, which already runs inside the user's
+// Launch gesture stack — earlier init would just trip Chrome's
+// autoplay warning.)
+
 // Dual-mode w9y dep sync: fire-and-forget `w9y mod apply`. Must run
 // after initPanels/initWorkspaceApi (the apply path needs both).
 ensureW9yDependencies(loadConfig().plugins, W9Y_BINARY_VERSION).catch((error) => {

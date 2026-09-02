@@ -64,10 +64,10 @@ textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, SFMono
 .terminal-placeholder pre { margin: 0; padding: 22px 24px; color: #e6edf3; font: 13.5px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
 .prompt { color: #58a6ff; } .muted { color: #8b949e; }
 .terminal { display: flex; flex: 1; min-height: 0; min-width: 0; padding: 0; overflow: hidden; background: #0a0e14; }
-.terminal-instance { display: flex; flex: 1; min-width: 0; min-height: 0; padding: 0; overflow: hidden; }
-.terminal-instance .xterm { width: 100%; height: 100%; padding: 0; }
+.terminal-instance { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; padding: 0; overflow: hidden; }
+.terminal-instance .xterm { flex: 1; min-height: 0; padding: 0; }
 .terminal-instance .xterm-viewport, .terminal-instance .xterm-screen { background: #0a0e14; }
-.term-progress { flex: none; height: 3px; background: #21262d; overflow: hidden; }
+.term-progress { flex: none; width: 100%; height: 3px; background: #21262d; overflow: hidden; }
 .term-progress[hidden] { display: none; }
 .term-progress-fill { height: 100%; width: 0; background: #58a6ff; transition: width 160ms ease-out; }
 .term-progress[data-state="2"] .term-progress-fill { background: #f85149; }

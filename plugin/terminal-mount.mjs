@@ -45,6 +45,63 @@ function bundle() {
   return bundlePromise;
 }
 
+// Play a short Web Audio chime in the current document context. Used as
+// the default onProgressDone response (state 0 from OSC 9;4 = agent
+// finished its turn). terminal-mount.mjs runs in both the host page and
+// iframe plugin documents, so each AudioContext belongs to whichever
+// document mounted the terminal — no cross-document API needed.
+const CHIME_AUTOPLAY_UNLOCK = "gearshell.chime.unlocked.v1";
+let chimeAudioCtx = null;
+function ensureChimeAudioContext() {
+  if (chimeAudioCtx || typeof window === "undefined") return chimeAudioCtx;
+  const Ctor = window.AudioContext || window.webkitAudioContext;
+  if (!Ctor) return null;
+  chimeAudioCtx = new Ctor();
+  return chimeAudioCtx;
+}
+function chimeLoadUnlocked() {
+  if (typeof localStorage === "undefined") return false;
+  try { return localStorage.getItem(CHIME_AUTOPLAY_UNLOCK) === "1"; }
+  catch { return false; }
+}
+function chimeMarkUnlocked() {
+  if (typeof localStorage === "undefined") return;
+  try { localStorage.setItem(CHIME_AUTOPLAY_UNLOCK, "1"); }
+  catch {}
+}
+export function playChime(kind = "done") {
+  const ctx = ensureChimeAudioContext();
+  if (!ctx) return false;
+  // Always try to resume; first call after page load may be silently
+  // dropped if the user has not yet interacted with this document, but
+  // resume() returns a promise that resolves on the next user gesture.
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+  const now = ctx.currentTime;
+  // "done" = ascending major third (pleasant); "attention" = sustained
+  // minor second (urgent). Two short notes; successive plays restart
+  // from the current context time so they do not stack.
+  const notes = kind === "attention"
+    ? [{ f: 440, t: now, dur: 0.18 }, { f: 415, t: now + 0.05, dur: 0.22 }]
+    : [{ f: 523, t: now, dur: 0.12 }, { f: 659, t: now + 0.04, dur: 0.16 }];
+  for (const { f, t, dur } of notes) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(f, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  }
+  chimeMarkUnlocked();
+  return true;
+}
+
 // Mobile tap-to-refocus: touch browsers may not synthesize the mousedown
 // xterm listens for after the terminal lost focus, so a tap would never
 // reopen the keyboard. Focus directly on a tap; scrolls are ignored.
@@ -83,6 +140,16 @@ function winchFor(anchor, term) {
 // created (the xterm bundle is loaded once and cached across mounts).
 export async function mountTerminal(anchor, session, options = {}) {
   const libs = await bundle();
+  // Create + resume the AudioContext while we are inside the user gesture
+  // stack that drove this mount (e.g. the Launch button click). The
+  // browser may still mark the context "suspended" until something
+  // actually resumes it, so the explicit resume() at construction time
+  // gets us out of that state immediately and playChime stays silent-
+  // free on the very first agent-done tick of this session.
+  {
+    const ctx = ensureChimeAudioContext();
+    if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+  }
   const term = new libs.Terminal({
     convertEol: true,
     cursorBlink: true,
@@ -120,7 +187,61 @@ export async function mountTerminal(anchor, session, options = {}) {
     } catch {}
   };
 
+  // Detect OSC 9;4 state transitions on the raw output stream. We do
+  // this here (rather than via a chained ProgressAddon) because some
+  // xterm builds drop the second OSC 9 handler after applyXtermAddons
+  // already registered one. A per-mount carry-over handles OSC
+  // sequences whose terminator (\x07 BEL or \x1b\\ ST) lands in the
+  // next chunk. We track the previous state so only the working → done
+  // edge triggers the chime — not the indeterminate start tick or any
+  // direct state=0 with no prior working signal.
+  const OSC_9_4_RE = /\x1b\]9;4;(\d+)(?:;(\d+))?(?:\x07|\x1b\\)/g;
+  let lastChimeState = null;
+  let chimeTimer = null;
+  let oscCarry = "";
+  function sniffOsc(chunk) {
+    const text = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
+    const haystack = oscCarry + text;
+    oscCarry = "";
+    OSC_9_4_RE.lastIndex = 0;
+    while (true) {
+      const m = OSC_9_4_RE.exec(haystack);
+      if (!m) break;
+      const state = Number(m[1]);
+      if (state !== 0) {
+        // Agent is back in a working state — cancel any pending chime
+        // that was awaiting a quiet moment to fire. A new OSC 9;4;0
+        // may follow and re-arm the timer.
+        if (chimeTimer != null) {
+          clearTimeout(chimeTimer);
+          chimeTimer = null;
+        }
+        lastChimeState = state;
+        continue;
+      }
+      // state === 0: arm a delayed chime. If the agent stays in state
+      // 0 (truly done) the timer fires and we play. If it goes back
+      // to a non-zero state, the early branch above cancels the
+      // timer. A 400 ms quiet window is short enough to feel snappy
+      // yet long enough to skip the per-frame 9;4;3 / 9;4;0 flapping
+      // that some TUIs emit while still busy.
+      if (lastChimeState !== null && lastChimeState !== 0) {
+        if (chimeTimer == null) {
+          chimeTimer = setTimeout(() => {
+            chimeTimer = null;
+            playChime("done");
+          }, 400);
+        }
+      }
+      lastChimeState = 0;
+    }
+    // Keep any partial OSC tail so the next chunk can complete it.
+    const lastEsc = haystack.lastIndexOf("\x1b");
+    if (lastEsc >= 0) oscCarry = haystack.slice(lastEsc);
+  }
+
   const offOutput = session.onOutput(sessionId, (data) => {
+    sniffOsc(data);
     term.write(data);
     options.onData?.(data);
   });
@@ -153,6 +274,10 @@ export async function mountTerminal(anchor, session, options = {}) {
       window.removeEventListener("resize", refitAndResize);
       offOutput?.();
       offExit?.();
+      if (chimeTimer != null) {
+        clearTimeout(chimeTimer);
+        chimeTimer = null;
+      }
       term.dispose();
       try {
         session.dispose(sessionId);

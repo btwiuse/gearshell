@@ -35,7 +35,6 @@
 <span class="muted">Crush Runner is ready.</span>
 <span class="muted">Click to start a live Crush session.</span>
 <span class="prompt">$ ▌</span></pre></button>
-        <div id="term-progress" class="term-progress" hidden><div id="term-progress-fill" class="term-progress-fill"></div></div>
         <div id="terminal" class="terminal" hidden></div>
       </section>
     </section>
@@ -45,8 +44,8 @@
 <script type="module">
 import { ghosttyIdentity, iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
 
-const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), taskTopic: false, fullscreen: false };
-const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "term-progress", "term-progress-fill", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
+const state = { snapshot: null, selected: null, terminal: null, taskTopic: false, fullscreen: false };
+const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
 
 function setStatus(message, error = false) {
   elements.status.textContent = message;
@@ -284,10 +283,11 @@ async function switchTerminal(preset) {
   await launch(preset);
 }
 
-function updateProgress(progress) {
-  const bar = elements["term-progress"];
-  const fill = elements["term-progress-fill"];
-  if (!bar || !fill) return;
+// Each terminal instance owns its own progress bar DOM. The bar is
+// closed over by the setupAddons callback below so updateProgress
+// reaches it without any DOM lookup — and only that bar, regardless
+// of which preset is currently mounted.
+function renderProgress(progress, bar, fill) {
   const stateValue = progress && progress.state;
   const value = Math.max(0, Math.min(100, Number(progress && progress.value) || 0));
   bar.hidden = stateValue === 0 || stateValue == null;
@@ -303,22 +303,16 @@ function updateProgress(progress) {
 async function launch(preset = activePreset()) {
   preset = preset || activePreset();
   if (!preset) return;
-  if (state.terminal?.preset.id === preset.id) {
-    state.terminal.handle.term.focus();
-    return;
-  }
-  const existing = state.terminals.get(preset.id);
-  if (existing) {
-    if (state.terminal) state.terminal.host.hidden = true;
-    existing.host.hidden = false;
-    state.terminal = existing;
-    existing.handle.term.focus();
-    setStatus(`Running ${preset.name}`);
-    return;
-  }
+  // Tear down the existing terminal instance before mounting a new
+  // one. Caching hidden siblings inside #terminal compresses the
+  // active host into a fraction of the available flex width, and a
+  // cached host whose parentNode has been removed would silently fail
+  // to re-show on a later switch.
   if (state.terminal) {
-    state.terminal.host.hidden = true;
+    try { state.terminal.handle.dispose(); } catch {}
+    const oldHost = state.terminal.host;
     state.terminal = null;
+    if (oldHost && oldHost.parentNode) oldHost.parentNode.removeChild(oldHost);
   }
   elements["terminal-placeholder"].hidden = true;
   elements.terminal.hidden = false;
@@ -328,19 +322,24 @@ async function launch(preset = activePreset()) {
   try {
     const host = document.createElement("div");
     host.className = "terminal-instance";
+    const progressBar = document.createElement("div");
+    progressBar.className = "term-progress";
+    progressBar.hidden = true;
+    const progressFill = document.createElement("div");
+    progressFill.className = "term-progress-fill";
+    progressBar.append(progressFill);
+    host.append(progressBar);
     elements.terminal.append(host);
     const handle = await mountTerminal(host, session, {
       ...ghosttyIdentity({ terminal: { fontSize: 13, scrollback: 12000, scrollbar: { showScrollbar: false }, theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" } } }),
       setupAddons: (term, libs) => {
         const addon = new libs.ProgressAddon();
         term.loadAddon(addon);
-        addon.onChange(updateProgress);
+        addon.onChange((progress) => renderProgress(progress, progressBar, progressFill));
       },
       onExit: (payload) => setStatus(payload.error ? payload.error : `Crush exited (${payload.code ?? "?"})`),
     });
-    const entry = { host, handle, preset };
-    state.terminals.set(preset.id, entry);
-    state.terminal = entry;
+    state.terminal = { host, handle, preset };
     handle.term.focus();
     setStatus(`Running ${preset.name}`);
   } catch (error) {
@@ -351,27 +350,27 @@ async function launch(preset = activePreset()) {
 }
 
 async function closeTerminal() {
+  // Click on the X: stop the current session and surface the
+  // placeholder. The user can re-open the same preset (or a different
+  // one) by clicking the placeholder or another preset card.
   if (!state.terminal) return;
-  state.terminal.host.hidden = true;
+  try {
+    state.terminal.handle.dispose();
+  } catch {}
+  const oldHost = state.terminal.host;
   state.terminal = null;
+  if (oldHost && oldHost.parentNode) oldHost.parentNode.removeChild(oldHost);
   elements["terminal-placeholder"].hidden = false;
   elements["terminal-actions"].hidden = true;
-}
-
-async function closeCurrentAndReopen() {
-  if (!state.terminal) return;
-  const presetId = state.terminal.preset.id;
-  state.terminal.handle.dispose();
-  state.terminals.delete(presetId);
-  state.terminal = null;
-  elements["terminal-placeholder"].hidden = false;
-  elements["terminal-actions"].hidden = true;
-  await launch();
 }
 
 function disposeAllTerminals() {
-  for (const entry of state.terminals.values()) entry.handle.dispose();
-  state.terminals.clear();
+  if (state.terminal) {
+    try { state.terminal.handle.dispose(); } catch {}
+    const oldHost = state.terminal.host;
+    state.terminal = null;
+    if (oldHost && oldHost.parentNode) oldHost.parentNode.removeChild(oldHost);
+  }
 }
 
 function toggleFullscreen() {
@@ -380,7 +379,7 @@ function toggleFullscreen() {
 }
 
 elements["terminal-placeholder"].addEventListener("click", () => launch());
-elements["close-terminal"].addEventListener("click", closeCurrentAndReopen);
+elements["close-terminal"].addEventListener("click", closeTerminal);
 window.addEventListener("pagehide", disposeAllTerminals);
 elements["restart-terminal"].addEventListener("click", async () => {
   await closeTerminal();
