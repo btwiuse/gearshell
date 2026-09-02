@@ -13,7 +13,7 @@ import {
 // Runtime + plugin normalizers live in app-normalize-runtime.js /
 // app-normalize-plugins.js; re-exported so existing importers (app.js,
 // workspace-config-api, app-workspace-presets) keep working unchanged.
-export { isLegacyWanixRuntimeUrl, normalizeRuntimeConfig, normalizePlugin, normalizePlugins };
+export { isLegacyWanixRuntimeUrl, normalizeRuntimeConfig, normalizePlugin, normalizePlugins, normalizeCrushRunnerPreset };
 
 import {
   BUILTIN_TERMINAL_PROFILES,
