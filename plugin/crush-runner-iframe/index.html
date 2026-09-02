@@ -44,7 +44,7 @@
 <script type="module">
 import { iframeSession, mountTerminal } from "/plugin/terminal-mount.mjs";
 
-const state = { snapshot: null, selected: null, terminal: null, taskTopic: false, fullscreen: false };
+const state = { snapshot: null, selected: null, terminal: null, terminals: new Map(), taskTopic: false, fullscreen: false };
 const elements = Object.fromEntries(["status", "install-banner", "preset-list", "terminal-frame", "terminal-actions", "terminal-placeholder", "terminal", "close-terminal", "restart-terminal", "fullscreen-terminal", "new-preset"].map((id) => [id, document.getElementById(id)]));
 
 function setStatus(message, error = false) {
@@ -274,38 +274,54 @@ function profileFor(preset) {
 }
 
 async function switchTerminal(preset) {
-  await closeTerminal();
-  if (state.snapshot.activeId === preset.id) launch(preset);
+  if (state.terminal) state.terminal.host.hidden = true;
+  const cached = state.terminals.get(preset.id);
+  if (cached) {
+    cached.host.hidden = false;
+    state.terminal = cached;
+    setStatus(`Running ${preset.name}`);
+    return;
+  }
+  await launch(preset);
 }
 
 async function launch(preset = activePreset()) {
   if (state.terminal || !preset) return;
   elements["terminal-placeholder"].hidden = true;
-  elements.terminal.hidden = false;
   elements["terminal-actions"].hidden = false;
   const session = iframeSession(GearShell);
   session.create = () => GearShell.terminal.create(profileFor(preset));
   try {
-    state.terminal = await mountTerminal(elements.terminal, session, {
+    const host = document.createElement("div");
+    host.className = "terminal-instance";
+    elements.terminal.append(host);
+    const handle = await mountTerminal(host, session, {
       terminal: { termName: "ghostty", fontSize: 13, scrollback: 12000, theme: { background: "#0a0e14", foreground: "#e6edf3", cursor: "#58a6ff" } },
       transformInput: (data) => data.replace("\\u001bP>|xterm.js(", "\\u001bP>|ghostty("),
       onExit: (payload) => setStatus(payload.error ? payload.error : `Crush exited (${payload.code ?? "?"})`),
     });
+    const entry = { host, handle, preset };
+    state.terminals.set(preset.id, entry);
+    state.terminal = entry;
     setStatus(`Running ${preset.name}`);
   } catch (error) {
     elements["terminal-placeholder"].hidden = false;
-    elements.terminal.hidden = true;
     elements["terminal-actions"].hidden = true;
     showError(error);
   }
 }
 
 async function closeTerminal() {
-  state.terminal?.dispose();
+  if (!state.terminal) return;
+  state.terminal.host.hidden = true;
   state.terminal = null;
   elements["terminal-placeholder"].hidden = false;
-  elements.terminal.hidden = true;
   elements["terminal-actions"].hidden = true;
+}
+
+function disposeAllTerminals() {
+  for (const entry of state.terminals.values()) entry.handle.dispose();
+  state.terminals.clear();
 }
 
 function toggleFullscreen() {
@@ -315,6 +331,7 @@ function toggleFullscreen() {
 
 elements["terminal-placeholder"].addEventListener("click", launch);
 elements["close-terminal"].addEventListener("click", closeTerminal);
+window.addEventListener("pagehide", disposeAllTerminals);
 elements["restart-terminal"].addEventListener("click", async () => {
   await closeTerminal();
   launch();

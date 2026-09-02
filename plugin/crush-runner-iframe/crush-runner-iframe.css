@@ -63,8 +63,9 @@ textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, SFMono
 .terminal-placeholder:hover { background: #0d1117; }
 .terminal-placeholder pre { margin: 0; padding: 22px 24px; color: #e6edf3; font: 13.5px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
 .prompt { color: #58a6ff; } .muted { color: #8b949e; }
-.terminal { flex: 1; min-height: 420px; height: 52vh; min-width: 0; padding: 0; overflow: hidden; background: #0a0e14; }
-.terminal .xterm { width: 100%; height: 100%; padding: 0; }
+.terminal { position: relative; flex: 1; min-height: 420px; height: 52vh; min-width: 0; padding: 0; overflow: hidden; background: #0a0e14; }
+.terminal-instance { position: absolute; inset: 0; padding: 0; }
+.terminal-instance .xterm { width: 100%; height: 100%; padding: 0; }
 .terminal .xterm-viewport, .terminal .xterm-screen { background: #0a0e14; }
 [hidden] { display: none !important; }
 @media (max-width: 700px) { .hero { display: block; padding: 22px 18px; } .status { margin-top: 12px; text-align: left; } .layout { display: block; } .sidebar { border-right: 0; border-bottom: 1px solid #263241; } .content { padding: 18px; } .form-grid { grid-template-columns: 1fr; } }
