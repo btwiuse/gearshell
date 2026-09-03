@@ -82,7 +82,7 @@
           <div class="info-row"><span class="info-label">Channel</span><span class="info-value">Tip</span></div>
           <div class="info-row"><span class="info-label">Commit</span><span class="info-value">main</span></div>
         </div>
-        <div id="about-actions"><a class="about-button about-icon-btn" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener" aria-label="GitHub"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-github.svg" alt=""></a><button id="about-home" class="about-button about-icon-btn" type="button" aria-label="Open Home"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/home.svg" alt=""></button><button id="about-settings" class="about-button about-icon-btn" type="button" aria-label="Open Settings"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/settings.svg" alt=""></button><button id="about-spotlight" class="about-button about-icon-btn" type="button" aria-label="Open Spotlight"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/search.svg" alt=""></button></div>
+        <div id="about-actions"><a class="about-button about-icon-btn" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener" aria-label="GitHub"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-github.svg" alt=""></a><button id="about-home" class="about-button about-icon-btn" type="button" aria-label="Open Home"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/home.svg" alt=""></button><button id="about-app-store" class="about-button about-icon-btn" type="button" aria-label="Open App Store"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/shopping-bag.svg" alt=""></button><button id="about-settings" class="about-button about-icon-btn" type="button" aria-label="Open Settings"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/settings.svg" alt=""></button><button id="about-spotlight" class="about-button about-icon-btn" type="button" aria-label="Open Spotlight"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/search.svg" alt=""></button></div>
       </div>
     </section>
   </div>
@@ -141,8 +141,10 @@
     refreshPlayback();
     const openHome = () => GearShell.panels.open("home").catch(() => {});
     const openSettings = () => GearShell.panels.open("settings").catch(() => {});
+    const openAppStore = () => GearShell.panels.open("app-store").catch(() => {});
     const openSpotlight = () => GearShell.events.dispatch("overlay.toggle", ["spotlight"]).catch(() => {});
     document.getElementById("about-home").onclick = openHome;
+    document.getElementById("about-app-store").onclick = openAppStore;
     document.getElementById("about-settings").onclick = openSettings;
     document.getElementById("about-spotlight").onclick = openSpotlight;
     let index = 0;
