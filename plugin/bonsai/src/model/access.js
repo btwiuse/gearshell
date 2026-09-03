@@ -362,6 +362,12 @@ class ModelAccess {
 
   wireEvents() {
     const $ = this.byId;
+    this.wireGate();
+    this.wireLoadButtons();
+    this.wireRetry();
+  }
+
+  wireGate() {
     this.gateContinue.addEventListener("click", (event) => {
       event.preventDefault();
       this.submitGate();
@@ -373,11 +379,16 @@ class ModelAccess {
       }
     });
     this.gateInput.addEventListener("input", () => this.clearGateError());
+    const $ = this.byId;
     $("gateShow").addEventListener("click", () => {
       const hidden = this.gateInput.type === "password";
       this.gateInput.type = hidden ? "text" : "password";
       $("gateShow").textContent = hidden ? "HIDE" : "SHOW";
     });
+  }
+
+  wireLoadButtons() {
+    const $ = this.byId;
     $("loadCta").addEventListener(
       "click",
       (event) => {
@@ -388,7 +399,7 @@ class ModelAccess {
       },
       true,
     );
-    const fileCta = byId("loadFileCta");
+    const fileCta = $("loadFileCta");
     if (fileCta) {
       fileCta.addEventListener("click", (event) => {
         event.preventDefault();
@@ -397,7 +408,10 @@ class ModelAccess {
       });
     }
     this.fileInput?.addEventListener("change", (event) => this.onLocalFile(event));
+  }
 
+  wireRetry() {
+    const $ = this.byId;
     $("retryBtn").addEventListener("click", (event) => {
       event.preventDefault();
       if (this.loadState === "failed") {
@@ -418,7 +432,12 @@ class ModelAccess {
 
 export function setupModelAccess(deps) {
   const access = new ModelAccess(deps);
-  window.BonsaiApp = { startLoad: () => access.startLoad() };
+  window.BonsaiApp = {
+    startLoad: () => access.startLoad(),
+    newSession: () => window.newSession?.(),
+    openSession: (id) => window.openSession?.(id),
+    listSessions: () => JSON.parse(localStorage.getItem("bonsai_chat_sessions_v1") ?? "[]"),
+  };
   access.init();
   if (
     document.body.classList.contains("stage-loading") &&

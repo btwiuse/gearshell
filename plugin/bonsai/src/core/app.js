@@ -2,8 +2,38 @@ import { Bonsai27B, DEFAULT_GGUF_FILE } from "../model/adapter.js";
 import { WorkerBonsai27B } from "../model/bonsai-client.js";
 import { setupModelAccess } from "../model/access.js";
 import { renderAnswer } from "../chat/markdown.js";
-import { executeToolCall, getGearShellTools } from "../chat/tools.js";
+import { renderHistoryPanel } from "../chat/history-panel.js";
+import { updateLiveStat } from "../chat/live-stats.js";
+import {
+  scheduleStreamPaint,
+  cancelStreamPaint,
+  appendTurnMeta,
+} from "../chat/turn-meta.js";
+import {
+  appendHistoricalAssistant as appendHistoricalAssistantModule,
+  appendHistoricalTool as appendHistoricalToolModule,
+} from "../chat/historical.js";
+import {
+  appendUserNode,
+  createTurnState as createTurnStateModule,
+  consumeTurnEvent,
+  handleGenerationError,
+  finishTurn,
+} from "../chat/turn.js";
+import {
+  runToolRound as runToolRoundModule,
+  streamAssistantRound as streamAssistantRoundModule,
+  appendToolCallCard,
+  buildStreamTools,
+} from "../chat/tool-runner.js";
 import { setupKernelInspector } from "../model/kernel/inspector.js";
+import {
+  makeSessionId,
+  persistSession,
+  loadSession,
+  readSessionIndex,
+  removeSession,
+} from "../chat/history.js";
 
 const $ = (id) => document.getElementById(id);
 const queryParams = new URLSearchParams(location.search);
@@ -27,6 +57,9 @@ let messages = [];
 let isGenerating = false;
 let contextExhausted = false;
 let abortController = null;
+let sessionTitle = "";
+let sessionId = null;
+let lastAssistantContent = null;
 const SEED_EXAMPLES = [
   {
     label: "LOGIC PUZZLE",
@@ -75,6 +108,22 @@ function prepChatUi() {
   cInput.disabled = false;
   $("clearBtn").disabled = false;
   $("thinkToggle").disabled = false;
+  const index = readSessionIndex();
+  if (index.length > 0) {
+    const last = index[0];
+    const data = loadSession(last.id);
+    if (data) {
+      sessionId = data.id;
+      sessionTitle = data.title;
+      messages = data.messages ?? [];
+      for (const m of messages) {
+        if (m.role === "user") appendUser(m.content ?? "");
+        else if (m.role === "assistant" && m.content) appendHistoricalAssistant(m.content);
+        else if (m.role === "tool") appendHistoricalTool(m);
+      }
+      if (messages.length > 0) removeWelcome();
+    }
+  }
   renderSeeds();
   refreshSend();
 }
@@ -105,6 +154,8 @@ document.addEventListener("click", (e) => {
 cSend.addEventListener("click", send);
 cStop.addEventListener("click", () => abortController?.abort());
 $("clearBtn").addEventListener("click", clearChat);
+$("newSessionBtn")?.addEventListener("click", newSession);
+$("historyBtn")?.addEventListener("click", toggleHistoryPanel);
 cInput.addEventListener("input", () => {
   autoGrow();
   refreshSend();
@@ -157,6 +208,7 @@ function removeWelcome() {
 }
 function clearChat() {
   if (isGenerating) return;
+  persistSession({ id: sessionId, title: sessionTitle, messages });
   messages = [];
   chat?.reset();
   contextExhausted = false;
@@ -167,203 +219,123 @@ function clearChat() {
   renderSeeds();
   cInput.focus();
 }
-function appendUser(text) {
-  const msg = document.createElement("div");
-  msg.className = "c-msg user";
-  const role = document.createElement("div");
-  role.className = "c-role";
-  role.textContent = "YOU";
-  const bubble = document.createElement("div");
-  bubble.className = "u-bubble";
-  bubble.textContent = text;
-  msg.append(role, bubble);
-  cThread.appendChild(msg);
-  scrollDown(true);
-}
-function appendAssistant(withThinking) {
-  const msg = document.createElement("div");
-  msg.className = "c-msg bot";
-  msg.innerHTML = `
-    <div class="c-role">BONSAI</div>
-    ${
-    withThinking
-      ? `
-    <div class="t-block live open">
-      <button class="t-head" type="button">
-        <span class="t-chev">&#9654;</span>
-        <span class="t-label t-shimmer">THINKING</span>
-      </button>
-      <div class="t-body"></div>
-    </div>`
-      : ""
-  }
-    <div class="a-body"></div>`;
-  const tBlock = msg.querySelector(".t-block");
-  tBlock?.querySelector(".t-head").addEventListener("click", () => {
-    if (tBlock.classList.contains("live")) return;
-    const open = tBlock.classList.toggle("open");
-    if (open) tBlock.querySelector(".t-body").scrollTop = 0;
+
+function newSession() {
+  if (isGenerating) return;
+  persistSession({
+    id: sessionId,
+    title: sessionTitle,
+    messages,
   });
-  cThread.appendChild(msg);
-  scrollDown(true);
-  return msg;
+  messages = [];
+  sessionId = makeSessionId();
+  sessionTitle = "New chat";
+  chat?.reset();
+  contextExhausted = false;
+  cInput.disabled = false;
+  cInput.placeholder = "Ask anything…";
+  setStatus("", "READY");
+  cThread.replaceChildren(welcomeTemplate.cloneNode(true));
+  renderSeeds();
+  cInput.focus();
+  removeSession(sessionId);
+  refreshHistoryPanel();
+}
+
+let historyPanelOpen = false;
+function toggleHistoryPanel() {
+  historyPanelOpen = !historyPanelOpen;
+  refreshHistoryPanel();
+}
+
+function refreshHistoryPanel() {
+  const panel = $("historyPanel");
+  if (!panel) return;
+  if (!historyPanelOpen) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  renderHistoryPanel({
+    panel,
+    sessionId,
+    index: readSessionIndex(),
+    onOpen: (id) => openSession(id),
+    onDelete: (id) => {
+      if (id === sessionId) newSession();
+      else removeSession(id);
+      refreshHistoryPanel();
+    },
+  });
+}
+
+function openSession(id) {
+  if (isGenerating) return;
+  const data = loadSession(id);
+  if (!data) return;
+  persistSession();
+  messages = data.messages ?? [];
+  sessionId = data.id ?? id;
+  sessionTitle = data.title ?? "Restored chat";
+  chat?.reset();
+  contextExhausted = false;
+  cThread.replaceChildren(welcomeTemplate.cloneNode(true));
+  for (const m of messages) {
+    if (m.role === "user") appendUser(m.content ?? "");
+    else if (m.role === "assistant" && m.content) appendHistoricalAssistant(m.content);
+    else if (m.role === "tool") appendHistoricalTool(m);
+  }
+  if (messages.length === 0) {
+    cThread.replaceChildren(welcomeTemplate.cloneNode(true));
+    renderSeeds();
+  }
+  removeWelcome();
+  cInput.disabled = false;
+  cInput.focus();
+  refreshHistoryPanel();
+}
+
+function appendHistoricalAssistant(text) {
+  appendHistoricalAssistantModule(cThread, text);
+}
+
+function appendHistoricalTool(record) {
+  appendHistoricalToolModule(cThread, record);
 }
 function createTurnState(thinkTurn) {
-  const msg = appendAssistant(thinkTurn);
+  return createTurnStateModule({ cThread, scrollDown, thinkTurn });
+}
+
+function turnEnv() {
   return {
-    msg,
-    tBlock: msg.querySelector(".t-block"),
-    tBody: msg.querySelector(".t-body"),
-    tLabel: msg.querySelector(".t-label"),
-    aBody: msg.querySelector(".a-body"),
-    phase: thinkTurn ? "think" : "answer",
-    thinking: "",
-    answer: "",
-    toolStatuses: [],
-    closed: false,
-    startedAt: performance.now(),
-    firstTokenAt: 0,
-    thinkEndedAt: 0,
-    tokens: 0,
+    chat,
+    cThread,
+    cInput,
+    cLive,
+    messages,
+    sessionId,
+    sessionTitle,
+    abortController,
+    contextExhausted,
+    persistSession,
+    setStatus,
+    setGenerating,
+    scrollDown,
+    refreshSend,
+    scheduleStreamPaint,
+    cancelStreamPaint,
+    appendTurnMeta,
+    appendToolCallCard,
+    updateLiveStat,
   };
 }
 
-function finishThinking(turn) {
-  turn.closed = true;
-  turn.thinkEndedAt = performance.now();
-  turn.tBlock.classList.remove("live", "open");
-  const seconds = (
-    (turn.thinkEndedAt - (turn.firstTokenAt || turn.startedAt)) /
-    1e3
-  ).toFixed(1);
-  turn.tLabel.classList.remove("t-shimmer");
-  turn.tLabel.textContent = `THOUGHT FOR ${seconds}S`;
-  if (!turn.thinking.trim()) turn.tBlock.remove();
-  setStatus("busy", "WRITING …");
-}
-
-function appendToolCall(turn, call) {
-  const card = document.createElement("div");
-  card.className = "c-tool-call";
-  const name = document.createElement("div");
-  name.className = "c-tool-name";
-  name.textContent = `CALLING ${call.name}`;
-  const detail = document.createElement("pre");
-  detail.className = "c-tool-detail";
-  detail.textContent = JSON.stringify(call.arguments ?? {}, null, 2);
-  const status = document.createElement("div");
-  status.className = "c-tool-status";
-  status.textContent = "RUNNING";
-  card.append(name, detail, status);
-  turn.aBody.appendChild(card);
-  scrollDown();
-  return status;
-}
-
-function consumeTurnEvent(event, turn) {
-  const now = performance.now();
-  if (event.type === "tool_call") {
-    event.statusElement = appendToolCall(turn, event.call);
-    return;
-  }
-  if (event.type === "complete") {
-    turn.tokens = event.result.tokens.length;
-    return;
-  }
-  if (!turn.firstTokenAt) turn.firstTokenAt = now;
-  turn.tokens++;
-  if (event.type === "thinking") {
-    turn.thinking += event.delta;
-    scheduleStream(() => {
-      turn.tBody.textContent = turn.thinking;
-      turn.tBody.scrollTop = turn.tBody.scrollHeight;
-    });
-  } else if (event.type === "text") {
-    if (turn.phase === "think") {
-      turn.phase = "answer";
-      finishThinking(turn);
-    }
-    turn.answer += turn.answer === "" ? event.delta.replace(/^\s+/, "") : event.delta;
-    scheduleStream(() => renderAnswer(turn.aBody, turn.answer, true));
-  }
-  updateLiveStat({
-    startedAt: turn.startedAt,
-    firstTokenAt: turn.firstTokenAt,
-    now,
-    tokens: turn.tokens,
-  });
-}
-
-function handleGenerationError(error, turn) {
-  console.error(error);
-  if (!turn.answer) {
-    turn.aBody.innerHTML = "";
-    const err = document.createElement("div");
-    err.className = "a-error";
-    err.textContent = `Generation stopped: ${String(error?.message ?? error)}`;
-    turn.aBody.appendChild(err);
-  }
-  setStatus("error", "ERROR · SEE CONSOLE");
-}
-
-function finishTurn(turn) {
-  if (turn.phase === "think" && !turn.closed) {
-    turn.tBlock.classList.remove("live");
-    turn.tLabel.classList.remove("t-shimmer");
-    turn.tLabel.textContent = "THINKING (INTERRUPTED)";
-  }
-  cancelStream();
-  if (turn.tBody?.isConnected) {
-    turn.tBody.textContent = turn.thinking;
-    turn.tBody.scrollTop = turn.tBody.scrollHeight;
-  }
-  if (turn.answer || !turn.aBody.firstChild) {
-    renderAnswer(turn.aBody, turn.answer, false);
-  }
-  appendMeta(turn.msg, {
-    startedAt: turn.startedAt,
-    firstTokenAt: turn.firstTokenAt,
-    thinkEndedAt: turn.thinkEndedAt,
-    endedAt: performance.now(),
-    tokens: turn.tokens,
-  });
-  scrollDown();
-  const content = chat.lastAssistantContent;
-  if (content !== null) messages.push({ role: "assistant", content });
-  setGenerating(false);
-  cLive.textContent = "";
-  abortController = null;
-  if (chat.contextFull) lockContextFull(turn.msg);
-  else cInput.focus();
-}
-
 async function runToolRound(turn, calls) {
-  const results = [];
-  for (const call of calls) {
-    const status = appendToolCall(turn, call);
-    try {
-      const content = await executeToolCall(call);
-      status.textContent = "COMPLETE";
-      results.push({ role: "tool", name: call.name, content });
-    } catch (error) {
-      const content = JSON.stringify({
-        ok: false,
-        error: String(error?.message ?? error),
-      });
-      status.textContent = "FAILED";
-      results.push({ role: "tool", name: call.name, content });
-    }
-  }
-  return results;
+  return runToolRoundModule(turn, calls);
 }
 
 async function streamAssistantRound(turn, options) {
-  const calls = [];
-  for await (const event of chat.streamTurn(messages, options)) {
-    if (event.type === "tool_call") calls.push(event.call);
-    else consumeTurnEvent(event, turn);
-  }
-  return calls;
+  return streamAssistantRoundModule(chat, messages, turn, options);
 }
 
 async function send() {
@@ -374,6 +346,11 @@ async function send() {
   autoGrow();
   appendUser(text);
   messages.push({ role: "user", content: text });
+  if (!sessionId) sessionId = makeSessionId();
+  if (!sessionTitle || sessionTitle === "New chat" || sessionTitle === "Untitled chat") {
+    sessionTitle = text.length > 60 ? text.slice(0, 57) + "…" : text;
+  }
+  persistSession({ id: sessionId, title: sessionTitle, messages });
   const thinkTurn = thinkingEnabled;
   const turn = createTurnState(thinkTurn);
   setGenerating(true);
@@ -386,7 +363,7 @@ async function send() {
         think: thinkTurn,
         thinkBudget,
         thinkEarlyStop,
-        tools: getGearShellTools(),
+        tools: buildStreamTools(),
         toolChoice: "auto",
       });
       if (toolCalls.length > 0) {
@@ -395,94 +372,10 @@ async function send() {
       }
     } while (toolCalls.length > 0 && !abortController.signal.aborted);
   } catch (error) {
-    handleGenerationError(error, turn);
+    handleGenerationError(error, turn, setStatus);
   } finally {
-    finishTurn(turn);
+    finishTurn(turn, turnEnv());
   }
-}
-function lockContextFull(msg) {
-  contextExhausted = true;
-  const note = document.createElement("div");
-  note.className = "a-ctxfull";
-  note.textContent =
-    `CONTEXT WINDOW FULL · ${chat.contextLength} TOKENS — PRESS CLEAR TO START FRESH`;
-  msg.appendChild(note);
-  cInput.disabled = true;
-  cInput.placeholder = "Context window full — press CLEAR to start fresh";
-  refreshSend();
-  setStatus("error", "CONTEXT FULL");
-  scrollDown();
-}
-function appendMeta(
-  msg,
-  { startedAt, firstTokenAt, thinkEndedAt, endedAt, tokens },
-) {
-  if (tokens <= 0) return;
-  const parts = [`${tokens} TOK`];
-  if (thinkEndedAt) {
-    parts.push(
-      `THOUGHT ${((thinkEndedAt - (firstTokenAt || startedAt)) / 1e3).toFixed(1)}S`,
-    );
-  }
-  if (firstTokenAt) {
-    parts.push(`TTFT ${(firstTokenAt - startedAt).toFixed(0)} MS`);
-  }
-  if (tokens > 5 && firstTokenAt) {
-    parts.push(
-      `${
-        ((tokens - 1) / Math.max((endedAt - firstTokenAt) / 1e3, 1e-9)).toFixed(
-          1,
-        )
-      } TOK/S`,
-    );
-  }
-  const meta = document.createElement("div");
-  meta.className = "c-msg-meta";
-  meta.textContent = parts.join("  ·  ");
-  msg.appendChild(meta);
-}
-const LIVE_STAT_MS = 150;
-let lastLiveStatAt = 0;
-function updateLiveStat({ startedAt, firstTokenAt, now, tokens }) {
-  if (tokens <= 1) {
-    cLive.textContent = `TTFT ${(firstTokenAt - startedAt).toFixed(0)} MS`;
-    lastLiveStatAt = now;
-    return;
-  }
-  if (now - lastLiveStatAt < LIVE_STAT_MS) return;
-  lastLiveStatAt = now;
-  cLive.textContent = `${
-    ((tokens - 1) / Math.max((now - firstTokenAt) / 1e3, 1e-9)).toFixed(0)
-  } TOK/S`;
-}
-const STREAM_RENDER_MS = 33;
-let streamPaint = null,
-  renderQueued = false,
-  lastRenderAt = 0;
-function scheduleStream(paint) {
-  streamPaint = paint;
-  if (renderQueued) return;
-  renderQueued = true;
-  const tick = () => {
-    if (!streamPaint) {
-      renderQueued = false;
-      return;
-    }
-    if (performance.now() - lastRenderAt < STREAM_RENDER_MS) {
-      requestAnimationFrame(tick);
-      return;
-    }
-    renderQueued = false;
-    lastRenderAt = performance.now();
-    const paintNow = streamPaint;
-    streamPaint = null;
-    paintNow();
-    scrollDown();
-  };
-  requestAnimationFrame(tick);
-}
-function cancelStream() {
-  streamPaint = null;
 }
 
 setupKernelInspector({ getChat: () => chat, byId: $ });
