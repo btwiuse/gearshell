@@ -107,8 +107,8 @@ export const IFRAME_PLUGINS = [
   // to the same config.plugins.* / panels.* surface as the old in-page
   // version — the bridge proxies every GearShell.* call across
   // postMessage, gated by this plugin's permissions.api whitelist.
-  // Disabled by default — opt in from the Settings > Apps card, then
-  // panels.open("app-store") lands here.
+  // Enabled by default — the Settings > Apps card just opens this
+  // panel, and Spotlight's extras list pins it under the A shortcut.
   {
     id: "app-store",
     name: "App Store",
@@ -132,7 +132,6 @@ export const IFRAME_PLUGINS = [
         "events.off",
       ],
     },
-    enabled: false,
   },
   // Lucide Icons browser: a buildless iframe plugin that uses an
   // importmap to load lucide-react from esm.sh. The page is fully
