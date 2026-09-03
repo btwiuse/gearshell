@@ -1,0 +1,64 @@
+/* chat-shell.css
+ *
+ * The full-viewport chat overlay shell. Owns the `#chatx` container,
+ * its show/hide transition, the text-selection relaxation that the
+ * chat surface shares with the kernel inspector, and the outer scroll
+ * track.
+ *
+ * Children (`#chatx > *`) are styled in chat-header.css, chat-thread.css,
+ * and chat-composer.css.
+ */
+
+#chatx {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(
+    90% 70% at 50% -20%,
+    rgba(38, 46, 70, 0.3),
+    transparent 60%
+  ),
+    radial-gradient(
+    120% 90% at 50% 115%,
+    rgba(46, 30, 44, 0.25),
+    transparent 55%
+  ),
+    #050609;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.7s;
+}
+#chatx.show {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 0.7s ease 0.15s,
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+}
+
+/* The chat surface (and the kernel inspector) re-enable text selection —
+ * the surrounding page disables it for the drag-driven prism canvas. */
+#chatx,
+.kx {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Outer message scroll track. The inner `.t-body` scrollbar lives in
+ * chat-markdown.css. */
+.c-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.c-scroll::-webkit-scrollbar-thumb {
+  background: var(--hair);
+  border: 3px solid #050609;
+  border-radius: 10px;
+}

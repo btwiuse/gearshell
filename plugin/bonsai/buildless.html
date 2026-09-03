@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bonsai 27B · Prism ML</title>
+    <meta
+      name="description"
+      content="Bonsai 27B by Prism ML — a 27-billion-parameter 1-bit model running entirely in your browser on WebGPU. No server. 3.8 GB."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iNTc1IiBoZWlnaHQ9IjQxMiIgc3R5bGU9IndpZHRoOjEwMCU7aGVpZ2h0OjEwMCU7dHJhbnNmb3JtOnRyYW5zbGF0ZTNkKDAsMCwwKTtjb250ZW50LXZpc2liaWxpdHk6dmlzaWJsZSI+PGRlZnM+PGNsaXBQYXRoIGlkPSJtIj48cGF0aCBkPSJNMCAwaDU3NXY0MTJIMHoiLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0idyI+PHBhdGggZD0iTTAgMGgzMTF2Mzc3SDB6Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9InoiPjxwYXRoIGQ9Ik0wIDBoMzB2NTBIMHoiLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iQSI+PHBhdGggZD0iTTAgMGgzMHY1MEgweiIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJCIj48cGF0aCBkPSJNMCAwaDMwdjUwSDB6Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImEiPjxwYXRoIGQ9Ik0wIDBoMzE1djM4NEgweiIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJiIj48cGF0aCBkPSJNMCAwaDMxMnYyODhIMHoiLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iZCI+PHBhdGggZD0iTTAgMGg0OHY1MUgweiIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJlIj48cGF0aCBkPSJNMCAwaDM2djQ4SDB6Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImciPjxwYXRoIGQ9Ik0wIDBoMTgwdjUxSDB6Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImgiPjxwYXRoIGQ9Ik0wIDBoMTUwdjQ4SDB6Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9InkiPjxwYXRoIGQ9Ik0wIDBoMzEwdjM3NkgweiIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJqIj48cGF0aCBkPSJNMCAwaDYxNnYzNzdIMHoiLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iayI+PHBhdGggZD0iTTAgMGg0NjJ2Mzc0SDB6Ii8+PC9jbGlwUGF0aD48ZyBpZD0iYyIgY2xpcC1wYXRoPSJ1cmwoI2EpIiBzdHlsZT0iZGlzcGxheTpibG9jayIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtOTUpIj48ZyBjbGlwLXBhdGg9InVybCgjYikiIHN0eWxlPSJkaXNwbGF5OmJsb2NrIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxKSI+PHBhdGggZD0iTTMxMiAwSDB6IiBzdHlsZT0iZGlzcGxheTpibG9jayIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCA5NikiLz48L2c+PC9nPjxnIGlkPSJmIiBjbGlwLXBhdGg9InVybCgjZCkiIHN0eWxlPSJkaXNwbGF5OmJsb2NrIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTEpIj48ZyBjbGlwLXBhdGg9InVybCgjZSkiIHN0eWxlPSJkaXNwbGF5OmJsb2NrIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDEpIj48cGF0aCBkPSJNMCAwdjQ4eiIgc3R5bGU9ImRpc3BsYXk6YmxvY2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDEyKSIvPjwvZz48L2c+PGcgaWQ9ImkiIGNsaXAtcGF0aD0idXJsKCNnKSIgc3R5bGU9ImRpc3BsYXk6YmxvY2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yOSkiPjxnIGNsaXAtcGF0aD0idXJsKCNoKSIgc3R5bGU9ImRpc3BsYXk6YmxvY2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMSkiPjxwYXRoIGQ9Ik0wIDB2NDh6IiBzdHlsZT0iZGlzcGxheTpibG9jayIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTApIi8+PC9nPjwvZz48ZyBpZD0ibCIgY2xpcC1wYXRoPSJ1cmwoI2opIiBzdHlsZT0iZGlzcGxheTpibG9jayIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTE1MykiPjxwYXRoIGQ9Ik0zMDktMUgtMXYzNzdoMzEweiIgc3R5bGU9ImRpc3BsYXk6YmxvY2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1NCAxKSIvPjxnIGNsaXAtcGF0aD0idXJsKCNrKSIgc3R5bGU9ImRpc3BsYXk6YmxvY2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMSkiPjxwYXRoIGQ9Ik0zMDcgMEgwdjM3NGgzMDd6IiBzdHlsZT0iZGlzcGxheTpibG9jayIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTU0KSIvPjwvZz48L2c+PG1hc2sgaWQ9IngiIG1hc2stdHlwZT0iYWxwaGEiPjx1c2UgeGxpbms6aHJlZj0iI2wiLz48L21hc2s+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNtKSI+PGcgY2xpcC1wYXRoPSJ1cmwoI3cpIiBzdHlsZT0iZGlzcGxheTpibG9jayIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTMgLTEpIj48ZyBtYXNrPSJ1cmwoI3gpIiBzdHlsZT0iZGlzcGxheTpibG9jayI+PGcgY2xpcC1wYXRoPSJ1cmwoI3kpIj48ZyBzdHlsZT0iZGlzcGxheTpibG9jayI+PHBhdGggZmlsbD0iIzI1MmMzNSIgZD0ibTIxNyAzNzUtNDItNzIgODQtMTQ0aDQ5TDIxNyAxIDEgMzc1eiIvPjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI1MmMzNSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBzdHJva2Utd2lkdGg9Ii4yIiBkPSJtMjE3IDM3NS00Mi03MiA4NC0xNDRoNDlMMjE3IDEgMSAzNzVoMjE2eiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0zMDkgMEgwdjM3NmgzMDl6Ii8+PC9nPjwvZz48L2c+PC9nPjxnIGNsaXAtcGF0aD0idXJsKCN6KSIgc3R5bGU9ImRpc3BsYXk6YmxvY2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDI2OSAzMjUpIj48ZyBzdHlsZT0iZGlzcGxheTpibG9jayI+PHBhdGggZmlsbD0iIzI1MmMzNSIgZD0iTTI5IDFIMWwyOCA0OHoiLz48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiMyNTJjMzUiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3Ryb2tlLXdpZHRoPSIuMiIgZD0iTTI5IDFIMWwyOCA0OFYxeiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0zMCAwSDB2NTBoMzB6Ii8+PC9nPjwvZz48ZyBzdHlsZT0iZGlzcGxheTpibG9jayI+PHBhdGggZmlsbD0iIzI1MmMzNSIgZD0iTTQ2MiAzMjZIMjk4djQ4aDE2NHoiLz48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiMyNTJjMzUiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3Ryb2tlLXdpZHRoPSIuMiIgZD0iTTQ2MiAzMjZIMjk4djQ4aDE2NHoiLz48cGF0aCBmaWxsPSJub25lIiBkPSJNNDYyIDMyNkgyNjl2NDhoMTkzeiIvPjwvZz48ZyBzdHlsZT0iZGlzcGxheTpibG9jayI+PHBhdGggZmlsbD0iIzI1MmMzNSIgZD0iTTQ2MiAzMjZIMjk4djQ4aDE2NHoiLz48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiMyNTJjMzUiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3Ryb2tlLXdpZHRoPSIuMiIgZD0iTTQ2MiAzMjZIMjk4djQ4aDE2NHoiLz48cGF0aCBmaWxsPSJub25lIiBkPSJNNTQ4IDMyNkgyNTV2NDhoMjkzeiIvPjwvZz48ZyBzdHlsZT0iZGlzcGxheTpibG9jayI+PHBhdGggZmlsbD0iIzI1MmMzNSIgZD0iTTUxMCAyNTRIMjg0djQ4aDIyNnoiLz48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiMyNTJjMzUiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3Ryb2tlLXdpZHRoPSIuMiIgZD0iTTUxMCAyNTRIMjg0djQ4aDIyNnoiLz48cGF0aCBmaWxsPSJub25lIiBkPSJNNjQ0IDI1NEgyMTd2NDhoNDI3eiIvPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjQSkiIHN0eWxlPSJkaXNwbGF5OmJsb2NrIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNTUgMjUzKSI+PGcgc3R5bGU9ImRpc3BsYXk6YmxvY2siPjxwYXRoIGZpbGw9IiMyNTJjMzUiIGQ9Ik0yOSAxIDEgNDloMjh6Ii8+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjUyYzM1IiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS13aWR0aD0iLjIiIGQ9Ik0yOSAxIDEgNDloMjhWMXoiLz48cGF0aCBmaWxsPSJub25lIiBkPSJNMzAgMEgwdjUwaDMweiIvPjwvZz48L2c+PGcgc3R5bGU9ImRpc3BsYXk6YmxvY2siPjxwYXRoIGZpbGw9IiMyNTJjMzUiIGQ9Ik00MzggMTgySDMyNnY0OGgxMTJ6Ii8+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjUyYzM1IiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS13aWR0aD0iLjIiIGQ9Ik00MzggMTgySDMyNnY0OGgxMTJ6Ii8+PHBhdGggZmlsbD0ibm9uZSIgZD0iTTQ5NCAxODJIMjk4djQ4aDE5NnoiLz48L2c+PGcgY2xpcC1wYXRoPSJ1cmwoI0IpIiBzdHlsZT0iZGlzcGxheTpibG9jayIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjk3IDE4MSkiPjxnIHN0eWxlPSJkaXNwbGF5OmJsb2NrIj48cGF0aCBmaWxsPSIjMjUyYzM1IiBkPSJNMjkgMSAxIDQ5aDI4eiIvPjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI1MmMzNSIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBzdHJva2Utd2lkdGg9Ii4yIiBkPSJNMjkgMSAxIDQ5aDI4VjF6Ii8+PHBhdGggZmlsbD0ibm9uZSIgZD0iTTMwIDBIMHY1MGgzMHoiLz48L2c+PC9nPjwvZz48L3N2Zz4="
+      type="image/svg+xml"
+    />
+    <link rel="stylesheet" href="src/ui/landing.css" />
+    <link rel="stylesheet" href="src/ui/access-gate.css" />
+    <link rel="stylesheet" href="src/chat/shell.css" />
+    <link rel="stylesheet" href="src/chat/header.css" />
+    <link rel="stylesheet" href="src/chat/thread.css" />
+    <link rel="stylesheet" href="src/chat/message.css" />
+    <link rel="stylesheet" href="src/chat/markdown.css" />
+    <link rel="stylesheet" href="src/chat/composer.css" />
+    <link rel="stylesheet" href="src/model/kernel/inspector.css" />
+    <link rel="stylesheet" href="src/ui/app.css" />
+  </head>
+  <body class="stage-landing">
+    <canvas id="sceneBG" aria-hidden="true"></canvas>
+    <canvas id="sceneA" aria-hidden="true"></canvas>
+    <canvas id="sceneB" aria-hidden="true"></canvas>
+    <div class="vignette"></div>
+    <div class="grain"></div>
+    <div class="ui">
+      <header>
+        <div class="brand">
+          <span class="logo-mark"
+            ><svg viewBox="0 0 575 412" fill="currentColor" aria-hidden="true">
+              <path
+                transform="translate(53 -1)"
+                d="m217 375-42-72 84-144h49L217 1 1 375z"
+              />
+              <path transform="translate(297 181)" d="M29 1 1 49h28z" />
+              <path d="M438 182H326v48h112z" />
+              <path transform="translate(255 253)" d="M29 1 1 49h28z" />
+              <path d="M510 254H284v48h226z" />
+              <path transform="translate(269 325)" d="M29 1H1l28 48z" />
+              <path d="M462 326H298v48h164z" /></svg></span
+          >BONSAI 27B
+        </div>
+      </header>
+      <div class="foot">
+        <div id="uiLand">
+          <h1>
+            <span class="line"><span>27B parameters.</span></span>
+            <span class="line"><span>1-bit weights.</span></span>
+            <span class="line"
+              ><span>In your <span class="strong">browser.</span></span></span
+            >
+          </h1>
+          <p class="sub" id="modelInfo">
+            <b>Bonsai&nbsp;27B</b> by <b>Prism&nbsp;ML</b> is a 27&nbsp;billion
+            parameter dense language model quantized to 1-bit precision
+            (3.8&nbsp;GB vs. original 54&nbsp;GB). Everything runs entirely
+            locally in your browser on WebGPU &mdash; no data leaves your
+            device. Agentic WebGPU kernel optimization by
+            <b>Fable&nbsp;5</b> and <b>GPT&nbsp;5.6&nbsp;Sol</b>.
+          </p>
+          <button class="cta" id="loadCta" type="button">
+            LOAD MODEL &rarr;
+          </button>
+          <div class="cta-note" id="ctaNote" hidden></div>
+        </div>
+        <div
+          id="uiLoad"
+          class="readout"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          aria-label="Model download progress"
+        >
+          <span class="rise"
+            ><span class="pct"
+              ><span id="pct">0</span><span class="sym">%</span></span
+            ></span
+          >
+          <span class="rise"
+            ><span class="status" id="status" aria-live="polite"
+              >REQUESTING WEBGPU DEVICE</span
+            ></span
+          >
+          <span class="rise"
+            ><span>
+              <span class="stats">
+                <span id="statA">0.00 / 3.80 GB</span>
+              </span>
+              <span class="bar"><i id="barFill"></i></span><br />
+              <span class="load-error" id="loadError" hidden>
+                <span class="load-error-msg" id="loadErrorMsg"></span><br />
+                <button class="begin retry" id="retryBtn" type="button">
+                  RETRY &rarr;
+                </button>
+                <button
+                  class="begin retry"
+                  id="changeTokenBtn"
+                  type="button"
+                  hidden
+                >
+                  CHANGE TOKEN &rarr;
+                </button>
+              </span>
+            </span></span
+          >
+        </div>
+      </div>
+    </div>
+    <div id="gate" hidden>
+      <div class="gate-inner">
+        <div class="gate-brand">
+          <span class="logo-mark"
+            ><svg viewBox="0 0 575 412" fill="currentColor" aria-hidden="true">
+              <path
+                transform="translate(53 -1)"
+                d="m217 375-42-72 84-144h49L217 1 1 375z"
+              />
+              <path transform="translate(297 181)" d="M29 1 1 49h28z" />
+              <path d="M438 182H326v48h112z" />
+              <path transform="translate(255 253)" d="M29 1 1 49h28z" />
+              <path d="M510 254H284v48h226z" />
+              <path transform="translate(269 325)" d="M29 1H1l28 48z" />
+              <path d="M462 326H298v48h164z" /></svg></span
+          >BONSAI 27B
+        </div>
+        <div class="gate-step">PRIVATE ACCESS</div>
+        <h2 class="gate-title">
+          This bonsai is<br /><span class="strong">still private.</span>
+        </h2>
+        <p class="gate-lead">
+          Enter a Hugging&nbsp;Face access token with read access to
+          <a
+            class="gate-repo"
+            href="https://huggingface.co/prism-ml/Bonsai-27B-gguf"
+            target="_blank"
+            rel="noopener"
+            >prism-ml/Bonsai-27B-gguf</a
+          >. It stays in this browser &mdash; requests go only to
+          huggingface.co.
+        </p>
+        <div class="gate-field" id="gateField">
+          <input
+            id="gateInput"
+            class="gate-input"
+            type="password"
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="hf_&hellip;"
+            aria-label="Hugging Face access token"
+          />
+          <button class="gate-show" id="gateShow" type="button">SHOW</button>
+        </div>
+        <p class="gate-error" id="gateError" role="alert" hidden></p>
+        <button class="cta gate-continue" id="gateContinue" type="button">
+          CONTINUE &rarr;
+        </button>
+        <div class="gate-links">
+          <a
+            href="https://huggingface.co/settings/tokens"
+            target="_blank"
+            rel="noopener"
+            >GET A TOKEN &nearr;</a
+          >
+          <span class="gate-dot">&middot;</span>
+          <a
+            href="https://huggingface.co/prism-ml/Bonsai-27B-gguf"
+            target="_blank"
+            rel="noopener"
+            >MODEL PAGE &nearr;</a
+          >
+        </div>
+      </div>
+    </div>
+    <div id="veil" hidden><span class="veil-text">VALIDATING ACCESS</span></div>
+    <section id="chatx" aria-label="Chat with Bonsai 27B">
+      <header class="c-head">
+        <div class="c-head-inner">
+          <div class="c-brand">
+            <span class="logo-mark"
+              ><svg
+                viewBox="0 0 575 412"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  transform="translate(53 -1)"
+                  d="m217 375-42-72 84-144h49L217 1 1 375z"
+                />
+                <path transform="translate(297 181)" d="M29 1 1 49h28z" />
+                <path d="M438 182H326v48h112z" />
+                <path transform="translate(255 253)" d="M29 1 1 49h28z" />
+                <path d="M510 254H284v48h226z" />
+                <path transform="translate(269 325)" d="M29 1H1l28 48z" />
+                <path d="M462 326H298v48h164z" /></svg></span
+            >BONSAI 27B
+          </div>
+          <div class="c-status" id="cStatus">
+            <span class="c-dot" id="cDot"></span>
+            <span class="c-status-text" id="cStatusText">READY</span>
+          </div>
+          <div class="c-actions">
+            <button class="c-btn" id="kernelsBtn" type="button">
+              VIEW KERNELS
+            </button>
+            <button class="c-btn" id="clearBtn" type="button" disabled>
+              CLEAR
+            </button>
+          </div>
+        </div>
+      </header>
+      <div class="c-scroll" id="cScroll">
+        <div class="c-thread" id="cThread">
+          <div class="c-welcome" id="cWelcome">
+            <div class="c-welcome-glyph" aria-hidden="true">
+              <span class="logo-mark"
+                ><svg viewBox="0 0 575 412" fill="currentColor">
+                  <path
+                    transform="translate(53 -1)"
+                    d="m217 375-42-72 84-144h49L217 1 1 375z"
+                  />
+                  <path transform="translate(297 181)" d="M29 1 1 49h28z" />
+                  <path d="M438 182H326v48h112z" />
+                  <path transform="translate(255 253)" d="M29 1 1 49h28z" />
+                  <path d="M510 254H284v48h226z" />
+                  <path transform="translate(269 325)" d="M29 1H1l28 48z" />
+                  <path d="M462 326H298v48h164z" /></svg
+              ></span>
+            </div>
+            <h2>What is on <span class="thin">your mind?</span></h2>
+            <p>
+              The entire 27&nbsp;billion parameter model runs entirely on your
+              device. No data ever leaves your machine.
+            </p>
+            <div class="c-seeds" id="cSeeds"></div>
+          </div>
+        </div>
+      </div>
+      <footer class="c-composer-wrap">
+        <div class="c-composer">
+          <div class="c-field">
+            <textarea
+              id="cInput"
+              rows="1"
+              placeholder="Ask anything&hellip;"
+              disabled
+            ></textarea>
+            <span class="c-bulb-wrap">
+              <button
+                class="c-bulb"
+                id="thinkToggle"
+                type="button"
+                aria-pressed="false"
+                aria-label="Toggle thinking mode"
+                disabled
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    class="bulb-glass"
+                    d="M12 2.5a6.5 6.5 0 0 1 4 11.62c-.72.55-1 1.4-1 2.38h-6c0-.98-.28-1.83-1-2.38A6.5 6.5 0 0 1 12 2.5z"
+                  />
+                  <path d="M9.5 19.5h5" />
+                  <path d="M10.5 22h3" />
+                </svg>
+              </button>
+              <span class="c-tip" id="thinkTip" role="tooltip"
+                >THINKING OFF</span
+              >
+            </span>
+            <button
+              class="c-send"
+              id="cSend"
+              type="button"
+              disabled
+              aria-label="Send"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 12h14" />
+                <path d="m13 6 6 6-6 6" />
+              </svg>
+            </button>
+            <button
+              class="c-stop"
+              id="cStop"
+              type="button"
+              aria-label="Stop generation"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="7" y="7" width="10" height="10" rx="1.5" />
+              </svg>
+            </button>
+          </div>
+          <div class="c-meta-row">
+            <span id="cLive"></span>
+          </div>
+        </div>
+      </footer>
+    </section>
+    <div class="kx" id="kernelsOverlay" hidden>
+      <div class="kx-backdrop" data-close></div>
+      <div
+        class="kx-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Rendered kernels"
+      >
+        <div class="kx-head">
+          <div class="kx-title">
+            <h3>Kernels</h3>
+            <span class="kx-sub" id="kxSub"></span>
+          </div>
+          <button class="kx-close" type="button" aria-label="Close" data-close>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <div class="kx-body">
+          <div class="kx-side"><div class="kx-list" id="kxList"></div></div>
+          <div class="kx-view">
+            <div class="kx-intro" id="kxIntro">
+              <div class="kx-intro-inner">
+                <div class="kx-spark" aria-hidden="true">
+                  <span class="kx-spark-ring"></span
+                  ><span class="kx-spark-core"></span
+                  ><span class="kx-spark-glyph"
+                    ><span class="logo-mark"
+                      ><svg viewBox="0 0 575 412" fill="currentColor">
+                        <path
+                          transform="translate(53 -1)"
+                          d="m217 375-42-72 84-144h49L217 1 1 375z"
+                        />
+                        <path
+                          transform="translate(297 181)"
+                          d="M29 1 1 49h28z"
+                        />
+                        <path d="M438 182H326v48h112z" />
+                        <path
+                          transform="translate(255 253)"
+                          d="M29 1 1 49h28z"
+                        />
+                        <path d="M510 254H284v48h226z" />
+                        <path
+                          transform="translate(269 325)"
+                          d="M29 1H1l28 48z"
+                        />
+                        <path d="M462 326H298v48h164z" /></svg></span
+                  ></span>
+                </div>
+                <h2 class="kx-intro-title">What are kernels?</h2>
+                <p class="kx-intro-lead">
+                  Kernels are the low-level GPU programs that do the model's
+                  actual math &mdash; the 1-bit matrix multiplies, linear
+                  attention and normalizations behind every token. Each one is a
+                  WGSL compute shader, compiled by your browser for this GPU.
+                </p>
+                <ul class="kx-points">
+                  <li>
+                    <b>Written by AI agents.</b> Every kernel in this list was
+                    authored by Fable&nbsp;5 and GPT&nbsp;5.6&nbsp;Sol &mdash;
+                    then tested for correctness and benchmarked on the shapes it
+                    serves before earning its place.
+                  </li>
+                  <li>
+                    <b>1-bit weights, full-speed math.</b> Packed binary weights
+                    are decoded inside the kernel itself &mdash; what you read
+                    below is the real inference path.
+                  </li>
+                  <li>
+                    <b>Fully local.</b> These shaders &mdash; and your
+                    conversation &mdash; never leave this machine.
+                  </li>
+                </ul>
+                <div class="kx-intro-hint">
+                  SELECT A KERNEL TO READ ITS REAL SOURCE
+                </div>
+              </div>
+            </div>
+            <div class="kx-source" id="kxSource" hidden>
+              <div class="kx-view-head">
+                <span class="kx-name" id="kxName"></span>
+                <div class="kx-view-actions">
+                  <span class="kx-lines" id="kxLines"></span>
+                  <button class="kx-copy" id="kxCopy" type="button">
+                    COPY
+                  </button>
+                </div>
+              </div>
+              <pre class="kx-code"><code id="kxCode"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="src/core/config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="module" src="src/core/loader.js"></script>
+    <script type="module" src="src/scenes/background.js"></script>
+    <script type="module" src="src/scenes/prism/index.js"></script>
+    <script type="module" src="src/scenes/garden/index.js"></script>
+    <script type="module" src="src/core/app.js"></script>
+  </body>
+</html>

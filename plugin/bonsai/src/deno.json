@@ -1,0 +1,20 @@
+{
+  "fmt": {
+    "include": ["**/*.js", "**/*.css", "**/*.md"],
+    "exclude": ["../buildless.html"],
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "singleQuote": false,
+    "semiColons": true,
+    "proseWrap": "preserve"
+  },
+  "lint": {
+    "include": ["**/*.js"],
+    "exclude": ["../buildless.html"]
+  },
+  "tasks": {
+    "fmt": "deno fmt",
+    "fmt-check": "deno fmt --check",
+    "lint": "deno lint"
+  }
+}

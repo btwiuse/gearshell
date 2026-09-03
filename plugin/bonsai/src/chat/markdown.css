@@ -1,0 +1,245 @@
+/* chat-markdown.css
+ *
+ * Renders the body of an assistant message: a `<details>`-style
+ * collapsible thinking block plus the actual markdown answer.
+ *
+ *   .t-block  — collapsible thinking container
+ *   .t-head   — the click-to-expand toggle row
+ *   .t-chev   — caret indicator on the toggle row
+ *   .t-shimmer — shimmer text used inside the toggle while thinking
+ *   .t-body   — the actual thinking content (collapsed / live / open)
+ *   .a-body   — the rendered markdown answer (paragraphs, headings,
+ *               code, lists, table, katex)
+ *
+ * The `tShimmer` keyframe belongs here because it only paints `.t-shimmer`.
+ */
+
+.t-block {
+  margin: 0 0 16px;
+}
+.t-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+.t-head:hover {
+  color: var(--mute);
+}
+.t-chev {
+  display: inline-block;
+  font-size: 8px;
+  transition: transform 0.25s ease;
+}
+.t-block.open .t-chev {
+  transform: rotate(90deg);
+}
+.t-shimmer {
+  background: var(--spectrum);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: tShimmer 2.4s linear infinite;
+}
+@keyframes tShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.t-body {
+  box-sizing: content-box;
+  max-height: 0;
+  overflow: hidden auto;
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 18px;
+  border-left: 1px solid var(--hair);
+  font-size: 13px;
+  line-height: 1.8;
+  font-weight: 300;
+  color: var(--faint);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  transition:
+    max-height 0.4s ease,
+    padding 0.4s ease,
+    margin 0.4s ease;
+}
+.t-block.open .t-body,
+.t-block.live .t-body {
+  max-height: 240px;
+  margin-top: 12px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.t-block.live .t-body {
+  border-image: linear-gradient(
+    180deg,
+    #ff4f58,
+    #ffd76a,
+    #53e6a6,
+    #4fa8ff,
+    #8b6bff
+  )
+    1;
+}
+.t-body::-webkit-scrollbar {
+  width: 8px;
+}
+.t-body::-webkit-scrollbar-thumb {
+  background: var(--hair);
+  border-radius: 8px;
+}
+
+/* Rendered assistant markdown body. Scope is intentionally broad — every
+ * element that `marked`/sanitizer can emit is styled here. */
+.a-body {
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: var(--ink);
+  font-weight: 300;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.a-body > :first-child {
+  margin-top: 0;
+}
+.a-body > :last-child {
+  margin-bottom: 0;
+}
+.a-body p {
+  margin: 0 0 0.9em;
+}
+.a-body strong {
+  color: #fff;
+  font-weight: 600;
+}
+.a-body em {
+  font-style: italic;
+}
+.a-body a {
+  color: #8fb3ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.a-body h1,
+.a-body h2,
+.a-body h3,
+.a-body h4,
+.a-body h5,
+.a-body h6 {
+  color: #fff;
+  font-weight: 500;
+  line-height: 1.25;
+  margin: 1.3em 0 0.6em;
+  letter-spacing: -0.01em;
+}
+.a-body h1 {
+  font-size: 1.45em;
+  font-weight: 300;
+}
+.a-body h2 {
+  font-size: 1.25em;
+}
+.a-body h3 {
+  font-size: 1.1em;
+}
+.a-body h4,
+.a-body h5,
+.a-body h6 {
+  font-size: 1em;
+}
+.a-body ul,
+.a-body ol {
+  margin: 0 0 0.9em;
+  padding-left: 1.5em;
+}
+.a-body li {
+  margin: 0.25em 0;
+}
+.a-body li::marker {
+  color: var(--faint);
+}
+.a-body blockquote {
+  margin: 0 0 0.9em;
+  padding: 2px 0 2px 16px;
+  border-left: 1px solid var(--hair-2);
+  color: var(--mute);
+}
+.a-body hr {
+  border: 0;
+  border-top: 1px solid var(--hair);
+  margin: 1.3em 0;
+}
+.a-body code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.a-body pre {
+  margin: 0 0 0.9em;
+  padding: 14px 16px;
+  background: #07080c;
+  border: 1px solid var(--hair);
+  overflow-x: auto;
+  border-radius: 2px;
+}
+.a-body pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.8em;
+  line-height: 1.65;
+  color: #c9d0e4;
+}
+.a-body table {
+  border-collapse: collapse;
+  margin: 0 0 0.9em;
+  font-size: 0.92em;
+  display: block;
+  overflow-x: auto;
+}
+.a-body th,
+.a-body td {
+  border: 1px solid var(--hair);
+  padding: 6px 12px;
+  text-align: left;
+}
+.a-body th {
+  background: var(--panel);
+  color: #fff;
+  font-weight: 500;
+}
+.a-body pre::-webkit-scrollbar,
+.a-body table::-webkit-scrollbar {
+  height: 8px;
+}
+.a-body pre::-webkit-scrollbar-thumb,
+.a-body table::-webkit-scrollbar-thumb {
+  background: var(--hair);
+  border-radius: 8px;
+}
+.a-body .katex {
+  font-size: 1.05em;
+}
+.a-body .katex-display {
+  margin: 0.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}

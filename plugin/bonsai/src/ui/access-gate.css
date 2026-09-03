@@ -1,0 +1,237 @@
+.begin.retry {
+  margin-right: 12px;
+}
+#gate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #050609;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+#gate[hidden] {
+  display: none;
+}
+#gate::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.gate-inner {
+  position: relative;
+  width: min(440px, 92vw);
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.9s ease 0.15s,
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+}
+#gate.show .gate-inner {
+  opacity: 1;
+  transform: none;
+}
+#gate.leave {
+  pointer-events: none;
+}
+#gate.leave .gate-inner {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+.gate-brand {
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  font-weight: 600;
+  color: #e6eaf6;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.gate-step {
+  margin-top: 34px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  color: #7b849e;
+}
+.gate-title {
+  margin: 14px 0 0;
+  font-size: clamp(30px, 4.4vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  font-weight: 200;
+  color: #dfe3ee;
+}
+.gate-title .strong {
+  font-weight: 650;
+  color: #fff;
+}
+.gate-lead {
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  line-height: 1.75;
+  font-weight: 300;
+  color: var(--mute);
+}
+.gate-repo {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--hair-2);
+  white-space: nowrap;
+}
+.gate-repo:hover {
+  border-color: var(--ink);
+}
+.gate-field {
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(160, 170, 200, 0.38);
+  background: rgba(150, 160, 190, 0.04);
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease;
+}
+.gate-field:focus-within {
+  border-color: rgba(190, 200, 230, 0.6);
+  background: rgba(150, 160, 190, 0.07);
+}
+.gate-field.error {
+  border-color: rgba(255, 157, 148, 0.55);
+}
+.gate-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  padding: 14px 16px;
+}
+.gate-input::placeholder {
+  color: var(--faint);
+}
+.gate-show {
+  flex-shrink: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: var(--faint);
+  transition: color 0.25s ease;
+}
+.gate-show:hover {
+  color: var(--ink);
+}
+.gate-error {
+  margin: 12px 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  line-height: 1.8;
+  color: var(--err);
+  min-height: 0;
+}
+.gate-error[hidden] {
+  display: none;
+}
+.gate-continue {
+  opacity: 1;
+  transform: none;
+  margin-top: 24px;
+}
+.gate-continue.busy {
+  pointer-events: none;
+  opacity: 0.5;
+}
+button.cta,
+button.begin {
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+body.stage-loading #gate .cta {
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+.gate-links {
+  margin-top: 30px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+}
+.gate-links a {
+  color: var(--faint);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+.gate-links a:hover {
+  color: var(--ink);
+}
+.gate-dot {
+  color: var(--faint);
+}
+#veil {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: #050609;
+  display: grid;
+  place-items: center;
+}
+#veil[hidden] {
+  display: none;
+}
+#veil.leave {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+.veil-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.42em;
+  color: var(--faint);
+  opacity: 0;
+  animation:
+    veilIn 1.2s ease 0.35s forwards,
+    veilPulse 2.2s ease-in-out 1.5s infinite;
+}
+@keyframes veilIn {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes veilPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+body.stage-chat #sceneA,
+body.stage-chat #sceneB,
+body.stage-chat #sceneBG,
+body.stage-chat .vignette,
+body.stage-chat .grain,
+body.stage-chat .ui {
+  display: none;
+}
