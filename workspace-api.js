@@ -39,6 +39,7 @@ import {
   wirePanelEvents,
 } from "./workspace-events.js";
 import { openApi } from "./workspace-open-api.js";
+import { toggleOverlay } from "./app-overlay-toggle.js";
 import { configApi } from "./workspace-config-api.js";
 import {
   runHeadlessTask,
@@ -143,6 +144,17 @@ const api = {
     on: safe(on),
     off: safe(off),
     emit: safe(emit),
+    dispatch: safe((method, args) => {
+      if (method === "panels.open") {
+        openApi.panels.open(...(Array.isArray(args) ? args : []));
+        return { ok: true };
+      }
+      if (method === "overlay.toggle") {
+        toggleOverlay(...(Array.isArray(args) ? args : []));
+        return { ok: true };
+      }
+      return { ok: false, error: `unsupported event: ${method}` };
+    }),
     // Agent-side read of the event ring buffer (see pushEvent above).
     // drainEvents splices the in-memory buffer and advances the
     // persisted drained high-water mark, so events survive reloads
