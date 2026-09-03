@@ -76,6 +76,15 @@ function emitTime() {
 function ensureAudio() {
   if (audio) return audio;
   audio = new Audio();
+  audio.setAttribute("data-music-engine", "true");
+  audio.style.display = "none";
+  // Browsers autoplay the first <audio> only when it is connected to a
+  // document; append it to <body> so the engine element is alive, and
+  // hide it from view. Hiding via `display: none` still satisfies the
+  // connected-document requirement and does not pause playback.
+  if (typeof document !== "undefined") {
+    try { document.body?.appendChild(audio); } catch {}
+  }
   // duration only becomes finite once the metadata is parsed; without
   // these events the panel would never learn it for a paused track.
   for (
