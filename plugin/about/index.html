@@ -92,20 +92,31 @@
     const demoTrack = "/plugin/music/Grapes-I-Dunno.mp3";
     let playing = false;
     let state = null;
+    const setLoopOne = async () => {
+      try { await GearShell.music.setLoop("one"); } catch {}
+    };
     const refreshPlayback = async () => {
       try {
         state = await GearShell.music.nowPlaying();
         playing = !!state?.current?.playing;
-        logoWrap.title = playing ? "Pause demo music" : state?.current ? "Resume demo music" : "Play demo music";
-        logoWrap.setAttribute("aria-label", logoWrap.title);
+        const title = playing ? "Pause demo music" : state?.current ? "Resume demo music" : "Play demo music on loop";
+        logoWrap.title = title;
+        logoWrap.setAttribute("aria-label", title);
       } catch {}
     };
     logoWrap.addEventListener("click", async (event) => {
       event.stopPropagation();
       try {
-        if (playing) await GearShell.music.pause();
-        else if (state?.current?.src) await GearShell.music.resume();
-        else await GearShell.music.play(demoTrack, "Grapes I Dunno");
+        if (playing) {
+          await GearShell.music.pause();
+        } else {
+          if (!state?.current?.src) {
+            await GearShell.music.play(demoTrack, "Grapes I Dunno");
+            await setLoopOne();
+          } else {
+            await GearShell.music.resume();
+          }
+        }
         await refreshPlayback();
       } catch {}
     });

@@ -211,7 +211,7 @@ export const CORE_PLUGINS = [
       allowFullscreen: true,
     },
     permissions: {
-      api: ["music.play", "music.pause", "music.resume", "music.nowPlaying", "panels.open", "events.dispatch"],
+      api: ["music.play", "music.pause", "music.resume", "music.nowPlaying", "music.setLoop", "panels.open", "events.dispatch"],
     },
     emptyGrid: true,
   },
