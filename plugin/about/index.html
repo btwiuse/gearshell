@@ -23,9 +23,11 @@
     #about-close { width: 13px; height: 13px; padding: 0; border: 0; border-radius: 50%; color: transparent; background: #ff5f57; cursor: pointer; }
     #about-close:hover { filter: brightness(.9); }
     #about-body { padding: 24px 32px 26px; }
-    #about-logo-wrap { position: relative; width: 144px; height: 144px; margin: 14px auto 18px; }
+    #about-logo-wrap { position: relative; width: 144px; height: 144px; margin: 14px auto 18px; cursor: pointer; }
+    #about-logo-wrap:active .logo.active .logo-card { transform: scale(.96); }
     .logo { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .8s ease-in-out; }
     .logo.active { opacity: 1; }
+    .logo-card { transition: transform .15s ease; }
     .logo-card { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 32px; box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.08) inset; }
     .logo-card::after { position: absolute; inset: 0; content: ""; background: radial-gradient(circle at 25% 18%, rgba(255,255,255,.28), transparent 34%); }
     .logo-img { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
@@ -79,13 +81,31 @@
           <div class="info-row"><span class="info-label">Channel</span><span class="info-value">Tip</span></div>
           <div class="info-row"><span class="info-label">Commit</span><span class="info-value">main</span></div>
         </div>
-        <div id="about-actions"><a class="about-button about-icon-btn" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener" aria-label="GitHub"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-github.svg" alt=""></a><a class="about-button about-icon-btn" href="https://gear.sh" target="_blank" rel="noreferrer noopener" aria-label="Open App"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-chrome.svg" alt=""></a><button id="about-play" class="about-button about-icon-btn" type="button" aria-label="Play demo music">▶</button><button id="about-home" class="about-button about-icon-btn" type="button" aria-label="Open Home"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-chrome.svg" alt=""></button><button id="about-settings" class="about-button about-icon-btn" type="button" aria-label="Open Settings"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/home.svg" alt=""></button><button id="about-spotlight" class="about-button about-icon-btn" type="button" aria-label="Open Spotlight"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/search.svg" alt=""></button></div>
+        <div id="about-actions"><a class="about-button about-icon-btn" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener" aria-label="GitHub"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-github.svg" alt=""></a><a class="about-button about-icon-btn" href="https://gear.sh" target="_blank" rel="noreferrer noopener" aria-label="Open App"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-chrome.svg" alt=""></a><button id="about-home" class="about-button about-icon-btn" type="button" aria-label="Open Home"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-chrome.svg" alt=""></button><button id="about-settings" class="about-button about-icon-btn" type="button" aria-label="Open Settings"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/home.svg" alt=""></button><button id="about-spotlight" class="about-button about-icon-btn" type="button" aria-label="Open Spotlight"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/search.svg" alt=""></button></div>
       </div>
     </section>
   </div>
   <script>
     const styles = ["midnight","stairs","arrows","rainbow","carbon","fibre","argyle","steps","cross","yin","stars","bricks","cube","tartan","grid","diagonal","cicada","pyramid"];
     const logoWrap = document.getElementById("about-logo-wrap");
+    const demoTrack = "/plugin/music/Grapes-I-Dunno.mp3";
+    let playing = false;
+    const refreshPlayback = async () => {
+      try {
+        const state = await GearShell.music.nowPlaying();
+        playing = !!state?.current?.playing;
+        logoWrap.title = playing ? "Pause demo music" : "Play demo music";
+        logoWrap.setAttribute("aria-label", logoWrap.title);
+      } catch {}
+    };
+    logoWrap.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      try {
+        if (playing) await GearShell.music.pause();
+        else await GearShell.music.play(demoTrack, "Grapes I Dunno");
+        await refreshPlayback();
+      } catch {}
+    });
     styles.forEach((style, index) => {
       const logo = document.createElement("div");
       logo.className = `logo${index === 0 ? " active" : ""}`;
@@ -104,24 +124,7 @@
     close.onclick = hide;
     backdrop.onclick = (event) => { if (event.target === backdrop) hide(); };
     document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !modal.hidden) hide(); });
-    const playButton = document.getElementById("about-play");
-    const demoTrack = "/plugin/music/Grapes-I-Dunno.mp3";
-    let playing = false;
-    const refreshPlayback = async () => {
-      try {
-        const state = await GearShell.music.nowPlaying();
-        playing = !!state?.current?.playing;
-        playButton.setAttribute("aria-label", playing ? "Pause demo music" : "Play demo music");
-        playButton.innerHTML = `<img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/${playing ? "player-pause" : "player-play"}.svg" alt="">`;
-      } catch {}
-    };
-    playButton.onclick = async () => {
-      try {
-        if (playing) await GearShell.music.pause();
-        else await GearShell.music.play(demoTrack, "Grapes I Dunno");
-        await refreshPlayback();
-      } catch {}
-    };
+    refreshPlayback();
     const openHome = () => GearShell.panels.open("home").catch(() => {});
     const openSettings = () => GearShell.panels.open("settings").catch(() => {});
     const openSpotlight = () => GearShell.panels.open("launcher").catch(() => {});
