@@ -48,6 +48,7 @@ export const GEAR_BIND = {
     "  config.audit.list  config.audit.undo  config.audit.clear",
     "  panels.list  panels.open  panels.close  panels.focus",
     "  browser.open  files.open",
+    "  bash.run",
     "  tasks.list  tasks.create  tasks.cancel  tasks.output",
     "  agents.list  agents.prompt  agents.read  agents.interrupt",
     "  music.play  music.pause  music.resume  music.stop  music.nowPlaying",

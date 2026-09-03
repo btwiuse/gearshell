@@ -554,6 +554,30 @@ for (const [name, summary, args, exampleCode, perm, retSig] of TERMINAL_TABLE) {
   });
 }
 
+RECORDS.push({
+  id: "bash.run",
+  title: "GearShell.bash.run",
+  namespace: "bash",
+  returns: "Promise<{ ok, command, taskId?, exitCode?, output?, error? }>",
+  sync: false,
+  permissions: ["bash.run"],
+  summary: "Run one non-interactive bash command in a headless workspace task and resolve after it exits. The result includes captured stdout and stderr, plus the exit code when the command starts successfully.",
+  signature: "await GearShell.bash.run(command, options)",
+  args: [
+    { name: "command", type: "string", required: true, description: "A non-empty bash command to run." },
+    { name: "options", type: "{ cwd?: string, env?: Record<string, string>, timeoutMs?: number }", required: false, description: "Optional working directory, environment variables, and timeout in milliseconds (default: 60000)." },
+  ],
+  returnsDescription: "A promise resolving to `{ ok, command, taskId, exitCode, output }`, or `{ ok: false, command, error }` when validation, startup, or timeout fails.",
+  examples: [
+    { title: "Capture command output", code: "const result = await GearShell.bash.run(\"printf 'hello\\\\n'\");\nconsole.log(result.output);" },
+    { title: "Set a directory, environment, and timeout", code: "const result = await GearShell.bash.run(\"printf '%s\\\\n' \\\"$NAME\\\"\", {\n  cwd: \"/opfs/home\",\n  env: { NAME: \"GearShell\" },\n  timeoutMs: 10_000,\n});" },
+  ],
+  notes: [
+    "Unlike the synchronous jsfs and `gear` surfaces, `bash.run` returns a promise and is intended for in-page or iframe callers.",
+    "The command runs headlessly. Use `tasks.create` for a long-running or interactive terminal task.",
+  ],
+});
+
 // VM
 RECORDS.push({
   id: "vm.list", title: "GearShell.vm.list", namespace: "vm",
@@ -1223,6 +1247,7 @@ const catalogSections = [
   { id: "agents", title: "Agents", methods: RECORDS.filter((r) => r.namespace === "agents").map(recordToIndex) },
   { id: "music", title: "Music", methods: RECORDS.filter((r) => r.namespace === "music").map(recordToIndex) },
   { id: "terminal", title: "Terminal", methods: RECORDS.filter((r) => r.namespace === "terminal").map(recordToIndex) },
+  { id: "bash", title: "Bash", methods: RECORDS.filter((r) => r.namespace === "bash").map(recordToIndex) },
   { id: "vm", title: "VM", methods: RECORDS.filter((r) => r.namespace === "vm").map(recordToIndex) },
   { id: "w9y", title: "W9y", methods: RECORDS.filter((r) => r.namespace === "w9y").map(recordToIndex) },
   { id: "events", title: "Events", methods: RECORDS.filter((r) => r.namespace === "events").map(recordToIndex) },

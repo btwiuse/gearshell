@@ -50,8 +50,32 @@ export const agentCatalog = [
     ],
   },
   {
+    namespace: "bash",
+    title: "Bash",
+    methods: [
+      {
+        name: "run",
+        args: [
+          {
+            key: "command",
+            label: "Command",
+            type: "string",
+            placeholder: "printf 'hello\\n'",
+          },
+          {
+            key: "options",
+            label: "Options",
+            type: "json",
+            default: "{}",
+            placeholder: '{"cwd":"/opfs/home","env":{"NAME":"Gear"},"timeoutMs":60000}',
+          },
+        ],
+        hint: "Run one bash command headlessly and return its output and exit code.",
+      },
+    ],
+  },
+  {
     namespace: "vm",
-    title: "VM",
     title: "VM",
     methods: [
       { name: "list", args: [], hint: "List VM sessions hosted by the shell." },

@@ -44,7 +44,7 @@
 if (window.top !== window.self) {
   class GearBridgeClient {
     constructor() {
-      this.callTimeoutMs = 8000;
+      this.callTimeoutMs = 15000;
       this.seq = 0;
       this.pending = new Map(); // id -> { resolve, reject, timer }
       this.listeners = new Map(); // topic -> Set<fn> (local, never posted)

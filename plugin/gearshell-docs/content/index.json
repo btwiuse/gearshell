@@ -666,6 +666,17 @@
       ]
     },
     {
+      "id": "bash",
+      "title": "Bash",
+      "methods": [
+        {
+          "id": "bash.run",
+          "title": "GearShell.bash.run",
+          "path": "bash/run.md"
+        }
+      ]
+    },
+    {
       "id": "vm",
       "title": "VM",
       "methods": [
