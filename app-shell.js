@@ -318,8 +318,7 @@ function dockviewOptions(onReady) {
     overflow: { mode: "wrap" },
     // 布局历史: 误关面板可 api.undo() 恢复
     layoutHistory: { enabled: true },
-    // 拖拽罗盘 + 智能参考线 (浮动窗口)
-    dndCompass: {},
+    // 智能参考线 (浮动窗口)
     smartGuides: {},
     // 左边缘自动隐藏组 (VS 式工具窗)
     autoHideEdgeGroups: { left: true },
