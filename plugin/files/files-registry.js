@@ -4,7 +4,13 @@
 //
 // app.js calls `initFiles(dependencies)` from the bottom of its module
 // body, populating a small lookup table that the panel modules read
-// lazily via `filesDep(name)`.
+// lazily via `filesDep(name)`. The panel talks to the rest of the
+// shell through two host-only deps — `getFs` (every filesystem read/
+// write via the GearShell.fs wrapper) and `onKernelReady` (subscribe
+// to wanix ready to retry the initial refresh + mount restore). Every
+// mount lifecycle call (picker / bind / unbind / restore / reconnect)
+// goes through `GearShell.fs.*` so the panel does not need a kernel
+// handle anymore.
 import { WORKSPACE_CHANGED_EVENT } from "../../app-constants.js";
 import { nextPanelIndex } from "../../app-panel-ids.js";
 

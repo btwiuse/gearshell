@@ -19,18 +19,19 @@ export const TREE_ROOT = ".";
 // === Tree state (lazy loading + auto-reveal) ===
 
 // Read a directory with a 2s timebox (namespace mirrors can hang, and
-// the kernel may still be booting when the panel mounts — getRoot throws
+// the kernel may still be booting when the panel mounts — getFs throws
 // then), sorting dirs first. Returns a normalized entry list or null.
-async function readTreeDir(getRoot, key) {
+async function readTreeDir(getFs, key) {
+  const fs = getFs();
   const rawNames = await Promise.race([
-    getRoot().readDir(key === TREE_ROOT ? "." : key),
+    fs.readDir(key === TREE_ROOT ? "." : key),
     new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
   ]);
   if (rawNames == null) return null;
-  return (Array.isArray(rawNames) ? rawNames : []).map((name) => {
-    const isDirectory = name.endsWith("/");
-    return { name: name.replace(/\/$/, ""), isDirectory };
-  }).sort((a, b) =>
+  return rawNames.map((entry) => ({
+    name: entry.name,
+    isDirectory: entry.isDirectory === true,
+  })).sort((a, b) =>
     Number(b.isDirectory) - Number(a.isDirectory) ||
     a.name.localeCompare(b.name)
   );
@@ -39,7 +40,7 @@ async function readTreeDir(getRoot, key) {
 // Build the tree's loadChildren callback: reads a directory, stores the
 // result, and retries with backoff when the kernel is not ready yet.
 function makeTreeLoader({
-  getRoot,
+  getFs,
   childrenRef,
   inflightRef,
   setLoadingPaths,
@@ -60,7 +61,7 @@ function makeTreeLoader({
       });
     };
     try {
-      const list = await readTreeDir(getRoot, key);
+      const list = await readTreeDir(getFs, key);
       if (list == null) throw new Error("timed out");
       finish();
       setChildrenMap((prev) => new Map(prev).set(key, { children: list }));
@@ -113,7 +114,7 @@ function revealTreePath(path, loadChildren, setExpanded) {
   chain.forEach((p) => loadChildren(p));
 }
 
-export function useFilesTree({ getRoot, path }) {
+export function useFilesTree({ getFs, path }) {
   // Set of expanded directory paths (normalized, "." = root).
   const [expanded, setExpanded] = useState(() => new Set([TREE_ROOT]));
   // Map path -> { children } once read; keeps errors out of the UI.
@@ -130,13 +131,13 @@ export function useFilesTree({ getRoot, path }) {
 
   const loadChildren = useCallback(
     makeTreeLoader({
-      getRoot,
+      getFs,
       childrenRef,
       inflightRef,
       setLoadingPaths,
       setChildrenMap,
     }),
-    [getRoot],
+    [getFs],
   );
 
   const toggleDir = useCallback((dirPath) => {

@@ -38,6 +38,7 @@ import {
   bindLocalDir,
   loadStoredMounts,
   removeStoredMount,
+  sanitizeMountName,
   storeMount,
 } from "./plugin/files-mounts.js";
 import { emit as emitEvent } from "./workspace-events.js";
@@ -205,6 +206,102 @@ async function remount(id) {
   await storeMount(updated);
   emitFsChanged({ type: "mounted", id, path: mount.dst });
   return { ok: true, mount: mountMetadata(updated) };
+}
+
+// reconnect runs the File System Access picker for a single stored
+// mount whose permission was revoked (silent queryPermission no
+// longer grants). The picker comes back with a fresh handle bound to
+// the same browser-side `id`, so we replace the stored handle and
+// re-bind to the same `dst`. If the user picks a different directory
+// the bind still works — only the path on disk changes. Returns the
+// refreshed mount record.
+async function reconnect(id) {
+  if (!id) throw new Error("mount id is required");
+  const stored = await loadStoredMounts();
+  const mount = stored.find((item) => item.id === id);
+  if (!mount) throw new Error(`mount not found: ${id}`);
+  if (typeof window === "undefined" ||
+    typeof window.showDirectoryPicker !== "function") {
+    throw new Error(
+      "File System Access API is not available in this runtime",
+    );
+  }
+  const handle = await window.showDirectoryPicker({
+    mode: mount.mode || "readwrite",
+    id: mount.id,
+  });
+  const name = sanitizeMountName(handle.name);
+  await bindLocalDir(handle, mount.dst, () => wanixSystem?._kernel);
+  const updated = { ...mount, name, handle, mounted: true };
+  await storeMount(updated);
+  emitFsChanged({ type: "mounted", id, path: mount.dst, name });
+  return { ok: true, mount: mountMetadata(updated) };
+}
+
+// requestLocalDir runs the File System Access picker and binds the
+// picked directory into the wanix namespace. The picker must run
+// inside a real user gesture on the host page (the File System Access
+// spec rejects picker calls without one), so this API is host-only
+// by construction — iframe plugins reach it by triggering a host
+// gesture (button click) and the host forwards the picker. Resolves
+// with the persisted mount record (id / name / dst / mode) so the
+// panel can navigate to the new bind without a follow-up read.
+async function requestLocalDir(name) {
+  if (typeof window === "undefined" ||
+    typeof window.showDirectoryPicker !== "function") {
+    throw new Error(
+      "File System Access API is not available in this runtime",
+    );
+  }
+  const id = `gear-mount-${Date.now().toString(36)}-${
+    Math.random().toString(36).slice(2, 7)
+  }`;
+  const handle = await window.showDirectoryPicker({
+    mode: "readwrite",
+    id,
+  });
+  const resolved = sanitizeMountName(name || handle.name);
+  // Pick a dst that doesn't collide with existing mounts.
+  const stored = await loadStoredMounts();
+  const used = new Set(stored.map((m) => m.dst));
+  let dst = `mnt/${resolved}`;
+  for (let i = 2; used.has(dst); i++) dst = `mnt/${resolved}-${i}`;
+  await bindLocalDir(handle, dst, () => wanixSystem?._kernel);
+  const mount = { id, name: resolved, dst, mode: "readwrite", handle, mounted: true };
+  await storeMount(mount);
+  emitFsChanged({ type: "mounted", id, path: dst, name });
+  return { ok: true, mount: mountMetadata(mount) };
+}
+
+// reconnectMountsOnBoot iterates every persisted mount, calls
+// queryPermission, and binds back the ones the browser still trusts.
+// Returns the current mount list (mounted flags refreshed). The
+// Files panel's boot-time restoreMounts flow now goes through this
+// single host-side entry point instead of doing its own kernel calls.
+async function restoreMounts() {
+  const stored = await loadStoredMounts();
+  const kernel = wanixSystem?._kernel;
+  const next = [];
+  for (const mount of stored) {
+    const granted = mount.handle?.queryPermission
+      ? (await mount.handle.queryPermission({
+        mode: mount.mode || "readwrite",
+      })) === "granted"
+      : Boolean(mount.handle);
+    if (granted && kernel?.isReady) {
+      try {
+        await bindLocalDir(mount.handle, mount.dst, () => wanixSystem?._kernel);
+        const updated = { ...mount, mounted: true };
+        await storeMount(updated);
+        next.push(updated);
+        continue;
+      } catch (err) {
+        console.error("restore mount", mount.dst, err);
+      }
+    }
+    next.push({ ...mount, mounted: false });
+  }
+  return { ok: true, mounts: next.map(mountMetadata) };
 }
 
 // exists() is a stat wrapper that resolves { ok, exists } rather
@@ -394,8 +491,11 @@ export const fsApi = {
   rm,
   rename,
   mounts,
-  unmount,
+  requestLocalDir,
+  reconnect,
   remount,
+  restoreMounts,
+  unmount,
   watch,
   unwatch,
   listWatchers,

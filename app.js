@@ -15,6 +15,7 @@ import { initSettings } from "./plugin/settings/settings-deps.js";
 import { TerminalPresetIconPicker } from "./plugin/settings/settings-icons.js";
 
 import { initFiles } from "./plugin/files/files-registry.js";
+import { getFs as filesFs } from "./plugin/files/files-fs.js";
 import { initRuntime } from "./plugin/runtime/runtime.js";
 import {
   getPluginBootPromise,
@@ -318,12 +319,33 @@ registerSyncPlugins();
 getPluginBootPromise();
 
 // Initialise the Files submodule with the helpers it needs at
-// runtime. The panel only reads the wanix filesystem root and
-// subscribes to the wanix-system ready event; everything else is
-// self-contained inside files.js.
+// runtime. The panel talks to the host through two deps: the
+// GearShell.fs wrapper (every read/write operation, including mount
+// lifecycle — requestLocalDir / reconnect / restoreMounts / unmount /
+// remount), and a kernel-ready callback (re-run the initial refresh
+// + mount restore once the wanix kernel boots). The picker itself
+// stays in the host because the File System Access API requires a
+// real user gesture — workspace-fs-api.js owns that side.
 initFiles({
-  wanixSystem,
-  getWanixRoot,
+  // `getFs` is the Files panel's filesystem surface — today it just
+  // wraps window.GearShell.fs; an iframe incarnation will swap in a
+  // bridge-backed wrapper without touching any panel module.
+  getFs: filesFs,
+  // Subscribe to the wanix kernel's ready event. Returns a disposer
+  // so the panel can clean up on unmount.
+  onKernelReady: (cb) => {
+    if (wanixSystem?._kernel?.isReady) {
+      cb();
+      return () => {};
+    }
+    const handler = (event) => {
+      if (event?.target !== wanixSystem) return;
+      wanixSystem.removeEventListener("ready", handler);
+      cb();
+    };
+    wanixSystem?.addEventListener("ready", handler);
+    return () => wanixSystem?.removeEventListener("ready", handler);
+  },
   rememberOpenPanel,
   HOME,
   loadConfig,

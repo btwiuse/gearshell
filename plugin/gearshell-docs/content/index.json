@@ -801,6 +801,36 @@
           "id": "fs.unwatch",
           "title": "GearShell.fs.unwatch",
           "path": "fs/unwatch.md"
+        },
+        {
+          "id": "fs.mounts",
+          "title": "GearShell.fs.mounts",
+          "path": "fs/mounts.md"
+        },
+        {
+          "id": "fs.requestLocalDir",
+          "title": "GearShell.fs.requestLocalDir",
+          "path": "fs/requestLocalDir.md"
+        },
+        {
+          "id": "fs.reconnect",
+          "title": "GearShell.fs.reconnect",
+          "path": "fs/reconnect.md"
+        },
+        {
+          "id": "fs.remount",
+          "title": "GearShell.fs.remount",
+          "path": "fs/remount.md"
+        },
+        {
+          "id": "fs.restoreMounts",
+          "title": "GearShell.fs.restoreMounts",
+          "path": "fs/restoreMounts.md"
+        },
+        {
+          "id": "fs.unmount",
+          "title": "GearShell.fs.unmount",
+          "path": "fs/unmount.md"
         }
       ]
     },

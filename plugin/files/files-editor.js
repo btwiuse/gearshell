@@ -3,7 +3,7 @@
 // downloading, plus the byte/preview helpers they share with the
 // context-menu module. Lives in its own module so FilesPanel in
 // files.js stays under the 500-line rule; all filesystem access goes
-// through getRoot().
+// through getFs().
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   filesystemPathJoin,
@@ -99,7 +99,7 @@ export function sniffWasmBytes(contents) {
 
 async function openEntryInEditor(
   {
-    getRoot,
+    getFs,
     nextPath,
     setSelectedPath,
     setPreview,
@@ -109,7 +109,7 @@ async function openEntryInEditor(
   },
 ) {
   try {
-    const data = await getRoot().readFile(nextPath);
+    const data = await getFs().readFile(nextPath);
     const previewType = getFilesystemPreviewType(nextPath);
     setSelectedPath(nextPath);
     if (previewType) {
@@ -144,7 +144,7 @@ async function openEntryInEditor(
 
 function useFilesFileOps(
   {
-    getRoot,
+    getFs,
     contents,
     selectedPath,
     preview,
@@ -155,7 +155,7 @@ function useFilesFileOps(
   const saveFile = useCallback(async (targetPath) => {
     if (!targetPath) return { ok: false, message: null };
     try {
-      await getRoot().writeFile(targetPath, contents);
+      await getFs().writeFile(targetPath, contents);
       setSavedContents(contents);
       return { ok: true, message: "Saved." };
     } catch (error) {
@@ -164,10 +164,10 @@ function useFilesFileOps(
         message: error.message || "Unable to save this file.",
       };
     }
-  }, [contents, getRoot]);
+  }, [contents, getFs]);
   const removeFile = useCallback(async (targetPath) => {
     try {
-      await getRoot().remove(targetPath);
+      await getFs().rm(targetPath);
       clearFileSelection();
       return { ok: true, message: "Deleted." };
     } catch (error) {
@@ -176,7 +176,7 @@ function useFilesFileOps(
         message: error.message || "Unable to delete this file.",
       };
     }
-  }, [getRoot, clearFileSelection]);
+  }, [getFs, clearFileSelection]);
   const downloadFile = useCallback(() => {
     if (!selectedPath) return;
     const blob = preview?.blob ||
@@ -206,13 +206,13 @@ function clearEditorSelection(ctx) {
   setBinary(false);
 }
 
-async function openEntryFlow({ getRoot, entry, currentPath, editorCtx }) {
+async function openEntryFlow({ getFs, entry, currentPath, editorCtx }) {
   const nextPath = filesystemPathJoin(currentPath, entry.name);
   if (entry.isDirectory) return { isDirectory: true, path: nextPath };
-  return openEntryInEditor({ getRoot, nextPath, ...editorCtx });
+  return openEntryInEditor({ getFs, nextPath, ...editorCtx });
 }
 
-function useEditorSelection(getRoot) {
+function useEditorSelection(getFs) {
   const [selectedPath, setSelectedPath] = useState(null);
   const [contents, setContents] = useState("");
   const [savedContents, setSavedContents] = useState("");
@@ -240,8 +240,8 @@ function useEditorSelection(getRoot) {
 
   const openEntry = useCallback(
     (entry, currentPath) =>
-      openEntryFlow({ getRoot, entry, currentPath, editorCtx }),
-    [getRoot, editorCtx],
+      openEntryFlow({ getFs, entry, currentPath, editorCtx }),
+    [getFs, editorCtx],
   );
 
   const dirty = selectedPath && !preview && !binary &&
@@ -260,10 +260,10 @@ function useEditorSelection(getRoot) {
   };
 }
 
-export function useFilesEditor(getRoot) {
-  const sel = useEditorSelection(getRoot);
+export function useFilesEditor(getFs) {
+  const sel = useEditorSelection(getFs);
   const fileOps = useFilesFileOps({
-    getRoot,
+    getFs,
     contents: sel.contents,
     selectedPath: sel.selectedPath,
     preview: sel.preview,
@@ -274,11 +274,11 @@ export function useFilesEditor(getRoot) {
 }
 // === Filesystem actions (create / rename / save / delete / upload) ===
 // The mutation handlers for FilesPanel, kept here so files.js only
-// orchestrates. All filesystem access goes through getRoot().
+// orchestrates. All filesystem access goes through getFs().
 
 async function renameOrCreateEntry(ctx, name, entryPath) {
   const {
-    getRoot,
+    getFs,
     path,
     selectedPath,
     renameTarget,
@@ -286,31 +286,31 @@ async function renameOrCreateEntry(ctx, name, entryPath) {
     setSelectedPath,
     setPath,
   } = ctx;
-  const root = getRoot();
+  const fs = getFs();
   if (creating === "rename-file" && selectedPath) {
     const nextPath = filesystemPathJoin(
       filesystemPathParent(selectedPath),
       name,
     );
-    await root.rename(selectedPath, nextPath);
+    await fs.rename(selectedPath, nextPath);
     setSelectedPath(nextPath);
   } else if (creating === "rename-folder") {
     const nextPath = filesystemPathJoin(filesystemPathParent(path), name);
-    await root.rename(path, nextPath);
+    await fs.rename(path, nextPath);
     setPath(nextPath);
   } else if (creating === "rename-entry" && renameTarget) {
     const nextPath = filesystemPathJoin(
       filesystemPathParent(renameTarget.path),
       name,
     );
-    await root.rename(renameTarget.path, nextPath);
+    await fs.rename(renameTarget.path, nextPath);
     if (selectedPath === renameTarget.path) {
       setSelectedPath(nextPath);
     }
   } else if (creating === "folder") {
-    await root.makeDir(entryPath);
+    await fs.mkdir(entryPath);
   } else {
-    await root.writeFile(entryPath, "");
+    await fs.writeFile(entryPath, "");
   }
 }
 
@@ -359,13 +359,13 @@ async function removeFileHandler(ctx) {
 }
 
 async function removeDirectory(ctx) {
-  const { getRoot, path, setStatus, navigateTo } = ctx;
+  const { getFs, path, setStatus, navigateTo } = ctx;
   if (path === "." || !window.confirm(`Delete the empty folder /${path}?`)) {
     return;
   }
   try {
     const parent = filesystemPathParent(path);
-    await getRoot().remove(path);
+    await getFs().rm(path);
     navigateTo(parent);
     setStatus("Deleted empty folder.");
   } catch (error) {
@@ -374,13 +374,13 @@ async function removeDirectory(ctx) {
 }
 
 async function uploadFiles(ctx, event) {
-  const { getRoot, path, setStatus, refresh } = ctx;
+  const { getFs, path, setStatus, refresh } = ctx;
   const files = Array.from(event.target.files || []);
   if (files.length === 0) return;
   try {
-    const root = getRoot();
+    const fs = getFs();
     for (const file of files) {
-      await root.writeFile(
+      await fs.writeFile(
         filesystemPathJoin(path, file.name),
         new Uint8Array(await file.arrayBuffer()),
       );

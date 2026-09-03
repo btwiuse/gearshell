@@ -19,7 +19,7 @@ import { useFilesContextMenu } from "./files-context-menu.js";
 import { useLocalDirMounts } from "../files-mounts.js";
 import { filesDep } from "./files-registry.js";
 
-async function sniffWasmEntries(getRoot, path, entries) {
+async function sniffWasmEntries(getFs, path, entries) {
   // Extension-less files are often WebAssembly binaries in this sandbox;
   // sniff the \0asm header so they get the right icon. Bounded: namespace
   // mirrors like js/ can hold hundreds of entries whose reads hang, so cap
@@ -27,13 +27,14 @@ async function sniffWasmEntries(getRoot, path, entries) {
   const SNIFF_LIMIT = 12;
   const SNIFF_TIMEOUT_MS = 400;
   let sniffed = 0;
+  const fs = getFs();
   await Promise.all(entries.map(async (entry) => {
     if (entry.isDirectory || entry.name.includes(".")) return;
     if (sniffed >= SNIFF_LIMIT) return;
     sniffed++;
     try {
       const data = await Promise.race([
-        getRoot().readFile(filesystemPathJoin(path, entry.name)),
+        fs.readFile(filesystemPathJoin(path, entry.name)),
         new Promise((resolve) =>
           setTimeout(() => resolve(null), SNIFF_TIMEOUT_MS)
         ),
@@ -101,24 +102,24 @@ function useFilesMediaLayout() {
   return { stackedLayout, setStackedLayout };
 }
 
-function useFilesRefresh({ getRoot, path, setEntries, setStatus, setLoading }) {
+function useFilesRefresh({ getFs, path, setEntries, setStatus, setLoading }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const names = await getRoot().readDir(path);
-      const next = (Array.isArray(names) ? names : []).map((entry) => {
-        const isDirectory = entry.endsWith("/");
-        return { name: entry.replace(/\/$/, ""), isDirectory };
-      }).sort((a, b) =>
+      const list = await getFs().readDir(path);
+      const next = list.map((entry) => ({
+        name: entry.name,
+        isDirectory: entry.isDirectory === true,
+      })).sort((a, b) =>
         Number(b.isDirectory) - Number(a.isDirectory) ||
         a.name.localeCompare(b.name)
       );
-      await sniffWasmEntries(getRoot, path, next);
+      await sniffWasmEntries(getFs, path, next);
       // Stat the listing (bounded: the wasm mirrors hold hundreds of
       // entries and large directory reads are the same hang risk) so
       // the info pane can sort by size / modified time.
       if (next.length <= 50) {
-        await enrichEntryStats(getRoot, path, next, { timeoutMs: 250 });
+        await enrichEntryStats(getFs, path, next, { timeoutMs: 250 });
       }
       setEntries(next);
       setStatus("");
@@ -128,7 +129,7 @@ function useFilesRefresh({ getRoot, path, setEntries, setStatus, setLoading }) {
     } finally {
       setLoading(false);
     }
-  }, [path, getRoot, setEntries, setStatus, setLoading]);
+  }, [path, getFs, setEntries, setStatus, setLoading]);
   return refresh;
 }
 
@@ -180,7 +181,7 @@ function useFilesOpenEntry(
 }
 
 function useFilesPanelContextMenu({
-  getRoot,
+  getFs,
   setStatus,
   path,
   openEditorEntry,
@@ -193,7 +194,7 @@ function useFilesPanelContextMenu({
   setRenameTarget,
 }) {
   return useFilesContextMenu({
-    getRoot,
+    getFs,
     setStatus,
     openEntry: (entry) => openEditorEntry(entry, path),
     navigateTo,
@@ -214,11 +215,10 @@ function useFilesPanelContextMenu({
 }
 
 function useFilesPanelMounts(
-  { getKernel, getRoot, path, setStatus, navigateTo, refresh },
+  { getFs, path, setStatus, navigateTo, refresh },
 ) {
   return useLocalDirMounts({
-    getKernel,
-    getRoot,
+    getFs,
     currentPath: path,
     parentPath: filesystemPathParent,
     onStatus: setStatus,
@@ -228,7 +228,7 @@ function useFilesPanelMounts(
 }
 
 function useFilesPanelActions({
-  getRoot,
+  getFs,
   path,
   selectedPath,
   renameTarget,
@@ -247,7 +247,7 @@ function useFilesPanelActions({
   fileInputRef,
 }) {
   return useFilesActions({
-    getRoot,
+    getFs,
     path,
     selectedPath,
     renameTarget,
@@ -277,17 +277,22 @@ function useFilesPanelEffects({
 }) {
   useEffect(() => {
     refresh();
-    const retry = () => {
+    // `onKernelReady` is a host-only dep: app.js wires it to whatever
+    // readiness signal the wanix kernel emits today (the
+    // `wanixSystem.ready` CustomEvent). The dep returns a disposer so
+    // we don't leak listeners across remounts.
+    const ready = filesDep("onKernelReady");
+    if (typeof ready !== "function") return;
+    const handle = ready(() => {
       refresh();
       restoreMounts();
+    });
+    // If the kernel was already up by the time we asked, the host fires
+    // the callback synchronously and we have no disposer (a no-op
+    // unsubscribe keeps the cleanup branch simple).
+    return () => {
+      if (typeof handle === "function") handle();
     };
-    const system = filesDep("wanixSystem");
-    if (system?._kernel?.isReady) {
-      restoreMounts();
-    } else {
-      system?.addEventListener("ready", retry);
-    }
-    return () => system?.removeEventListener("ready", retry);
   }, [refresh, restoreMounts]);
 
   useEffect(() => {

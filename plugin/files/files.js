@@ -13,9 +13,12 @@
 // Dependency-injection shim: app.js calls `initFiles(dependencies)`
 // from the bottom of its module body, populating a small lookup
 // table that the helpers below read lazily via `filesDep(name)`. The
-// only app.js globals FilesPanel touches directly are the wanix
-// system element (so the panel can subscribe to its `ready` event)
-// and the wanix filesystem root accessor.
+// panel talks to the rest of the shell only through two host-only
+// deps: `getFs` (every filesystem read/write via the GearShell.fs
+// wrapper) and `onKernelReady` (re-run the initial refresh + mount
+// restore once the wanix kernel finishes booting). Mount lifecycle
+// (picker / unbind / restore / reconnect) goes through `GearShell.fs.*`
+// too, so the panel does not need a kernel handle.
 
 import React, { useCallback, useEffect, useRef } from "react";
 import htm from "htm";
@@ -72,8 +75,8 @@ export function requestFilesOpen(path) {
 // refresh) onto the panel object.
 function useFilesPanelCore(panel, panelRef) {
   panel.stackedLayout = useFilesMediaLayout().stackedLayout;
-  panel.getRoot = useCallback(() => filesDep("getWanixRoot")(), []);
-  Object.assign(panel, useFilesEditor(panel.getRoot));
+  panel.getFs = useFilesFs();
+  Object.assign(panel, useFilesEditor(panel.getFs));
   Object.assign(
     panel,
     useFilesSidebarResize({
@@ -90,12 +93,21 @@ function useFilesPanelCore(panel, panelRef) {
     }),
   );
   panel.refresh = useFilesRefresh({
-    getRoot: panel.getRoot,
+    getFs: panel.getFs,
     path: panel.path,
     setEntries: panel.setEntries,
     setStatus: panel.setStatus,
     setLoading: panel.setLoading,
   });
+}
+
+// useFilesFs returns a stable getter for the Files panel's filesystem
+// surface (the underlying GearShell.fs is process-global, but the
+// wrapper object is per-mount so a future iframe incarnation can swap
+// in a bridge-backed implementation here without touching any other
+// panel module). Callers do `const fs = getFs(); await fs.readFile(path)`.
+function useFilesFs() {
+  return useCallback(() => filesDep("getFs")(), []);
 }
 
 // Wire navigation / open-entry / context-menu, routing the info-pane
@@ -124,7 +136,7 @@ function useFilesPanelNavigation(panel, selectedInfoSetterRef) {
   Object.assign(
     panel,
     useFilesPanelContextMenu({
-      getRoot: panel.getRoot,
+      getFs: panel.getFs,
       setStatus: panel.setStatus,
       path: panel.path,
       openEditorEntry: panel.openEditorEntry,
@@ -146,14 +158,14 @@ function useFilesPanelSelection(panel, selectedInfoSetterRef) {
   Object.assign(
     panel,
     useFilesSelection({
-      getRoot: panel.getRoot,
+      getFs: panel.getFs,
       path: panel.path,
       setHighlighted: panel.setHighlighted,
       setContextMenu: panel.setContextMenu,
     }),
   );
   selectedInfoSetterRef.current = panel.setSelectedInfo;
-  panel.tree = useFilesTree({ getRoot: panel.getRoot, path: panel.path });
+  panel.tree = useFilesTree({ getFs: panel.getFs, path: panel.path });
 }
 
 // Wire mounts, panel actions and lifecycle effects (split from the
@@ -162,8 +174,7 @@ function useFilesPanelActionsWire(panel, fileInputRef) {
   Object.assign(
     panel,
     useFilesPanelMounts({
-      getKernel: useCallback(() => filesDep("wanixSystem")?._kernel, []),
-      getRoot: panel.getRoot,
+      getFs: panel.getFs,
       path: panel.path,
       setStatus: panel.setStatus,
       navigateTo: panel.navigateTo,
@@ -173,7 +184,7 @@ function useFilesPanelActionsWire(panel, fileInputRef) {
   Object.assign(
     panel,
     useFilesPanelActions({
-      getRoot: panel.getRoot,
+      getFs: panel.getFs,
       path: panel.path,
       selectedPath: panel.selectedPath,
       renameTarget: panel.renameTarget,

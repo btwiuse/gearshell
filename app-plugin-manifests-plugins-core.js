@@ -92,6 +92,15 @@ export const CORE_PLUGINS = [
     icon: "FolderOpen",
     entry: "/plugin/files/files-plugin.js",
     css: ["/plugin/files/files.css"],
+    permissions: {
+      api: [
+        "fs.*",
+        "config.getShell",
+        "config.updateShell",
+        "panels.*",
+        "events.*",
+      ],
+    },
   },
   {
     id: "workbench",

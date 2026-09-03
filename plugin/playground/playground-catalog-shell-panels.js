@@ -282,14 +282,46 @@ export const panelsCatalog = [
         hint: "List persisted local directory mounts without exposing handles.",
       },
       {
-        name: "unmount",
+        name: "requestLocalDir",
+        args: [
+          {
+            key: "name",
+            label: "Display name (optional)",
+            type: "string",
+            placeholder: "my-project",
+          },
+        ],
+        hint:
+          "Run the File System Access picker on the host, bind the chosen " +
+          "directory into mnt/<name>, persist it in IndexedDB. Resolves " +
+          "{ ok, mount: { id, name, dst, mounted } }. Browser-only and " +
+          "requires a real user gesture.",
+      },
+      {
+        name: "reconnect",
         args: [{ key: "id", label: "Mount id", type: "string" }],
-        hint: "Unmount and forget a persisted local directory mount.",
+        hint:
+          "Re-run the File System Access picker for a stored mount whose " +
+          "permission was revoked. Picks the same browser-side id so the " +
+          "bind graph slot is reused.",
       },
       {
         name: "remount",
         args: [{ key: "id", label: "Mount id", type: "string" }],
         hint: "Reconnect a stored mount when permission is already granted.",
+      },
+      {
+        name: "restoreMounts",
+        args: [],
+        hint:
+          "Boot-time restore: silently rebinds every stored mount whose " +
+          "permission queryPermission still grants. Returns the refreshed " +
+          "mount list (with mounted flags).",
+      },
+      {
+        name: "unmount",
+        args: [{ key: "id", label: "Mount id", type: "string" }],
+        hint: "Unmount and forget a persisted local directory mount.",
       },
       {
         name: "watch",

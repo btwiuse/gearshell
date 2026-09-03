@@ -35,20 +35,26 @@ export function filesystemPathParent(path) {
 // modified time. Stat them (bounded and timeboxed, like the wasm
 // sniffer) so the info pane can sort by size / modified without hanging
 // on namespace mirrors whose reads never resolve.
-export function enrichEntryStats(getRoot, basePath, entries, {
+//
+// `getFs()` resolves the Files panel's filesystem surface (the
+// GearShell.fs wrapper — see plugin/files/files-fs.js). The stat
+// payload is already normalised to snake_case by the wrapper, so this
+// module does not depend on the wanix Go-shaped field names any more.
+export function enrichEntryStats(getFs, basePath, entries, {
   limit = Infinity,
   timeoutMs = 400,
 } = {}) {
   if (!entries || entries.length === 0) return Promise.resolve(entries);
   const targets = entries.slice(0, limit).filter((entry) => !entry.isDirectory);
+  const fs = getFs();
   return Promise.all(targets.map((entry) =>
     Promise.race([
-      getRoot().stat(filesystemPathJoin(basePath, entry.name)),
+      fs.stat(filesystemPathJoin(basePath, entry.name)),
       new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs)),
     ]).then((stat) => {
       if (stat) {
-        if (stat.Size != null) entry.size = stat.Size;
-        if (stat.ModTime != null) entry.modTime = stat.ModTime;
+        if (stat.size != null) entry.size = stat.size;
+        if (stat.modTime != null) entry.modTime = stat.modTime;
       }
     }).catch(() => {})
   )).then(() => entries);

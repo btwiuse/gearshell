@@ -22,35 +22,36 @@ import { html } from "../../dom-html.js";
 // thousands of rows; the info pane reports the full count separately.
 const MAX_INFO_CHILDREN = 50;
 
-async function loadDirectoryInfo(getRoot, nextPath) {
+async function loadDirectoryInfo(getFs, nextPath) {
   let entriesCount = null;
   let children = null;
   let childrenTotal = null;
   try {
-    const rawNames = await getRoot().readDir(nextPath);
-    const names = Array.isArray(rawNames) ? rawNames : [];
+    const fs = getFs();
+    const list = await fs.readDir(nextPath);
+    const names = Array.isArray(list) ? list : [];
     entriesCount = names.length;
     childrenTotal = names.length;
-    children = names.map((name) => {
-      const isDirectory = name.endsWith("/");
-      return { name: name.replace(/\/$/, ""), isDirectory };
-    }).sort((a, b) =>
+    children = names.map((entry) => ({
+      name: entry.name,
+      isDirectory: entry.isDirectory === true,
+    })).sort((a, b) =>
       Number(b.isDirectory) - Number(a.isDirectory) ||
       a.name.localeCompare(b.name)
     ).slice(0, MAX_INFO_CHILDREN);
-    await enrichEntryStats(getRoot, nextPath, children);
+    await enrichEntryStats(getFs, nextPath, children);
   } catch {
     // stat info is still useful without the item count
   }
   return { entriesCount, children, childrenTotal };
 }
 
-async function loadFilePreview(getRoot, nextPath, previewType) {
+async function loadFilePreview(getFs, nextPath, previewType) {
   let preview = null;
   let textPreview = null;
   let iconKind = null;
   try {
-    const data = await getRoot().readFile(nextPath);
+    const data = await getFs().readFile(nextPath);
     if (previewType) {
       const blob = new Blob([toFilesystemBytes(data)], {
         type: previewType.mime,
@@ -73,20 +74,21 @@ async function loadFilePreview(getRoot, nextPath, previewType) {
 
 // Collect the info-pane payload for a selected entry: stat + directory
 // listing / file preview, with preview-URL lifecycle through the ref.
-async function buildSelectedInfo({ getRoot, entry, nextPath, previewUrlRef }) {
+async function buildSelectedInfo({ getFs, entry, nextPath, previewUrlRef }) {
   const base = {
     path: nextPath,
     name: entry.name,
     isDirectory: entry.isDirectory,
   };
   try {
-    const stat = await getRoot().stat(nextPath);
+    const fs = getFs();
+    const stat = await fs.stat(nextPath);
     const dirInfo = entry.isDirectory
-      ? await loadDirectoryInfo(getRoot, nextPath)
+      ? await loadDirectoryInfo(getFs, nextPath)
       : {};
     const previewType = getFilesystemPreviewType(nextPath);
     const previewInfo = !entry.isDirectory
-      ? await loadFilePreview(getRoot, nextPath, previewType)
+      ? await loadFilePreview(getFs, nextPath, previewType)
       : {};
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     previewUrlRef.current = previewInfo.preview
@@ -94,10 +96,10 @@ async function buildSelectedInfo({ getRoot, entry, nextPath, previewUrlRef }) {
       : null;
     return {
       ...base,
-      // wanix stat returns Go-style field names: Size, Mode, IsDir,
-      // ModTime (unix seconds).
-      size: stat?.Size ?? null,
-      modTime: stat?.ModTime ?? null,
+      // stat is already normalised by GearShell.fs.stat — snake_case
+      // fields (size / modTime / isDirectory / isFile / mode).
+      size: stat?.size ?? null,
+      modTime: stat?.modTime ?? null,
       previewKind: previewType ? previewType.kind : null,
       entries: dirInfo.entriesCount ?? null,
       children: dirInfo.children ?? null,
@@ -123,7 +125,7 @@ async function buildSelectedInfo({ getRoot, entry, nextPath, previewUrlRef }) {
 }
 
 export function useFilesSelection(
-  { getRoot, path, setHighlighted, setContextMenu },
+  { getFs, path, setHighlighted, setContextMenu },
 ) {
   const [selectedInfo, setSelectedInfo] = useState(null);
   const previewUrlRef = useRef(null);
@@ -137,7 +139,7 @@ export function useFilesSelection(
     setHighlighted(nextPath);
     setContextMenu(null);
     setSelectedInfo(
-      await buildSelectedInfo({ getRoot, entry, nextPath, previewUrlRef }),
+      await buildSelectedInfo({ getFs, entry, nextPath, previewUrlRef }),
     );
   };
 
@@ -179,7 +181,7 @@ function openEntryFromMenu(ctx, entry) {
 async function deleteEntry(ctx, entry) {
   const {
     setContextMenu,
-    getRoot,
+    getFs,
     selectedPath,
     clearFileSelection,
     setStatus,
@@ -188,7 +190,7 @@ async function deleteEntry(ctx, entry) {
   setContextMenu(null);
   if (!window.confirm(`Delete ${entry.name}?`)) return;
   try {
-    await getRoot().remove(entry.path);
+    await getFs().rm(entry.path);
     if (selectedPath === entry.path) clearFileSelection();
     setStatus("Deleted.");
     await refresh();
@@ -210,10 +212,10 @@ function startRenameEntry(ctx, entry) {
 }
 
 async function downloadEntry(ctx, entry) {
-  const { setContextMenu, getRoot, setStatus } = ctx;
+  const { setContextMenu, getFs, setStatus } = ctx;
   setContextMenu(null);
   try {
-    const data = await getRoot().readFile(entry.path);
+    const data = await getFs().readFile(entry.path);
     const type = getFilesystemPreviewType(entry.path);
     const blob = new Blob([toFilesystemBytes(data)], {
       type: type ? type.mime : "application/octet-stream",
