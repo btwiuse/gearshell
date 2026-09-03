@@ -724,9 +724,9 @@ function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen, onShowDeta
   const Icon = iconOf(plugin.icon);
   const perms = plugin.permissions?.api || [];
   return html`<article className=${"as-card " + (plugin.enabled ? "" : "is-disabled") + (plugin.loadError ? " has-error" : "")}>
+    <div className="as-card-logo"><${Icon} size=${64} aria-hidden=${true}/></div>
     <div className="as-card-body">
       <div className="as-card-top">
-        <div className="as-card-icon"><${Icon} size=${36} aria-hidden=${true}/></div>
         <div className="as-card-head">
           <div className="as-card-name">${plugin.name || plugin.id}</div>
           <div className="as-card-id">${plugin.id} · v${plugin.version}</div>

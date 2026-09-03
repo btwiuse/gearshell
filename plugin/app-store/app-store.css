@@ -177,34 +177,47 @@ body {
 .as-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  gap: 0;
+  padding: 0;
   border: 1px solid #21262d;
   border-radius: 8px;
   background: #161b22;
+  overflow: hidden;
 }
 
 .as-card.is-disabled { opacity: 0.6; }
 .as-card.has-error { border-color: #f85149; }
+
+/* Square logo block at the top of the card. Same role as the old
+   1:1 preview, but renders the lucide icon instead of a generated
+   PNG. Subtle accent-tinted background so the icon reads as a
+   logo, not a chip. The card's own border-radius clips the
+   square's top corners. */
+.as-card-logo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 30%, #1f6feb22, transparent 70%),
+    linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  color: #79c0ff;
+  flex: 0 0 auto;
+}
+
+.as-card.is-disabled .as-card-logo { color: #6e7681; }
+
+.as-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
 
 .as-card-top {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
-
-.as-card-icon {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 14px;
-  background: #1f6feb22;
-  color: #79c0ff;
-  flex: 0 0 auto;
-}
-
-.as-card.is-disabled .as-card-icon { background: #21262d; color: #6e7681; }
 
 .as-card-head { flex: 1 1 auto; min-width: 0; }
 .as-card-name { font-weight: 600; color: #f0f6fc; }
