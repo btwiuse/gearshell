@@ -302,6 +302,11 @@ function appendHistoricalAssistant(text) {
 function appendHistoricalTool(record) {
   appendHistoricalToolModule(cThread, record);
 }
+
+function appendUser(text) {
+  appendUserNode(cThread, scrollDown, text);
+}
+
 function createTurnState(thinkTurn) {
   return createTurnStateModule({ cThread, scrollDown, thinkTurn });
 }
