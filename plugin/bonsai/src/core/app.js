@@ -164,6 +164,12 @@ cStop.addEventListener("click", () => abortController?.abort());
 $("clearBtn").addEventListener("click", clearChat);
 $("newSessionBtn")?.addEventListener("click", newSession);
 $("historyBtn")?.addEventListener("click", toggleHistoryPanel);
+$("historyOverlay").addEventListener("click", (event) => {
+  if (event.target.closest("[data-history-close]")) closeHistory();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("historyOverlay").hidden) closeHistory();
+});
 cInput.addEventListener("input", () => {
   autoGrow();
   refreshSend();
@@ -247,29 +253,31 @@ function newSession() {
   renderSeeds();
   cInput.focus();
   removeSession(sessionId);
-  refreshHistoryPanel();
 }
 
-let historyPanelOpen = false;
+function closeHistory() {
+  $("historyOverlay").hidden = true;
+  $("historyBtn").setAttribute("aria-expanded", "false");
+  document.body.classList.remove("kx-locked");
+}
+
 function toggleHistoryPanel() {
-  historyPanelOpen = !historyPanelOpen;
+  const overlay = $("historyOverlay");
+  if (!overlay.hidden) return closeHistory();
   refreshHistoryPanel();
-  $("historyBtn")?.setAttribute("aria-expanded", String(historyPanelOpen));
+  overlay.hidden = false;
+  $("historyBtn").setAttribute("aria-expanded", "true");
+  document.body.classList.add("kx-locked");
 }
 
 function refreshHistoryPanel() {
-  const panel = $("historyPanel");
-  if (!panel) return;
-  panel.hidden = !historyPanelOpen;
-  if (!historyPanelOpen) return;
   renderHistoryPanel({
-    panel,
+    panel: $("historyPanel"),
     sessionId,
     index: readSessionIndex(),
     onOpen: (id) => {
       openSession(id);
-      historyPanelOpen = false;
-      refreshHistoryPanel();
+      closeHistory();
     },
     onDelete: (id) => {
       if (id === sessionId) newSession();
@@ -302,7 +310,6 @@ function openSession(id) {
   removeWelcome();
   cInput.disabled = false;
   cInput.focus();
-  refreshHistoryPanel();
 }
 
 function appendHistoricalAssistant(text) {

@@ -37,6 +37,10 @@
   min-height: 0;
 }
 
+.history-modal {
+  width: min(820px, 100%);
+}
+
 .cache-body {
   padding: 24px;
 }

@@ -227,7 +227,7 @@
               class="c-btn"
               id="historyBtn"
               type="button"
-              aria-controls="historyPanel"
+              aria-controls="historyOverlay"
               aria-expanded="false"
             >
               HISTORY
@@ -241,7 +241,6 @@
           </div>
         </div>
       </header>
-      <aside id="historyPanel" class="h-panel" hidden></aside>
       <div class="c-scroll" id="cScroll">
         <div class="c-thread" id="cThread">
           <div class="c-welcome" id="cWelcome">
@@ -344,6 +343,28 @@
         </div>
       </footer>
     </section>
+    <div class="kx" id="historyOverlay" hidden>
+      <div class="kx-backdrop" data-history-close></div>
+      <section
+        class="kx-panel cache-panel history-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Chat history"
+      >
+        <div class="kx-head">
+          <div class="kx-title">
+            <h3>Chat history</h3>
+            <span class="kx-sub">SAVED CONVERSATIONS ON THIS BROWSER</span>
+          </div>
+          <button class="kx-close" type="button" aria-label="Close" data-history-close>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <div id="historyPanel" class="history-list"></div>
+      </section>
+    </div>
     <div class="kx" id="settingsOverlay" hidden>
       <div class="kx-backdrop" data-settings-close></div>
       <section
