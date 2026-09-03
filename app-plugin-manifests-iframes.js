@@ -30,13 +30,7 @@ export const IFRAME_PLUGINS = [
       allowFullscreen: true,
     },
     permissions: {
-      api: [
-        "fs.readFileText",
-        "fs.writeFileText",
-        "fs.readDir",
-        "fs.stat",
-        "config.getShell",
-      ],
+      api: ["bash.run"],
     },
   },
   {

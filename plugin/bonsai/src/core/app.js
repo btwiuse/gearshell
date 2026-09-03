@@ -246,21 +246,23 @@ let historyPanelOpen = false;
 function toggleHistoryPanel() {
   historyPanelOpen = !historyPanelOpen;
   refreshHistoryPanel();
+  $("historyBtn")?.setAttribute("aria-expanded", String(historyPanelOpen));
 }
 
 function refreshHistoryPanel() {
   const panel = $("historyPanel");
   if (!panel) return;
-  if (!historyPanelOpen) {
-    panel.hidden = true;
-    return;
-  }
-  panel.hidden = false;
+  panel.hidden = !historyPanelOpen;
+  if (!historyPanelOpen) return;
   renderHistoryPanel({
     panel,
     sessionId,
     index: readSessionIndex(),
-    onOpen: (id) => openSession(id),
+    onOpen: (id) => {
+      openSession(id);
+      historyPanelOpen = false;
+      refreshHistoryPanel();
+    },
     onDelete: (id) => {
       if (id === sessionId) newSession();
       else removeSession(id);
@@ -370,6 +372,8 @@ async function send() {
         thinkEarlyStop,
         tools: buildStreamTools(),
         toolChoice: "auto",
+        consumeTurnEvent: (event, activeTurn) =>
+          consumeTurnEvent(event, activeTurn, turnEnv()),
       });
       if (toolCalls.length > 0) {
         messages.push({ role: "assistant", content: chat.lastAssistantContent ?? "" });

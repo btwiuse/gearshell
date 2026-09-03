@@ -1,31 +1,32 @@
-const GEAR_TOOL_NAME = "gearshell";
+const BASH_TOOL_NAME = "bash_run";
 
-const GEAR_API_TOOLS = [
+const BASH_TOOLS = [
   {
-    name: GEAR_TOOL_NAME,
+    name: BASH_TOOL_NAME,
     description:
-      "Call a permitted GearShell API. Use fs.readFileText to read a text file, fs.writeFileText to write one, fs.readDir to list a directory, fs.stat to inspect a path, and config.getShell to inspect non-secret shell configuration.",
+      "Run one non-interactive Bash command in the GearShell sandbox. Use it for filesystem inspection, reading or writing workspace files, and multi-step shell work. The result includes ok, exitCode, and combined stdout/stderr in output. Examples: list a directory with `ls -la /opfs/home`; read a file with `cat /opfs/home/README.md`; write a file with `printf '%s\\n' 'hello' > /opfs/home/hello.txt`; inspect a failure with `command-that-fails 2>&1`. Prefer short, deterministic commands and check exitCode before relying on output.",
     parameters: {
       type: "object",
       properties: {
-        method: {
+        command: {
           type: "string",
-          enum: [
-            "fs.readFileText",
-            "fs.writeFileText",
-            "fs.readDir",
-            "fs.stat",
-            "config.getShell",
-          ],
-          description: "The permitted GearShell API method to call.",
+          description: "Required Bash source. Examples: `pwd`, `find /opfs/home -maxdepth 2 -type f`, or `cat /opfs/home/README.md`.",
         },
-        args: {
-          type: "array",
-          items: {},
-          description: "Positional arguments for the selected method.",
+        cwd: {
+          type: "string",
+          description: "Optional sandbox-VFS working directory. Example: `/opfs/home/project` lets `ls` and relative paths run there.",
+        },
+        env: {
+          type: "object",
+          additionalProperties: { type: "string" },
+          description: "Optional string environment variables for this command only. Example: `{\"MODE\":\"test\",\"NAME\":\"Bonsai\"}`.",
+        },
+        timeoutMs: {
+          type: "number",
+          description: "Optional timeout in milliseconds, capped at 60000. Use a bounded value such as 10000 for quick commands.",
         },
       },
-      required: ["method"],
+      required: ["command"],
       additionalProperties: false,
     },
   },
@@ -42,36 +43,39 @@ function toolResult(value) {
 function normaliseArguments(call) {
   const args = call?.arguments;
   if (!args || typeof args !== "object" || Array.isArray(args)) return null;
-  return { method: args.method, values: Array.isArray(args.args) ? args.args : [] };
+  const { command, cwd, env, timeoutMs } = args;
+  return {
+    command,
+    options: {
+      ...(typeof cwd === "string" ? { cwd } : {}),
+      ...(env && typeof env === "object" && !Array.isArray(env) ? { env } : {}),
+      ...(Number.isFinite(timeoutMs) ? { timeoutMs: Math.min(timeoutMs, 60000) } : {}),
+    },
+  };
 }
 
-async function executeGearCall(call) {
+async function executeBashRun(call) {
   const input = normaliseArguments(call);
-  if (!input?.method) return toolError("Tool call needs a GearShell API method.");
-  const target = input.method.split(".").reduce(
-    (value, key) => value?.[key],
-    window.GearShell,
-  );
-  if (typeof target !== "function") {
-    return toolError(`GearShell API is unavailable: ${input.method}`);
+  if (typeof input?.command !== "string" || input.command.trim() === "") {
+    return toolError("bash_run needs a non-empty command.");
+  }
+  if (typeof window.GearShell?.bash?.run !== "function") {
+    return toolError("GearShell API is unavailable: bash.run");
   }
   try {
-    return toolResult(await target(...input.values));
+    return toolResult(await window.GearShell.bash.run(input.command, input.options));
   } catch (error) {
     return toolError(String(error?.message ?? error));
   }
 }
 
 export function getGearShellTools() {
-  return GEAR_API_TOOLS.map((tool) => ({
-    type: "function",
-    function: tool,
-  }));
+  return BASH_TOOLS.map((tool) => ({ type: "function", function: tool }));
 }
 
 export async function executeToolCall(call) {
-  if (call?.name !== GEAR_TOOL_NAME) {
+  if (call?.name !== BASH_TOOL_NAME) {
     return toolError(`Unknown tool: ${String(call?.name ?? "")}`);
   }
-  return executeGearCall(call);
+  return executeBashRun(call);
 }

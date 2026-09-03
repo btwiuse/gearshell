@@ -18,6 +18,7 @@ function buildBashTaskSpec(command, { cwd, env, timeoutMs } = {}) {
   return {
     name: "bash",
     cmd: command,
+    term: false,
     ...(cwd ? { workdir: cwd } : {}),
     ...(env ? { env } : {}),
     ...(Number.isFinite(timeoutMs) ? { timeoutMs } : {}),

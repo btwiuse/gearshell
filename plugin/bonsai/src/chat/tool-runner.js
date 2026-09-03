@@ -51,7 +51,7 @@ export async function streamAssistantRound(chat, messages, turn, options) {
   const calls = [];
   for await (const event of chat.streamTurn(messages, options)) {
     if (event.type === "tool_call") calls.push(event.call);
-    else if (turn) turn.consume(event);
+    else if (turn) options.consumeTurnEvent(event, turn);
   }
   return calls;
 }
