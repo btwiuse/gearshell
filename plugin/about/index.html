@@ -116,6 +116,14 @@
           } else {
             await GearShell.music.resume();
           }
+          // First-time play through an iframe may be blocked by the
+          // autoplay policy because the user gesture is in a different
+          // document; retry once from the parent window so the browser
+          // counts it as a direct user interaction.
+          const after = await GearShell.music.nowPlaying();
+          if (after?.current && !after.current.playing) {
+            await GearShell.music.resume();
+          }
         }
         await refreshPlayback();
       } catch {}
