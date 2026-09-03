@@ -72,7 +72,6 @@ export const CORE_PLUGINS = [
         "events.*",
         "w9y.*",
         "hotkeys.*",
-        "shell.*",
       ],
     },
   },
