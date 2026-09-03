@@ -1828,3 +1828,267 @@ Settings 那一栏改成 "Apps" 并把 App Store 作为唯一入口。
   视图这些老 Plugins 页没有的功能)。
 - Spotlight 搜索 "app" 或 "store" 直接出 App Store(原来是 "plugins"
   → Plugins panel)。
+
+## 五十二、Files 面板迁移到 GearShell.fs.*(2026-09-03,本轮)
+
+里程碑:面板内部所有对 wanix kernel / `getWanixRoot()` 的直接调用全部走
+`GearShell.fs.*`,只剩 mount 链(`_setupNamespace` + `showDirectoryPicker`)
+留在 host。Files iframe 化只差打包。详见 `memory/files-panel.md`「Files
+面板迁移到 GearShell.fs.*」+ `memory/plugin-iframe-migration.md` Files Tier1
+状态节。
+
+### 设计选择
+
+- **两步走**:先做 API 适配再做 iframe 切割。本轮做第一步,稳定后再做打包;
+  这样在 API 层先验证 host-only 边界是否真的就是 mount + picker,而不是
+  迁移完了才发现 iframe 还多要几个 kernel 句柄。
+- **新增 `plugin/files/files-fs.js`** 作为 panel 的 fs 表面;所有 panel 模块
+  拿 `getFs()` 而不是 `getWanixRoot()`。iframe 化时只在这一个文件改实现
+  (走 `gear-bridge.js` → postMessage),panel 其余代码不动。
+- **`GearShell.fs.unmount(id)` 替代 `root.unbind(dst, dst)`**:bind graph
+  和 IDB 持久化从两处分散维护(`files-mounts.js` + `workspace-fs-api.js`)
+  收敛到 `workspace-fs-api.js` 一处。panel 只调 `fs.unmount(mount.id)`。
+
+### 交付
+
+- 新模块 `plugin/files/files-fs.js`(131 行):暴露 `{readDir, readFile,
+  readFileText, writeFile, writeFileText, stat, mkdir, rm, rename, exists}`,
+  所有方法背后调 `GearShell.fs.*`。
+- 9 个 panel 模块替换:`files.js` / `files-editor.js` / `files-context-menu.js`
+  / `files-tree.js` / `files-panel-hooks.js` / `files-path.js` /
+  `files-mounts.js` / `files-registry.js` / `app.js`。DI 表去掉
+  `getWanixRoot` 和 `wanixSystem` 两个 key,新增 `getFs` / `onKernelReady` /
+  `getMountKernel` 三个 host-only dep。
+- `files-mounts.js:unmountLocalDir` 走 `GearShell.fs.unmount(id)` 替代
+  `root.unbind(dst, dst)`。
+- stat 字段从 wanix PascalCase (`Size`/`ModTime`) 切到 GearShell.fs
+  snake_case (`size`/`modTime`),`enrichEntryStats` 不再依赖 wanix 内部 shape。
+- kernel-ready 事件订阅从 `wanixSystem.addEventListener("ready", ...)`
+  改成 `filesDep("onKernelReady")(cb)` disposer 模式。
+
+### 留 host 的边界(为什么不能整个 iframe 化)
+
+| 能力 | 文件 | 原因 |
+|---|---|---|
+| `showDirectoryPicker` ×2 | `plugin/files-mounts.js` | File System Access API 必须 user gesture 在顶层文档触发,无法跨 postMessage |
+| `bindLocalDir(handle, dst, getKernel)` 内的 `kernel._setupNamespace("1", "", binds)` | `plugin/files-mounts.js` | wanix bind graph 唯一入口,只有 host 持 kernel 句柄 |
+| `onKernelReady` 订阅 | `app.js`(通过 `filesDep("onKernelReady")` 暴露) | wanix 元素发 ready CustomEvent,host 桥成 disposer;iframe 形态可走 `events.on("kernel.ready", ...)`,待 wanix 暴露 |
+
+### iframe 化的下一步(留作未来工作)
+
+`permissions.api: ["fs.*", "config.*", "panels.*", "events.*"]` 已经就位,
+打包时不需要新增 manifest 权限。具体步骤:
+
+1. 把 `files.js` + 12 个 sibling 装进 `plugin/files/index.html`(仿 Notes
+   插件的 buildless React+importmap 形态,见 `memory/pluginization-lessons.md`
+   round 39)。
+2. `corePlugins` 里 Files 的 `entry: "/plugin/files/files-plugin.js"`
+   改成 `iframe: { src: "/plugin/files/index.html" }`。
+3. `files-fs.js` 的实现换成走 bridge:`window.GearShell.fs.*`(经
+   `gear-bridge.js` 自动转 postMessage)。
+4. `files-mounts.js` 留在 host(因为 `bindLocalDir` + `showDirectoryPicker`),
+   Files 面板通过 `GearShell.fs.mounts.requestLocalDir()` / `remount()` /
+   `unmount()` 触发;mount 列表通过 `events.fs.changed` 推送给 iframe。
+5. kernel-ready:如果 wanix 暴露了 `events.emit("kernel.ready", ...)`,iframe
+   形态直接 `GearShell.events.on("kernel.ready", retry)`;否则沿用 host dep。
+
+### 验证
+
+- `node --input-type=module --check` 全 10 个 touched 文件通过。
+- grep `plugin/files/` 无 `getRoot` / `wanixSystem` / `_setupNamespace` /
+  `showDirectoryPicker` 引用(注释除外;`plugin/files-mounts.js` 是
+  host-only 文件保留这三条)。
+- `getWanixRoot` 仍在 `workspace-fs-api.js` / `workspace-terminal-*` /
+  `music-engine.js` / `plugins-loading.js` 等 host-side 模块使用(合理——
+  这些是 PTY / music engine / plugin kernel,合法需要 kernel 句柄)。
+- 浏览器实测待本轮 commit 后跑(CDP 测 Files panel: tree 展开 / 文件 open
+  / save / rename / mkdir / delete / upload / volume mount / unmount /
+  reconnect 全链路)。
+
+### 本轮未做、刻意保留
+
+- **Files iframe 打包**:本里程碑在 API 层足够优秀,iframe 化等以后有精力。
+  manifest 仍标 `entry`,boot 时仍 fetch;但 host dep 收敛后这条链风险更小。
+- **workbench Tier1**:与 files 同结构,等 files iframe 验证后再启动。
+- **`scripts/verify-static.mjs` 的 `DeckPanel` marker 失败**:pre-existing
+  (Deck → iframe 迁移遗留),与本轮无关。
+
+memory 已同步 wiki(待 `scripts/sync-wiki.sh` + 推进 memory 子模块指针):
+- `memory/files-panel.md` 新增「Files 面板迁移到 GearShell.fs.*」节
+- `memory/plugin-iframe-migration.md` 新增「Files Tier1 状态」节
+- `memory/Home.md` Latest rounds 加 round 61 条目
+
+## 五十三、Files 面板 mount 链迁 GearShell.fs.*(2026-09-03,本轮)
+
+用户追问:fs mount 还没有走 GearShell API?——对,上一轮只把 unmount 改了,
+picker / bind / restore / reconnect 还是直接调 `bindLocalDir` +
+`showDirectoryPicker`。本轮补齐,Files 面板**完全不再持有 kernel 句柄**。
+
+### 改动
+
+- **`workspace-fs-api.js` 集中 6 个 mount API**(新增 4 个):
+  - `fs.requestLocalDir(name?)` — 弹 picker + bind + IDB persist,host-only
+  - `fs.reconnect(id)` — 重新 picker(权限撤销时)+ bind,host-only
+  - `fs.remount(id)` — silent queryPermission + bind,host-only
+  - `fs.restoreMounts()` — boot 时静默重连所有有权限的 mount
+  - `fs.mounts()` — 列 metadata(已有)
+  - `fs.unmount(id)` — unbind + IDB drop(已有)
+- **`plugin/files-mounts.js:useLocalDirMounts` 退化为 UI shim**:
+  `restoreStoredMounts` → `fs.restoreMounts()`,
+  `handleMountLocalDir` → `fs.requestLocalDir()`,
+  `reconnectLocalDir` → `fs.reconnect()`,
+  `unmountLocalDir` → `fs.unmount()`(上轮已做)。
+  删 `getKernel` 入参 + `restoredMountsRef`(panel 不再需要 dedup,host 端
+  `restoreMounts` 自己 idempotent)。
+- **`bindLocalDir` 现在只被 `workspace-fs-api.js` 调用**(grep 验证),
+  panel 全程不持 `_setupNamespace`。`showDirectoryPicker` 也只在
+  `workspace-fs-api.js` 里调。
+- **`initFiles` 删 `getMountKernel` dep**,只剩 `getFs` + `onKernelReady` 两个
+  host-only 入参(后者是 kernel ready 事件订阅,跟 mount 无关)。
+- **Playground catalog** 新增 4 个 mount 调试入口(panels 列表);
+  `scripts/build-docs-content.mjs` 的 FS_TABLE 同步,自动生成 docs 页面
+  `plugin/gearshell-docs/content/fs/{mounts,requestLocalDir,reconnect,restoreMounts}.md`。
+- **Docs index** 由 `node scripts/build-docs-content.mjs` 自动生成(150 API + 8 guides)。
+
+### 验证
+
+- `node --input-type=module --check` 全部 touched 文件通过(8 个)。
+- `grep -E "showDirectoryPicker|bindLocalDir|_setupNamespace|getKernel|getMountKernel"`
+  在 `plugin/files/files.js` + `files-panel-hooks.js` 下**零命中**(注释除外)。
+- panel 入口(VolumesSidebar / FilesPanel)全部走 `window.GearShell.fs.*`,
+  `useLocalDirMounts` 返回的 `restoreMounts` / `handleMountLocalDir` /
+  `unmountLocalDir` / `openMount` 全部转发到 host 端的 fs 表面。
+
+### 留 host 的边界
+
+- **FSA picker**(`showDirectoryPicker`):必须是真实 user gesture 在顶层
+  文档触发,iframe 没法触发。`fs.requestLocalDir` / `fs.reconnect` 在 host
+  端执行 picker,iframe 调一次 postMessage,host 完成 picker 后回 result。
+- **`bindLocalDir` → `_setupNamespace`**:wanix bind graph 唯一入口,
+  kernel handle 只在 host 端持有。这两个 host-only 限制让 `fs.*` 的 mount
+  方法无法纯前端转发,但对 iframe 透明(panel 只调 `fs.requestLocalDir()`)。
+- **`onKernelReady` dep**:kernel ready 事件订阅暂时走 host(wanix 元素
+  发 ready CustomEvent)。iframe 形态可改为 `events.on("kernel.ready", ...)`
+  (待 wanix 暴露)。
+
+### Files iframe 化仅剩打包
+
+API 适配**全部完成**。Files manifest 仍标 `entry`,boot 时仍 fetch 入口
+模块;iframe 化的下一步纯粹是打包 + 入口,与 API 层无关。具体步骤记录在
+上一节「iframe 化的下一步」,留作未来。
+
+memory 待同步:
+- `memory/files-panel.md` 「Files 面板迁移到 GearShell.fs.*」 节更新 mount
+  链全走 API 的描述
+- `memory/plugin-iframe-migration.md` Files Tier1 状态节同步
+- `memory/Home.md` Latest rounds 加 round 62 条目
+
+## 五十二、App Store 权限披露 + 按权限过滤(2026-09-03)
+
+### 动机
+
+App Store 当前只在 Edit / Install 弹窗里露出 `permissions.api` 文本,
+浏览态只看到 kind / tags / enabled-state。`appsettings` 里要求"披露应用
+请求的 Permission 列表",所以需要让"这个插件要用到哪些 API path"成为
+**目录级别的可读信息**,并支持按权限反向查询("谁用了 fs.*?")。
+
+### 改动
+
+**新增内容**
+
+- `PERMISSION_CATALOG`:每个 namespace 配一条 blurb + 常用 method 一行
+  说明。覆盖 `panels / config / events / fs / terminal / tasks / vm /
+  music / browser / files / agents / hotkeys / w9y / shell`。未在表
+  里的 path 走 fallback,显示成 "Custom method path — not in the
+  built-in catalog"。
+- `describePermission(path)`:把 `terminal.write` 拆成
+  `{ ns, label: "Terminal", methodLabel: "write", blurb: "Write input
+  bytes to a terminal." }`。
+- `summarizePermissions(plugin)`:`{ list, wildcards, others }` 给 chip
+  排版用。
+- `groupByNamespace(perms)`:把扁平数组按 namespace 折叠成
+  `[ { ns, label, blurb, paths[] } ]`,给 PermissionPanel 的分组视图。
+
+**新组件**
+
+- `PermissionChip`:单条权限的 chip。命名空间标签 + method 标签;
+  wildcard(`fs.*`)用金色描边以示作用域大。可选 `onClick` —— 在卡片
+  / 列表的摘要里是按钮(点了跳过滤),在 modal / 展开面板里是静态
+  `<span>`(纯文档)。
+- `PermissionSummary`:一行版摘要。"Permissions:" + 前 2 个 chip +
+  `+N more` 链接。Plugin 完全无权限时显示绿色 "No API permissions
+  requested."。
+- `PermissionPanel`:完整分组视图。按 namespace 分 section,每个
+  section 有 blurb + 全量 chips,顶部 "N API permissions requested"。
+  空态有图标的友好解释。
+- `PluginDetailModal`:Grid view 点 "Permissions (N)" 按钮 / chip / 卡
+  片顶部图标打开的详情弹窗。包含完整 PermissionPanel + Open 按钮 +
+  关闭按钮(右上角 X + 点遮罩关闭)。
+
+**Grid 视图变化**
+
+- 每张卡片底部新增 `Permissions:` 一行摘要(前 2 个 chip + `+N more`)。
+- 卡片 action row 新增 "Permissions (N)" 按钮(蓝色描边),点击打开
+  detail modal。
+
+**List 视图变化**
+
+- 行布局改成 6 列:`chevron | icon | name/id | tags | perms | actions`,
+  perms 列 `minmax(0, 420px)` —— 容器够宽时一行展开所有 chip,不够时
+  自动换行;始终放不下就把行扩起来(见下)。
+- 行首 `ChevronRight` / `ChevronDown` 按钮:点击切换该行的展开。
+  展开后下方插入 `PermissionPanel`(完整分组视图)。
+- 行 hover / expanded 状态走 `.as-row-wrap` 而非 `.as-row`,保证展开
+  面板不破坏行 hover 高亮。
+- 每行还显示 `PermissionSummary`,chip 本身可点(跳过滤)—— 不展开行也
+  能 1-click 反查 "谁用了 X"。
+
+**搜索栏新增 `perm:` 语法**
+
+- `perm:<path>`:过滤包含此精确 path 的插件(也匹配声明了匹配 wildcard
+  的,例如 `perm:fs.read` 同时匹配 `fs.*`)。
+- `perm:`(空):只显示请求了至少 1 个 permission 的插件(`/ 33` → `16 /
+  33`)。
+- 任何以 `perm:` 开头的输入会在顶部加一条 banner:`Filtering by
+  permission: <code>perm:...</code>` + Clear 按钮。
+- placeholder 文案也改:"Search by name, id or use perm:<api-path> to
+  filter by permission"。
+- **chip click 即跳转**:summary 里的 chip 是按钮,点 Music 卡的 `Music
+  *` 直接 `setQuery("perm:music.*")`,可见列表立刻 33 → 3。
+
+**Store 状态新增**
+
+- `expandedRows: Set<id>` —— 哪些行展开了。
+- `detailPlugin: Plugin | null` —— 当前打开的 detail modal。
+- `toggleExpandedRow(id)` / `openDetail(plugin)` / `closeDetail()`。
+
+**CSS 新增**
+
+- `.as-perm-chip` / `.as-perm-summary` / `.as-perm-panel` / `.as-perm-group` /
+  `.as-perm-banner` / `.as-detail-modal` / `.as-row-wrap` / `.as-row-chevron` /
+  `.as-row-expand` 全部新加。`@media (max-width: 720px)` 列表网格退化到
+  4 列(chevron/icon/name+id/actions),tags+perms 折到 name 列下方。
+
+### 验证(浏览器实测,localhost:8080)
+
+- 启用 `app-store`, `panels.open("app-store")`。
+- **Grid**:33 张卡,每张有 `Permissions:` 一行 + `Permissions (N)`
+  按钮。`Runtime` 这类无权限插件显示绿色 "No API permissions
+  requested."。
+- **List**:33 行,每行右侧有完整 chip 摘要 + `+N more`;点 chevron 展开
+  后看到完整分组(例:Music → 2 groups / 3 chips,Files → 4 groups /
+  14 chips 之类)。
+- **Detail modal**:点 Music 卡的 "Permissions (3)" → 弹窗显示 3 个
+  permission 分 2 组(Music + Panels)。遮罩点关 / X 关均工作。
+- **`perm:` 过滤**:
+  - `perm:fs.*` → 3 / 33
+  - `perm:panels.open` → 8 / 33
+  - `perm:terminal.*` → 5 / 33
+  - `perm:` → 16 / 33(任何 plugin with any permission)
+  - 点 Music 卡 `Music *` chip → 自动 `setQuery("perm:music.*")` → 3 /
+    33
+- **空权限态**:Runtime 的详情弹窗显示 "No API permissions requested.
+  This plugin runs in the same origin as the shell. It can read DOM and
+  call bridge methods only inside its iframe."
+- ESM 全清白;`node --input-type=module --check` 0 错误。
+- Console 无 error / warning。

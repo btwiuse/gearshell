@@ -333,23 +333,27 @@ body {
 
 .as-row {
   display: grid;
-  /* Table-like columns: icon | name/id | tags | actions. The name column
-     is capped at 220px (overflow ellipsizes) so the tags column's left
-     edge stays aligned across every row — otherwise a long plugin name
-     would shove the tags to the right and break the column look. */
-  grid-template-columns: 32px minmax(0, 220px) minmax(0, 1fr) auto;
+  /* Table-like columns: chevron | icon | name/id | tags | perms | actions.
+     The name column is capped at 220px (overflow ellipsizes) so the tag
+     column's left edge stays aligned across every row — otherwise a
+     long plugin name would shove the tags to the right and break the
+     column look. The perms column is `auto` so it grows until ~420px
+     then drops to a second line — below that the row expands. */
+  grid-template-columns: 18px 32px minmax(0, 220px) minmax(0, 1fr) minmax(0, 420px) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: transparent;
   color: #c9d1d9;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
-.as-row:hover { background: #161b22; border-color: #21262d; }
+.as-row-wrap:hover { background: #161b22; border-color: #21262d; }
+.as-row-wrap.is-disabled { opacity: 0.6; }
+.as-row-wrap.is-required { background: #d2992211; }
+.as-row-wrap.is-required:hover { background: #d2992218; }
 .as-row.is-disabled { opacity: 0.6; }
-.as-row.is-required { background: #d2992211; }
 
 .as-row-icon {
   display: grid;
@@ -509,4 +513,261 @@ body {
     grid-template-columns: 32px minmax(0, 1fr) auto;
   }
   .as-row-tags { grid-column: 2 / -1; }
+}
+
+/* --- Permission display --- */
+.as-perm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+button.as-perm-chip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+button.as-perm-chip:hover { background: #1f6feb22; border-color: #1f6feb66; color: #79c0ff; }
+
+.as-perm-chip.wildcard {
+  background: #d2992222;
+  border-color: #d2992266;
+  color: #d29922;
+}
+button.as-perm-chip.wildcard:hover { background: #d2992244; border-color: #d29922; color: #f0d272; }
+
+.as-perm-chip-ns { color: #79c0ff; font-weight: 600; }
+.as-perm-chip.wildcard .as-perm-chip-ns { color: #f0d272; }
+.as-perm-chip-method { color: inherit; }
+
+.as-perm-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.as-perm-summary-icon { color: #6e7681; flex: 0 0 auto; }
+.as-perm-summary-label { font-weight: 500; margin-right: 2px; }
+.as-perm-summary.none { color: #56d364; }
+.as-perm-summary.none .as-perm-summary-icon { color: #2da44e; }
+
+.as-perm-more {
+  background: transparent;
+  border: 1px dashed #30363d;
+  color: #8b949e;
+  font: inherit;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.as-perm-more:hover { color: #79c0ff; border-color: #1f6feb66; }
+
+.as-perm-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.as-perm-panel.empty {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  color: #56d364;
+}
+.as-perm-panel.empty svg { color: #2da44e; flex: 0 0 auto; }
+.as-perm-panel.empty p { margin: 4px 0 0 0; color: #8b949e; font-size: 12px; }
+
+.as-perm-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c9d1d9;
+  font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #21262d;
+}
+
+.as-perm-group { display: flex; flex-direction: column; gap: 4px; }
+.as-perm-group + .as-perm-group { margin-top: 4px; }
+.as-perm-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.as-perm-group-label { font-weight: 600; color: #f0f6fc; font-size: 12px; }
+.as-perm-group-ns {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #6e7681;
+  font-size: 11px;
+}
+.as-perm-group-blurb { margin: 0 0 6px 0; color: #8b949e; font-size: 12px; line-height: 1.4; }
+.as-perm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Card layout: the chip row sits between badges and the action row */
+.as-card .as-perm-summary { margin-top: 2px; }
+
+/* Card "Permissions" button keeps the same look as the other actions */
+.as-card-actions .as-btn[title="View permissions and details"] {
+  /* subtle color hint that this opens an info surface, not an action */
+  color: #79c0ff;
+  border-color: #1f6feb66;
+}
+.as-card-actions .as-btn[title="View permissions and details"]:hover:not(:disabled) {
+  background: #1f6feb22;
+}
+
+/* --- Detail modal --- */
+.as-detail-modal {
+  width: min(620px, calc(100% - 32px));
+  position: relative;
+}
+
+.as-detail-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  cursor: pointer;
+}
+.as-detail-close:hover { color: #f0f6fc; background: #21262d; }
+
+.as-detail-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.as-detail-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #1f6feb22;
+  color: #79c0ff;
+}
+
+.as-detail-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.as-detail-meta h2 { margin: 0; font-size: 16px; color: #f0f6fc; }
+.as-detail-sub { color: #8b949e; font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.as-detail-desc { margin: 4px 0 0 0; color: #c9d1d9; font-size: 13px; line-height: 1.4; }
+
+/* --- Perm-filter banner --- */
+.as-perm-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #1f6feb11;
+  border-bottom: 1px solid #1f6feb44;
+  color: #c9d1d9;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+.as-perm-banner code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #79c0ff;
+  background: #0d1117;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #1f6feb66;
+}
+.as-perm-banner-clear {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.as-perm-banner-clear:hover { color: #f0f6fc; border-color: #1f6feb66; }
+
+/* --- List view: per-row wrapper + chevron + expanded panel --- */
+.as-row-wrap {
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+.as-row-wrap:hover { background: #161b22; border-color: #21262d; }
+.as-row-wrap.is-disabled { opacity: 0.6; }
+.as-row-wrap.is-required { background: #d2992211; }
+.as-row-wrap.is-required:hover { background: #d2992218; }
+
+.as-row {
+  display: grid;
+  /* Columns: chevron | icon | name/id | tags | perms | actions. The
+     name column is capped at 220px (overflow ellipsizes) so the tag
+     column's left edge stays aligned across every row. The perms
+     column is `auto` so it grows until ~420px then drops to a second
+     line — below that the row expands. */
+  grid-template-columns: 18px 32px minmax(0, 220px) minmax(0, 1fr) minmax(0, 420px) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  color: #c9d1d9;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.as-row-chevron {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  width: 18px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: #6e7681;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.as-row-chevron:hover { color: #79c0ff; background: #21262d; }
+
+.as-row.is-expanded .as-row-chevron { color: #79c0ff; }
+
+.as-row-name-cell { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.as-row-expand { padding: 0 10px 10px 60px; }
+
+@media (max-width: 720px) {
+  .as-row {
+    grid-template-columns: 18px 32px minmax(0, 1fr) auto;
+  }
+  .as-row-tags,
+  .as-row-perms { grid-column: 3 / -1; }
+  .as-row-expand { padding-left: 10px; }
 }

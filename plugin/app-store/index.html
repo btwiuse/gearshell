@@ -56,6 +56,11 @@ import {
   ExternalLink,
   AlertTriangle,
   Check,
+  ShieldCheck,
+  ChevronRight,
+  ChevronDown,
+  KeyRound,
+  X,
 } from "lucide-react";
 
 const html = htm.bind(React.createElement);
@@ -82,6 +87,222 @@ function kindOf(plugin) {
   return "builtin";
 }
 
+// --- Permission catalog ---
+// Human-readable one-liner per namespace plus a short list of the most
+// common method paths so chips show a hint at a glance. Wildcards like
+// "fs.*" stay literal — the bridge check permitsPath matches exact or
+// "ns.*" suffix, and we render them verbatim. The catalog is best-effort:
+// any api path the plugin declares but we don't list falls back to a
+// generic description ("custom method") so the chip never goes blank.
+const PERMISSION_CATALOG = {
+  panels: {
+    label: "Panels",
+    blurb: "Open, list, focus and close dockview panels in the shell grid.",
+    methods: {
+      list: "List every open panel.",
+      open: "Open a panel by component name.",
+      close: "Close an open panel.",
+      focus: "Bring an open panel to the front.",
+    },
+  },
+  config: {
+    label: "Config",
+    blurb: "Read and update the shell configuration (workspaces, plugins, providers, runtime).",
+    methods: {
+      getShell: "Read the shell config (workspaces, plugins, providers).",
+      updateShell: "Patch the shell config in place.",
+      getSystem: "Read runtime module URLs and allowed origins.",
+      updateRuntime: "Update the runtime module / wasm URL.",
+      workspaces: "List, create and switch workspaces.",
+      workspace: "Read or delete the active workspace.",
+      plugins: "List, install, remove and toggle plugins.",
+      providers: "List and save provider configs.",
+      kv: "Get, set, delete and list KV store entries.",
+      audit: "Read or clear the agent activity ring buffer.",
+      auditClear: "Clear the agent activity ring buffer.",
+      terminalProfiles: "Read or save terminal preset profiles.",
+      terminalIcons: "List icon catalog entries for terminal presets.",
+      binds: "List or update bind mounts (system or task).",
+      tasks: "List or update workspace tasks.",
+      presets: "List, save, load and delete workspace presets.",
+    },
+  },
+  events: {
+    label: "Events",
+    blurb: "Subscribe to host-pushed events or send events to other plugins.",
+    methods: {
+      on: "Subscribe to a host event by topic (push from the shell).",
+      off: "Unsubscribe from a host event.",
+      emit: "Emit an event to other listeners.",
+    },
+  },
+  fs: {
+    label: "Files",
+    blurb: "Read, write, list and watch OPFS files. Watch is kernel-side and supports recursive paths under /opfs/.",
+    methods: {
+      readText: "Read a UTF-8 text file.",
+      writeText: "Write a UTF-8 text file.",
+      readBinary: "Read a binary file as Uint8Array.",
+      writeBinary: "Write a binary file from Uint8Array.",
+      readdir: "List a directory.",
+      mkdir: "Create a directory.",
+      remove: "Delete a file or directory.",
+      stat: "Read file metadata (size, mode, type).",
+      rename: "Rename or move a file.",
+      copy: "Copy a file.",
+      exists: "Test whether a path exists.",
+      watch: "Subscribe to filesystem changes under /opfs/.",
+      unwatch: "Cancel a filesystem watch handle.",
+    },
+  },
+  terminal: {
+    label: "Terminal",
+    blurb: "Spawn and control headless or interactive terminals attached to a wanix kernel task.",
+    methods: {
+      create: "Spawn a new terminal session.",
+      write: "Write input bytes to a terminal.",
+      resize: "Change a terminal's row / column size.",
+      output: "Read buffered output from a terminal.",
+      dispose: "Tear down a terminal session.",
+      embed: "Mount an interactive terminal in the DOM.",
+    },
+  },
+  tasks: {
+    label: "Tasks",
+    blurb: "Create and control long-running workspace tasks (auto, gojs, wasi, js).",
+    methods: {
+      list: "List the active workspace tasks.",
+      create: "Spawn a new task.",
+      remove: "Stop and dispose a task.",
+      output: "Read buffered output from a task.",
+      set: "Update one or more tasks in place.",
+    },
+  },
+  vm: {
+    label: "VM",
+    blurb: "Boot and control the in-page x86 (v86) / RISC-V (rv64) virtual machines.",
+    methods: {
+      create: "Boot a new VM with a manifest.",
+      reset: "Reset a running VM.",
+      destroy: "Tear a VM down.",
+      input: "Send keyboard / mouse input.",
+      key: "Press a single key.",
+      pause: "Pause the VM clock.",
+      resume: "Resume the VM clock.",
+      serial: "Read or write the serial console.",
+    },
+  },
+  music: {
+    label: "Music",
+    blurb: "Drive the built-in music player (library, queue, playback, lyrics).",
+    methods: {
+      play: "Start playback.",
+      pause: "Pause playback.",
+      next: "Skip to the next track.",
+      prev: "Jump back to the previous track.",
+      seek: "Seek to a position in the current track.",
+      queue: "Read or mutate the queue.",
+      library: "Read or mutate the library.",
+      lyrics: "Read lyrics for the current track.",
+      search: "Search the library.",
+    },
+  },
+  browser: {
+    label: "Browser",
+    blurb: "Drive the in-page browser module (navigate, tabs, scripts).",
+    methods: {
+      navigate: "Open a URL.",
+      tabs: "List / switch / close browser tabs.",
+      eval: "Run a script in a browser tab.",
+    },
+  },
+  files: {
+    label: "Files panel",
+    blurb: "Drive the Files panel (navigate, upload, mount).",
+    methods: {
+      open: "Open a file or directory in the Files panel.",
+      upload: "Upload a file into the Files panel.",
+      mount: "Mount an external resource into Files.",
+    },
+  },
+  agents: {
+    label: "Agents",
+    blurb: "Talk to the agent runtime (Crush, code-mode, sub-agents).",
+    methods: {
+      run: "Run an agent prompt.",
+      cancel: "Cancel a running agent.",
+      list: "List active agents.",
+    },
+  },
+  hotkeys: {
+    label: "Hotkeys",
+    blurb: "Register or release global keyboard shortcuts.",
+    methods: {
+      bind: "Register a hotkey.",
+      unbind: "Release a hotkey.",
+      list: "List the registered hotkeys.",
+    },
+  },
+  w9y: {
+    label: "w9y",
+    blurb: "Resolve and load w9y-hosted modules.",
+    methods: {
+      install: "Install a w9y module.",
+      status: "Read the install status.",
+      list: "List installed modules.",
+    },
+  },
+  shell: {
+    label: "Shell",
+    blurb: "Top-level verbs on the GearShell handle itself.",
+    methods: {
+      version: "Read the GearShell version.",
+      ping: "Round-trip liveness check.",
+    },
+  },
+};
+
+function describePermission(path) {
+  const [ns, ...rest] = path.split(".");
+  const entry = PERMISSION_CATALOG[ns];
+  if (!entry) return { ns: ns || "?", label: ns || "Custom", method: path, blurb: "Custom method path — not in the built-in catalog." };
+  const method = rest.join(".");
+  const methodBlurb = entry.methods[method];
+  return {
+    ns,
+    label: entry.label,
+    method,
+    methodLabel: method || "(whole namespace)",
+    blurb: methodBlurb || entry.blurb,
+  };
+}
+
+function summarizePermissions(plugin) {
+  const list = plugin?.permissions?.api || [];
+  const wildcards = [];
+  const others = [];
+  for (const p of list) {
+    if (p.endsWith(".*")) wildcards.push(p);
+    else others.push(p);
+  }
+  return { list, wildcards, others };
+}
+
+function groupByNamespace(perms) {
+  const groups = new Map();
+  for (const p of perms) {
+    const ns = p.split(".")[0] || "?";
+    if (!groups.has(ns)) groups.set(ns, []);
+    groups.get(ns).push(p);
+  }
+  return [...groups.entries()].map(([ns, paths]) => ({
+    ns,
+    label: PERMISSION_CATALOG[ns]?.label || ns,
+    blurb: PERMISSION_CATALOG[ns]?.blurb || "Custom namespace — methods on this path are gated to this plugin.",
+    paths,
+  }));
+}
+
 // --- Filter / view state ---
 function useStore() {
   const [plugins, setPlugins] = useState([]);
@@ -90,6 +311,12 @@ function useStore() {
   const [activeTags, setActiveTags] = useState([]); // string[]
   const [notice, setNotice] = useState(null); // {kind, text}
   const [modal, setModal] = useState(null); // {mode, plugin?}
+  // PermFilter: a parsed `perm:` prefix from the search box — filters
+  // plugins that request this exact api path (or whose permissions
+  // include a wildcard that matches it). `perm:` alone matches any
+  // plugin that requests at least one permission.
+  const [expandedRows, setExpandedRows] = useState(() => new Set());
+  const [detailPlugin, setDetailPlugin] = useState(null);
 
   const refresh = async () => {
     // The gear bridge only installs window.GearShell inside an iframe
@@ -120,10 +347,10 @@ function useStore() {
     // and when config changes anywhere (Settings toggle etc.).
     const reload = () => refresh();
     if (typeof GearShell === "undefined") return;
-    GearShell.events.on("plugin.changed", reload);
+    GearShell.events.on("plugins.changed", reload);
     GearShell.events.on("config.changed", reload);
     return () => {
-      GearShell.events.off("plugin.changed", reload);
+      GearShell.events.off("plugins.changed", reload);
       GearShell.events.off("config.changed", reload);
     };
   }, []);
@@ -138,7 +365,15 @@ function useStore() {
   }, [plugins]);
 
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const raw = query.trim();
+    let text = raw;
+    let permFilter = null; // string | null
+    if (raw.startsWith("perm:")) {
+      const rest = raw.slice(5).trim();
+      text = "";
+      permFilter = rest || "*"; // empty "perm:" = "any perm declared"
+    }
+    const q = text.toLowerCase();
     return plugins.filter((p) => {
       if (q) {
         const hay = [p.name, p.id, p.description]
@@ -151,6 +386,21 @@ function useStore() {
         const have = new Set(p.tags || []);
         for (const t of activeTags) if (!have.has(t)) return false;
       }
+      if (permFilter !== null) {
+        const api = p.permissions?.api || [];
+        if (permFilter === "*") {
+          if (api.length === 0) return false;
+        } else if (!api.some((rule) => {
+          if (rule === permFilter) return true;
+          if (rule.endsWith(".*")) {
+            const ns = rule.slice(0, -2);
+            return permFilter === ns || permFilter.startsWith(ns + ".");
+          }
+          return false;
+        })) {
+          return false;
+        }
+      }
       return true;
     });
   }, [plugins, query, activeTags]);
@@ -160,6 +410,18 @@ function useStore() {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
+
+  const toggleExpandedRow = (id) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const openDetail = (plugin) => setDetailPlugin(plugin);
+  const closeDetail = () => setDetailPlugin(null);
 
   const flash = (result, okText) => {
     if (result && result.ok === false) {
@@ -186,6 +448,11 @@ function useStore() {
     setNotice,
     modal,
     setModal,
+    expandedRows,
+    toggleExpandedRow,
+    detailPlugin,
+    openDetail,
+    closeDetail,
     flash,
     refresh,
   };
@@ -323,6 +590,123 @@ function ToggleSwitch({ checked, disabled, onChange, label }) {
   ></button>`;
 }
 
+// --- Permission display ---
+// Compact chip that shows a permission path; clicking it sets the
+// search filter to that exact path (perm:<path>) so the user can pivot
+// from "this plugin uses X" to "what else uses X?". On the detail modal
+// and the expanded row the chips are non-interactive — they're
+// documentation, not filters.
+function PermissionChip({ path, onClick, title }) {
+  const meta = describePermission(path);
+  const t = title || meta.blurb;
+  const className = "as-perm-chip" + (path.endsWith(".*") ? " wildcard" : "");
+  if (!onClick) {
+    return html`<span className=${className} title=${t}>
+      <span className="as-perm-chip-ns">${meta.label}</span>
+      <span className="as-perm-chip-method">${meta.methodLabel}</span>
+    </span>`;
+  }
+  return html`<button
+    type="button"
+    className=${className}
+    title=${t}
+    onClick=${onClick}
+  >
+    <span className="as-perm-chip-ns">${meta.label}</span>
+    <span className="as-perm-chip-method">${meta.methodLabel}</span>
+  </button>`;
+}
+
+// One-line summary for the card footer or list-row caption. Shows the
+// first 2 permissions (sorted by namespace), then a "+N more" hint when
+// the manifest declares more. No chips if the plugin asks for nothing.
+function PermissionSummary({ plugin, onChipClick, max = 2 }) {
+  const { list } = summarizePermissions(plugin);
+  if (list.length === 0) {
+    return html`<span className="as-perm-summary none">
+      <${ShieldCheck} size=${11} aria-hidden=${true}/>
+      No API permissions requested.
+    </span>`;
+  }
+  const sorted = [...list].sort((a, b) => a.localeCompare(b));
+  const shown = sorted.slice(0, max);
+  const rest = sorted.length - shown.length;
+  return html`<div className="as-perm-summary">
+    <${ShieldCheck} size=${11} aria-hidden=${true} className="as-perm-summary-icon"/>
+    <span className="as-perm-summary-label">Permissions:</span>
+    ${shown.map((p) => html`<${PermissionChip} key=${p} path=${p} onClick=${onChipClick}/>`)}
+    ${rest > 0 ? html`<button type="button" className="as-perm-more" onClick=${onChipClick}>+${rest} more</button>` : null}
+  </div>`;
+}
+
+// Full grouped view for the detail modal and the list-row expansion.
+// One section per namespace, with a one-line blurb and every declared
+// path listed (chips are non-interactive).
+function PermissionPanel({ plugin }) {
+  const { list } = summarizePermissions(plugin);
+  if (list.length === 0) {
+    return html`<div className="as-perm-panel empty">
+      <${ShieldCheck} size=${16} aria-hidden=${true}/>
+      <div>
+        <strong>No API permissions requested.</strong>
+        <p>This plugin runs in the same origin as the shell. It can read DOM and call bridge methods only inside its iframe.</p>
+      </div>
+    </div>`;
+  }
+  const groups = groupByNamespace(list);
+  return html`<div className="as-perm-panel">
+    <div className="as-perm-panel-head">
+      <${ShieldCheck} size=${14} aria-hidden=${true}/>
+      <strong>${list.length} API permission${list.length === 1 ? "" : "s"} requested</strong>
+    </div>
+    ${groups.map((g) => html`<section key=${g.ns} className="as-perm-group">
+      <header className="as-perm-group-head">
+        <span className="as-perm-group-label">${g.label}</span>
+        <span className="as-perm-group-ns">${g.ns}</span>
+      </header>
+      <p className="as-perm-group-blurb">${g.blurb}</p>
+      <div className="as-perm-chips">
+        ${g.paths.map((p) => html`<${PermissionChip} key=${p} path=${p}/>`)}
+      </div>
+    </section>`)}
+  </div>`;
+}
+
+// Detail modal shown from the grid view: clicking the card body or the
+// "Permissions" button opens it. The card's action buttons (Open / Edit
+// / Remove) keep working without opening the modal — they're separate
+// stop-propagation handlers.
+function PluginDetailModal({ plugin, onClose, onOpen }) {
+  if (!plugin) return null;
+  const Icon = iconOf(plugin.icon);
+  const kind = kindOf(plugin);
+  return html`<div className="as-modal-back" onClick=${onClose}>
+    <div className="as-modal as-detail-modal" onClick=${(e) => e.stopPropagation()}>
+      <button type="button" className="as-detail-close" onClick=${onClose} title="Close" aria-label="Close">
+        <${X} size=${14} aria-hidden=${true}/>
+      </button>
+      <header className="as-detail-head">
+        <div className="as-detail-icon"><${Icon} size=${22} aria-hidden=${true}/></div>
+        <div className="as-detail-meta">
+          <h2>${plugin.name || plugin.id}</h2>
+          <div className="as-detail-sub">${plugin.id} · v${plugin.version}</div>
+          <${Badges} plugin=${plugin}/>
+        </div>
+        <button
+          type="button"
+          className="as-btn primary"
+          disabled=${!plugin.enabled}
+          title=${plugin.enabled ? `Open ${plugin.name}` : `Enable ${plugin.name} first`}
+          onClick=${() => { onClose(); onOpen(plugin); }}
+        ><${ExternalLink} size=${12} aria-hidden=${true}/> Open</button>
+      </header>
+      ${plugin.description ? html`<p className="as-detail-desc">${plugin.description}</p>` : null}
+      ${plugin.loadError ? html`<p className="as-detail-desc" style=${{ color: "#f85149" }}>${plugin.loadError}</p>` : null}
+      <${PermissionPanel} plugin=${plugin}/>
+    </div>
+  </div>`;
+}
+
 function Badges({ plugin }) {
   const kind = kindOf(plugin);
   const tags = (plugin.tags || []).filter((t) => t !== kind);
@@ -336,8 +720,9 @@ function Badges({ plugin }) {
   </div>`;
 }
 
-function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen }) {
+function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen, onShowDetail, onChipClick }) {
   const Icon = iconOf(plugin.icon);
+  const perms = plugin.permissions?.api || [];
   return html`<article className=${"as-card " + (plugin.enabled ? "" : "is-disabled") + (plugin.loadError ? " has-error" : "")}>
     <div className="as-card-top">
       <div className="as-card-icon"><${Icon} size=${18} aria-hidden=${true}/></div>
@@ -354,6 +739,7 @@ function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen }) {
     </div>
     ${plugin.description ? html`<div className="as-card-desc">${plugin.description}</div>` : null}
     <${Badges} plugin=${plugin}/>
+    <${PermissionSummary} plugin=${plugin} onChipClick=${(e) => onChipClick && onChipClick(e, plugin)}/>
     ${plugin.loadError ? html`<div className="as-card-desc" style=${{ color: "#f85149" }}>${plugin.loadError}</div>` : null}
     <div className="as-card-actions">
       <button
@@ -363,6 +749,12 @@ function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen }) {
         title=${plugin.enabled ? `Open ${plugin.name} in a new tab` : `Enable ${plugin.name} first`}
         onClick=${() => onOpen(plugin)}
       ><${ExternalLink} size=${12} aria-hidden=${true}/> Open</button>
+      <button
+        type="button"
+        className="as-btn"
+        title="View permissions and details"
+        onClick=${() => onShowDetail(plugin)}
+      ><${ShieldCheck} size=${12} aria-hidden=${true}/> Permissions${perms.length ? html` (${perms.length})` : null}</button>
       <button
         type="button"
         className="as-btn"
@@ -379,34 +771,53 @@ function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen }) {
   </article>`;
 }
 
-function PluginRowList({ plugin, onToggle, onEdit, onRemove, onOpen }) {
+function PluginRowList({ plugin, expanded, onToggleExpand, onToggle, onEdit, onRemove, onOpen, onChipClick }) {
   const Icon = iconOf(plugin.icon);
-  return html`<div className=${"as-row " + (plugin.enabled ? "" : "is-disabled") + (plugin.required ? "is-required " : "")}>
-    <div className="as-row-icon"><${Icon} size=${16} aria-hidden=${true}/></div>
-    <div>
-      <div className="as-row-name">${plugin.name || plugin.id}</div>
-      <div className="as-row-id">${plugin.id} · v${plugin.version}</div>
-    </div>
-    <div className="as-row-tags">
-      ${(plugin.tags || []).slice(0, 6).map((t) => html`<span key=${t} className="as-badge">${t}</span>`)}
-    </div>
-    <div className="as-row-actions">
-      <${ToggleSwitch}
-        checked=${plugin.enabled}
-        disabled=${plugin.required}
-        onChange=${() => onToggle(plugin)}
-        label=${plugin.enabled ? `Disable ${plugin.name}` : `Enable ${plugin.name}`}
-      />
+  const perms = plugin.permissions?.api || [];
+  return html`<div className=${"as-row-wrap " + (plugin.enabled ? "" : "is-disabled") + (plugin.required ? "is-required " : "")}>
+    <div className=${"as-row " + (expanded ? "is-expanded " : "")}>
       <button
         type="button"
-        className="as-btn primary"
-        disabled=${!plugin.enabled}
-        title=${plugin.enabled ? `Open ${plugin.name} in a new tab` : `Enable ${plugin.name} first`}
-        onClick=${() => onOpen(plugin)}
-      ><${ExternalLink} size=${12} aria-hidden=${true}/></button>
-      <button type="button" className="as-btn" disabled=${plugin.required} onClick=${() => onEdit(plugin)}><${Pencil} size=${12} aria-hidden=${true}/></button>
-      <button type="button" className="as-btn danger" disabled=${plugin.builtin} onClick=${() => onRemove(plugin)}><${Trash2} size=${12} aria-hidden=${true}/></button>
+        className="as-row-chevron"
+        aria-expanded=${expanded ? "true" : "false"}
+        aria-label=${expanded ? `Collapse ${plugin.name} permissions` : `Expand ${plugin.name} permissions`}
+        title=${expanded ? "Collapse" : "Show permissions"}
+        onClick=${() => onToggleExpand(plugin.id)}
+      ><${expanded ? ChevronDown : ChevronRight} size=${14} aria-hidden=${true}/></button>
+      <div className="as-row-icon"><${Icon} size=${16} aria-hidden=${true}/></div>
+      <div className="as-row-name-cell">
+        <div className="as-row-name">${plugin.name || plugin.id}</div>
+        <div className="as-row-id">${plugin.id} · v${plugin.version}</div>
+      </div>
+      <div className="as-row-tags">
+        ${(plugin.tags || []).slice(0, 6).map((t) => html`<span key=${t} className="as-badge">${t}</span>`)}
+      </div>
+      <div className="as-row-perms">
+        <${PermissionSummary} plugin=${plugin} onChipClick=${(e) => { e?.stopPropagation?.(); onChipClick && onChipClick(e, plugin); }}/>
+      </div>
+      <div className="as-row-actions">
+        <${ToggleSwitch}
+          checked=${plugin.enabled}
+          disabled=${plugin.required}
+          onChange=${() => onToggle(plugin)}
+          label=${plugin.enabled ? `Disable ${plugin.name}` : `Enable ${plugin.name}`}
+        />
+        <button
+          type="button"
+          className="as-btn primary"
+          disabled=${!plugin.enabled}
+          title=${plugin.enabled ? `Open ${plugin.name} in a new tab` : `Enable ${plugin.name} first`}
+          onClick=${() => onOpen(plugin)}
+        ><${ExternalLink} size=${12} aria-hidden=${true}/></button>
+        <button type="button" className="as-btn" disabled=${plugin.required} onClick=${() => onEdit(plugin)}><${Pencil} size=${12} aria-hidden=${true}/></button>
+        <button type="button" className="as-btn danger" disabled=${plugin.builtin} onClick=${() => onRemove(plugin)}><${Trash2} size=${12} aria-hidden=${true}/></button>
+      </div>
     </div>
+    ${expanded
+      ? html`<div className="as-row-expand">
+          <${PermissionPanel} plugin=${plugin}/>
+        </div>`
+      : null}
   </div>`;
 }
 
@@ -472,13 +883,21 @@ function App() {
   const store = useStore();
   const { onToggle, onRemove, onOpen, onSubmit } = useActions(store);
   const editing = store.modal?.mode === "edit" ? store.modal.plugin : null;
+  // Clicking a permission chip in a card/row sets the search filter to
+  // "perm:<path>" — the same syntax the user can type manually. The
+  // filter is a single source of truth, so the visible set updates and
+  // the tag chips stay consistent without any extra state.
+  const onChipClick = (_event, plugin) => {
+    const first = plugin?.permissions?.api?.[0];
+    store.setQuery(first ? `perm:${first}` : "perm:");
+  };
   return html`<div className="as-bar">
     <h1><${Store} size=${16} aria-hidden=${true}/> App Store</h1>
     <label className="as-search">
       <${Search} size=${14} aria-hidden=${true}/>
       <input
         type="search"
-        placeholder="Search plugins by name or id"
+        placeholder="Search by name, id or use perm:<api-path> to filter by permission"
         value=${store.query}
         onInput=${(e) => store.setQuery(e.target.value)}
       />
@@ -505,6 +924,11 @@ function App() {
     ><${Plus} size=${14} aria-hidden=${true}/> Install</button>
   </div>
   <${TagChips} allTags=${store.allTags} activeTags=${store.activeTags} onToggle=${store.toggleTag}/>
+  ${store.query.startsWith("perm:") ? html`<div className="as-perm-banner">
+    <${KeyRound} size=${12} aria-hidden=${true}/>
+    <span>Filtering by permission: <code>${store.query}</code></span>
+    <button type="button" className="as-perm-banner-clear" onClick=${() => store.setQuery("")}>Clear</button>
+  </div>` : null}
   <div className="as-scroll">
     ${store.plugins.length === 0
       ? html`<div className="as-empty">
@@ -520,7 +944,7 @@ function App() {
         ? html`<div className="as-empty">
             <${Search} size=${28} aria-hidden=${true}/>
             <p>No plugins match the current filters.</p>
-            <p className="as-empty-hint">Try clearing tags or the search box.</p>
+            <p className="as-empty-hint">Try clearing tags or the permission filter.</p>
           </div>`
         : store.view === "grid"
           ? html`<div className="as-grid">
@@ -531,16 +955,21 @@ function App() {
                 onEdit=${(p) => store.setModal({ mode: "edit", plugin: p })}
                 onRemove=${onRemove}
                 onOpen=${onOpen}
+                onShowDetail=${store.openDetail}
+                onChipClick=${onChipClick}
               />`)}
             </div>`
           : html`<div className="as-list">
               ${store.visible.map((plugin) => html`<${PluginRowList}
                 key=${plugin.id}
                 plugin=${plugin}
+                expanded=${store.expandedRows.has(plugin.id)}
+                onToggleExpand=${store.toggleExpandedRow}
                 onToggle=${onToggle}
                 onEdit=${(p) => store.setModal({ mode: "edit", plugin: p })}
                 onRemove=${onRemove}
                 onOpen=${onOpen}
+                onChipClick=${onChipClick}
               />`)}
             </div>`}
   </div>
@@ -550,6 +979,11 @@ function App() {
     plugin=${editing}
     onCancel=${() => store.setModal(null)}
     onSubmit=${onSubmit}
+  />` : null}
+  ${store.detailPlugin ? html`<${PluginDetailModal}
+    plugin=${store.detailPlugin}
+    onClose=${store.closeDetail}
+    onOpen=${onOpen}
   />` : null}
   `;
 }
