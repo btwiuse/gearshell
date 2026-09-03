@@ -319,13 +319,16 @@ registerSyncPlugins();
 getPluginBootPromise();
 
 // Initialise the Files submodule with the helpers it needs at
-// runtime. The panel talks to the host through two deps: the
-// GearShell.fs wrapper (every read/write operation, including mount
-// lifecycle — requestLocalDir / reconnect / restoreMounts / unmount /
-// remount), and a kernel-ready callback (re-run the initial refresh
-// + mount restore once the wanix kernel boots). The picker itself
-// stays in the host because the File System Access API requires a
-// real user gesture — workspace-fs-api.js owns that side.
+// runtime. The panel talks to the host through three deps: the
+// GearShell.fs wrapper (every read/write operation), a kernel-ready
+// callback (re-run the initial refresh + mount restore once the wanix
+// kernel boots), and the mount kernel accessor (the wanix kernel
+// handle the localdir mount module needs to bind/unbind namespaces).
+// The mount chain is intentionally direct-call today: routing it
+// through GearShell.fs.* in round 53 turned out to break the bind in
+// practice (see memory/files-panel.md "Mount-chain API attempt +
+// rollback"), so the picker + bindLocalDir live in `files-mounts.js`
+// and the panel keeps a kernel handle for that surface.
 initFiles({
   // `getFs` is the Files panel's filesystem surface — today it just
   // wraps window.GearShell.fs; an iframe incarnation will swap in a
@@ -346,6 +349,11 @@ initFiles({
     wanixSystem?.addEventListener("ready", handler);
     return () => wanixSystem?.removeEventListener("ready", handler);
   },
+  // The wanix kernel handle itself, kept host-only because the mount
+  // module needs it to call _setupNamespace (the only filesystem-level
+  // capability the Files panel retains after the round-53 mount-API
+  // rollback).
+  getMountKernel: () => wanixSystem?._kernel,
   rememberOpenPanel,
   HOME,
   loadConfig,

@@ -174,6 +174,8 @@ function useFilesPanelActionsWire(panel, fileInputRef) {
   Object.assign(
     panel,
     useFilesPanelMounts({
+      getKernel: useCallback(() => filesDep("getMountKernel")?.(), []),
+      getRoot: panel.getFs,
       getFs: panel.getFs,
       path: panel.path,
       setStatus: panel.setStatus,

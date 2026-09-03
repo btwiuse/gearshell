@@ -101,61 +101,84 @@ export async function bindLocalDir(handle, dst, getKernel) {
 
 // --- React state for the Files panel ---
 //
-// The panel hands in UI callbacks (status text, path navigation,
-// directory refresh); the hook owns the local mount list, restore
-// tracking, and dispatches mount lifecycle through `GearShell.fs.*`.
+// The panel hands in stable accessors (getKernel, getRoot) and UI
+// callbacks (status text, path navigation, directory refresh); the hook
+// owns mount lifecycle: restore on kernel-ready, pick/bind, unmount,
+// and reconnect after the user re-grants a lost permission.
 //
-// Every kernel/picker call is now concentrated in workspace-fs-api:
-//   `fs.requestLocalDir()`     picker + bind + IDB persist
-//   `fs.reconnect(id)`         re-picker + bind for a single mount
-//   `fs.restoreMounts()`       boot-time silent re-bind
-//   `fs.unmount(id)`           unbind + IDB drop
-//   `fs.remount(id)`           silent queryPermission + rebind
-//
-// This module is now a UI shim: state, list rendering, and the
-// dispatch over the GearShell API surface. The Files panel does not
-// need a kernel handle.
+// **Why not `GearShell.fs.*` for mount lifecycle?** The mount flow
+// runs `window.showDirectoryPicker` (which must run inside a real
+// user gesture on the top-level document) and then calls
+// `kernel._setupNamespace(...)` to insert the bind into the wanix
+// namespace. Rerouting this through `GearShell.fs.requestLocalDir` etc.
+// — even though those wrappers do exist in `workspace-fs-api.js` — was
+// tried in round 53 and empirically did not work from the in-page Files
+// panel: the picker came up but the resulting bind never showed up in
+// the kernel, and the panel was left in an inconsistent state. Until
+// that is diagnosed (see memory/files-panel.md "Mount-chain API
+// attempt + rollback"), the panel calls the kernel directly here. The
+// same `fs.*` mount methods stay in the public API for non-Files callers
+// (playground catalog, future agents) and may be revisited later.
 
 async function restoreStoredMounts(ctx) {
-  const { setMounts } = ctx;
-  try {
-    const result = await window.GearShell?.fs?.restoreMounts?.();
-    if (result && Array.isArray(result.mounts)) {
-      // restoreMounts returns metadata only (no handles). Re-read the
-      // IDB-backed store so the panel can keep the full record set in
-      // local state (the volume list shows handle-backed fields like
-      // mounted/permission).
-      const stored = await loadStoredMounts();
-      const live = new Map(stored.map((m) => [m.id, m]));
-      setMounts(
-        result.mounts.map((m) => {
-          const full = live.get(m.id);
-          return full ? { ...full, mounted: m.mounted } : { ...m };
-        }),
-      );
-      return;
+  const { getKernel, setMounts } = ctx;
+  const stored = await loadStoredMounts();
+  const kernel = getKernel();
+  const next = [];
+  for (const mount of stored) {
+    let granted = false;
+    if (typeof mount.handle?.queryPermission === "function") {
+      granted = (await mount.handle.queryPermission({
+        mode: mount.mode || "readwrite",
+      })) === "granted";
+    } else {
+      granted = Boolean(mount.handle);
     }
-  } catch (err) {
-    console.error("restoreMounts:", err);
+    if (granted && kernel?.isReady) {
+      try {
+        await bindLocalDir(mount.handle, mount.dst, getKernel);
+        next.push({ ...mount, mounted: true });
+        continue;
+      } catch (err) {
+        console.error("restore mount", mount.dst, err);
+      }
+    }
+    next.push({ ...mount, mounted: false });
   }
-  setMounts(await loadStoredMounts());
+  setMounts(next);
 }
 
 async function handleMountLocalDir(ctx) {
-  const { setMounts, onStatus, onNavigate, onRefresh } = ctx;
+  const {
+    getKernel,
+    setMounts,
+    onStatus,
+    onNavigate,
+    onRefresh,
+  } = ctx;
+  if (typeof window.showDirectoryPicker !== "function") {
+    onStatus("File System Access API is not supported in this browser.");
+    return;
+  }
   try {
-    const result = await window.GearShell?.fs?.requestLocalDir?.();
-    if (!result || !result.mount) {
-      onStatus("File System Access API is not supported in this browser.");
-      return;
-    }
-    // Pull the freshly-stored record so the local list has the full
-    // handle-backed entry (requestLocalDir returns metadata only).
+    const id = `gear-mount-${Date.now().toString(36)}-${
+      Math.random().toString(36).slice(2, 7)
+    }`;
+    const handle = await window.showDirectoryPicker({
+      mode: "readwrite",
+      id,
+    });
+    const name = sanitizeMountName(handle.name);
     const stored = await loadStoredMounts();
-    const fresh = stored.find((m) => m.id === result.mount.id);
-    if (fresh) setMounts((prev) => [...prev, fresh]);
-    onStatus(`Mounted local directory "${result.mount.name}" at /${result.mount.dst}`);
-    onNavigate(result.mount.dst);
+    const used = new Set(stored.map((m) => m.dst));
+    let dst = `mnt/${name}`;
+    for (let i = 2; used.has(dst); i++) dst = `mnt/${name}-${i}`;
+    await bindLocalDir(handle, dst, getKernel);
+    const mount = { id, name, dst, mode: "readwrite", handle, mounted: true };
+    await storeMount(mount);
+    setMounts((prev) => [...prev, mount]);
+    onStatus(`Mounted local directory "${name}" at /${dst}`);
+    onNavigate(dst);
     onRefresh();
   } catch (err) {
     if (err?.name === "AbortError") return; // user dismissed the picker
@@ -166,6 +189,7 @@ async function handleMountLocalDir(ctx) {
 
 async function unmountLocalDir(ctx, mount) {
   const {
+    getRoot,
     setMounts,
     currentPath,
     parentPath,
@@ -174,9 +198,8 @@ async function unmountLocalDir(ctx, mount) {
     onStatus,
   } = ctx;
   try {
-    // Delegate the wanix unbind + IDB drop to GearShell.fs.unmount so
-    // the bind graph is the only source of truth for what is mounted.
-    await window.GearShell?.fs?.unmount?.(mount.id);
+    if (mount.mounted) await getRoot().unbind(mount.dst, mount.dst);
+    await removeStoredMount(mount.id);
     setMounts((prev) => prev.filter((m) => m.id !== mount.id));
     if (
       currentPath === mount.dst || currentPath.startsWith(`${mount.dst}/`)
@@ -193,22 +216,29 @@ async function unmountLocalDir(ctx, mount) {
 }
 
 async function reconnectLocalDir(ctx, mount) {
-  const { setMounts, onStatus, onNavigate, onRefresh } = ctx;
+  const {
+    getKernel,
+    setMounts,
+    onStatus,
+    onNavigate,
+    onRefresh,
+  } = ctx;
+  if (typeof window.showDirectoryPicker !== "function") {
+    onStatus("File System Access API is not supported in this browser.");
+    return;
+  }
   try {
-    const result = await window.GearShell?.fs?.reconnect?.(mount.id);
-    if (!result || !result.mount) {
-      onStatus("File System Access API is not supported in this browser.");
-      return;
-    }
-    const stored = await loadStoredMounts();
-    const fresh = stored.find((m) => m.id === mount.id);
-    if (fresh) {
-      setMounts((prev) =>
-        prev.map((m) => (m.id === mount.id ? fresh : m))
-      );
-    }
-    onStatus(`Reconnected local directory "${result.mount.name}".`);
-    onNavigate(result.mount.dst);
+    const handle = await window.showDirectoryPicker({
+      mode: mount.mode || "readwrite",
+      id: mount.id,
+    });
+    const name = sanitizeMountName(handle.name);
+    await bindLocalDir(handle, mount.dst, getKernel);
+    const updated = { ...mount, name, handle, mounted: true };
+    await storeMount(updated);
+    setMounts((prev) => prev.map((m) => (m.id === mount.id ? updated : m)));
+    onStatus(`Reconnected local directory "${name}".`);
+    onNavigate(mount.dst);
     onRefresh();
   } catch (err) {
     if (err?.name === "AbortError") return;
@@ -221,10 +251,7 @@ export function useLocalDirMounts(props) {
   const ctx = { ...props, mounts, setMounts };
   const restoreMounts = useCallback(
     () => restoreStoredMounts(ctx),
-    // The hook only ever calls into GearShell.fs.* which is process-global;
-    // deps on the UI callbacks keep the restoration aligned with the
-    // latest status/navigate/refresh setters the panel supplies.
-    [ctx.onStatus, ctx.onNavigate, ctx.onRefresh],
+    [ctx.getKernel],
   );
   const openMount = (mount) => {
     if (!mount.mounted) {

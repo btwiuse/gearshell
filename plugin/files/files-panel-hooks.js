@@ -215,9 +215,11 @@ function useFilesPanelContextMenu({
 }
 
 function useFilesPanelMounts(
-  { getFs, path, setStatus, navigateTo, refresh },
+  { getKernel, getRoot, getFs, path, setStatus, navigateTo, refresh },
 ) {
   return useLocalDirMounts({
+    getKernel,
+    getRoot,
     getFs,
     currentPath: path,
     parentPath: filesystemPathParent,

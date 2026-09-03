@@ -1983,6 +1983,66 @@ memory 待同步:
 - `memory/plugin-iframe-migration.md` Files Tier1 状态节同步
 - `memory/Home.md` Latest rounds 加 round 62 条目
 
+## 五十四、Files mount 链回滚 + 调查记录(2026-09-03,本轮)
+
+**用户实测反馈**:round 五十三 把 Files 面板的 mount 链也搬上
+`GearShell.fs.*` 后,**Mount 按钮 picker 出来、用户选了目录,但 bind 没
+落到 kernel** —— `/mnt/<name>` 在面板里能看到 entry 但 VFS ls 不到。
+本轮把 mount 链回滚到原来的 direct kernel/picker 路径。
+
+### 回滚内容
+
+- `plugin/files-mounts.js` —— `useLocalDirMounts` / `restoreStoredMounts` /
+  `handleMountLocalDir` / `reconnectLocalDir` / `unmountLocalDir` 全部回滚
+  到 round 五十二 之前的 direct-kernel 版本(直接调 `showDirectoryPicker`
+  + `bindLocalDir` + `_setupNamespace`)。
+- `plugin/files/files-registry.js` —— `getMountKernel` 重新列为 host-only dep。
+- `plugin/files/files.js` —— `useFilesPanelActionsWire` 重新传
+  `getKernel: useCallback(() => filesDep("getMountKernel")?.(), [])`。
+- `plugin/files/files-panel-hooks.js` —— `useFilesPanelMounts` 重新接受
+  `getKernel` + `getRoot` 入参。
+- `app.js` —— `initFiles` 重新加回 `getMountKernel: () => wanixSystem?._kernel`。
+
+### 保留不变(API 层已正确,只是 panel 走不通)
+
+- `workspace-fs-api.js` 六个 mount API 全部保留:`fs.mounts` /
+  `fs.requestLocalDir` / `fs.reconnect` / `fs.remount` / `fs.restoreMounts` /
+  `fs.unmount`。Playground catalog 调试入口保留;docs 页面保留。**Files
+  面板不再调它们**,但 agent / 未来 iframe / 其他 builtin 仍然能用。
+- `fs.readFile` / `writeFile` / `readDir` / `stat` / `mkdir` / `rm` /
+  `rename` / `exists` / `watch` / `unwatch` —— round 五十二已落地的 VFS API,
+  全部正常工作,Files 面板继续用。
+
+### 调查过的嫌疑(都没确认是 root cause)
+
+1. **`safe()` 包装**:不会把 async 函数降级成同步值,call 端 `await` 拿到
+   Promise 正确结果。✅ 排除。
+2. **`wanixSystem` ESM live binding**:live binding 应该正常工作。✅ 排除。
+3. **FSA user gesture 跨 API 边界丢**(最可疑):`showDirectoryPicker`
+   要求 transient user activation 在 stack frame 上;`fs.requestLocalDir`
+   是 async function,内部 `await loadStoredMounts()` 之后再调 picker,
+   跨 micro-task 可能让 picker 看到的 stack frame 不再是用户点击的那一
+   个。Picker 仍能弹(很多浏览器宽容),但后续 bind 的 state machine 可能
+   受 activation window 影响。
+4. **call stack 太深 / event loop 优先级**:`safe(asyncFn)` →
+   `bindLocalDir` → `_setupNamespace`,三层 async 可能让 bind 写入的 state
+   在 panel `refresh()` 时还没生效,导致列里看不到。
+
+### 留给未来重试
+
+如果将来想重做 mount API 化,先诊断清楚:
+- 抓 picker 失败 / 失败位置 / `_setupNamespace` 的 return value / 错误堆栈
+- 区分三个分支:FSA gesture 跨 API 边界丢 / kernel bind 实际成功但 Files
+  列拿不到 / IDB 持久化失败
+- 候选解法:把 `requestLocalDir` 拆 picker / persist / bind 三阶段,让
+  panel 自己控制激活时序;或者 fs 层只暴露纯数据操作(`mounts.list` /
+  `unbind` / `queryPermission`),picker 留 host-only 给 panel 自己
+
+memory 已同步:`memory/files-panel.md` 末尾新增
+「Mount-chain API attempt + rollback(2026-09-03)」 节,详细列出
+「哪些 API 状态」「调查过的嫌疑路径」「当前 host-only 边界」
+「留给未来重试」「改动文件清单」。
+
 ## 五十二、App Store 权限披露 + 按权限过滤(2026-09-03)
 
 ### 动机
