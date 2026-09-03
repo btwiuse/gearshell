@@ -282,7 +282,7 @@ const PANEL_ADDERS = {
     addTerminalPanel(api, group, options?.profile),
   terminal: (api, group, options) =>
     addTerminalPanel(api, group, options?.profile),
-  "workspace-task": addWorkspaceTaskPanel,
+  "workspace-task": (api, group) => addWorkspaceTaskPanel(api, group),
 };
 
 function addPanelByComponent(api, component, group, options) {
@@ -307,7 +307,7 @@ function addPanelByComponent(api, component, group, options) {
     }).id;
   }
   const adder = PANEL_ADDERS[component];
-  if (adder) return adder(api, targetGroup);
+  if (adder) return adder(api, targetGroup, options);
   // Plugin panels register with the kernel (plugins.js); the generic
   // opener mints `${component}-<n>` ids exactly like the built-ins.
   const pluginPanel = openPluginPanel(api, component, targetGroup);

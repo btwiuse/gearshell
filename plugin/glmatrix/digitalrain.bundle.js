@@ -2815,10 +2815,10 @@ $packages["runtime"] = (function() {
 	return $pkg;
 })();
 $packages["github.com/btwiuse/digitalrain"] = (function() {
-	var $pkg = {}, $init, js, Duration, DigitalRain, waterDrop, GlyphCanvas, ptrType, sliceType, sliceType$1, funcType, ptrType$1, sliceType$2, ptrType$2, ptrType$3, funcType$1, sliceType$3, mapType, mapType$1, lowGlyphCanvases, highGlyphCanvases, backgrounds, overlap, githubLinkColor, githubLinkOverColor, githubLink, level1Cols, level2Cols, index, main, itoa, ftoa, randi, NewDigitalRain, shortLink, NewGlyphCanvas;
+	var $pkg = {}, $init, js, Duration, DigitalRain, waterDrop, GlyphCanvas, ptrType, sliceType, sliceType$1, funcType, ptrType$1, sliceType$2, ptrType$2, ptrType$3, funcType$1, sliceType$3, mapType, mapType$1, lowGlyphCanvases, highGlyphCanvases, backgrounds, overlap, level1Cols, level2Cols, index, main, itoa, ftoa, randi, NewDigitalRain, NewGlyphCanvas;
 	js = $packages["github.com/gopherjs/gopherjs/js"];
 	Duration = $newType(8, $kindFloat64, "main.Duration", true, "github.com/btwiuse/digitalrain", true, null);
-	DigitalRain = $newType(0, $kindStruct, "main.DigitalRain", true, "github.com/btwiuse/digitalrain", true, function(parent_, canvas_, ctx_, width_, height_, ratio_, timestamp_, lowGlyphCanvas_, highGlyphCanvas_, drops_, linkover_, screenCols_, minSpeed_, maxSpeed_, brightness_, Clicked_) {
+	DigitalRain = $newType(0, $kindStruct, "main.DigitalRain", true, "github.com/btwiuse/digitalrain", true, function(parent_, canvas_, ctx_, width_, height_, ratio_, timestamp_, lowGlyphCanvas_, highGlyphCanvas_, drops_, screenCols_, minSpeed_, maxSpeed_, brightness_, Clicked_) {
 		this.$val = this;
 		if (arguments.length === 0) {
 			this.parent = null;
@@ -2831,7 +2831,6 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 			this.lowGlyphCanvas = ptrType.nil;
 			this.highGlyphCanvas = ptrType.nil;
 			this.drops = sliceType$2.nil;
-			this.linkover = false;
 			this.screenCols = 0;
 			this.minSpeed = 0;
 			this.maxSpeed = 0;
@@ -2849,7 +2848,6 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 		this.lowGlyphCanvas = lowGlyphCanvas_;
 		this.highGlyphCanvas = highGlyphCanvas_;
 		this.drops = drops_;
-		this.linkover = linkover_;
 		this.screenCols = screenCols_;
 		this.minSpeed = minSpeed_;
 		this.maxSpeed = maxSpeed_;
@@ -2977,7 +2975,7 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 		};
 		NewDigitalRain = function NewDigitalRain$1(parent, screenCols, minSpeed, maxSpeed, brightness) {
 			var brightness, err, maxSpeed, minSpeed, parent, rain, screenCols;
-			rain = new DigitalRain.ptr(parent, null, null, 0, 0, 0, 0, ptrType.nil, ptrType.nil, sliceType$2.nil, false, 0, 0, 0, 0, $throwNilPointerError);
+			rain = new DigitalRain.ptr(parent, null, null, 0, 0, 0, 0, ptrType.nil, ptrType.nil, sliceType$2.nil, 0, 0, 0, 0, $throwNilPointerError);
 			rain.screenCols = screenCols;
 			rain.minSpeed = minSpeed;
 			rain.maxSpeed = maxSpeed;
@@ -3054,37 +3052,15 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 			r.canvas.addEventListener($externalize("click", $String), $externalize((function DigitalRain·layout·func1(ev) {
 					var {ev, $s, $r, $c} = $restore(this, {ev});
 					/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-					/* */ if (r.overLink($parseInt(ev.x) >> 0, $parseInt(ev.y) >> 0)) { $s = 1; continue; }
+					/* */ if (!(r.Clicked === $throwNilPointerError)) { $s = 1; continue; }
 					/* */ $s = 2; continue;
-					/* if (r.overLink($parseInt(ev.x) >> 0, $parseInt(ev.y) >> 0)) { */ case 1:
-						$global.location = $externalize(githubLink, $String);
-						$s = 3; continue;
-					/* } else { */ case 2:
-						/* */ if (!(r.Clicked === $throwNilPointerError)) { $s = 4; continue; }
-						/* */ $s = 5; continue;
-						/* if (!(r.Clicked === $throwNilPointerError)) { */ case 4:
-							$r = r.Clicked(); /* */ $s = 6; case 6: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-						/* } */ case 5:
-					/* } */ case 3:
+					/* if (!(r.Clicked === $throwNilPointerError)) { */ case 1:
+						$r = r.Clicked(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+					/* } */ case 2:
 					$s = -1; return;
 					/* */ } return; } var $f = {$blk: DigitalRain·layout·func1, $c: true, $r, ev, $s};return $f;
 				}), funcType$1));
-			r.canvas.addEventListener($externalize("mousemove", $String), $externalize((function DigitalRain·layout·func2(ev) {
-					var ev;
-					if (r.overLink($parseInt(ev.x) >> 0, $parseInt(ev.y) >> 0)) {
-						r.canvas.style.cursor = $externalize("pointer", $String);
-						r.linkover = true;
-					} else {
-						r.canvas.style.cursor = $externalize("default", $String);
-						r.linkover = false;
-					}
-				}), funcType$1));
 			r.loop(r.timestamp);
-		};
-		$ptrType(DigitalRain).prototype.overLink = function overLink(x, y) {
-			var r, x, y;
-			r = this;
-			return x > (((r.width / r.ratio >> 0)) - 320 >> 0) && y > (((r.height / r.ratio >> 0)) - 50 >> 0);
 		};
 		$ptrType(DigitalRain).prototype.dropWaterAtCol = function dropWaterAtCol(col, speed, length, start$1, created) {
 			var _r, col, created, i, length, r, speed, start$1, wd, x;
@@ -3166,49 +3142,8 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 				r.ctx.restore();
 			}
 		};
-		shortLink = function shortLink$1(link) {
-			var i, link;
-			i = 0;
-			while (true) {
-				if (!(i < link.length)) { break; }
-				if ((link.charCodeAt(i) === 58) && (i + 2 >> 0) < link.length && (link.charCodeAt((i + 1 >> 0)) === 47) && (link.charCodeAt((i + 2 >> 0)) === 47)) {
-					return $substring(link, (i + 3 >> 0));
-				}
-				i = i + (1) >> 0;
-			}
-			return link;
-		};
-		$ptrType(DigitalRain).prototype.drawTitle = function drawTitle(text, color, fontSize, y) {
-			var color, fontSize, ny, pad, r, text, x, y;
-			r = this;
-			ny = y + (fontSize * 1.5);
-			pad = 15 * r.ratio;
-			x = r.width - pad;
-			y = r.height - pad - y;
-			r.ctx.save();
-			r.ctx.font = $externalize(itoa(((fontSize >> 0))) + "px Menlo, Consolas, Monospace, Helvetica, Arial, Sans-Serif", $String);
-			r.ctx.textAlign = $externalize("right", $String);
-			r.ctx.lineWidth = 0;
-			r.ctx.shadowColor = $externalize(color, $String);
-			r.ctx.shadowBlur = (fontSize);
-			r.ctx.fillStyle = $externalize(color, $String);
-			r.ctx.fillText($externalize(text, $String), x, y);
-			r.ctx.restore();
-			return ny;
-		};
-		$ptrType(DigitalRain).prototype.drawTitles = function drawTitles() {
-			var r, y;
-			r = this;
-			y = 0;
-			if (r.linkover) {
-				y = r.drawTitle(shortLink(githubLink), githubLinkOverColor, 15 * r.ratio, y);
-			} else {
-				y = r.drawTitle(shortLink(githubLink), githubLinkColor, 15 * r.ratio, y);
-			}
-		};
 		$ptrType(DigitalRain).prototype.loop = function loop(timestamp) {
-			var _i, _r, _r$1, _r$2, _r$3, _ref, age, brightness, drop, drops, elapsed, gbrightness, gcount, gl, glyph, i, r, ri, ri$1, row, timestamp, x, x$1, $deferred;
-			/* */ var $err = null; try { $deferred = []; $curGoroutine.deferStack.push($deferred);
+			var _i, _r, _r$1, _r$2, _r$3, _ref, age, brightness, drop, drops, elapsed, gbrightness, gcount, gl, glyph, i, r, ri, ri$1, row, timestamp, x, x$1;
 			r = this;
 			if ((timestamp === 0) || (r.timestamp === 0)) {
 				r.timestamp = timestamp;
@@ -3218,7 +3153,6 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 			r.timestamp = timestamp;
 			r.dropRandomWaterDrop(timestamp);
 			r.ctx.clearRect(0, 0, r.width, r.height);
-			$deferred.push([$methodVal(r, "drawTitles"), []]);
 			drops = sliceType$2.nil;
 			_ref = r.drops;
 			_i = 0;
@@ -3265,7 +3199,6 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 				_i++;
 			}
 			r.drops = drops;
-			/* */ } catch(err) { $err = err; } finally { $callDeferred($deferred, $err); }
 		};
 		NewGlyphCanvas = function NewGlyphCanvas$1(color) {
 			var _1, _i, _ref, _rune, c, cellSize, col, color, ctx, fontSize, glyphCanvas, i, i$1, row;
@@ -3339,9 +3272,9 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 			}
 			return my;
 		};
-		ptrType$2.methods = [{prop: "start", name: "start", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([], [$error], false)}, {prop: "layout", name: "layout", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([], [], false)}, {prop: "overLink", name: "overLink", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([$Int, $Int], [$Bool], false)}, {prop: "dropWaterAtCol", name: "dropWaterAtCol", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([$Int, $Float64, $Int, $Float64, Duration], [], false)}, {prop: "dropRandomWaterDrop", name: "dropRandomWaterDrop", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([Duration], [], false)}, {prop: "maxRows", name: "maxRows", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([], [$Int], false)}, {prop: "drawGlyphAt", name: "drawGlyphAt", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([$Int, $Int, $Float64, $Float64, $Bool], [], false)}, {prop: "drawGlyphElAt", name: "drawGlyphElAt", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([ptrType, $Int, $Int, $Float64, $Float64], [], false)}, {prop: "drawTitle", name: "drawTitle", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([$String, $String, $Float64, $Float64], [$Float64], false)}, {prop: "drawTitles", name: "drawTitles", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([], [], false)}, {prop: "loop", name: "loop", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([Duration], [], false)}];
+		ptrType$2.methods = [{prop: "start", name: "start", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([], [$error], false)}, {prop: "layout", name: "layout", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([], [], false)}, {prop: "dropWaterAtCol", name: "dropWaterAtCol", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([$Int, $Float64, $Int, $Float64, Duration], [], false)}, {prop: "dropRandomWaterDrop", name: "dropRandomWaterDrop", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([Duration], [], false)}, {prop: "maxRows", name: "maxRows", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([], [$Int], false)}, {prop: "drawGlyphAt", name: "drawGlyphAt", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([$Int, $Int, $Float64, $Float64, $Bool], [], false)}, {prop: "drawGlyphElAt", name: "drawGlyphElAt", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([ptrType, $Int, $Int, $Float64, $Float64], [], false)}, {prop: "drawTitle", name: "drawTitle", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([$String, $String, $Float64, $Float64], [$Float64], false)}, {prop: "loop", name: "loop", pkg: "github.com/btwiuse/digitalrain", typ: $funcType([Duration], [], false)}];
 		ptrType.methods = [{prop: "Glyph", name: "Glyph", pkg: "", typ: $funcType([$Int, $Int], [ptrType$3], false)}];
-		DigitalRain.init("github.com/btwiuse/digitalrain", [{prop: "parent", name: "parent", embedded: false, exported: false, typ: ptrType$3, tag: ""}, {prop: "canvas", name: "canvas", embedded: false, exported: false, typ: ptrType$3, tag: ""}, {prop: "ctx", name: "ctx", embedded: false, exported: false, typ: ptrType$3, tag: ""}, {prop: "width", name: "width", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "height", name: "height", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "ratio", name: "ratio", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "timestamp", name: "timestamp", embedded: false, exported: false, typ: Duration, tag: ""}, {prop: "lowGlyphCanvas", name: "lowGlyphCanvas", embedded: false, exported: false, typ: ptrType, tag: ""}, {prop: "highGlyphCanvas", name: "highGlyphCanvas", embedded: false, exported: false, typ: ptrType, tag: ""}, {prop: "drops", name: "drops", embedded: false, exported: false, typ: sliceType$2, tag: ""}, {prop: "linkover", name: "linkover", embedded: false, exported: false, typ: $Bool, tag: ""}, {prop: "screenCols", name: "screenCols", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "minSpeed", name: "minSpeed", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "maxSpeed", name: "maxSpeed", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "brightness", name: "brightness", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "Clicked", name: "Clicked", embedded: false, exported: true, typ: funcType, tag: ""}]);
+		DigitalRain.init("github.com/btwiuse/digitalrain", [{prop: "parent", name: "parent", embedded: false, exported: false, typ: ptrType$3, tag: ""}, {prop: "canvas", name: "canvas", embedded: false, exported: false, typ: ptrType$3, tag: ""}, {prop: "ctx", name: "ctx", embedded: false, exported: false, typ: ptrType$3, tag: ""}, {prop: "width", name: "width", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "height", name: "height", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "ratio", name: "ratio", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "timestamp", name: "timestamp", embedded: false, exported: false, typ: Duration, tag: ""}, {prop: "lowGlyphCanvas", name: "lowGlyphCanvas", embedded: false, exported: false, typ: ptrType, tag: ""}, {prop: "highGlyphCanvas", name: "highGlyphCanvas", embedded: false, exported: false, typ: ptrType, tag: ""}, {prop: "drops", name: "drops", embedded: false, exported: false, typ: sliceType$2, tag: ""}, {prop: "screenCols", name: "screenCols", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "minSpeed", name: "minSpeed", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "maxSpeed", name: "maxSpeed", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "brightness", name: "brightness", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "Clicked", name: "Clicked", embedded: false, exported: true, typ: funcType, tag: ""}]);
 		waterDrop.init("github.com/btwiuse/digitalrain", [{prop: "col", name: "col", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "row", name: "row", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "start", name: "start", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "speed", name: "speed", embedded: false, exported: false, typ: $Float64, tag: ""}, {prop: "glyphs", name: "glyphs", embedded: false, exported: false, typ: sliceType$3, tag: ""}, {prop: "spedup", name: "spedup", embedded: false, exported: false, typ: $Bool, tag: ""}, {prop: "created", name: "created", embedded: false, exported: false, typ: Duration, tag: ""}]);
 		GlyphCanvas.init("github.com/btwiuse/digitalrain", [{prop: "jso", name: "jso", embedded: false, exported: false, typ: ptrType$3, tag: ""}, {prop: "glyphs", name: "glyphs", embedded: false, exported: false, typ: mapType$1, tag: ""}]);
 	};
@@ -3353,9 +3286,6 @@ $packages["github.com/btwiuse/digitalrain"] = (function() {
 		highGlyphCanvases = sliceType.nil;
 		backgrounds = sliceType$1.nil;
 		overlap = 0;
-		githubLinkColor = "rgba(107,165,184,.5)";
-		githubLinkOverColor = "rgba(107,165,184,1)";
-		githubLink = "http://github.com/tidwall/digitalrain";
 		level1Cols = 40;
 		level2Cols = 60;
 		index = 1;
