@@ -2180,3 +2180,88 @@ PNG。33 个全部 0 失败。
   能值得换 prompt 重跑,但 accent + 主体都识别得出,优先级低。
 - ⬜ **可插拔来源**:目前预览是静态 PNG;以后可以扩展成"优先
   插件自带的 og:image / screenshot,缺失再走 AI 生成"。
+
+## 五十四、App Store 预览图重做:真正的 app icons(2026-09-03)
+
+### 反馈
+
+第一轮"preview images"生成的是**装饰卡片**(device frame / panel UI /
+placeholder objects),不是图标。要求修正:
+- 必须**纯黑**(solid #000000),不是 navy 渐变
+- **单一 subject**,不要设备边框 / 窗口 / 卡片外壳
+- 不要中央小框包图标——要 subject 自己撑满画面
+- 不要纯 placeholder,要"简约大气,突出应用特点"
+- 生成**真正的 app icon**(让人一眼看出这 app 干嘛的)
+
+### 4 轮迭代
+
+**Pass 1**(初版)— 33 张卡片式 UI mockup,被否定。
+
+**Pass 2**(重写 prompt)— 加更严的 STYLE 约束:
+"pure flat black, no glow halo, no drop shadow, subject occupies ~60% of
+frame, single accent color"。Music / Files / Wagi Dog 这一轮出来非常
+好;但很多 subject 仍然太小(settings / runtime / home / group /
+glmatrix),还有一些带 glow halo(notes / default-page / spotlight)。
+
+**Pass 3**(13 张)— 把太小的 5 张 + 带 glow 的 4 张 + placeholder 的 4 张
+重跑,prompt 更明确"F"填"fill the entire frame, edge to edge"。多数修
+正到位,但 deck 被解读成 Discord 聊天气泡,widgetbot 渲染成 PlayStation
+手柄,widgetbot 太小,lucide-icons 还是偏小。
+
+**Pass 4**(10 张)— 修 deck / widgetbot / lucide-icons / bonsai / codigo /
+browser / app-store / crush-playground / launcher / spotlight。
+
+**Pass 5**(2 张)— 收尾:rv64 之前的 microchip 太小,terminal-frame 的 ">"
+被解读成一个像素大的点,最后两轮精确 prompt 修掉。
+
+最终 32 张(去掉无独立身份的 `iframe-template` 模板)全部可用。
+脚本拆成 4 个文件:`gen-app-store-previews.mjs` (全量) +
+`regen-weak-icons.mjs` / `-2.mjs` / `-3.mjs` (按 pass 增量修复)。
+
+### 设计决策
+
+- 每个图标 prompt **只换 subject + accent**,STYLE 段完全相同 —— 视觉
+  节奏统一。
+- 把 accent 颜色硬性写进 prompt(`#60a5fa` 等具体 hex),防止模型默认
+  渲成白色(第一轮失败模式)。
+- 加 "fill the entire frame" + "edge to edge" 防止 subject 太小。
+- 加 "No glow halo, no drop shadow" 防止模型自加 card silhouette。
+- iframe-template 故意没有生成——它只是模板,没有独立的图标身份,
+  fallback 走 lucide icon。
+
+### 最终图标清单(精选)
+
+- **Music**: 粉色八分音符 ♪
+- **Files**: 青色文件夹
+- **Settings**: 大蓝色齿轮
+- **Music / Files / Web Pet / W9y / Spotlight / Default-page / Playground
+  / Notes**: 单色实心图标,完美 accent
+- **Runtime**: 橙色同心圆 target
+- **Wagi Dog**: 真 3D 立体的 Shiba Dog 头像
+- **Crush**: 红粉 ASCII heart(像素方块组成)
+- **Rick Roll**: 复古磁带
+- **Terminal-frame**: 粗绿 ")"
+- **V86**: 立体 CPU 芯片
+- **Launcher**: 火箭
+- **Browser**: 蓝色 wireframe 地球
+- **Codigo**: 红色 "< >"
+- **Glmatrix**: 绿色片假名字符雨(5 列)
+- **Web Pet / Wagi Dog / Spotlight / Default-page**: 单主体,无 frame
+
+### 验证
+
+- 32/32 PNG 文件生成,平均 ~80 KB,1:1 比例
+- App Store grid 嵌入后,33 张卡片 32 张有图(剩下 iframe-template 走
+  fallback lucide 图标)
+- 滚动整个 catalog 全部 lazy-load 成功
+- 视觉对比第一版:卡片变图标,主体清晰,无设备边框,无中央 frame
+
+### 文件清单
+
+```
+plugin/app-store/previews/*.png (32 张)
+scripts/gen-app-store-previews.mjs
+scripts/regen-weak-icons.mjs
+scripts/regen-weak-icons-2.mjs
+scripts/regen-weak-icons-3.mjs
+```

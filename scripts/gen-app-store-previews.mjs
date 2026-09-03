@@ -1,15 +1,14 @@
 #!/usr/bin/env node
-// scripts/gen-app-store-previews.mjs — generate 1:1 preview images for
-// every App Store plugin via `mmx image generate`. Run from repo root:
-//   node scripts/gen-app-store-previews.mjs
-// Re-running overwrites the existing PNGs (the App Store UI just shows
-// whatever file exists on disk for a given plugin id, no caching).
+// scripts/gen-app-store-previews.mjs — generate 1:1 app-icon-style
+// preview images for every App Store plugin. This is the second pass;
+// the first produced decorative card art with device frames and
+// placeholder UI. This pass produces real app icons: solid black
+// background, single subject, lots of negative space, recognizable at
+// small sizes. Run from repo root:
 //
-// Every prompt follows the same visual recipe so the cards look like a
-// unified set: a stylized UI snapshot on a deep navy gradient with a
-// soft accent glow, framed by the plugin's own icon glyph. Only the
-// surface content (terminal text, music waveform, file tree, etc.)
-// changes per plugin.
+//   node scripts/gen-app-store-previews.mjs
+//
+// Re-runnable: each invocation overwrites the existing PNGs.
 
 import { spawn } from "node:child_process";
 import { mkdirSync, existsSync } from "node:fs";
@@ -19,188 +18,192 @@ const REPO = resolve(import.meta.dirname, "..");
 const OUT = resolve(REPO, "plugin/app-store/previews");
 mkdirSync(OUT, { recursive: true });
 
-// Common visual style prefix. The compositing rules at the end keep the
-// cards consistent: square framing, soft glow, dark backdrop, single
-// accent color that varies per plugin.
+// Common visual recipe — the *only* anchor every prompt shares. The
+// subject text differs per plugin; the rest is fixed so the catalog
+// reads as one set. Key constraints:
+//   - "pure black background, no gradient" keeps the canvas flat
+//   - "subject rendered in the specified accent color" prevents the
+//     model from defaulting to white (first pass problem)
+//   - "subject occupies ~60% of the frame" prevents tiny subjects
+//     (home-pass problem) AND prevents device-frame compositions
+//   - "no drop shadow, no glow halo, no surface reflection" prevents
+//     the rounded-card silhouette the model loves adding
 const STYLE = [
-  "Square 1:1 dark app preview card",
-  "deep navy gradient background (#0d1117 → #161b22)",
-  "soft cyan-purple accent glow on the edges",
-  "subtle grid texture, slightly blurred",
-  "rounded inner panel with a faint border",
-  "centered stylized UI mockup, no text labels",
-  "cinematic, high contrast, soft volumetric light",
-  "no human figures, no logos",
-  "no border watermarks",
+  "Pure flat black background, no gradient, no texture",
+  "Single centered subject, no frame, no window chrome, no device, no card outline",
+  "No drop shadow, no glow halo, no surface reflection, no floor",
+  "The subject is rendered only in the single accent color specified below",
+  "Subject occupies ~60% of the frame, lots of negative space",
+  "Minimal, clean geometric composition",
+  "No text, no labels, no watermarks, no logos",
+  "1:1 square format",
 ].join(", ");
 
+// Per-plugin subject + accent color. Each subject is *one* thing that
+// captures what the app does — not a UI snapshot. The accent is the
+// only color the model is allowed to use, on a pure-black canvas.
 const plugins = [
-  // === Built-ins ===
+  // === Built-in component / kernel plugins ===
   {
     id: "home",
-    subject: "a clean dashboard with a centered circular glowing launch button surrounded by small icon tiles",
-    accent: "warm amber accent",
+    subject: "a single glowing house silhouette, simple geometric roof + walls, soft warm light from the door",
+    accent: "warm amber #fbbf24",
   },
   {
     id: "files",
-    subject: "a stylized file tree panel on the left with indented folder/file rows and a single highlighted file in cyan",
-    accent: "cool teal accent",
+    subject: "a single folder icon, the classic manila folder shape with a clean cut corner, slightly opened",
+    accent: "cool cyan #22d3ee",
   },
   {
     id: "settings",
-    subject: "a stylized settings panel with horizontal toggle switches and section dividers, blue accent",
-    accent: "electric blue accent",
+    subject: "a single gear / cog, twelve teeth, viewed straight on, clean metallic shading",
+    accent: "electric blue #60a5fa",
   },
   {
     id: "music",
-    subject: "a stylized music player card with an album-art square, a horizontal waveform, a play button, and a volume slider",
-    accent: "magenta-pink accent",
+    subject: "a single eighth note (♪), thick bold strokes, centered, slightly tilted",
+    accent: "magenta-pink #f472b6",
   },
   {
     id: "runtime",
-    subject: "a stylized runtime monitor with a glowing circular pulse, three horizontal meters, and a small line graph",
-    accent: "vivid orange accent",
+    subject: "a single pulsing concentric ring — three concentric circles around a glowing dot, like a heartbeat",
+    accent: "vivid orange #fb923c",
   },
   {
     id: "playground",
-    subject: "a stylized developer playground with a code editor block on the left, a run button, and a small output panel on the right",
-    accent: "violet accent",
+    subject: "a single stylized chevron pair ( >_ ) rendered as one solid shape, slightly tilted, hint of motion",
+    accent: "violet #a78bfa",
   },
   {
     id: "w9y",
-    subject: "a stylized package manager with stacked package cards each showing a tiny version tag and an install badge",
-    accent: "emerald accent",
+    subject: "a single 3D isometric package / box with a band of tape across it, viewed from above-front",
+    accent: "emerald #34d399",
   },
   {
     id: "workbench",
-    subject: "a stylized IDE workbench with a file sidebar, a centered code editor with syntax-colored tokens, and a bottom terminal",
-    accent: "deep blue accent",
+    subject: "a single stylized hammer crossed with a screwdriver, forming an X",
+    accent: "deep blue #6366f1",
   },
   {
     id: "deck",
-    subject: "a stylized presentation slide carousel with three overlapping rounded panels showing abstract chart shapes",
-    accent: "indigo accent",
+    subject: "a single rectangular slide / card with three horizontal lines of varying widths inside, like a presentation card",
+    accent: "indigo #818cf8",
   },
   {
     id: "launcher",
-    subject: "a stylized rocket-themed launcher with a large centered icon grid and a search bar at the top",
-    accent: "amber accent",
+    subject: "a single stylized rocket pointing up, simple geometric fins, a small flame underneath",
+    accent: "amber #f59e0b",
   },
   {
     id: "spotlight",
-    subject: "a stylized spotlight search overlay with a centered rounded search box, a few keyboard shortcut hints below, and a soft halo behind",
-    accent: "lilac accent",
+    subject: "a single large magnifying glass at a slight angle, with three short lines radiating from the lens",
+    accent: "lilac #c084fc",
   },
   {
     id: "group",
-    subject: "a stylized group chat window with three stacked message bubbles of varying widths and two overlapping circular avatars",
-    accent: "sky blue accent",
+    subject: "a cluster of three overlapping circles, two on the bottom and one centered above, like three people grouped together",
+    accent: "sky blue #38bdf8",
   },
   {
     id: "crush",
-    subject: "a stylized terminal with a single prompt line and a colorful ascii-art heart made of characters",
-    accent: "hot pink accent",
+    subject: "a single heart shape made of small ascii-art style pixels / squares, each square a slightly different color",
+    accent: "hot pink #ec4899",
   },
   {
     id: "crush-playground",
-    subject: "a stylized split-pane view with a chat-style input on the left and a tool-call preview pane on the right",
-    accent: "magenta accent",
+    subject: "a single chat bubble outline overlapping a wrench icon, the two shapes interlocking",
+    accent: "magenta #d946ef",
   },
   {
     id: "notes",
-    subject: "a stylized markdown notes editor with three paragraphs of placeholder lines and a left-aligned gutter with bullet markers",
-    accent: "amber accent",
+    subject: "a single notepad icon — a rectangle with a spiral binding on the left edge and three horizontal lines inside",
+    accent: "amber #f59e0b",
   },
   {
     id: "glmatrix",
-    subject: "a stylized matrix-style falling character rain effect with thin vertical columns of glowing green glyphs against deep black",
-    accent: "matrix green accent",
+    subject: "a single vertical column of falling katakana-style characters, glowing green on black, characters trailing off into motion",
+    accent: "matrix green #22c55e",
   },
   {
     id: "web-pet",
-    subject: "a stylized cute desktop pet creature — a small round shiba dog character with glowing eyes on a soft pastel podium",
-    accent: "warm coral accent",
+    subject: "a single cute shiba-inu dog face, front view, large round eyes, simple geometric shapes",
+    accent: "warm coral #fb923c",
   },
   {
     id: "widgetbot",
-    subject: "a stylized Discord-style chat widget panel with a server icon, a channel list, and three rounded chat bubbles",
-    accent: "blurple accent",
+    subject: "a single game controller / gamepad, viewed straight on, two grip handles and a d-pad shape",
+    accent: "blurple #5865f2",
   },
   {
     id: "default-page",
-    subject: "a stylized empty default-page hero with a large glowing centered star and subtle radial light",
-    accent: "soft violet accent",
+    subject: "a single five-pointed star with soft glowing edges",
+    accent: "soft violet #c4b5fd",
   },
   {
     id: "shell-tools",
-    subject: "a stylized toolbox with three floating tool icons (wrench, terminal, file) arranged in a small triangle",
-    accent: "silver accent",
+    subject: "a single wrench and screwdriver crossed in an X shape",
+    accent: "silver #94a3b8",
   },
   {
     id: "examples",
-    subject: "a stylized folder of demo tiles — a 2x2 grid of rounded mini cards each showing an abstract demo icon",
-    accent: "teal accent",
+    subject: "a single grid of four small squares (2x2), each square a slightly different shade",
+    accent: "teal #2dd4bf",
   },
   {
     id: "rickroll",
-    subject: "a stylized vintage music video thumbnail — neon 80s chrome text shape with palm-tree silhouettes and a soft pink-orange sunset gradient",
-    accent: "neon pink-orange accent",
+    subject: "a single stylized music cassette tape, viewed at a slight 3/4 angle, two visible reels",
+    accent: "neon coral-red #fb7185",
   },
   // === Iframe plugins ===
   {
     id: "browser",
-    subject: "a stylized web browser window with a top URL bar, three small tabs, and a softly glowing empty page",
-    accent: "steel blue accent",
+    subject: "a single stylized globe / wireframe sphere made of latitude and longitude lines",
+    accent: "steel blue #3b82f6",
   },
   {
     id: "bonsai",
-    subject: "a stylized miniature bonsai tree in a small ceramic pot, gently lit from above with a soft halo",
-    accent: "sage green accent",
+    subject: "a single stylized bonsai silhouette — a small curved tree in a tiny pot, all rendered as one minimal shape",
+    accent: "sage green #84cc16",
   },
   {
     id: "codigo",
-    subject: "a stylized code editor in a dark window with a vertical column of colorful token dots representing syntax highlighting",
-    accent: "coral accent",
+    subject: "a single pair of angle brackets < >, thick and bold, centered with strong negative space",
+    accent: "coral #f87171",
   },
   {
     id: "rv64",
-    subject: "a stylized RISC-V chip — a square silicon die with a subtle circuit pattern and a tiny riscv logo etching in the center",
-    accent: "warm orange accent",
+    subject: "a single square microchip with visible pin legs on all four sides and a tiny riscv-logo etched in the center",
+    accent: "warm orange #fb923c",
   },
   {
     id: "v86",
-    subject: "a stylized x86 vintage CPU — a beige ceramic DIP package with golden pins and a small etched label",
-    accent: "amber accent",
+    subject: "a single vintage CPU chip — a beige ceramic DIP package with two rows of golden pins",
+    accent: "amber #d97706",
   },
   {
     id: "app-store",
-    subject: "a stylized storefront — a grid of three small app cards with icons, an install button, and a search bar at the top",
-    accent: "violet accent",
+    subject: "a single capital letter A inside a thin rounded square outline, like a storefront sign",
+    accent: "violet #a78bfa",
   },
   {
     id: "gearshell-docs",
-    subject: "a stylized API documentation page with a left sidebar TOC, a centered markdown block, and a small code snippet card",
-    accent: "soft blue accent",
+    subject: "a single open book viewed from above, two facing pages visible with abstract horizontal lines",
+    accent: "soft blue #60a5fa",
   },
   {
     id: "bubbletea-playground",
-    subject: "a stylized TUI playground — a dark terminal-style box with a vertical list of selectable rows and one highlighted row",
-    accent: "rose accent",
+    subject: "a single stylized teacup with steam rising from it, simple flat shapes",
+    accent: "rose #fb7185",
   },
   {
     id: "terminal-frame",
-    subject: "a stylized terminal window with a single line of input, a blinking cursor, and a thin title bar with three traffic-light dots",
-    accent: "lime accent",
+    subject: "a single chevron prompt character (>) followed by a small blinking cursor block",
+    accent: "lime #84cc16",
   },
   {
     id: "lucide-icons",
-    subject: "a stylized icon catalog — a 4x4 grid of simple monochrome icon glyphs (star, heart, square, circle, triangle, etc.) on a dark surface",
-    accent: "neutral white accent",
-  },
-  {
-    id: "iframe-template",
-    subject: "a stylized empty iframe template — a plain rounded placeholder card with a small chevron-up icon in the corner",
-    accent: "muted slate accent",
+    subject: "a single four-pointed compass star, geometric and minimal, centered",
+    accent: "warm white #f5f5f5",
   },
 ];
 
@@ -227,7 +230,12 @@ async function main() {
   let ok = 0, fail = 0;
   for (const p of plugins) {
     const out = resolve(OUT, `${p.id}.png`);
-    const prompt = `${p.subject}. ${STYLE}. ${p.accent}, soft glow, premium look, 1:1 ratio.`;
+    const prompt = [
+      `Subject: ${p.subject}.`,
+      `Style: ${STYLE}.`,
+      `Single accent color for the subject: ${p.accent}.`,
+      `Background must be pure flat black (#000000), no other colors anywhere except the accent on the subject.`,
+    ].join(" ");
     process.stdout.write(`[${p.id}] generating ... `);
     try {
       await runMmx(prompt, out);
