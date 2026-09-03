@@ -40,9 +40,9 @@ function iframeElementForSource(source) {
 }
 
 function pluginForIframeElement(el) {
-  let elHref = null;
+  let elUrl;
   try {
-    elHref = new URL(el.src).href;
+    elUrl = new URL(el.src, window.location.href);
   } catch {
     return null;
   }
@@ -50,13 +50,26 @@ function pluginForIframeElement(el) {
   // are both legitimate senders; they live in separate registries.
   const candidates = [...listPluginIframes(), ...listOverlayIframes()];
   for (const { component, src, manifest } of candidates) {
-    let entryHref = null;
+    let entryUrl;
     try {
-      entryHref = new URL(src, window.location.href).href;
+      entryUrl = new URL(src, window.location.href);
     } catch {
       continue;
     }
-    if (entryHref === elHref) {
+    if (
+      entryUrl.origin === elUrl.origin &&
+      entryUrl.pathname === elUrl.pathname &&
+      entryUrl.search === elUrl.search &&
+      entryUrl.hash === elUrl.hash
+    ) {
+      return { component, manifest };
+    }
+    if (
+      entryUrl.origin === elUrl.origin &&
+      entryUrl.pathname === elUrl.pathname &&
+      !entryUrl.search &&
+      !entryUrl.hash
+    ) {
       return { component, manifest };
     }
   }
