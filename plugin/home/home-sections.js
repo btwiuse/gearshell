@@ -47,7 +47,7 @@ function HeroButtons({ openPanel, openExternal, scrollToId, GH }) {
         <span>Open Terminal</span>
         <${ArrowRight} size=${14} aria-hidden=${true}/>
       </button>
-      <button className="mkt-btn mkt-btn-ghost" type="button" onClick=${() => openPanel("launcher")}>
+      <button className="mkt-btn mkt-btn-ghost" type="button" onClick=${() => openPanel("app-store")}>
         <${LayoutGrid} size=${16} aria-hidden=${true}/>
         <span>Browse apps</span>
       </button>
@@ -408,7 +408,7 @@ export function HomeFooter({ openPanel, scrollToId, GH }) {
           <span>Open Terminal</span>
           <${ArrowRight} size=${14} aria-hidden=${true}/>
         </button>
-        <button className="mkt-btn mkt-btn-ghost" type="button" onClick=${() => openPanel("launcher")}>
+        <button className="mkt-btn mkt-btn-ghost" type="button" onClick=${() => openPanel("app-store")}>
           <${LayoutGrid} size=${16} aria-hidden=${true}/>
           <span>Browse apps</span>
         </button>
