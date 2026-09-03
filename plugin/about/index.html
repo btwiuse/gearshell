@@ -79,7 +79,7 @@
           <div class="info-row"><span class="info-label">Channel</span><span class="info-value">Tip</span></div>
           <div class="info-row"><span class="info-label">Commit</span><span class="info-value">main</span></div>
         </div>
-        <div id="about-actions"><a class="about-button" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener">GitHub</a><a class="about-button about-icon-btn" href="https://gear.sh" target="_blank" rel="noreferrer noopener" aria-label="Open App"><img src="https://cdn.simpleicons.org/googlechrome" alt=""></a><button id="about-play" class="about-button about-icon-btn" type="button" aria-label="Play demo music">▶</button><button id="about-home" class="about-button about-icon-btn" type="button" aria-label="Open Home"><img src="https://cdn.simpleicons.org/homeassistant" alt=""></button><button id="about-settings" class="about-button about-icon-btn" type="button" aria-label="Open Settings"><img src="https://cdn.simpleicons.org/settings" alt=""></button><button id="about-spotlight" class="about-button about-icon-btn" type="button" aria-label="Open Spotlight"><img src="https://cdn.simpleicons.org/openstreetmap" alt=""></button></div>
+        <div id="about-actions"><a class="about-button about-icon-btn" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener" aria-label="GitHub"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-github.svg" alt=""></a><a class="about-button about-icon-btn" href="https://gear.sh" target="_blank" rel="noreferrer noopener" aria-label="Open App"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-chrome.svg" alt=""></a><button id="about-play" class="about-button about-icon-btn" type="button" aria-label="Play demo music">▶</button><button id="about-home" class="about-button about-icon-btn" type="button" aria-label="Open Home"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/brand-chrome.svg" alt=""></button><button id="about-settings" class="about-button about-icon-btn" type="button" aria-label="Open Settings"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/home.svg" alt=""></button><button id="about-spotlight" class="about-button about-icon-btn" type="button" aria-label="Open Spotlight"><img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/search.svg" alt=""></button></div>
       </div>
     </section>
   </div>
@@ -111,8 +111,8 @@
       try {
         const state = await GearShell.music.nowPlaying();
         playing = !!state?.current?.playing;
-        playButton.textContent = playing ? "❚❚" : "▶";
         playButton.setAttribute("aria-label", playing ? "Pause demo music" : "Play demo music");
+        playButton.innerHTML = `<img src="https://cdn.jsdelivr.net/npm/@tabler/icons@3.46.0/icons/outline/${playing ? "player-pause" : "player-play"}.svg" alt="">`;
       } catch {}
     };
     playButton.onclick = async () => {
