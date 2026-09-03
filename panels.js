@@ -202,21 +202,25 @@ function addIframePanel(api, config, group, options) {
   if (config?.w9y && typeof config.w9y.mod === "string" && config.w9y.mod) {
     panelsDep("triggerPluginW9yInstall")(config.w9y);
   }
-  // Per-open URL override. Used by the Spotlight → Settings jump to
-  // land on a specific tab. Only honor a small whitelist of known
-  // keys so a malicious caller can't smuggle script into `src`.
-  const src = applyIframeSrcOverride(config.src, options);
-  // Build a config copy whose `src` reflects the override; the rest
-  // of the spread still merges in any options the caller passed.
-  const configWithOverride = { ...config, src };
+  // Per-open URL override. The caller passes `route: "<name>"` and
+  // the manifest-declared routes (already in the plugin config) tell
+  // the kernel which query string to append. Routes are the iframe
+  // plugin's own responsibility — this side just translates the named
+  // route into a URL.
+  const configWithOverride = { ...config };
+  const routes = configWithOverride.routes;
+  const src = applyIframeSrcOverride(configWithOverride.src, { ...(options || {}), __routes: routes });
+  // Replace `src` in the spread so the iframe session mounts the
+  // overridden URL while still picking up the rest of the config.
+  configWithOverride.src = src;
   const panel = api.addPanel({
     id: `iframe-${id}`,
     component: "iframe",
-    params: { iframeId: id, panelType: config.panelType, pluginIcon: config.icon, ...configWithOverride, ...(options || {}) },
-    title: config.title,
+    params: { iframeId: id, panelType: configWithOverride.panelType, pluginIcon: configWithOverride.icon, ...configWithOverride, ...(options || {}) },
+    title: configWithOverride.title,
     ...(group && { position: { referenceGroup: group } }),
   });
-  panelsDep("rememberOpenPanel")(panel, { component: config.panelType });
+  panelsDep("rememberOpenPanel")(panel, { component: configWithOverride.panelType });
   panel.api.setActive();
   return panel;
 }
@@ -226,20 +230,42 @@ function addIframePanel(api, config, group, options) {
 // Settings iframe (it ignores unknown values), so this side stays
 // conservative: we only forward the key, and only when the
 // iframe plugin's manifest is one we know about.
+// Per-open URL helper. If `options.route` is set and matches a route
+// declared by the iframe plugin's manifest, append the route's query
+// string to the iframe `src`. Whitelist (route names: lowercase a-z
+// + dash, max 32 chars) lives in the iframe page — the manifest
+// itself is the source of truth, this side just translates the
+// named route into a URL override.
 function applyIframeSrcOverride(src, options) {
   if (!src || !options) return src;
-  const section = typeof options.section === "string" ? options.section : null;
-  if (!section) return src;
+  const route = typeof options.route === "string" ? options.route : null;
+  if (!route) return src;
+  // Find the route definition on the iframe config (caller spread
+  // it in via ...configWithOverride so the kernel's `params.routes`
+  // is the single source of truth).
+  const routes = Array.isArray(options.__routes) ? options.__routes : null;
+  const match = routes?.find((entry) => entry && entry.name === route);
+  if (!match) return src;
+  // Pull the `query` field off the route and merge it into src.
+  const query = typeof match.query === "string" ? match.query : "";
+  if (!query) return src;
   try {
     const url = new URL(src, window.location.origin);
-    if (section && /^[a-z][a-z0-9-]{0,32}$/.test(section)) {
-      url.searchParams.set("section", section);
-      return url.pathname + url.search + url.hash;
+    // Accept any key=value&k=v format from the manifest. Validate
+    // keys+values against a conservative character class so a
+    // misbehaving manifest can't smuggle a hash or javascript: URL.
+    const safePair = /^([a-zA-Z][a-zA-Z0-9_-]{0,30})=([a-zA-Z0-9._\-+%,/]{0,80})$/;
+    for (const part of query.split("&")) {
+      const [rawKey, ...rest] = part.split("=");
+      const key = decodeURIComponent(rawKey || "").trim();
+      const value = decodeURIComponent(rest.join("=")).trim();
+      if (!safePair.test(`${rawKey}=${value}`)) continue;
+      url.searchParams.set(key, value);
     }
+    return url.pathname + url.search + url.hash;
   } catch {
-    // bad src; fall through
+    return src;
   }
-  return src;
 }
 
 // === addPanelByComponent ===

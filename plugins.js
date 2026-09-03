@@ -210,6 +210,11 @@ export function getPluginIframeConfig(component) {
     panelType: component,
     ...(entry.allow ? { allow: entry.allow } : {}),
     ...(entry.allowFullscreen ? { allowFullscreen: true } : {}),
+    // Deep-link routes for Spotlight. The kernel turns `route=<name>`
+    // in `options` into the matching query string on the iframe URL.
+    // Routes are filtered+deduped at the catalog layer; we just
+    // surface whatever the manifest declared.
+    ...(Array.isArray(entry.manifest?.routes) ? { routes: entry.manifest.routes } : {}),
     // Iframe plugins with a w9y dep install lazily on first open
     // (see addIframePanel in panels.js). ensureW9yDependencies skips
     // iframe plugins on boot so the install cost is paid only when

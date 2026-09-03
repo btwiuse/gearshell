@@ -138,6 +138,27 @@ export function normalizePlugin(plugin = {}) {
         },
       }
       : {}),
+    // Deep-link routes for iframe plugins. Each route teaches the
+    // kernel how to add a per-open URL query string when callers pass
+    // `{ route: "<name>" }` to panels.open. Forwarded verbatim from
+    // the manifest so plugins can ship a `routes[]` and have
+    // Spotlight pick them up automatically.
+    ...(Array.isArray(plugin.routes) && plugin.routes.length
+      ? {
+        routes: plugin.routes
+          .map((entry) =>
+            entry && typeof entry === "object" && typeof entry.name === "string"
+              ? {
+                name: String(entry.name).trim(),
+                ...(typeof entry.label === "string" ? { label: entry.label.trim() } : {}),
+                ...(typeof entry.icon === "string" ? { icon: entry.icon.trim() } : {}),
+                ...(typeof entry.query === "string" ? { query: entry.query.trim() } : {}),
+              }
+              : null,
+          )
+          .filter(Boolean),
+      }
+      : {}),
     ...(wasm.length ? { wasm } : {}),
     ...(preset.length ? { preset } : {}),
     ...(files.length ? { files } : {}),
@@ -196,6 +217,12 @@ export function normalizePlugins(list, defaults) {
         // plugin's API surface is a property of the shipped manifest, so
         // workspace-saved copies must not freeze an old whitelist.
         ...(def.permissions ? { permissions: def.permissions } : {}),
+        // Deep-link routes for iframe plugins: also a property of the
+        // shipped manifest, so saved workspaces pick up new routes
+        // when the manifest adds them.
+        ...(Array.isArray(def.routes) && def.routes.length
+          ? { routes: def.routes }
+          : {}),
         wasm: def.wasm || [],
         ...(def.preset ? { preset: def.preset } : {}),
         // files/systemFiles are REPLACED even when the default no longer

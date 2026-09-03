@@ -126,6 +126,21 @@ export const CORE_PLUGINS = [
         "events.*",
       ],
     },
+    // Spotlight deep-link routes. Each entry teaches the kernel
+    // how to add a `<iframe plugin id="..." route="...">` target
+    // and tells the iframe page (via ?route=<name>) which view to
+    // render. The kernel translates `route` into the right query
+    // string on the iframe URL. Routes that point to the same
+    // component deduplicate in Spotlight.
+    routes: [
+      { name: "behavior",  label: "Behavior",            icon: "SlidersHorizontal", query: "view=behavior" },
+      { name: "workspace", label: "Workspace",           icon: "Folder",            query: "view=workspace" },
+      { name: "system",    label: "Runtime & system",    icon: "Server",            query: "view=system" },
+      { name: "binds",     label: "Mounts & tasks",      icon: "Layers",            query: "view=binds" },
+      { name: "terminal",  label: "Terminal presets",    icon: "Terminal",          query: "view=terminal" },
+      { name: "activity",  label: "Agent activity",      icon: "Activity",          query: "view=activity" },
+      { name: "apps",      label: "Apps",                icon: "Store",             query: "view=apps" },
+    ],
   },
   {
     id: "launcher",

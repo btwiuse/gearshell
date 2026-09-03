@@ -46,22 +46,14 @@ const EXTRA_APPS = [
   { component: "app-store", name: "App Store", iconName: "Store" },
 ];
 
-// Settings deep-links: every iframe panel can be opened with a
-// `params.section` override that the Settings iframe consumes via
-// `?section=...` (panels.js addIframePanel translates the option
-// into a query string). Listing each section here gives Spotlight a
-// typed entry so "workspace" or "agent activity" jumps straight to
-// the right tab instead of opening Settings and forcing the user
-// to click the tab.
-const SETTINGS_SECTIONS = [
-  { section: "behavior", name: "Settings · Behavior", iconName: "SlidersHorizontal" },
-  { section: "workspace", name: "Settings · Workspace", iconName: "Folder" },
-  { section: "system", name: "Settings · Runtime & system", iconName: "Server" },
-  { section: "binds", name: "Settings · Mounts & tasks", iconName: "Layers" },
-  { section: "terminal", name: "Settings · Terminal presets", iconName: "Terminal" },
-  { section: "activity", name: "Settings · Agent activity", iconName: "Activity" },
-  { section: "apps", name: "Settings · Apps", iconName: "Store" },
-];
+// Settings deep-links are no longer hard-coded here; the Settings
+// plugin manifest declares its own `routes[]` (panel/settings/index.html
+// reads `?view=...` on load and routes to the matching section).
+// Other iframe plugins can declare routes the same way — Spotlight
+// folds every `routes[]` from every iframe plugin manifest into the
+// catalog automatically. This is the kernel-level mechanism the
+// App Store / any future iframe plugin plugs into without us editing
+// this file.
 
 // Mount state driven by the toggle channel ("toggle" | "open" | "close").
 function useSpotlightVisibility() {
@@ -90,15 +82,53 @@ function RowIcon({ item }) {
   `;
 }
 
-// Subsequence match ("plg" hits "Playground") with a score that favours
-// prefix and word-boundary hits, so short queries rank the obvious app
-// first instead of whatever happens to sort earliest.
+// Subsequence match ("plg" hits "Playground") with a score that
+// favours full-token substring hits — when the user types "app
+// store", we want "App Store" to rank above "Settings · Apps"
+// even though the latter's component "settings" fuzzy-matches
+// every letter of "app store" in order. The token loop runs first
+// so multi-word queries ("app store", "agent activity") prefer
+// entries whose name contains the full phrase, not just a fuzzy
+// character match.
 function fuzzyScore(text, query) {
-  const haystack = text.toLowerCase();
+  const haystack = (text || "").toLowerCase();
   if (!query) return 0;
-  if (haystack.startsWith(query)) return 1000;
+  // 1. Exact-prefix hit: query matches the start of the name.
+  if (haystack.startsWith(query)) return 2000;
+  // 2. Phrase hit: the full query is a substring somewhere.
   const direct = haystack.indexOf(query);
-  if (direct > 0) return 600 - direct;
+  if (direct >= 0) return 1500 - direct;
+  // 3. Per-token hit: every space-separated word in the query
+  //    appears as a substring in order. This is the dominant
+  //    signal — it kills the "Settings · Apps" type matches when
+  //    the user is typing a multi-word phrase.
+  const tokens = query.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    let cursor = 0;
+    let allFound = true;
+    let firstTokenStart = -1;
+    for (const token of tokens) {
+      const found = haystack.indexOf(token, cursor);
+      if (found === -1) { allFound = false; break; }
+      if (firstTokenStart === -1) firstTokenStart = found;
+      cursor = found + token.length;
+    }
+    if (allFound) {
+      // Strong bonus when the first token is at the start; softer
+      // when it appears later. We keep the score well above the
+      // per-character score so it always wins.
+      return 800 - firstTokenStart;
+    }
+  }
+  // 4. Per-token hit on a single-word query, or per-character
+  //    fuzzy fallback. The first-token score still wins over a
+  //    cross-field fuzzy match.
+  const firstToken = tokens[0] || query;
+  const firstIdx = haystack.indexOf(firstToken);
+  if (firstIdx >= 0) return 600 - firstIdx;
+  // 5. Char-by-char fuzzy. Bounded so cross-field matches (e.g.
+  //    component "settings" matching "app store") don't drown out
+  //    the real hits.
   let score = 0;
   let cursor = 0;
   for (const char of query) {
@@ -107,7 +137,11 @@ function fuzzyScore(text, query) {
     score += found === 0 || /[\s-_]/.test(haystack[found - 1] || "") ? 12 : 4;
     cursor = found + 1;
   }
-  return score;
+  // Penalize the score so it never beats a real substring hit. A
+  // pure char-by-char match with no real word overlap usually
+  // means a cross-field artifact ("Settings" matching "app store"
+  // letter-by-letter) — drop it below the threshold.
+  return score - 400;
 }
 
 function matchItems(items, query) {
@@ -126,16 +160,40 @@ function matchItems(items, query) {
 }
 
 function pluginApps(plugins) {
-  return plugins
-    .filter((plugin) => plugin && plugin.enabled !== false && plugin.id)
+  const apps = [];
+  for (const plugin of plugins || []) {
+    if (!plugin || plugin.enabled === false || !plugin.id) continue;
     // Tool-only plugins (wasm/preset, no UI) have no panel to open.
-    .filter((plugin) => plugin.entry || plugin.iframe)
-    .map((plugin) => ({
+    if (!plugin.entry && !plugin.iframe) continue;
+    // The plugin itself: one entry per installed component plugin.
+    apps.push({
       kind: "app",
       component: plugin.id,
       name: plugin.name || plugin.id,
       iconName: typeof plugin.icon === "string" ? plugin.icon : null,
-    }));
+    });
+    // Routes declared by the plugin manifest. The Settings plugin
+    // uses this to expose 7 deep-link entries (Settings · Workspace,
+    // etc); other plugins can declare their own. Each route becomes
+    // a separate Spotlight entry that calls `panels.open(component,
+    // { route: "<name>" })` — the kernel translates that into a
+    // query string on the iframe URL using the manifest's `query`.
+    const routes = Array.isArray(plugin.routes) ? plugin.routes : null;
+    if (routes) {
+      for (const entry of routes) {
+        if (!entry || typeof entry.name !== "string" || !entry.name) continue;
+        apps.push({
+          kind: "route",
+          component: plugin.id,
+          route: entry.name,
+          name: `${plugin.name || plugin.id} · ${entry.label || entry.name}`,
+          iconName: typeof entry.icon === "string" ? entry.icon
+            : (typeof plugin.icon === "string" ? plugin.icon : null),
+        });
+      }
+    }
+  }
+  return apps;
 }
 
 function dedupeApps(apps) {
@@ -143,7 +201,7 @@ function dedupeApps(apps) {
   return apps.filter((app) => {
     let key;
     if (app.kind === "preset") key = `preset:${app.preset.id}`;
-    else if (app.kind === "section") key = `section:${app.component}:${app.section}`;
+    else if (app.kind === "route") key = `route:${app.component}:${app.route}`;
     else key = `app:${app.component}`;
     if (seen.has(key)) return false;
     seen.add(key);
@@ -214,13 +272,6 @@ function useSpotlightCatalog(open, api) {
         const apps = dedupeApps([
           ...pluginApps(Array.isArray(plugins) ? plugins : []),
           ...EXTRA_APPS.map((app) => ({ ...app, kind: "app" })),
-          ...SETTINGS_SECTIONS.map((entry) => ({
-            kind: "section",
-            component: "settings",
-            name: entry.name,
-            iconName: entry.iconName,
-            section: entry.section,
-          })),
           ...consolePresetApps({ terminalProfiles: profiles || [] }),
         ]);
         setCatalog({
@@ -306,7 +357,7 @@ function SpotlightResults({ results, active, query, error, onActivate, onLaunch 
     const showGroup = index === 0 || item.kind !== results[index - 1].kind;
     const groupLabel = item.kind === "panel" ? "Open panels" : "Applications";
     return html`
-      <${React.Fragment} key=${`${item.kind}:${item.id || item.component}`}>
+      <${React.Fragment} key=${`${item.kind}:${item.id || item.component}:${item.route || ""}`}>
         ${showGroup && html`
           <div className="sl-group-label">${groupLabel}</div>
         `}
@@ -374,8 +425,8 @@ function useSpotlightLaunch({ results, close, api }) {
         // a Settings tab is already open, dockview will spawn a new
         // panel — each section gets its own URL, so multiple deep
         // links can stay open side by side.
-        if (item.kind === "section") {
-          await api.panels.open(item.component, { section: item.section });
+        if (item.kind === "route") {
+          await api.panels.open(item.component, { route: item.route });
           return;
         }
         await api.panels.open(item.component, item.kind === "preset"

@@ -504,18 +504,19 @@
   document.querySelector('[data-tab="behavior"]').classList.add("active");
   await load();
 
-  // Section deep-linking: Spotlight / hotkey / external code can land
-  // on a specific Settings tab by either appending `?section=workspace`
-  // to the iframe URL or posting `{type:"settings.switch", section}`
-  // to this window. The whitelist mirrors the inline tab list above
-  // so a stray value never silently lands on a non-existent tab.
-  const VALID_SECTIONS = new Set([
+  // View deep-linking: Spotlight / hotkey / external code can land
+  // on a specific Settings tab by appending `?view=workspace` to the
+  // iframe URL (the manifest's `routes[]` declares each `view` and
+  // its query string). The iframe also listens for
+  // `{type: "settings.switch", view: "..."}` postMessage events so
+  // a future caller can hot-swap the tab on an already-open panel.
+  const VALID_VIEWS = new Set([
     "behavior", "workspace", "system", "binds", "terminal", "activity", "apps",
   ]);
-  const switchToSection = (section) => {
-    if (!section || !VALID_SECTIONS.has(section)) return false;
-    const tab = document.querySelector(`[data-tab="${section}"]`);
-    const sec = document.querySelector(`[data-section="${section}"]`);
+  const switchToView = (view) => {
+    if (!view || !VALID_VIEWS.has(view)) return false;
+    const tab = document.querySelector(`[data-tab="${view}"]`);
+    const sec = document.querySelector(`[data-section="${view}"]`);
     if (!tab || !sec) return false;
     document.querySelectorAll("[data-section]").forEach((s) => { s.hidden = s !== sec; });
     document.querySelectorAll("[data-tab]").forEach((t) => { t.classList.toggle("active", t === tab); });
@@ -525,15 +526,15 @@
   // `section` set on the iframe's `<iframe>` `name` attribute (parent
   // could in principle set it). Both are post-load so we run after
   // the default `behavior` tab is marked active.
-  const initialSection = (() => {
+  const initialView = (() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get("section");
+      return params.get("view");
     } catch {
       return null;
     }
   })();
-  if (initialSection) switchToSection(initialSection);
+  if (initialView) switchToView(initialView);
   // Live updates from the parent shell (already-open panels that
   // want to jump tabs). The bridge's postMessage channel is for the
   // GearShell API; this is a separate dedicated event for the
@@ -541,11 +542,11 @@
   window.addEventListener("message", (event) => {
     const data = event.data;
     if (!data || data.type !== "settings.switch") return;
-    if (switchToSection(data.section)) {
+    if (switchToView(data.view)) {
       // The parent might have just asked us to switch, so acknowledge
       // (no-op right now, but it lets future code verify the jump).
       try {
-        event.source?.postMessage({ type: "settings.switched", section: data.section }, "*");
+        event.source?.postMessage({ type: "settings.switched", view: data.view }, "*");
       } catch {}
     }
   });
