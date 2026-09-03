@@ -1,4 +1,5 @@
 const BASH_TOOL_NAME = "bash_run";
+const TOOL_SETTINGS_KEY = "bonsai_tool_settings_v1";
 
 const BASH_TOOLS = [
   {
@@ -69,13 +70,44 @@ async function executeBashRun(call) {
   }
 }
 
+function getDisabledToolNames() {
+  try {
+    const value = JSON.parse(localStorage.getItem(TOOL_SETTINGS_KEY) || "{}");
+    return new Set(Object.entries(value).filter(([, enabled]) => !enabled).map(([name]) => name));
+  } catch {
+    return new Set();
+  }
+}
+
+export function getToolSettings() {
+  const disabled = getDisabledToolNames();
+  return BASH_TOOLS.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    enabled: !disabled.has(tool.name),
+  }));
+}
+
+export function setToolEnabled(name, enabled) {
+  const settings = Object.fromEntries(getToolSettings().map((tool) => [tool.name, tool.enabled]));
+  settings[name] = enabled;
+  localStorage.setItem(TOOL_SETTINGS_KEY, JSON.stringify(settings));
+}
+
 export function getGearShellTools() {
-  return BASH_TOOLS.map((tool) => ({ type: "function", function: tool }));
+  const disabled = getDisabledToolNames();
+  return BASH_TOOLS.filter((tool) => !disabled.has(tool.name)).map((tool) => ({
+    type: "function",
+    function: tool,
+  }));
 }
 
 export async function executeToolCall(call) {
   if (call?.name !== BASH_TOOL_NAME) {
     return toolError(`Unknown tool: ${String(call?.name ?? "")}`);
+  }
+  if (getDisabledToolNames().has(call.name)) {
+    return toolError(`Tool is disabled: ${call.name}`);
   }
   return executeBashRun(call);
 }

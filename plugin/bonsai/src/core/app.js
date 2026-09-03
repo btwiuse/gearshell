@@ -27,6 +27,14 @@ import {
   buildStreamTools,
 } from "../chat/tool-runner.js";
 import { setupKernelInspector } from "../model/kernel/inspector.js";
+import { setupModelCachePanel } from "../model/cache-panel.js";
+import { setupToolsPanel } from "../chat/tools-panel.js";
+import {
+  buildConversation,
+  buildGenerationOptions,
+  loadChatSettings,
+} from "../chat/settings.js";
+import { setupSettingsPanel } from "../chat/settings-panel.js";
 import {
   makeSessionId,
   persistSession,
@@ -59,7 +67,7 @@ let contextExhausted = false;
 let abortController = null;
 let sessionTitle = "";
 let sessionId = null;
-let lastAssistantContent = null;
+let chatSettings = loadChatSettings();
 const SEED_EXAMPLES = [
   {
     label: "LOGIC PUZZLE",
@@ -342,7 +350,8 @@ async function runToolRound(turn, calls) {
 }
 
 async function streamAssistantRound(turn, options) {
-  return streamAssistantRoundModule(chat, messages, turn, options);
+  const conversation = buildConversation(messages, chatSettings.systemPrompt);
+  return streamAssistantRoundModule(chat, conversation, turn, options);
 }
 
 async function send() {
@@ -366,6 +375,7 @@ async function send() {
     let toolCalls;
     do {
       toolCalls = await streamAssistantRound(turn, {
+        ...buildGenerationOptions(chatSettings),
         signal: abortController.signal,
         think: thinkTurn,
         thinkBudget,
@@ -388,3 +398,8 @@ async function send() {
 }
 
 setupKernelInspector({ getChat: () => chat, byId: $ });
+setupModelCachePanel();
+setupToolsPanel();
+setupSettingsPanel((settings) => {
+  chatSettings = settings;
+});

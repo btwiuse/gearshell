@@ -214,6 +214,15 @@
             <button class="c-btn" id="kernelsBtn" type="button">
               VIEW KERNELS
             </button>
+            <button class="c-btn" id="cacheBtn" type="button">
+              MODEL CACHE
+            </button>
+            <button class="c-btn" id="toolsBtn" type="button">
+              TOOLS
+            </button>
+            <button class="c-btn" id="settingsBtn" type="button">
+              SETTINGS
+            </button>
             <button
               class="c-btn"
               id="historyBtn"
@@ -335,6 +344,130 @@
         </div>
       </footer>
     </section>
+    <div class="kx" id="settingsOverlay" hidden>
+      <div class="kx-backdrop" data-settings-close></div>
+      <section
+        class="kx-panel cache-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Bonsai settings"
+      >
+        <div class="kx-head">
+          <div class="kx-title">
+            <h3>Model settings</h3>
+            <span class="kx-sub">APPLY TO THE NEXT RESPONSE</span>
+          </div>
+          <button class="kx-close" type="button" aria-label="Close" data-settings-close>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <div class="cache-body settings-form">
+          <label>
+            <span>System prompt</span>
+            <textarea id="systemPromptInput" rows="7"></textarea>
+          </label>
+          <div class="settings-grid">
+            <label><span>Temperature</span><input id="temperatureInput" type="number" min="0" max="2" step="0.05"></label>
+            <label><span>Top P</span><input id="topPInput" type="number" min="0" max="1" step="0.05"></label>
+            <label><span>Top K</span><input id="topKInput" type="number" min="1" max="100" step="1"></label>
+            <label><span>Max tokens</span><input id="maxTokensInput" type="number" min="64" max="4096" step="64"></label>
+          </div>
+          <div class="cache-actions">
+            <button class="c-btn" id="settingsResetBtn" type="button">RESET</button>
+            <button class="c-btn" id="settingsSaveBtn" type="button">SAVE SETTINGS</button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="kx" id="toolsOverlay" hidden>
+      <div class="kx-backdrop" data-tools-close></div>
+      <section
+        class="kx-panel cache-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Model tools"
+      >
+        <div class="kx-head">
+          <div class="kx-title">
+            <h3>Model tools</h3>
+            <span class="kx-sub">CHOOSE WHAT BONSAI CAN CALL</span>
+          </div>
+          <button
+            class="kx-close"
+            type="button"
+            aria-label="Close"
+            data-tools-close
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <div class="cache-body">
+          <p>
+            Disabled tools are omitted from the model prompt and cannot be
+            called. Changes apply to the next message and stay on this browser.
+          </p>
+          <div class="tools-list" id="toolsList"></div>
+        </div>
+      </section>
+    </div>
+    <div class="kx" id="cacheOverlay" hidden>
+      <div class="kx-backdrop" data-cache-close></div>
+      <section
+        class="kx-panel cache-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Model cache"
+      >
+        <div class="kx-head">
+          <div class="kx-title">
+            <h3>Model cache</h3>
+            <span class="kx-sub" id="cacheSummary">READING BROWSER STORAGE</span>
+          </div>
+          <button
+            class="kx-close"
+            type="button"
+            aria-label="Close"
+            data-cache-close
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <div class="cache-body">
+          <p>
+            Bonsai stores downloaded model data on this browser origin. Cache
+            Storage and IndexedDB are isolated from other origins.
+          </p>
+          <pre class="cache-report" id="cacheReport">Loading…</pre>
+          <div class="cache-actions">
+            <button class="c-btn" id="cacheRefreshBtn" type="button">REFRESH</button>
+            <button class="c-btn" id="cachePersistBtn" type="button">
+              KEEP OFFLINE
+            </button>
+            <button class="c-btn cache-danger" id="cacheClearBtn" type="button">
+              DELETE MODEL CACHE
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
     <div class="kx" id="kernelsOverlay" hidden>
       <div class="kx-backdrop" data-close></div>
       <div
