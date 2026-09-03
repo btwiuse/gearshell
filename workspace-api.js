@@ -48,6 +48,7 @@ import {
 import { agentsApi } from "./workspace-agents-api.js";
 import { musicApi } from "./music-engine.js";
 import { terminalApi } from "./workspace-terminal-api.js";
+import { bashApi } from "./workspace-bash-api.js";
 import { fsApi } from "./workspace-fs-api.js";
 import {
   applyW9yMod,
@@ -105,6 +106,7 @@ const api = {
   files: wrapNamespace(openApi.files),
   fs: wrapNamespace(fsApi),
   tasks: wrapNamespace(tasksApi),
+  bash: wrapNamespace(bashApi),
   agents: wrapNamespace(agentsApi),
   music: wrapNamespace(musicApi),
   terminal: wrapNamespace(terminalApi),

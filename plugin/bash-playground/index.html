@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bash Playground</title>
+<style>
+* { box-sizing: border-box; }
+:root {
+  color-scheme: dark;
+  --bg: #0c0f15;
+  --panel: #141923;
+  --ink: #e6edf3;
+  --mute: #8b95a7;
+  --hair: #1d232f;
+  --hair-2: #2a3142;
+  --ok: #6fdc8c;
+  --err: #ff6b6b;
+  --accent: #5aa9ff;
+  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--hair);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(20, 25, 35, 0.4);
+}
+header h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+header .meta {
+  color: var(--mute);
+  font-size: 11px;
+  font-family: var(--mono);
+}
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 0;
+}
+nav {
+  border-right: 1px solid var(--hair);
+  padding: 12px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+nav button {
+  text-align: left;
+  border: 1px solid var(--hair);
+  background: var(--panel);
+  color: var(--ink);
+  font: 12px var(--mono);
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+nav button:hover { background: #1a2030; border-color: var(--hair-2); }
+nav button.active { background: #1c2a40; border-color: var(--accent); }
+section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.editor {
+  flex: 0 0 auto;
+  padding: 14px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.editor label {
+  font-size: 11px;
+  color: var(--mute);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+}
+textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 70px;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  color: var(--ink);
+  border-radius: 6px;
+  font: 13px/1.5 var(--mono);
+  padding: 10px 12px;
+}
+textarea:focus { outline: none; border-color: var(--accent); }
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.toolbar .spacer { flex: 1; }
+button.run {
+  background: var(--accent);
+  color: #0c0f15;
+  border: none;
+  font: 600 12px/1 var(--mono);
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+}
+button.run:hover { filter: brightness(1.1); }
+button.run:disabled { opacity: 0.4; cursor: not-allowed; }
+button.ghost {
+  background: none;
+  border: 1px solid var(--hair);
+  color: var(--mute);
+  font: 11px var(--mono);
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button.ghost:hover { color: var(--ink); border-color: var(--hair-2); }
+.status {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--mute);
+}
+.status.ok { color: var(--ok); }
+.status.err { color: var(--err); }
+.output {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 16px 16px;
+  background: #06090d;
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  overflow: auto;
+  padding: 12px 14px;
+  font: 12px/1.55 var(--mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ink);
+}
+.output .muted { color: var(--mute); }
+.output .err  { color: var(--err); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Bash Playground</h1>
+  <span class="meta" id="bridgeStatus">bridge: …</span>
+  <span class="spacer" style="flex:1"></span>
+  <span class="status" id="status">READY</span>
+</header>
+<main>
+  <nav id="snippets"></nav>
+  <section>
+    <div class="editor">
+      <label for="cmd">Command</label>
+      <textarea id="cmd" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      <div class="toolbar">
+        <button class="run" id="runBtn">RUN ▷</button>
+        <button class="ghost" id="copyBtn">COPY OUTPUT</button>
+        <button class="ghost" id="clearBtn">CLEAR</button>
+        <span class="meta" id="exit"></span>
+      </div>
+    </div>
+    <pre class="output" id="output"></pre>
+  </section>
+</main>
+<script src="/plugin/gear-bridge.js"></script>
+<script>
+const SNIPPETS = [
+  { label: "echo hello", cmd: "echo hello world" },
+  { label: "pwd",        cmd: "pwd" },
+  { label: "ls /opfs",   cmd: "ls -la /opfs" },
+  { label: "list /bin",  cmd: "ls /bin" },
+  { label: "cat readme", cmd: "cat /opfs/home/README.md 2>/dev/null || echo 'no readme'" },
+  { label: "env",        cmd: "env | head -n 20" },
+  { label: "df",         cmd: "df -h" },
+  { label: "ps",         cmd: "ps -ef | head -n 20" },
+  { label: "date",       cmd: "date -u +'%Y-%m-%dT%H:%M:%SZ'" },
+  { label: "whoami",     cmd: "whoami" },
+  { label: "uname",      cmd: "uname -a" },
+  { label: "wc (demo)",  cmd: "echo one two three | wc -w" },
+];
+
+const $ = (id) => document.getElementById(id);
+const outputEl = $("output");
+const statusEl = $("status");
+const exitEl = $("exit");
+const runBtn = $("runBtn");
+const cmdEl = $("cmd");
+const bridgeStatusEl = $("bridgeStatus");
+
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = "status" + (kind ? " " + kind : "");
+}
+
+function appendOutput(text, kind) {
+  if (text) {
+    const span = document.createElement("span");
+    if (kind) span.className = kind;
+    span.textContent = text;
+    outputEl.appendChild(span);
+  }
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function clearOutput() {
+  outputEl.replaceChildren();
+  exitEl.textContent = "";
+}
+
+function renderSnippets() {
+  const nav = $("snippets");
+  nav.replaceChildren();
+  for (const snippet of SNIPPETS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = snippet.label;
+    b.addEventListener("click", () => {
+      cmdEl.value = snippet.cmd;
+      [...nav.querySelectorAll("button")].forEach((node) =>
+        node.classList.toggle("active", node === b),
+      );
+    });
+    nav.appendChild(b);
+  }
+}
+
+async function runCommand() {
+  const command = cmdEl.value;
+  if (!command.trim()) {
+    setStatus("EMPTY COMMAND", "err");
+    return;
+  }
+  if (!window.GearShell?.bash?.run) {
+    setStatus("BASH UNAVAILABLE", "err");
+    return;
+  }
+  runBtn.disabled = true;
+  clearOutput();
+  setStatus("RUNNING …");
+  appendOutput(`$ ${command}\n`, "muted");
+  try {
+    const result = await window.GearShell.bash.run(command, { timeoutMs: 60000 });
+    if (result.ok) {
+      const out = result.output ?? "";
+      if (out) appendOutput(out);
+      const exitCode = result.exitCode ?? 0;
+      exitEl.textContent = `exit ${exitCode}`;
+      setStatus(exitCode === 0 ? "DONE" : `EXIT ${exitCode}`, exitCode === 0 ? "ok" : "err");
+    } else {
+      const err = result.error ?? "unknown error";
+      appendOutput(`\n[bash.run] ${err}\n`, "err");
+      setStatus("ERROR", "err");
+    }
+  } catch (error) {
+    appendOutput(`\n[exception] ${String(error?.message ?? error)}\n`, "err");
+    setStatus("EXCEPTION", "err");
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+$("runBtn").addEventListener("click", runCommand);
+$("copyBtn").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(outputEl.textContent ?? "");
+    setStatus("COPIED", "ok");
+    setTimeout(() => setStatus("READY"), 1200);
+  } catch {
+    setStatus("COPY FAILED", "err");
+  }
+});
+$("clearBtn").addEventListener("click", () => {
+  clearOutput();
+  setStatus("READY");
+});
+cmdEl.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    event.preventDefault();
+    runCommand();
+  }
+});
+
+renderSnippets();
+if (window.GearShell?.bash?.run) {
+  bridgeStatusEl.textContent = "bridge: bash.run ✓";
+  cmdEl.value = SNIPPETS[0].cmd;
+} else {
+  bridgeStatusEl.textContent = "bridge: bash.run ✗";
+  setStatus("BASH UNAVAILABLE", "err");
+}
+</script>
+</body>
+</html>

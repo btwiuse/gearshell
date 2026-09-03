@@ -39,12 +39,14 @@ export {
   isLegacyHushBinaryUrl,
   SHELL_PROFILE_CONTENT,
 } from "./app-plugin-manifests-shell-tools.js";
+import { BASH_PLAYGROUND_PLUGIN } from "./app-plugin-manifests-bash.js";
 
 export const DEFAULT_PLUGINS = [
   ...CORE_PLUGINS,
   ...IFRAME_PLUGINS,
   ...CRUSH_PLUGINS,
   SHELL_TOOLS_PLUGIN,
+  BASH_PLAYGROUND_PLUGIN,
 ];
 
 // The examples + bbtex bind providers are data, not logic: pushed after
