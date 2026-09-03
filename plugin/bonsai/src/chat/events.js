@@ -1,51 +1,63 @@
 // Convert bitgpu's callback-plus-generator API into UI-friendly typed events.
-export async function* streamChatEvents(chat, messages, options = {}) {
+function createEventQueue() {
   const events = [];
   let wake = null;
-  let finished = false;
-  let failure = null;
-
-  const push = (event) => {
-    events.push(event);
-    wake?.();
-    wake = null;
-  };
-
-  const producer = (async () => {
-    try {
-      const stream = chat.stream(messages, {
-        ...options,
-        onThink: (delta) => {
-          if (delta) push({ type: "thinking", delta });
-        },
-      });
-      for (;;) {
-        const next = await stream.next();
-        if (next.done) {
-          push({ type: "complete", result: next.value });
-          break;
-        }
-        if (next.value) push({ type: "text", delta: next.value });
-      }
-    } catch (error) {
-      failure = error;
-    } finally {
-      finished = true;
+  return {
+    events,
+    push(event) {
+      events.push(event);
       wake?.();
       wake = null;
-    }
-  })();
-
-  while (!finished || events.length > 0) {
-    if (events.length > 0) {
-      yield events.shift();
-    } else {
-      await new Promise((resolve) => {
+    },
+    wait() {
+      return new Promise((resolve) => {
         wake = resolve;
       });
-    }
-  }
+    },
+    wake() {
+      wake?.();
+      wake = null;
+    },
+  };
+}
 
+async function produceEvents(chat, messages, options, queue, state) {
+  try {
+    const { onToolCall, ...streamOptions } = options;
+    const stream = chat.stream(messages, {
+      ...streamOptions,
+      onThink: (delta) => {
+        if (delta) queue.push({ type: "thinking", delta });
+      },
+      onToolCall: (call) => {
+        queue.push({ type: "tool_call", call });
+        onToolCall?.(call);
+      },
+    });
+    for (;;) {
+      const next = await stream.next();
+      if (next.done) {
+        queue.push({ type: "complete", result: next.value });
+        break;
+      }
+      if (next.value) queue.push({ type: "text", delta: next.value });
+    }
+  } catch (error) {
+    state.failure = error;
+  } finally {
+    state.finished = true;
+    queue.wake();
+  }
+}
+
+export async function* streamChatEvents(chat, messages, options = {}) {
+  const queue = createEventQueue();
+  const state = { finished: false, failure: null };
+  const producer = produceEvents(chat, messages, options, queue, state);
+  while (!state.finished || queue.events.length > 0) {
+    if (queue.events.length > 0) yield queue.events.shift();
+    else await queue.wait();
+  }
   await producer;
-  if (failure) throw failure;
+  if (state.failure) throw state.failure;
 }

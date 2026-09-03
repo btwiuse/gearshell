@@ -2,6 +2,7 @@ import { Bonsai27B, DEFAULT_GGUF_FILE } from "../model/adapter.js";
 import { WorkerBonsai27B } from "../model/bonsai-client.js";
 import { setupModelAccess } from "../model/access.js";
 import { renderAnswer } from "../chat/markdown.js";
+import { executeToolCall, getGearShellTools } from "../chat/tools.js";
 import { setupKernelInspector } from "../model/kernel/inspector.js";
 
 const $ = (id) => document.getElementById(id);
@@ -218,6 +219,7 @@ function createTurnState(thinkTurn) {
     phase: thinkTurn ? "think" : "answer",
     thinking: "",
     answer: "",
+    toolStatuses: [],
     closed: false,
     startedAt: performance.now(),
     firstTokenAt: 0,
@@ -240,8 +242,30 @@ function finishThinking(turn) {
   setStatus("busy", "WRITING …");
 }
 
+function appendToolCall(turn, call) {
+  const card = document.createElement("div");
+  card.className = "c-tool-call";
+  const name = document.createElement("div");
+  name.className = "c-tool-name";
+  name.textContent = `CALLING ${call.name}`;
+  const detail = document.createElement("pre");
+  detail.className = "c-tool-detail";
+  detail.textContent = JSON.stringify(call.arguments ?? {}, null, 2);
+  const status = document.createElement("div");
+  status.className = "c-tool-status";
+  status.textContent = "RUNNING";
+  card.append(name, detail, status);
+  turn.aBody.appendChild(card);
+  scrollDown();
+  return status;
+}
+
 function consumeTurnEvent(event, turn) {
   const now = performance.now();
+  if (event.type === "tool_call") {
+    event.statusElement = appendToolCall(turn, event.call);
+    return;
+  }
   if (event.type === "complete") {
     turn.tokens = event.result.tokens.length;
     return;
@@ -313,6 +337,35 @@ function finishTurn(turn) {
   else cInput.focus();
 }
 
+async function runToolRound(turn, calls) {
+  const results = [];
+  for (const call of calls) {
+    const status = appendToolCall(turn, call);
+    try {
+      const content = await executeToolCall(call);
+      status.textContent = "COMPLETE";
+      results.push({ role: "tool", name: call.name, content });
+    } catch (error) {
+      const content = JSON.stringify({
+        ok: false,
+        error: String(error?.message ?? error),
+      });
+      status.textContent = "FAILED";
+      results.push({ role: "tool", name: call.name, content });
+    }
+  }
+  return results;
+}
+
+async function streamAssistantRound(turn, options) {
+  const calls = [];
+  for await (const event of chat.streamTurn(messages, options)) {
+    if (event.type === "tool_call") calls.push(event.call);
+    else consumeTurnEvent(event, turn);
+  }
+  return calls;
+}
+
 async function send() {
   const text = cInput.value.trim();
   if (!text || !chat || isGenerating || contextExhausted) return;
@@ -326,16 +379,21 @@ async function send() {
   setGenerating(true);
   abortController = new AbortController();
   try {
-    for await (
-      const event of chat.streamTurn(messages, {
+    let toolCalls;
+    do {
+      toolCalls = await streamAssistantRound(turn, {
         signal: abortController.signal,
         think: thinkTurn,
         thinkBudget,
         thinkEarlyStop,
-      })
-    ) {
-      consumeTurnEvent(event, turn);
-    }
+        tools: getGearShellTools(),
+        toolChoice: "auto",
+      });
+      if (toolCalls.length > 0) {
+        messages.push({ role: "assistant", content: chat.lastAssistantContent ?? "" });
+        messages.push(...await runToolRound(turn, toolCalls));
+      }
+    } while (toolCalls.length > 0 && !abortController.signal.aborted);
   } catch (error) {
     handleGenerationError(error, turn);
   } finally {
