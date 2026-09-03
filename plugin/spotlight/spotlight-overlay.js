@@ -46,6 +46,23 @@ const EXTRA_APPS = [
   { component: "app-store", name: "App Store", iconName: "Store" },
 ];
 
+// Settings deep-links: every iframe panel can be opened with a
+// `params.section` override that the Settings iframe consumes via
+// `?section=...` (panels.js addIframePanel translates the option
+// into a query string). Listing each section here gives Spotlight a
+// typed entry so "workspace" or "agent activity" jumps straight to
+// the right tab instead of opening Settings and forcing the user
+// to click the tab.
+const SETTINGS_SECTIONS = [
+  { section: "behavior", name: "Settings · Behavior", iconName: "SlidersHorizontal" },
+  { section: "workspace", name: "Settings · Workspace", iconName: "Folder" },
+  { section: "system", name: "Settings · Runtime & system", iconName: "Server" },
+  { section: "binds", name: "Settings · Mounts & tasks", iconName: "Layers" },
+  { section: "terminal", name: "Settings · Terminal presets", iconName: "Terminal" },
+  { section: "activity", name: "Settings · Agent activity", iconName: "Activity" },
+  { section: "apps", name: "Settings · Apps", iconName: "Store" },
+];
+
 // Mount state driven by the toggle channel ("toggle" | "open" | "close").
 function useSpotlightVisibility() {
   const [open, setOpen] = useState(false);
@@ -124,9 +141,10 @@ function pluginApps(plugins) {
 function dedupeApps(apps) {
   const seen = new Set();
   return apps.filter((app) => {
-    const key = app.kind === "preset"
-      ? `preset:${app.preset.id}`
-      : `app:${app.component}`;
+    let key;
+    if (app.kind === "preset") key = `preset:${app.preset.id}`;
+    else if (app.kind === "section") key = `section:${app.component}:${app.section}`;
+    else key = `app:${app.component}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -196,6 +214,13 @@ function useSpotlightCatalog(open, api) {
         const apps = dedupeApps([
           ...pluginApps(Array.isArray(plugins) ? plugins : []),
           ...EXTRA_APPS.map((app) => ({ ...app, kind: "app" })),
+          ...SETTINGS_SECTIONS.map((entry) => ({
+            kind: "section",
+            component: "settings",
+            name: entry.name,
+            iconName: entry.iconName,
+            section: entry.section,
+          })),
           ...consolePresetApps({ terminalProfiles: profiles || [] }),
         ]);
         setCatalog({
@@ -340,6 +365,17 @@ function useSpotlightLaunch({ results, close, api }) {
       try {
         if (item.kind === "panel") {
           await api.panels.focus(item.id);
+          return;
+        }
+        // Settings · <Section> entries open the Settings iframe with
+        // a per-open `section` option. panels.js translates it into
+        // a `?section=...` query string on the iframe URL; the
+        // Settings iframe switches to the matching tab on load. If
+        // a Settings tab is already open, dockview will spawn a new
+        // panel — each section gets its own URL, so multiple deep
+        // links can stay open side by side.
+        if (item.kind === "section") {
+          await api.panels.open(item.component, { section: item.section });
           return;
         }
         await api.panels.open(item.component, item.kind === "preset"

@@ -503,6 +503,52 @@
   $("open-app-store").onclick = async () => { try { await call("panels.open", "app-store"); } catch (error) { status(error.message || String(error), true); } };
   document.querySelector('[data-tab="behavior"]').classList.add("active");
   await load();
+
+  // Section deep-linking: Spotlight / hotkey / external code can land
+  // on a specific Settings tab by either appending `?section=workspace`
+  // to the iframe URL or posting `{type:"settings.switch", section}`
+  // to this window. The whitelist mirrors the inline tab list above
+  // so a stray value never silently lands on a non-existent tab.
+  const VALID_SECTIONS = new Set([
+    "behavior", "workspace", "system", "binds", "terminal", "activity", "apps",
+  ]);
+  const switchToSection = (section) => {
+    if (!section || !VALID_SECTIONS.has(section)) return false;
+    const tab = document.querySelector(`[data-tab="${section}"]`);
+    const sec = document.querySelector(`[data-section="${section}"]`);
+    if (!tab || !sec) return false;
+    document.querySelectorAll("[data-section]").forEach((s) => { s.hidden = s !== sec; });
+    document.querySelectorAll("[data-tab]").forEach((t) => { t.classList.toggle("active", t === tab); });
+    return true;
+  };
+  // Initial section: prefer `?section=` query string, then fall back to
+  // `section` set on the iframe's `<iframe>` `name` attribute (parent
+  // could in principle set it). Both are post-load so we run after
+  // the default `behavior` tab is marked active.
+  const initialSection = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("section");
+    } catch {
+      return null;
+    }
+  })();
+  if (initialSection) switchToSection(initialSection);
+  // Live updates from the parent shell (already-open panels that
+  // want to jump tabs). The bridge's postMessage channel is for the
+  // GearShell API; this is a separate dedicated event for the
+  // per-panel "switch section" command.
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (!data || data.type !== "settings.switch") return;
+    if (switchToSection(data.section)) {
+      // The parent might have just asked us to switch, so acknowledge
+      // (no-op right now, but it lets future code verify the jump).
+      try {
+        event.source?.postMessage({ type: "settings.switched", section: data.section }, "*");
+      } catch {}
+    }
+  });
 })().catch((error) => { document.getElementById("status").textContent = error.message || String(error); });
 </script>
 </body>

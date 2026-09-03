@@ -185,7 +185,14 @@ function addWorkbenchPanel(
 
 
 // === addIframePanel ===
-function addIframePanel(api, config, group) {
+// `options` lets the caller pass per-open context (e.g. Spotlight
+// asking for `section: "workspace"`) that the iframe plugin can
+// consume on load. We translate `options.section` into a `?section=...`
+// query string on the iframe `src` so the plugin page can read it
+// from `location.search` without needing a postMessage roundtrip; the
+// kernel also threads the same value through `params` so the iframe
+// can react to live updates via its own bridge.
+function addIframePanel(api, config, group, options) {
   const id = nextPanelIndex("iframe");
   // Lazy w9y install: the iframe plugin declares `w9y: { mod, version? }`
   // on its manifest; ensureW9yDependencies skips iframe plugins on boot
@@ -195,16 +202,44 @@ function addIframePanel(api, config, group) {
   if (config?.w9y && typeof config.w9y.mod === "string" && config.w9y.mod) {
     panelsDep("triggerPluginW9yInstall")(config.w9y);
   }
+  // Per-open URL override. Used by the Spotlight → Settings jump to
+  // land on a specific tab. Only honor a small whitelist of known
+  // keys so a malicious caller can't smuggle script into `src`.
+  const src = applyIframeSrcOverride(config.src, options);
+  // Build a config copy whose `src` reflects the override; the rest
+  // of the spread still merges in any options the caller passed.
+  const configWithOverride = { ...config, src };
   const panel = api.addPanel({
     id: `iframe-${id}`,
     component: "iframe",
-    params: { iframeId: id, panelType: config.panelType, pluginIcon: config.icon, ...config },
+    params: { iframeId: id, panelType: config.panelType, pluginIcon: config.icon, ...configWithOverride, ...(options || {}) },
     title: config.title,
     ...(group && { position: { referenceGroup: group } }),
   });
   panelsDep("rememberOpenPanel")(panel, { component: config.panelType });
   panel.api.setActive();
   return panel;
+}
+
+// Per-open URL helper. Currently translates `options.section` into
+// `?section=...` on the iframe `src`. The whitelist lives in the
+// Settings iframe (it ignores unknown values), so this side stays
+// conservative: we only forward the key, and only when the
+// iframe plugin's manifest is one we know about.
+function applyIframeSrcOverride(src, options) {
+  if (!src || !options) return src;
+  const section = typeof options.section === "string" ? options.section : null;
+  if (!section) return src;
+  try {
+    const url = new URL(src, window.location.origin);
+    if (section && /^[a-z][a-z0-9-]{0,32}$/.test(section)) {
+      url.searchParams.set("section", section);
+      return url.pathname + url.search + url.hash;
+    }
+  } catch {
+    // bad src; fall through
+  }
+  return src;
 }
 
 // === addPanelByComponent ===
