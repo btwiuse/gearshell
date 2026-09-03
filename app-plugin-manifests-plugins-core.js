@@ -203,7 +203,7 @@ export const CORE_PLUGINS = [
     id: "about",
     name: "About",
     version: "1.0.0",
-    icon: "CloudRain",
+    icon: "Info",
     iframe: {
       src: "/plugin/about/index.html",
       title: "About",
