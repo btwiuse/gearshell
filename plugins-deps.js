@@ -1,7 +1,7 @@
 // plugins-deps.js — the plugin kernel's DI shim + change event
 // (500-line split out of plugins.js).
 
-import { pushEvent } from "./workspace-events.js";
+import { emit } from "./workspace-events.js";
 
 export const PLUGIN_CHANGED_EVENT = "GearShellPluginsChanged";
 
@@ -9,7 +9,13 @@ export function emitPluginChanged(payload) {
   window.dispatchEvent(
     new CustomEvent(PLUGIN_CHANGED_EVENT, { detail: payload || {} }),
   );
-  pushEvent("plugins.changed", payload || {});
+  // emit (not pushEvent) so the iframe plugin bridge forwards the
+  // notification to every subscribed plugin. pushEvent only writes
+  // to the agent ring buffer, leaving iframe events.on("plugins.changed")
+  // listeners (App Store, Settings Apps tab, etc.) silently dead.
+  // Plugin install/toggle/remove fires this on user action, so the
+  // low frequency is safe for in-memory fan-out.
+  emit("plugins.changed", payload || {});
 }
 
 let __pluginsDeps = null;
