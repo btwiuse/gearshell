@@ -38,6 +38,27 @@ let loopMode = "off";
 let shuffle = false;
 const history = []; // newest first: { src, title, ts, count }
 
+// === Demo seed ===
+// First-time users see an empty queue and have nothing to play. Seed the
+// engine with a single public demo track so the panel has something
+// to render the first time it's opened. Runs exactly once per page
+// load (the next time the engine is re-imported in the same session
+// is rare — HMR re-uses module state). If the user clears the queue
+// they stay empty until the next reload, which is the right behavior
+// for a demo (no surprise replays on every clear).
+const SEED_DEMO_TRACK = {
+  src: "https://wt0iqcvbni0x.matrix.k0s.io/Grapes-I-Dunno.mp3",
+  title: "Grapes I Dunno",
+};
+if (queue.length === 0) {
+  queue.push(SEED_DEMO_TRACK);
+  queueIndex = 0;
+  // Populate the "now playing" surface with the seed track so the
+  // panel's metadata (title / cover / duration) renders right away.
+  // We do NOT auto-start audio playback — the user has to hit play.
+  current = { src: SEED_DEMO_TRACK.src, title: SEED_DEMO_TRACK.title };
+}
+
 function emitState() {
   window.dispatchEvent(new CustomEvent(MUSIC_STATE_EVENT));
 }
