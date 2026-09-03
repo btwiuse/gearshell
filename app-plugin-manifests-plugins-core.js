@@ -160,6 +160,7 @@ export const CORE_PLUGINS = [
         "panels.open",
         "panels.focus",
         "config.getShell",
+        "config.terminalProfiles.list",
         "config.plugins.list",
       ],
     },

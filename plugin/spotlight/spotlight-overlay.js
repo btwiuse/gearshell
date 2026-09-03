@@ -134,8 +134,15 @@ function dedupeApps(apps) {
 }
 
 function consolePresetApps(shell) {
+  // List every terminal profile (built-in or user-saved). The user's
+  // mental model of Spotlight is "type to find anything I can launch";
+  // hiding the shell's two defaults (Bash, Crush) because they're
+  // pinned-as-built-in elsewhere just makes them harder to find when
+  // the user reaches for the keyboard. The dedupe key includes the
+  // preset id so a profile with the same id from two sources still
+  // appears once.
   return (shell.terminalProfiles || [])
-    .filter((profile) => profile && profile.builtin !== true && profile.id)
+    .filter((profile) => profile && profile.id)
     .map((profile) => ({
       kind: "preset",
       component: "console",
@@ -179,13 +186,17 @@ function useSpotlightCatalog(open, api) {
       api.config.getShell(),
       api.config.plugins.list(),
       api.panels.list(),
+      // config.terminalProfiles.list returns the merged list (built-in
+      // Bash/Crush defaults + any user-saved profile) — the kernel
+      // does the dedupe, so we don't have to repeat the filter here.
+      api.config.terminalProfiles?.list?.() ?? Promise.resolve([]),
     ]).then(
-      ([shell, plugins, panels]) => {
+      ([shell, plugins, panels, profiles]) => {
         if (stopped) return;
         const apps = dedupeApps([
           ...pluginApps(Array.isArray(plugins) ? plugins : []),
           ...EXTRA_APPS.map((app) => ({ ...app, kind: "app" })),
-          ...consolePresetApps(shell || {}),
+          ...consolePresetApps({ terminalProfiles: profiles || [] }),
         ]);
         setCatalog({
           apps: sortApps(apps, shell || {}),
