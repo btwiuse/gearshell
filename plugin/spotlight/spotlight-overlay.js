@@ -46,15 +46,6 @@ const EXTRA_APPS = [
   { component: "app-store", name: "App Store", iconName: "Store" },
 ];
 
-// Settings deep-links are no longer hard-coded here; the Settings
-// plugin manifest declares its own `routes[]` (panel/settings/index.html
-// reads `?view=...` on load and routes to the matching section).
-// Other iframe plugins can declare routes the same way — Spotlight
-// folds every `routes[]` from every iframe plugin manifest into the
-// catalog automatically. This is the kernel-level mechanism the
-// App Store / any future iframe plugin plugs into without us editing
-// this file.
-
 // Mount state driven by the toggle channel ("toggle" | "open" | "close").
 function useSpotlightVisibility() {
   const [open, setOpen] = useState(false);
@@ -82,53 +73,15 @@ function RowIcon({ item }) {
   `;
 }
 
-// Subsequence match ("plg" hits "Playground") with a score that
-// favours full-token substring hits — when the user types "app
-// store", we want "App Store" to rank above "Settings · Apps"
-// even though the latter's component "settings" fuzzy-matches
-// every letter of "app store" in order. The token loop runs first
-// so multi-word queries ("app store", "agent activity") prefer
-// entries whose name contains the full phrase, not just a fuzzy
-// character match.
+// Subsequence match ("plg" hits "Playground") with a score that favours
+// prefix and word-boundary hits, so short queries rank the obvious app
+// first instead of whatever happens to sort earliest.
 function fuzzyScore(text, query) {
-  const haystack = (text || "").toLowerCase();
+  const haystack = text.toLowerCase();
   if (!query) return 0;
-  // 1. Exact-prefix hit: query matches the start of the name.
-  if (haystack.startsWith(query)) return 2000;
-  // 2. Phrase hit: the full query is a substring somewhere.
+  if (haystack.startsWith(query)) return 1000;
   const direct = haystack.indexOf(query);
-  if (direct >= 0) return 1500 - direct;
-  // 3. Per-token hit: every space-separated word in the query
-  //    appears as a substring in order. This is the dominant
-  //    signal — it kills the "Settings · Apps" type matches when
-  //    the user is typing a multi-word phrase.
-  const tokens = query.split(/\s+/).filter(Boolean);
-  if (tokens.length > 1) {
-    let cursor = 0;
-    let allFound = true;
-    let firstTokenStart = -1;
-    for (const token of tokens) {
-      const found = haystack.indexOf(token, cursor);
-      if (found === -1) { allFound = false; break; }
-      if (firstTokenStart === -1) firstTokenStart = found;
-      cursor = found + token.length;
-    }
-    if (allFound) {
-      // Strong bonus when the first token is at the start; softer
-      // when it appears later. We keep the score well above the
-      // per-character score so it always wins.
-      return 800 - firstTokenStart;
-    }
-  }
-  // 4. Per-token hit on a single-word query, or per-character
-  //    fuzzy fallback. The first-token score still wins over a
-  //    cross-field fuzzy match.
-  const firstToken = tokens[0] || query;
-  const firstIdx = haystack.indexOf(firstToken);
-  if (firstIdx >= 0) return 600 - firstIdx;
-  // 5. Char-by-char fuzzy. Bounded so cross-field matches (e.g.
-  //    component "settings" matching "app store") don't drown out
-  //    the real hits.
+  if (direct > 0) return 600 - direct;
   let score = 0;
   let cursor = 0;
   for (const char of query) {
@@ -137,11 +90,7 @@ function fuzzyScore(text, query) {
     score += found === 0 || /[\s-_]/.test(haystack[found - 1] || "") ? 12 : 4;
     cursor = found + 1;
   }
-  // Penalize the score so it never beats a real substring hit. A
-  // pure char-by-char match with no real word overlap usually
-  // means a cross-field artifact ("Settings" matching "app store"
-  // letter-by-letter) — drop it below the threshold.
-  return score - 400;
+  return score;
 }
 
 function matchItems(items, query) {
@@ -173,11 +122,11 @@ function pluginApps(plugins) {
       iconName: typeof plugin.icon === "string" ? plugin.icon : null,
     });
     // Routes declared by the plugin manifest. The Settings plugin
-    // uses this to expose 7 deep-link entries (Settings · Workspace,
-    // etc); other plugins can declare their own. Each route becomes
-    // a separate Spotlight entry that calls `panels.open(component,
-    // { route: "<name>" })` — the kernel translates that into a
-    // query string on the iframe URL using the manifest's `query`.
+    // uses this to expose 7 deep-link entries (Settings ·
+    // Workspace, etc); other plugins can declare their own. Each
+    // route becomes a separate Spotlight entry that calls
+    // `panels.open(component, { route: <name> })` — the kernel
+    // translates that into a query string on the iframe URL.
     const routes = Array.isArray(plugin.routes) ? plugin.routes : null;
     if (routes) {
       for (const entry of routes) {
@@ -199,10 +148,11 @@ function pluginApps(plugins) {
 function dedupeApps(apps) {
   const seen = new Set();
   return apps.filter((app) => {
-    let key;
-    if (app.kind === "preset") key = `preset:${app.preset.id}`;
-    else if (app.kind === "route") key = `route:${app.component}:${app.route}`;
-    else key = `app:${app.component}`;
+    const key = app.kind === "preset"
+      ? `preset:${app.preset.id}`
+      : app.kind === "route"
+        ? `route:${app.component}:${app.route}`
+        : `app:${app.component}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -397,11 +347,24 @@ function useSpotlightSession() {
 // "switch to" affordance, not a default clutter).
 function useSpotlightResults(catalog, query) {
   const trimmed = query.trim().toLowerCase();
-  return useMemo(() => {
+  // We can't just depend on the catalog arrays' identity (those are
+  // new on every catalog re-load even when contents are stable) and
+  // we also can't depend on the rendered list's identity (it's
+  // `[...apps, ...panels]`, a new spread each call). So we hash the
+  // visible content into a primitive string and use that as the
+  // memo key. The body of the memo still rebuilds the array, but
+  // only when something the user can see actually changed.
+  const visibleKey =
+    `${trimmed}|` +
+    catalog.apps.map((p) => `${p.kind}:${p.id || p.component}:${p.route || ""}`).join(",") +
+    "|" +
+    catalog.panels.map((p) => p.id).join(",");
+  return React.useMemo(() => {
     const apps = matchItems(catalog.apps, trimmed);
     const panels = trimmed ? matchItems(catalog.panels, trimmed) : [];
     return [...apps, ...panels];
-  }, [catalog.apps, catalog.panels, trimmed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleKey]);
 }
 
 // Launch the picked result: close the overlay first so the newly
@@ -418,13 +381,6 @@ function useSpotlightLaunch({ results, close, api }) {
           await api.panels.focus(item.id);
           return;
         }
-        // Settings · <Section> entries open the Settings iframe with
-        // a per-open `section` option. panels.js translates it into
-        // a `?section=...` query string on the iframe URL; the
-        // Settings iframe switches to the matching tab on load. If
-        // a Settings tab is already open, dockview will spawn a new
-        // panel — each section gets its own URL, so multiple deep
-        // links can stay open side by side.
         if (item.kind === "route") {
           await api.panels.open(item.component, { route: item.route });
           return;
@@ -507,6 +463,7 @@ function SpotlightCard({
         />
         <div className="sl-results">
           <${SpotlightResults}
+            key=${`r:${query}:${results.length}:${error ? "err" : "ok"}`}
             results=${results}
             active=${active}
             query=${query}
