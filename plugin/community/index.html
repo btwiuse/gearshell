@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Community</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { overflow: auto; background: radial-gradient(circle at 15% 10%, #1b3550, #0d1117 48%, #080b10); color: #f0f6fc; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .community { width: min(760px, 100%); margin: 0 auto; padding: 30px 20px 40px; }
+    .hero { margin-bottom: 24px; text-align: center; }
+    .hero h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -.03em; }
+    .hero p { margin: 0; color: #9da9b8; line-height: 1.5; }
+    .channels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .channel { min-width: 0; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(20,28,39,.78); box-shadow: 0 12px 35px rgba(0,0,0,.18); }
+    .channel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
+    .channel-icon { display: block; width: 56px; height: 56px; padding: 8px; border-radius: 0; object-fit: contain; color: #fff; font-size: 20px; font-weight: 700; }
+    .discord .channel-icon, .wechat .channel-icon, .telegram .channel-icon, .x .channel-icon { background: transparent; border: 0; }
+    .channel h2 { margin: 0; font-size: 16px; }
+    .channel p { min-height: 42px; margin: 0 0 14px; color: #aeb8c5; line-height: 1.5; }
+    .channel a, .channel button, .placeholder { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 34px; padding: 7px 12px; border: 1px solid rgba(143,209,255,.3); border-radius: 8px; color: #e6f5ff; background: rgba(143,209,255,.1); font: inherit; text-decoration: none; cursor: pointer; }
+    .channel a:hover, .channel button:hover { background: rgba(143,209,255,.2); }
+    .placeholder { color: #8793a1; border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.04); }
+    .wechat-qr { display: block; width: min(100%, 240px); max-height: 240px; margin: 0 auto 14px; border-radius: 8px; object-fit: contain; background: #fff; }
+    .qr-modal { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.66); backdrop-filter: blur(5px); }
+    .qr-modal[hidden] { display: none; }
+    .qr-card { position: relative; width: min(430px, 100%); padding: 22px; border: 1px solid rgba(255,255,255,.18); border-radius: 16px; background: rgba(25,31,42,.96); box-shadow: 0 24px 70px rgba(0,0,0,.6); text-align: center; }
+    .qr-card h2 { margin: 0 0 15px; font-size: 20px; }
+    .qr-card img { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; background: #fff; }
+    .qr-close { margin-top: 14px; }
+    @media (max-width: 560px) { .community { padding: 22px 14px 28px; } .channels { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="community">
+    <header class="hero"><h1>Community</h1><p>Join the GearShell community and follow the project across the web.</p></header>
+    <section class="channels" aria-label="Community channels">
+      <article class="channel discord"><div class="channel-head"><img class="channel-icon" src="https://cdn.simpleicons.org/discord/5865F2" alt=""><h2>Discord</h2></div><p>Chat with the GearShell community and share what you are building.</p><a href="https://discord.gg/uRCe6AwSjk" target="_blank" rel="noopener noreferrer">Join Discord</a></article>
+      <article class="channel wechat"><div class="channel-head"><img class="channel-icon" src="https://cdn.simpleicons.org/wechat/07C160" alt=""><h2>WeChat</h2></div><p>Join the GearShell WeChat group by scanning the QR code.</p><button id="wechat-open" type="button">Show QR code</button></article>
+      <article class="channel telegram"><div class="channel-head"><img class="channel-icon" src="https://cdn.simpleicons.org/telegram/229ED9" alt=""><h2>Telegram</h2></div><p>The Telegram community link will be added soon.</p><span class="placeholder">Coming soon</span></article>
+      <article class="channel x"><div class="channel-head"><img class="channel-icon" src="https://cdn.simpleicons.org/x/ffffff" alt=""><h2>X</h2></div><p>Follow GearShell updates, releases, and project news.</p><a href="https://x.com/gear_sh" target="_blank" rel="noopener noreferrer">Follow on X</a></article>
+    </section>
+  </main>
+  <div id="wechat-modal" class="qr-modal" hidden>
+    <section class="qr-card" role="dialog" aria-modal="true" aria-labelledby="wechat-title">
+      <h2 id="wechat-title">WeChat Group</h2>
+      <img src="./wechat-group.png" alt="WeChat group QR code">
+      <button id="wechat-close" class="qr-close" type="button">Close</button>
+    </section>
+  </div>
+  <script>
+    const wechatModal = document.getElementById("wechat-modal");
+    const openWechat = () => { wechatModal.hidden = false; document.getElementById("wechat-close").focus(); };
+    const closeWechat = () => { wechatModal.hidden = true; };
+    document.getElementById("wechat-open").onclick = openWechat;
+    document.getElementById("wechat-close").onclick = closeWechat;
+    wechatModal.onclick = (event) => { if (event.target === wechatModal) closeWechat(); };
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !wechatModal.hidden) closeWechat(); });
+  </script>
+</body>
+</html>

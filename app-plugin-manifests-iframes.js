@@ -174,12 +174,12 @@ export const IFRAME_PLUGINS = [
     enabled: false,
   },
   {
-    id: "group",
-    name: "Group",
+    id: "community",
+    name: "Community",
     version: "1.0.0",
     icon: "UsersRound",
     iframe: {
-      src: "/plugin/group/index.html",
+      src: "/plugin/community/index.html",
     },
   },
   {

@@ -200,15 +200,18 @@ export const CORE_PLUGINS = [
   // page paints its own surface; declaring a shell stylesheet here
   // would only inject host rules.
   {
-    id: "glmatrix",
-    name: "Digital Rain",
+    id: "about",
+    name: "About",
     version: "1.0.0",
     icon: "CloudRain",
     iframe: {
-      src: "/plugin/glmatrix/index.html",
-      title: "Digital Rain",
+      src: "/plugin/about/index.html",
+      title: "About",
       allow: "fullscreen",
       allowFullscreen: true,
+    },
+    permissions: {
+      api: ["music.play", "music.pause", "music.nowPlaying"],
     },
     emptyGrid: true,
   },

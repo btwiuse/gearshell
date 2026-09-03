@@ -47,7 +47,7 @@ const history = []; // newest first: { src, title, ts, count }
 // they stay empty until the next reload, which is the right behavior
 // for a demo (no surprise replays on every clear).
 const SEED_DEMO_TRACK = {
-  src: "https://wt0iqcvbni0x.matrix.k0s.io/Grapes-I-Dunno.mp3",
+  src: "/plugin/music/Grapes-I-Dunno.mp3",
   title: "Grapes I Dunno",
 };
 if (queue.length === 0) {
@@ -126,7 +126,7 @@ function randomQueueIndex(except) {
 }
 
 function isRemote(src) {
-  return /^https?:\/\//i.test(src);
+  return /^https?:\/\//i.test(src) || String(src).startsWith("/plugin/");
 }
 
 // Replays of the same source merge into one entry, moved to the front

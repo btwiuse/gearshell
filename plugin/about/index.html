@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/alpha.png">
+  <title>GearShell — About</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #000; }
+    #about-link { position: fixed; right: 15px; bottom: 15px; z-index: 2; border: 0; padding: 0; color: rgba(107,165,184,.8); background: transparent; font: 15px Menlo,Consolas,monospace; cursor: pointer; text-shadow: 0 0 15px rgba(107,165,184,.8); }
+    #about-link:hover { color: #d7f5ff; }
+    #about-backdrop { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.35); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+    #about-backdrop.is-open { opacity: 1; pointer-events: auto; }
+    #about-backdrop.closing { opacity: 0; }
+    #about-backdrop[hidden], #about-modal[hidden] { display: none; }
+    #about-modal { position: relative; width: 360px; max-width: 100%; color: #f5f5f7; background: rgba(39,39,43,.94); border: 1px solid rgba(255,255,255,.18); border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.7), 0 0 1px #fff; font: 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; text-align: center; user-select: none; overflow: hidden; opacity: 0; transform: scale(.96) translateY(6px); transition: opacity .22s ease, transform .22s cubic-bezier(.16,1,.3,1); }
+    #about-modal.is-open { opacity: 1; transform: scale(1) translateY(0); }
+    #about-modal.closing { opacity: 0; transform: scale(.97) translateY(6px); }
+    #about-header { display: flex; align-items: center; min-height: 42px; padding: 0 14px; background: rgba(255,255,255,.07); cursor: move; touch-action: none; }
+    #about-header strong { flex: 1; margin-left: 18px; font-size: 13px; font-weight: 600; }
+    #about-close { width: 13px; height: 13px; padding: 0; border: 0; border-radius: 50%; color: transparent; background: #ff5f57; cursor: pointer; }
+    #about-close:hover { filter: brightness(.9); }
+    #about-body { padding: 24px 32px 26px; }
+    #about-logo-wrap { position: relative; width: 144px; height: 144px; margin: 14px auto 18px; }
+    .logo { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .8s ease-in-out; }
+    .logo.active { opacity: 1; }
+    .logo-card { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 32px; box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.08) inset; }
+    .logo-card::after { position: absolute; inset: 0; content: ""; background: radial-gradient(circle at 25% 18%, rgba(255,255,255,.28), transparent 34%); }
+    .logo-img { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+    .pat-midnight { background: radial-gradient(circle at 50% 35%, #2a2a2a, #050505 70%); }
+    .pat-stairs { background: repeating-linear-gradient(135deg, #777 0 7px, #333 7px 18px, #111 18px 26px); }
+    .pat-arrows { background: repeating-linear-gradient(45deg, #315c67 0 18px, #17343e 18px 36px); }
+    .pat-rainbow { background: linear-gradient(135deg,#184500,#187546,#006782,#0b1284,#760ea1,#b13e12); }
+    .pat-carbon { background: repeating-linear-gradient(45deg,#151515 0 5px,#242424 5px 10px); }
+    .pat-fibre { background: radial-gradient(#000 15%,transparent 16%) 0 0/16px 16px,#282828; }
+    .pat-argyle { background: repeating-linear-gradient(45deg,rgba(255,255,255,.12) 0 1px,transparent 1px 30px),#4c5059; }
+    .pat-steps { background: repeating-linear-gradient(135deg,#81334d 0 12px,#d05d79 12px 24px); }
+    .pat-cross { background: linear-gradient(90deg,transparent 46%,#8b99a8 46% 54%,transparent 54%),linear-gradient(0deg,transparent 46%,#8b99a8 46% 54%,transparent 54%),#34404c; background-size: 50px 50px; }
+    .pat-yin { background: radial-gradient(circle at 50% 25%,#d2caab 0 12%,transparent 13%),radial-gradient(circle at 50% 75%,#364e27 0 12%,transparent 13%),#63773f; }
+    .pat-stars { background: radial-gradient(#e3d7bf 2px,transparent 3px) 0 0/28px 28px,#232927; }
+    .pat-bricks { background: linear-gradient(#822 5px,transparent 5px) 0 0/58px 29px,linear-gradient(90deg,#b55 5px,transparent 5px) 0 0/58px 29px,#555; }
+    .pat-cube { background: repeating-linear-gradient(30deg,#445 0 8px,#667 8px 16px); }
+    .pat-tartan { background: repeating-linear-gradient(0deg,rgba(0,0,0,.4) 0 4px,transparent 4px 28px),repeating-linear-gradient(90deg,rgba(0,0,0,.4) 0 4px,transparent 4px 28px),#713636; }
+    .pat-grid { background: linear-gradient(#6af 2px,transparent 2px),linear-gradient(90deg,#6af 2px,transparent 2px),#173d67; background-size: 28px 28px; }
+    .pat-diagonal { background: repeating-linear-gradient(45deg,#555 0 16px,#888 16px 32px); }
+    .pat-cicada { background: repeating-linear-gradient(90deg,#026873 0 7px,#258b91 7px 14px); }
+    .pat-pyramid { background: linear-gradient(135deg,#6a201b 25%,transparent 25%) 0 0/20px 20px,linear-gradient(315deg,#d45d55 25%,#561a16 25%) 0 0/20px 20px; }
+    #about-title { margin: 0 0 10px; color: #f5f5f7; font-size: 30px; font-weight: 700; }
+    #about-tagline { margin: 0 auto 22px; max-width: 280px; color: #c8c8cc; font-size: 14px; line-height: 1.45; }
+    #about-info { max-width: 240px; margin: 0 auto 24px; color: #c8c8cc; font: 13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; text-align: right; user-select: text; -webkit-user-select: text; cursor: text; }
+    .info-row { display: flex; justify-content: space-between; gap: 16px; }
+    .info-value { user-select: text; -webkit-user-select: text; }
+    .info-label { color: #a5a5aa; }
+    .info-value { color: #f5f5f7; }
+    #about-actions { display: flex; justify-content: center; gap: 8px; }
+    .about-button { flex: 1; padding: 8px 18px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; color: #f5f5f7; background: rgba(255,255,255,.08); font: 13px inherit; text-decoration: none; transition: background .12s ease; }
+    .about-button:hover { background: rgba(255,255,255,.16); }
+    @media (max-width: 440px) { #about-modal { width: calc(100vw - 24px); } #about-body { padding-left: 18px; padding-right: 18px; } }
+    @media (prefers-reduced-motion: reduce) { #about-modal, #about-backdrop, .logo, .about-button { transition: none; } }
+  </style>
+  <script src="digitalrain.bundle.js"></script>
+<script src="/plugin/gear-bridge.js"></script>
+</head>
+<body>
+  <button id="about-link" type="button" aria-haspopup="dialog">About</button>
+  <div id="about-backdrop" hidden>
+    <section id="about-modal" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <header id="about-header"><strong>About</strong><button id="about-close" type="button" aria-label="Close"></button></header>
+      <div id="about-body">
+        <div id="about-logo-wrap" aria-label="Rotating GearShell logo"></div>
+        <h1 id="about-title">GearShell</h1>
+        <p id="about-tagline">Web Native Agent Sandbox.</p>
+        <div id="about-info">
+          <div class="info-row"><span class="info-label">Version</span><span class="info-value">cmd/gear/v0.0.3</span></div>
+          <div class="info-row"><span class="info-label">Channel</span><span class="info-value">Tip</span></div>
+          <div class="info-row"><span class="info-label">Commit</span><span class="info-value">main</span></div>
+        </div>
+        <div id="about-actions"><a class="about-button" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener">GitHub</a><a class="about-button" href="https://gear.sh" target="_blank" rel="noreferrer noopener">Open App</a><button id="about-play" class="about-button" type="button" aria-label="Play demo music">▶</button></div>
+      </div>
+    </section>
+  </div>
+  <script>
+    const styles = ["midnight","stairs","arrows","rainbow","carbon","fibre","argyle","steps","cross","yin","stars","bricks","cube","tartan","grid","diagonal","cicada","pyramid"];
+    const logoWrap = document.getElementById("about-logo-wrap");
+    styles.forEach((style, index) => {
+      const logo = document.createElement("div");
+      logo.className = `logo${index === 0 ? " active" : ""}`;
+      logo.innerHTML = `<div class="logo-card pat-${style}"><img class="logo-img" src="/alpha.png" alt="GearShell logo"></div>`;
+      logoWrap.appendChild(logo);
+    });
+    const link = document.getElementById("about-link");
+    const modal = document.getElementById("about-modal");
+    const backdrop = document.getElementById("about-backdrop");
+    const close = document.getElementById("about-close");
+    const header = document.getElementById("about-header");
+    let closeTimer = 0;
+    const show = () => { clearTimeout(closeTimer); modal.hidden = false; backdrop.hidden = false; modal.style.position = "relative"; modal.style.left = ""; modal.style.top = ""; modal.style.transform = ""; modal.classList.remove("closing"); backdrop.classList.remove("closing"); requestAnimationFrame(() => { modal.classList.add("is-open"); backdrop.classList.add("is-open"); }); close.focus({preventScroll:true}); };
+    const hide = () => { modal.classList.remove("is-open"); backdrop.classList.remove("is-open"); modal.classList.add("closing"); backdrop.classList.add("closing"); closeTimer = setTimeout(() => { modal.hidden = true; backdrop.hidden = true; modal.classList.remove("closing"); backdrop.classList.remove("closing"); }, 220); };
+    link.onclick = show;
+    close.onclick = hide;
+    backdrop.onclick = (event) => { if (event.target === backdrop) hide(); };
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !modal.hidden) hide(); });
+    const playButton = document.getElementById("about-play");
+    const demoTrack = "/plugin/music/Grapes-I-Dunno.mp3";
+    let playing = false;
+    const refreshPlayback = async () => {
+      try {
+        const state = await GearShell.music.nowPlaying();
+        playing = !!state?.current?.playing;
+        playButton.textContent = playing ? "❚❚" : "▶";
+        playButton.setAttribute("aria-label", playing ? "Pause demo music" : "Play demo music");
+      } catch {}
+    };
+    playButton.onclick = async () => {
+      try {
+        if (playing) await GearShell.music.pause();
+        else await GearShell.music.play(demoTrack, "Grapes I Dunno");
+        await refreshPlayback();
+      } catch {}
+    };
+    let index = 0;
+    setInterval(() => { const logos = logoWrap.querySelectorAll(".logo"); logos[index].classList.remove("active"); index = (index + 1) % logos.length; logos[index].classList.add("active"); }, 5000);
+    refreshPlayback();
+    let drag = null;
+    header.addEventListener("pointerdown", (event) => { if (event.target === close || (event.pointerType === "mouse" && event.button !== 0)) return; event.preventDefault(); const rect = modal.getBoundingClientRect(); drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top }; modal.style.transition = "none"; modal.style.transform = "none"; modal.style.position = "fixed"; modal.style.left = `${rect.left}px`; modal.style.top = `${rect.top}px`; header.setPointerCapture(event.pointerId); });
+    header.addEventListener("pointermove", (event) => { if (!drag) return; modal.style.left = `${drag.left + event.clientX - drag.x}px`; modal.style.top = `${drag.top + event.clientY - drag.y}px`; });
+    const stopDrag = () => { if (!drag) return; drag = null; modal.style.transition = ""; };
+    header.addEventListener("pointerup", stopDrag);
+    header.addEventListener("pointercancel", stopDrag);
+    show();
+  </script>
+</body>
+</html>
