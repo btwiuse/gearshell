@@ -177,11 +177,54 @@ body {
 .as-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  gap: 0;
+  padding: 0;
   border: 1px solid #21262d;
   border-radius: 8px;
   background: #161b22;
+  overflow: hidden;
+}
+
+/* 1:1 preview square. The image always fills (object-fit: cover) and
+   the fallback (gradient + centered lucide icon) is hidden until the
+   <img> fails (onError swaps display). The fallback uses the same
+   gradient palette as the rest of the dark theme so missing previews
+   don't break the visual rhythm of the grid. */
+.as-card-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  overflow: hidden;
+}
+
+.as-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.as-card:hover .as-card-preview img {
+  transform: scale(1.02);
+}
+
+.as-card-preview-fallback {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: radial-gradient(circle at 30% 30%, #1f6feb22, transparent 60%),
+    linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  color: #79c0ff;
+}
+
+.as-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
 }
 
 .as-card.is-disabled { opacity: 0.6; }
@@ -639,6 +682,39 @@ button.as-perm-chip.wildcard:hover { background: #d2992244; border-color: #d2992
 .as-detail-modal {
   width: min(620px, calc(100% - 32px));
   position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.as-detail-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  border-bottom: 1px solid #21262d;
+}
+.as-detail-hero .as-card-preview {
+  aspect-ratio: 16 / 9;
+  border-radius: 0;
+}
+
+.as-detail-modal > .as-detail-close { z-index: 2; }
+.as-detail-modal > .as-detail-hero ~ .as-detail-head,
+.as-detail-modal > .as-detail-hero ~ p,
+.as-detail-modal > .as-detail-hero ~ .as-perm-panel {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+.as-detail-modal > .as-detail-hero + .as-detail-head {
+  padding-top: 14px;
+}
+.as-detail-modal > .as-detail-hero ~ p {
+  margin: 0;
+  padding-bottom: 4px;
+}
+.as-detail-modal > .as-detail-hero ~ .as-perm-panel {
+  margin: 0 18px 18px 18px;
+  width: auto;
 }
 
 .as-detail-close {

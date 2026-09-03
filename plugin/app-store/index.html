@@ -685,6 +685,9 @@ function PluginDetailModal({ plugin, onClose, onOpen }) {
       <button type="button" className="as-detail-close" onClick=${onClose} title="Close" aria-label="Close">
         <${X} size=${14} aria-hidden=${true}/>
       </button>
+      <div className="as-detail-hero">
+        <${PluginPreview} plugin=${plugin}/>
+      </div>
       <header className="as-detail-head">
         <div className="as-detail-icon"><${Icon} size=${22} aria-hidden=${true}/></div>
         <div className="as-detail-meta">
@@ -720,53 +723,81 @@ function Badges({ plugin }) {
   </div>`;
 }
 
+// 1:1 preview image. Resolves the relative path against the App Store
+// iframe's URL (/plugin/app-store/index.html) so the same pattern works
+// for `previews/<id>.png`. Falls back to a stylised gradient + icon if
+// the PNG is missing (user-installed plugin without a curated preview)
+// so the grid never shows a broken-image glyph.
+function PluginPreview({ plugin }) {
+  const Icon = iconOf(plugin.icon);
+  const src = `previews/${plugin.id}.png`;
+  return html`<div className="as-card-preview">
+    <img
+      src=${src}
+      alt=${`${plugin.name || plugin.id} preview`}
+      loading="lazy"
+      onError=${(e) => {
+        e.currentTarget.style.display = "none";
+        const fallback = e.currentTarget.nextElementSibling;
+        if (fallback) fallback.style.display = "grid";
+      }}
+    />
+    <div className="as-card-preview-fallback">
+      <${Icon} size=${48} aria-hidden=${true}/>
+    </div>
+  </div>`;
+}
+
 function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen, onShowDetail, onChipClick }) {
   const Icon = iconOf(plugin.icon);
   const perms = plugin.permissions?.api || [];
   return html`<article className=${"as-card " + (plugin.enabled ? "" : "is-disabled") + (plugin.loadError ? " has-error" : "")}>
-    <div className="as-card-top">
-      <div className="as-card-icon"><${Icon} size=${18} aria-hidden=${true}/></div>
-      <div className="as-card-head">
-        <div className="as-card-name">${plugin.name || plugin.id}</div>
-        <div className="as-card-id">${plugin.id} · v${plugin.version}</div>
+    <${PluginPreview} plugin=${plugin}/>
+    <div className="as-card-body">
+      <div className="as-card-top">
+        <div className="as-card-icon"><${Icon} size=${18} aria-hidden=${true}/></div>
+        <div className="as-card-head">
+          <div className="as-card-name">${plugin.name || plugin.id}</div>
+          <div className="as-card-id">${plugin.id} · v${plugin.version}</div>
+        </div>
+        <${ToggleSwitch}
+          checked=${plugin.enabled}
+          disabled=${plugin.required}
+          onChange=${() => onToggle(plugin)}
+          label=${plugin.enabled ? `Disable ${plugin.name}` : `Enable ${plugin.name}`}
+        />
       </div>
-      <${ToggleSwitch}
-        checked=${plugin.enabled}
-        disabled=${plugin.required}
-        onChange=${() => onToggle(plugin)}
-        label=${plugin.enabled ? `Disable ${plugin.name}` : `Enable ${plugin.name}`}
-      />
-    </div>
-    ${plugin.description ? html`<div className="as-card-desc">${plugin.description}</div>` : null}
-    <${Badges} plugin=${plugin}/>
-    <${PermissionSummary} plugin=${plugin} onChipClick=${(e) => onChipClick && onChipClick(e, plugin)}/>
-    ${plugin.loadError ? html`<div className="as-card-desc" style=${{ color: "#f85149" }}>${plugin.loadError}</div>` : null}
-    <div className="as-card-actions">
-      <button
-        type="button"
-        className="as-btn primary"
-        disabled=${!plugin.enabled}
-        title=${plugin.enabled ? `Open ${plugin.name} in a new tab` : `Enable ${plugin.name} first`}
-        onClick=${() => onOpen(plugin)}
-      ><${ExternalLink} size=${12} aria-hidden=${true}/> Open</button>
-      <button
-        type="button"
-        className="as-btn"
-        title="View permissions and details"
-        onClick=${() => onShowDetail(plugin)}
-      ><${ShieldCheck} size=${12} aria-hidden=${true}/> Permissions${perms.length ? html` (${perms.length})` : null}</button>
-      <button
-        type="button"
-        className="as-btn"
-        disabled=${plugin.required}
-        onClick=${() => onEdit(plugin)}
-      ><${Pencil} size=${12} aria-hidden=${true}/> Edit</button>
-      <button
-        type="button"
-        className="as-btn danger"
-        disabled=${plugin.builtin}
-        onClick=${() => onRemove(plugin)}
-      ><${Trash2} size=${12} aria-hidden=${true}/> Remove</button>
+      ${plugin.description ? html`<div className="as-card-desc">${plugin.description}</div>` : null}
+      <${Badges} plugin=${plugin}/>
+      <${PermissionSummary} plugin=${plugin} onChipClick=${(e) => onChipClick && onChipClick(e, plugin)}/>
+      ${plugin.loadError ? html`<div className="as-card-desc" style=${{ color: "#f85149" }}>${plugin.loadError}</div>` : null}
+      <div className="as-card-actions">
+        <button
+          type="button"
+          className="as-btn primary"
+          disabled=${!plugin.enabled}
+          title=${plugin.enabled ? `Open ${plugin.name} in a new tab` : `Enable ${plugin.name} first`}
+          onClick=${() => onOpen(plugin)}
+        ><${ExternalLink} size=${12} aria-hidden=${true}/> Open</button>
+        <button
+          type="button"
+          className="as-btn"
+          title="View permissions and details"
+          onClick=${() => onShowDetail(plugin)}
+        ><${ShieldCheck} size=${12} aria-hidden=${true}/> Permissions${perms.length ? html` (${perms.length})` : null}</button>
+        <button
+          type="button"
+          className="as-btn"
+          disabled=${plugin.required}
+          onClick=${() => onEdit(plugin)}
+        ><${Pencil} size=${12} aria-hidden=${true}/> Edit</button>
+        <button
+          type="button"
+          className="as-btn danger"
+          disabled=${plugin.builtin}
+          onClick=${() => onRemove(plugin)}
+        ><${Trash2} size=${12} aria-hidden=${true}/> Remove</button>
+      </div>
     </div>
   </article>`;
 }

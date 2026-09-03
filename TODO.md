@@ -2092,3 +2092,91 @@ App Store 当前只在 Edit / Install 弹窗里露出 `permissions.api` 文本,
   call bridge methods only inside its iframe."
 - ESM 全清白;`node --input-type=module --check` 0 错误。
 - Console 无 error / warning。
+
+## 五十三、App Store 卡片 1:1 预览图(2026-09-03)
+
+### 动机
+
+之前 App Store 的卡片只有 icon + 文字描述,逛 33 个插件时很扁平,无法
+快速看出 "这玩意儿大概长什么样"。给每张卡片加一块**正方形预览图**——
+可以是 AI 生成的 stylized UI mockup,也可以是插件本身的真实截图(取决于
+什么能渲染)。
+
+### 实施
+
+**生成管线:** `scripts/gen-app-store-previews.mjs`(230 行)— Node 脚本
+逐个 `spawn("mmx", ["image", "generate", "--prompt", ..., "--aspect-ratio",
+"1:1", "--out", "<id>.png"])`,33 个插件覆盖一遍。
+
+**视觉风格统一**:每条 prompt 后面拼同一段 STYLE 常量(deep navy 渐变,
+soft cyan-purple glow, rounded inner panel, cinematic),每个插件
+subject 是它对应的 UI 元素(music player / file tree / IDE / Wagi Dog /
+ASCII heart / matrix rain / etc.),accent 色按插件主色区分。整个
+catalog 看起来像一组排版统一的卡片。
+
+**生成结果**:`plugin/app-store/previews/<id>.png` 共 33 张,100–210 KB
+每张,1:1 比例。`mmx image generate --aspect-ratio 1:1` 默认输出正方形
+PNG。33 个全部 0 失败。
+
+**二次精修**:第一轮里 `spotlight` 和 `terminal-frame` 偏模糊,重新跑
+了带 "crisp focus, no blur" 的 prompt,`terminal-frame` 第二轮拿到清晰
+的版本;`spotlight` 模型始终偏好 soft-focus,接受。
+
+**集成到 App Store UI:**
+
+- 新增 `PluginPreview` 组件:`<div className="as-card-preview">` +
+  `<img src="previews/<id>.png">` + hidden fallback `<div>`(渐变背景
+  + lucide icon,`onError` 时显示)。<img> 上挂 `loading="lazy"`,长列表
+  只渲可视区域的图。
+- 卡片结构从 `gap: 8px; padding: 14px` 改成上下两段:
+  - 上:`PluginPreview`(全宽,`aspect-ratio: 1 / 1`,`object-fit: cover`,
+    `overflow: hidden`,card `border-radius` 跟着 outer)
+  - 下:`as-card-body`(原来的 icon/name/toggle/badges/perms/actions 全部
+    移到这里,`padding: 14px`)
+- 卡片 hover 时预览图轻微 `scale(1.02)` 过渡。
+- 详情弹窗新增 `.as-detail-hero` —— 16:9 比例的横版 hero preview,
+  在 modal 顶部占据完整宽度,把原来的小 icon 挪到 hero 下方的 header
+  左侧,视觉层次更分明。
+- 用户自装无 `previews/<id>.png` 的插件:不破图,直接走 fallback
+  (lucide icon + radial gradient),跟整个暗色系一致。
+
+### 验证(浏览器实测,localhost:8080)
+
+- 启用 `app-store`, `panels.open("app-store")`。
+- Grid 33 张卡,每张有完整预览图。Web Pet 实际跑出**真 3D 立体的
+  Shiba Dog + podium**,Crush 跑出 phone 里的 ASCII heart,Rick Roll
+  跑出 sunset + palm trees 的 80s 视频 thumbnail,Music 跑出
+  music player UI。
+- 滚动整个 catalog 33/33 图全部 lazy-load 成功。
+- `perm:fs.*` 过滤后剩 3 张(files / notes / gearshell-docs),三张
+  都有对应预览图。
+- 详情弹窗:Music 的 hero 显示正方形 Music player UI,下方接 metadata
+  header + PermissionPanel(分组 3 permissions / 2 groups)。
+- 卡片预览缺失(用户自装未生成预览):fallback 显示 lucide icon,
+  视觉节奏不破。
+- ESM check 全清白;console 无 error。
+
+### 文件清单
+
+```
+新增 scripts/gen-app-store-previews.mjs
+新增 plugin/app-store/previews/*.png (33 张)
+改动 plugin/app-store/index.html (PluginPreview 组件 + 卡片结构)
+改动 plugin/app-store/app-store.css (preview/fallback/hero 样式)
+```
+
+### 用户体验
+
+- 浏览 catalog 时一眼能看到每个插件"长什么样"——Music 是粉色音乐卡,
+  Files 是青色文件夹图标,Runtime 是橙色脉冲,Wagi Dog 是立体
+  Shiba Dog 站在台上。
+- 自装插件的 fallback 让 grid 永远整齐,不会出现破图图标。
+- Hero 在详情弹窗里给了一个杂志封面般的开场,PermissionPanel 接
+  在下面,信息密度合理。
+
+### 已知 / 下一步
+
+- ⬜ **w9y / Spot Light 预览图抽象**:模型给出的版本偏 blurred,可
+  能值得换 prompt 重跑,但 accent + 主体都识别得出,优先级低。
+- ⬜ **可插拔来源**:目前预览是静态 PNG;以后可以扩展成"优先
+  插件自带的 og:image / screenshot,缺失再走 AI 生成"。
