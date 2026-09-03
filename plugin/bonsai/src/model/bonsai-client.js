@@ -45,6 +45,10 @@ class WorkerChatClient {
   load(source, options) {
     return new Promise((resolve, reject) => {
       const { onProgress, ...workerOptions } = options;
+      if (workerOptions.file instanceof Blob) {
+        reject(new Error("LOAD FROM DISK is not supported with the worker runtime."));
+        return;
+      }
       this.loadOptions = { onProgress };
       this.loadResolve = resolve;
       this.loadReject = reject;

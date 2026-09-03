@@ -122,12 +122,17 @@ export class Bonsai27B {
 
   static async load(source = DEFAULT_MODEL_ID, options = {}) {
     const onProgress = options.onProgress ?? (() => {});
-    const ggufUrl = resolveGgufUrl(source, options.file);
+    const localFile = options.file instanceof Blob ? options.file : null;
+    const ggufUrl = localFile
+      ? URL.createObjectURL(localFile)
+      : resolveGgufUrl(source, options.file);
     assertOverflowSupported(source, options.overflow);
     const request = createModelFetch({
       accessToken: options.accessToken,
       cache: options.cache,
       signal: options.signal,
+      sourceFile: localFile,
+      ggufUrl,
     });
 
     const { model, useOfficialManifest } = await resolveModelSource(
@@ -158,6 +163,7 @@ export class Bonsai27B {
     });
 
     onProgress({ status: "ready", message: "Ready", fraction: 1 });
+    if (localFile) URL.revokeObjectURL(ggufUrl);
     return new BonsaiChat(
       engine,
       nativeChat,

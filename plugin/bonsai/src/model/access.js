@@ -29,6 +29,7 @@ class ModelAccess {
     this.gateContinue = byId("gateContinue");
     this.gateField = byId("gateField");
     this.veil = byId("veil");
+    this.fileInput = byId("loadFileInput");
 
     this.loadState = "idle";
     this.loadBlocked = false;
@@ -308,6 +309,57 @@ class ModelAccess {
     }
   }
 
+  async startLoadFromFile(file) {
+    if (this.query.get("runtime") === "worker") {
+      throw new Error(
+        "LOAD FROM DISK is unavailable with the worker runtime; reload without ?runtime=worker.",
+      );
+    }
+    if (
+      !file ||
+      this.loadState === "loading" ||
+      this.loadState === "ready" ||
+      this.loadBlocked
+    ) {
+      return;
+    }
+    this.loadState = "loading";
+    this.hideLoadError();
+    BonsaiLoader.set(0, file.size || FALLBACK_BYTES);
+    BonsaiLoader.phase("READING LOCAL GGUF");
+    try {
+      const chat = await this.Bonsai27B.load(MODEL_ID, {
+        ...this.modelOptions(),
+        file,
+        cache: false,
+        maxLength: Number.parseInt(this.query.get("ctx") ?? "", 10) ||
+          undefined,
+        overflow: this.query.get("overflow") === "sinks" ? "sinks" : undefined,
+        onProgress: (event) => this.onLoadProgress(event),
+      });
+      this.setChat(chat);
+      this.loadState = "ready";
+      window.__bonsaiChat = chat;
+      this.onChatReady();
+      BonsaiLoader.done();
+    } catch (error) {
+      console.error(error);
+      this.loadState = "failed";
+      this.showLoadError(error);
+    }
+  }
+
+  pickLocalFile() {
+    if (!this.fileInput) return;
+    this.fileInput.value = "";
+    this.fileInput.click();
+  }
+
+  onLocalFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (file) this.startLoadFromFile(file);
+  }
+
   wireEvents() {
     const $ = this.byId;
     this.gateContinue.addEventListener("click", (event) => {
@@ -336,6 +388,16 @@ class ModelAccess {
       },
       true,
     );
+    const fileCta = byId("loadFileCta");
+    if (fileCta) {
+      fileCta.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (this.loadBlocked) return;
+        this.pickLocalFile();
+      });
+    }
+    this.fileInput?.addEventListener("change", (event) => this.onLocalFile(event));
+
     $("retryBtn").addEventListener("click", (event) => {
       event.preventDefault();
       if (this.loadState === "failed") {
