@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bonsai Cache Manager</title>
+<style>
+:root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; background: #101513; color: #edf5ed; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; padding: clamp(20px, 5vw, 64px); }
+main { max-width: 860px; margin: auto; }
+h1 { margin: 0; font-size: clamp(28px, 5vw, 48px); font-weight: 650; letter-spacing: -.04em; }
+p { color: #b4c2b5; line-height: 1.65; }
+.card { margin-top: 20px; padding: 22px; border: 1px solid #334237; border-radius: 14px; background: #172019; }
+h2 { margin: 0 0 10px; font-size: 17px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+button, .file-label { border: 1px solid #52715a; border-radius: 8px; padding: 9px 13px; background: #223126; color: inherit; font: inherit; cursor: pointer; }
+button:hover, .file-label:hover { background: #304637; }
+button.danger { border-color: #9c4c4c; color: #ffd4d4; }
+input[type=url] { width: 100%; padding: 10px; border: 1px solid #52715a; border-radius: 8px; background: #101513; color: inherit; font: 13px ui-monospace, monospace; }
+input[type=file] { display: none; }
+pre { min-height: 62px; margin: 16px 0 0; padding: 13px; overflow: auto; border-radius: 8px; background: #0d120e; color: #bfe9c8; font: 12px/1.55 ui-monospace, monospace; white-space: pre-wrap; }
+small { color: #94a898; }
+code { color: #d2efd7; }
+</style>
+</head>
+<body>
+<main>
+<h1>Bonsai Cache Manager</h1>
+<p>Manage the full Bonsai GGUF responses stored in this origin’s Cache Storage. Export on <code>https://gear.sh/bonsai-utils/</code>, then import the downloaded GGUF from <code>http://localhost:PORT/bonsai-utils/</code>.</p>
+<section class="card">
+<h2>Cached model responses</h2>
+<p id="origin"></p>
+<div class="actions"><button id="refresh">Refresh</button><button id="persist">Request persistent storage</button></div>
+<pre id="entries">Loading…</pre>
+</section>
+<section class="card">
+<h2>Export cached model</h2>
+<p>Exports the selected response as a GGUF file without holding the whole model in page memory. The export does not include Hugging Face tokens.</p>
+<div class="actions"><button id="export">Export selected cache entry</button></div>
+</section>
+<section class="card">
+<h2>Import model into this origin</h2>
+<p>Select the exported GGUF and choose the exact URL that Bonsai will request. The default is the standard Bonsai-27B URL.</p>
+<input id="url" type="url" spellcheck="false">
+<div class="actions"><label class="file-label" for="importFile">Choose GGUF to import</label><input id="importFile" type="file" accept=".gguf,application/octet-stream"></div>
+<pre id="importStatus">No file selected.</pre>
+</section>
+<section class="card">
+<h2>Delete cache</h2>
+<p>This removes all Bonsai full-weight responses for this origin. It does not clear browser HTTP cache, site settings, or any Hugging Face token stored by Bonsai.</p>
+<div class="actions"><button class="danger" id="clear">Delete Bonsai model cache</button></div>
+</section>
+</main>
+<script>
+const CACHE_NAME = "bonsai-model-weights-v1";
+const DEFAULT_URL = "https://huggingface.co/prism-ml/Bonsai-27B-gguf/resolve/main/Bonsai-27B-Q1_0.gguf";
+const entries = document.querySelector("#entries");
+const importStatus = document.querySelector("#importStatus");
+const urlInput = document.querySelector("#url");
+let selectedRequest = null;
+urlInput.value = DEFAULT_URL;
+document.querySelector("#origin").textContent = `Current origin: ${location.origin}`;
+
+function bytes(value) {
+  if (!Number.isFinite(value)) return "unknown size";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) { value /= 1024; index++; }
+  return `${value.toFixed(index < 2 ? 0 : 2)} ${units[index]}`;
+}
+
+async function cache() { return caches.open(CACHE_NAME); }
+
+async function refresh() {
+  const store = await cache();
+  const requests = await store.keys();
+  if (!requests.length) {
+    selectedRequest = null;
+    entries.textContent = `No entries in ${CACHE_NAME}.`;
+    return;
+  }
+  const rows = [];
+  for (const request of requests) {
+    const response = await store.match(request);
+    const size = Number(response.headers.get("content-length"));
+    rows.push(`${request.url}\n  ${response.status} ${response.statusText || "OK"} · ${bytes(size)}`);
+  }
+  selectedRequest = requests[0];
+  entries.textContent = `Selected first entry for export:\n\n${rows.join("\n\n")}`;
+}
+
+async function exportSelected() {
+  if (!selectedRequest) throw new Error("No cached model response is available to export.");
+  const response = await (await cache()).match(selectedRequest);
+  if (!response?.body) throw new Error("Cached response body is unavailable.");
+  const suggestedName = new URL(selectedRequest.url).pathname.split("/").pop() || "bonsai-model.gguf";
+  if (!window.showSaveFilePicker) throw new Error("Use a Chromium browser with File System Access support to export this large file.");
+  const handle = await window.showSaveFilePicker({ suggestedName, types: [{ description: "GGUF model", accept: { "application/octet-stream": [".gguf"] } }] });
+  const writable = await handle.createWritable();
+  try { await response.body.pipeTo(writable); } catch (error) { await writable.abort(); throw error; }
+  entries.textContent = `Exported ${suggestedName}. Transfer it to the target origin and import it there.`;
+}
+
+async function importModel(file) {
+  const target = new URL(urlInput.value).href;
+  importStatus.textContent = `Writing ${file.name} (${bytes(file.size)}) into ${CACHE_NAME}…`;
+  const response = new Response(file.stream(), { headers: { "content-type": "application/octet-stream", "content-length": String(file.size) } });
+  await (await cache()).put(target, response);
+  importStatus.textContent = `Imported ${file.name} as:\n${target}`;
+  await refresh();
+}
+
+async function requestPersistence() {
+  const granted = await navigator.storage?.persist?.();
+  const estimate = await navigator.storage?.estimate?.();
+  entries.textContent = `Persistent storage: ${granted ? "granted" : "not granted"}\nUsage: ${bytes(estimate?.usage)} / ${bytes(estimate?.quota)}`;
+}
+
+function report(action) {
+  return async () => {
+    try { await action(); } catch (error) { entries.textContent = `Error: ${String(error.message || error)}`; }
+  };
+}
+
+document.querySelector("#refresh").addEventListener("click", report(refresh));
+document.querySelector("#persist").addEventListener("click", report(requestPersistence));
+document.querySelector("#export").addEventListener("click", report(exportSelected));
+document.querySelector("#importFile").addEventListener("change", report(async (event) => {
+  const file = event.target.files[0];
+  if (file) await importModel(file);
+}));
+document.querySelector("#clear").addEventListener("click", report(async () => {
+  if (!confirm(`Delete every entry in ${CACHE_NAME} for ${location.origin}?`)) return;
+  await caches.delete(CACHE_NAME);
+  importStatus.textContent = "Bonsai model cache deleted.";
+  await refresh();
+}));
+refresh().catch((error) => { entries.textContent = `Error: ${String(error.message || error)}`; });
+</script>
+</body>
+</html>
