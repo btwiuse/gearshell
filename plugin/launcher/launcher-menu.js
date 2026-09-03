@@ -6,6 +6,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Check, Dog, Keyboard, Plus } from "lucide-react";
 import { launcherDep, TerminalLaunchPicker } from "./launcher.js";
+import { toggleOverlay } from "../../app-overlay-toggle.js";
+import { SPOTLIGHT_OVERLAY_ID } from "../spotlight/spotlight-overlay.js";
 import htm from "htm";
 
 const html = htm.bind(React.createElement);
@@ -254,19 +256,19 @@ function useMenuKeyboardNav(menuOpen, setMenuOpen, controlRef, menuRef) {
   }, [menuOpen, setMenuOpen, controlRef, menuRef]);
 }
 
-// The + control itself. Tap creates a terminal; long-press, right-click or
-// Arrow keys open the all-apps menu (the pressing highlight + title make
-// the gesture discoverable — P2).
+// The + control itself. Tap toggles Spotlight search; long-press,
+// right-click, or Arrow keys open the all-apps menu (the pressing
+// highlight + title make the gesture discoverable — P2).
 function AddPanelButton(
-  { pressing, menuOpen, startPress, clearPressTimer, openMenu, createTerminal },
+  { pressing, menuOpen, startPress, clearPressTimer, openMenu, toggleSpotlight },
 ) {
   return html`
     <button
       className=${"panel-action-button" +
         (pressing || menuOpen ? " pressing" : "")}
       type="button"
-      title="Add panel — long-press or right-click for all apps"
-      aria-label="Add panel"
+      title="Search (Spotlight) — long-press or right-click for all apps"
+      aria-label="Search apps"
       aria-haspopup="menu"
       aria-expanded=${menuOpen}
       onPointerDown=${startPress}
@@ -285,7 +287,7 @@ function AddPanelButton(
         event.preventDefault();
         openMenu();
       }}
-      onClick=${createTerminal}
+      onClick=${toggleSpotlight}
     >
       <${Plus} size=${18} aria-hidden=${true}/>
     </button>
@@ -307,18 +309,22 @@ function AddTerminalButton({ containerApi, group }) {
   const menuRef = useRef(null);
   useMenuKeyboardNav(menuOpen, setMenuOpen, controlRef, menuRef);
 
-  const createTerminal = (event) => {
+  // Click on +: toggle Spotlight search (the keyboard-first way to
+  // launch anything without spending a tab on it). Long-press and
+  // right-click still open the all-apps menu for adding non-terminal
+  // panels directly.
+  const toggleSpotlight = (event) => {
     if (longPress.current) {
       event.preventDefault();
       longPress.current = false;
       return;
     }
-    launcherDep("addTerminalPanel")(containerApi, group);
+    toggleOverlay(SPOTLIGHT_OVERLAY_ID);
   };
 
   return html`
     <div ref=${controlRef} className="panel-actions">
-      <${AddPanelButton} pressing=${pressing} menuOpen=${menuOpen} startPress=${startPress} clearPressTimer=${clearPressTimer} openMenu=${openMenu} createTerminal=${createTerminal}/>
+      <${AddPanelButton} pressing=${pressing} menuOpen=${menuOpen} startPress=${startPress} clearPressTimer=${clearPressTimer} openMenu=${openMenu} toggleSpotlight=${toggleSpotlight}/>
       ${menuOpen &&
         renderPanelActionMenu({
           containerApi,
