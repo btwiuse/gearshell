@@ -17,126 +17,276 @@ h2 { margin: 0 0 10px; font-size: 17px; }
 button, .file-label { border: 1px solid #52715a; border-radius: 8px; padding: 9px 13px; background: #223126; color: inherit; font: inherit; cursor: pointer; }
 button:hover, .file-label:hover { background: #304637; }
 button.danger { border-color: #9c4c4c; color: #ffd4d4; }
+button:disabled { opacity: .4; cursor: not-allowed; }
 input[type=url] { width: 100%; padding: 10px; border: 1px solid #52715a; border-radius: 8px; background: #101513; color: inherit; font: 13px ui-monospace, monospace; }
 input[type=file] { display: none; }
 pre { min-height: 62px; margin: 16px 0 0; padding: 13px; overflow: auto; border-radius: 8px; background: #0d120e; color: #bfe9c8; font: 12px/1.55 ui-monospace, monospace; white-space: pre-wrap; }
 small { color: #94a898; }
 code { color: #d2efd7; }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--faint); }
+.row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.row > strong { flex: 1 1 200px; font-size: 12px; }
+.muted { color: #94a898; }
+.progress { height: 8px; border-radius: 4px; background: #102018; overflow: hidden; }
+.progress > i { display: block; height: 100%; background: #6abf7d; transition: width .15s; }
 </style>
 </head>
 <body>
 <main>
 <h1>Bonsai Cache Manager</h1>
-<p>Manage the full Bonsai GGUF responses stored in this origin’s Cache Storage. Export on <code>https://gear.sh/bonsai-utils/</code>, then import the downloaded GGUF from <code>http://localhost:PORT/bonsai-utils/</code>.</p>
+<p>Inspect, export, and delete the bitgpu GGUF cache that the Bonsai app actually uses on this origin. Bitgpu stores downloaded model bytes in a Cache Storage entry, a Cache header entry, and an IndexedDB whose records cover the rest of the file. Cache Storage is partitioned by origin, so to move a model between <code>https://gear.sh/bonsai-utils/</code> and a <code>http://localhost:PORT/bonsai-utils/</code> instance you must either export / import on the same origin, or reload the GGUF from Hugging Face.</p>
+
 <section class="card">
-<h2>Cached model responses</h2>
-<p id="origin"></p>
+<h2>Storage footprint</h2>
+<p>Current origin: <code id="origin"></code></p>
 <div class="actions"><button id="refresh">Refresh</button><button id="persist">Request persistent storage</button></div>
-<pre id="entries">Loading…</pre>
+<pre id="summary">Loading…</pre>
 </section>
+
 <section class="card">
-<h2>Export cached model</h2>
-<p>Exports the selected response as a GGUF file without holding the whole model in page memory. The export does not include Hugging Face tokens.</p>
-<div class="actions"><button id="export">Export selected cache entry</button></div>
+<h2>IndexedDB chunks (gguf-cache-v1)</h2>
+<p>One record covers a contiguous byte range. Export reads every chunk and reassembles the full GGUF in a streaming <code>showSaveFilePicker</code> write; import chunks it back on the target origin using the same ranges.</p>
+<div class="actions"><button id="export">Export full model (streaming)</button></div>
+<div class="progress"><i id="exportBar" style="width:0%"></i></div>
+<pre id="exportStatus">Idle.</pre>
 </section>
+
 <section class="card">
 <h2>Import model into this origin</h2>
-<p>Select the exported GGUF and choose the exact URL that Bonsai will request. The default is the standard Bonsai-27B URL.</p>
 <input id="url" type="url" spellcheck="false">
 <div class="actions"><label class="file-label" for="importFile">Choose GGUF to import</label><input id="importFile" type="file" accept=".gguf,application/octet-stream"></div>
+<div class="progress"><i id="importBar" style="width:0%"></i></div>
 <pre id="importStatus">No file selected.</pre>
 </section>
+
 <section class="card">
 <h2>Delete cache</h2>
-<p>This removes all Bonsai full-weight responses for this origin. It does not clear browser HTTP cache, site settings, or any Hugging Face token stored by Bonsai.</p>
+<p>This removes every chunk record, the GGUF header cache, and the bitgpu Cache Storage entry on this origin. It does not clear other sites' data or Hugging Face tokens stored elsewhere.</p>
 <div class="actions"><button class="danger" id="clear">Delete Bonsai model cache</button></div>
+<pre id="clearStatus">Idle.</pre>
 </section>
+
 </main>
 <script>
-const CACHE_NAME = "bonsai-model-weights-v1";
+const HEADER_CACHE = "gguf-v1";
+const HEADER_CACHE_WITH_HEADERS = "gguf-v1-headers";
+const DB_NAME = "gguf-cache-v1";
+const CHUNKS_STORE = "chunks";
+const META_STORE = "meta";
 const DEFAULT_URL = "https://huggingface.co/prism-ml/Bonsai-27B-gguf/resolve/main/Bonsai-27B-Q1_0.gguf";
-const entries = document.querySelector("#entries");
-const importStatus = document.querySelector("#importStatus");
-const urlInput = document.querySelector("#url");
-let selectedRequest = null;
-urlInput.value = DEFAULT_URL;
-document.querySelector("#origin").textContent = `Current origin: ${location.origin}`;
 
-function bytes(value) {
-  if (!Number.isFinite(value)) return "unknown size";
+const summaryEl = document.querySelector("#summary");
+const exportStatusEl = document.querySelector("#exportStatus");
+const importStatusEl = document.querySelector("#importStatus");
+const clearStatusEl = document.querySelector("#clearStatus");
+const exportBarEl = document.querySelector("#exportBar");
+const importBarEl = document.querySelector("#importBar");
+const urlInput = document.querySelector("#url");
+
+urlInput.value = DEFAULT_URL;
+document.querySelector("#origin").textContent = location.origin;
+
+function fmt(bytes) {
+  if (!Number.isFinite(bytes)) return "unknown";
   const units = ["B", "KB", "MB", "GB", "TB"];
-  let index = 0;
-  while (value >= 1024 && index < units.length - 1) { value /= 1024; index++; }
-  return `${value.toFixed(index < 2 ? 0 : 2)} ${units[index]}`;
+  let i = 0;
+  while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+  return `${bytes.toFixed(i < 2 ? 0 : 2)} ${units[i]}`;
 }
 
-async function cache() { return caches.open(CACHE_NAME); }
+function setBar(el, fraction) {
+  el.style.width = `${Math.max(0, Math.min(1, fraction)) * 100}%`;
+}
+
+async function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 2);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(CHUNKS_STORE)) db.createObjectStore(CHUNKS_STORE);
+      if (!db.objectStoreNames.contains(META_STORE)) db.createObjectStore(META_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error("indexedDB open blocked"));
+  });
+}
+
+async function fetchChunks(url) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHUNKS_STORE, "readonly");
+    const store = tx.objectStore(CHUNKS_STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = async () => {
+      const keys = req.result.filter((k) => Array.isArray(k) && k[0] === url);
+      const chunks = [];
+      for (const k of keys) chunks.push({ key: k, blob: undefined });
+      for (const entry of chunks) {
+        entry.blob = await new Promise((res, rej) => {
+          const r = store.get(entry.key);
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+      }
+      db.close();
+      chunks.sort((a, b) => a.key[1] - b.key[1]);
+      resolve(chunks);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error("indexedDB delete blocked (close other tabs first)"));
+  });
+}
 
 async function refresh() {
-  const store = await cache();
-  const requests = await store.keys();
-  if (!requests.length) {
-    selectedRequest = null;
-    entries.textContent = `No entries in ${CACHE_NAME}.`;
-    return;
+  summaryEl.textContent = "Reading…";
+  try {
+    const cacheNames = await caches.keys();
+    const headerInfo = [];
+    for (const name of [HEADER_CACHE, HEADER_CACHE_WITH_HEADERS]) {
+      if (!cacheNames.includes(name)) continue;
+      const store = await caches.open(name);
+      const keys = await store.keys();
+      const items = await Promise.all(keys.map(async (k) => {
+        const resp = await store.match(k);
+        const len = Number(resp.headers.get("content-length")) || (await resp.clone().blob()).size;
+        return { url: k.url, size: len, status: resp.status };
+      }));
+      headerInfo.push({ name, items });
+    }
+    const db = await openDB();
+    const chunkCount = await new Promise((res, rej) => {
+      const tx = db.transaction(CHUNKS_STORE, "readonly");
+      const req = tx.objectStore(CHUNKS_STORE).count();
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+    db.close();
+    const estimate = (await navigator.storage?.estimate?.()) || {};
+    const lines = [];
+    lines.push(`Cache Storage entries for header data:`);
+    if (headerInfo.length === 0) lines.push(`  (none)`);
+    else for (const c of headerInfo) {
+      lines.push(`  ${c.name}: ${c.items.length} request(s)`);
+      for (const it of c.items) lines.push(`    ${it.url} → ${fmt(it.size)}`);
+    }
+    lines.push("");
+    lines.push(`IndexedDB ${DB_NAME} → ${CHUNKS_STORE}: ${chunkCount} chunk record(s)`);
+    lines.push("");
+    lines.push(`Storage estimate: ${fmt(estimate.usage)} used of ${fmt(estimate.quota)}`);
+    summaryEl.textContent = lines.join("\n");
+  } catch (error) {
+    summaryEl.textContent = `Error: ${error.message || error}`;
   }
-  const rows = [];
-  for (const request of requests) {
-    const response = await store.match(request);
-    const size = Number(response.headers.get("content-length"));
-    rows.push(`${request.url}\n  ${response.status} ${response.statusText || "OK"} · ${bytes(size)}`);
-  }
-  selectedRequest = requests[0];
-  entries.textContent = `Selected first entry for export:\n\n${rows.join("\n\n")}`;
 }
 
-async function exportSelected() {
-  if (!selectedRequest) throw new Error("No cached model response is available to export.");
-  const response = await (await cache()).match(selectedRequest);
-  if (!response?.body) throw new Error("Cached response body is unavailable.");
-  const suggestedName = new URL(selectedRequest.url).pathname.split("/").pop() || "bonsai-model.gguf";
-  if (!window.showSaveFilePicker) throw new Error("Use a Chromium browser with File System Access support to export this large file.");
-  const handle = await window.showSaveFilePicker({ suggestedName, types: [{ description: "GGUF model", accept: { "application/octet-stream": [".gguf"] } }] });
+async function exportChunks() {
+  const url = urlInput.value;
+  const chunks = await fetchChunks(url);
+  if (chunks.length === 0) throw new Error(`No chunk records in ${DB_NAME} for ${url}`);
+  if (!window.showSaveFilePicker) throw new Error("Use a Chromium browser with File System Access to export this large file.");
+  const suggestedName = url.split("/").pop() || "bonsai-model.gguf";
+  const handle = await window.showSaveFilePicker({
+    suggestedName,
+    types: [{ description: "GGUF model", accept: { "application/octet-stream": [".gguf"] } }],
+  });
   const writable = await handle.createWritable();
-  try { await response.body.pipeTo(writable); } catch (error) { await writable.abort(); throw error; }
-  entries.textContent = `Exported ${suggestedName}. Transfer it to the target origin and import it there.`;
+  let written = 0;
+  const totalSize = chunks[chunks.length - 1].key[2] - chunks[0].key[1];
+  exportStatusEl.textContent = `Streaming ${chunks.length} chunks into ${suggestedName}…`;
+  try {
+    for (const chunk of chunks) {
+      const buf = await chunk.blob.arrayBuffer();
+      await writable.write(new Uint8Array(buf));
+      written += buf.byteLength;
+      setBar(exportBarEl, written / totalSize);
+    }
+    await writable.close();
+    exportStatusEl.textContent = `Exported ${chunks.length} chunks (${fmt(written)}). Import on the target origin via the section below.`;
+  } catch (error) {
+    try { await writable.abort(); } catch {}
+    throw error;
+  }
 }
 
-async function importModel(file) {
-  const target = new URL(urlInput.value).href;
-  importStatus.textContent = `Writing ${file.name} (${bytes(file.size)}) into ${CACHE_NAME}…`;
-  const response = new Response(file.stream(), { headers: { "content-type": "application/octet-stream", "content-length": String(file.size) } });
-  await (await cache()).put(target, response);
-  importStatus.textContent = `Imported ${file.name} as:\n${target}`;
-  await refresh();
+async function importChunks(file) {
+  const url = urlInput.value;
+  importStatusEl.textContent = `Hashing ${file.name} (${fmt(file.size)})…`;
+  const total = file.size;
+  let offset = 0;
+  const chunkSize = 24 * 1024 * 1024;
+  const db = await openDB();
+  const chunkStore = db.transaction(CHUNKS_STORE, "readwrite").objectStore(CHUNKS_STORE);
+  const metaStore = db.transaction(META_STORE, "readwrite").objectStore(META_STORE);
+  while (offset < total) {
+    const end = Math.min(total, offset + chunkSize);
+    const slice = file.slice(offset, end);
+    chunkStore.put(slice, [url, offset, end]);
+    offset = end;
+    setBar(importBarEl, offset / total);
+  }
+  metaStore.put({
+    headerBytes: new ArrayBuffer(0),
+    size: total,
+    acceptsRanges: true,
+  }, url);
+  await new Promise((res, rej) => {
+    const t = db.transaction([CHUNKS_STORE, META_STORE], "readwrite");
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error);
+  });
+  db.close();
+  importStatusEl.textContent = `Imported ${file.name} as ${url} (${chunks.length} chunks). Refresh to confirm.`;
 }
 
 async function requestPersistence() {
   const granted = await navigator.storage?.persist?.();
   const estimate = await navigator.storage?.estimate?.();
-  entries.textContent = `Persistent storage: ${granted ? "granted" : "not granted"}\nUsage: ${bytes(estimate?.usage)} / ${bytes(estimate?.quota)}`;
+  summaryEl.textContent = `Persistent storage: ${granted ? "granted" : "not granted"}\nUsage: ${fmt(estimate?.usage)} / ${fmt(estimate?.quota)}`;
 }
 
-function report(action) {
-  return async () => {
-    try { await action(); } catch (error) { entries.textContent = `Error: ${String(error.message || error)}`; }
-  };
-}
-
-document.querySelector("#refresh").addEventListener("click", report(refresh));
-document.querySelector("#persist").addEventListener("click", report(requestPersistence));
-document.querySelector("#export").addEventListener("click", report(exportSelected));
-document.querySelector("#importFile").addEventListener("change", report(async (event) => {
-  const file = event.target.files[0];
-  if (file) await importModel(file);
-}));
-document.querySelector("#clear").addEventListener("click", report(async () => {
-  if (!confirm(`Delete every entry in ${CACHE_NAME} for ${location.origin}?`)) return;
-  await caches.delete(CACHE_NAME);
-  importStatus.textContent = "Bonsai model cache deleted.";
+async function deleteAll() {
+  const tasks = [];
+  for (const name of await caches.keys()) {
+    if (name === HEADER_CACHE || name === HEADER_CACHE_WITH_HEADERS) tasks.push(caches.delete(name));
+  }
+  tasks.push(deleteDB());
+  await Promise.all(tasks);
+  clearStatusEl.textContent = `Removed: ${[HEADER_CACHE, HEADER_CACHE_WITH_HEADERS, DB_NAME].join(", ")}`;
   await refresh();
-}));
-refresh().catch((error) => { entries.textContent = `Error: ${String(error.message || error)}`; });
+}
+
+function wire(id, action, status) {
+  const btn = document.getElementById(id);
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try { await action(); } catch (error) { status.textContent = `Error: ${error.message || error}`; }
+    finally { btn.disabled = false; }
+  });
+}
+
+wire("refresh", refresh, summaryEl);
+wire("persist", requestPersistence, summaryEl);
+wire("export", exportChunks, exportStatusEl);
+wire("clear", deleteAll, clearStatusEl);
+
+document.querySelector("#importFile").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try { await importChunks(file); } catch (error) { importStatusEl.textContent = `Error: ${error.message || error}`; }
+});
+
+refresh();
 </script>
 </body>
 </html>
