@@ -224,6 +224,7 @@ async function importChunks(file) {
   const total = file.size;
   let offset = 0;
   const chunkSize = 24 * 1024 * 1024;
+  let written = 0;
   const db = await openDB();
   const chunkStore = db.transaction(CHUNKS_STORE, "readwrite").objectStore(CHUNKS_STORE);
   const metaStore = db.transaction(META_STORE, "readwrite").objectStore(META_STORE);
@@ -232,6 +233,7 @@ async function importChunks(file) {
     const slice = file.slice(offset, end);
     chunkStore.put(slice, [url, offset, end]);
     offset = end;
+    written += 1;
     setBar(importBarEl, offset / total);
   }
   metaStore.put({
@@ -246,7 +248,7 @@ async function importChunks(file) {
     t.onabort = () => rej(t.error);
   });
   db.close();
-  importStatusEl.textContent = `Imported ${file.name} as ${url} (${chunks.length} chunks). Refresh to confirm.`;
+  importStatusEl.textContent = `Imported ${file.name} as ${url} (${written} chunks). Refresh to confirm.`;
 }
 
 async function requestPersistence() {
