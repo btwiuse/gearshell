@@ -172,7 +172,6 @@ export const IFRAME_PLUGINS = [
     iframe: {
       src: "/plugin/group/index.html",
     },
-    enabled: false,
   },
   {
     id: "crush",

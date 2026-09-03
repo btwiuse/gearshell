@@ -20,5 +20,4 @@ export const V86_IFRAME_PLUGIN = {
       "events.off",
     ],
   },
-  enabled: false,
 };
