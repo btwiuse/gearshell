@@ -22,12 +22,21 @@ export const IFRAME_PLUGINS = [
   {
     id: "bonsai",
     name: "Bonsai 27B",
-    version: "1.0.0",
+    version: "1.1.0",
     icon: "TreePine",
     iframe: {
-      src: "/bonsai/",
+      src: "/plugin/bonsai/buildless.html",
       allow: "clipboard-read; clipboard-write; fullscreen",
       allowFullscreen: true,
+    },
+    permissions: {
+      api: [
+        "fs.readFileText",
+        "fs.writeFileText",
+        "fs.readDir",
+        "fs.stat",
+        "config.getShell",
+      ],
     },
   },
   {
