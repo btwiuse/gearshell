@@ -279,7 +279,14 @@ export const TERMINAL_PRESET_ICON_BY_ID = Object.fromEntries(
 );
 
 export const BUILTIN_TERMINAL_PROFILES = [
-  { id: "bash", name: "Bash", type: "gojs", icon: "terminal", builtin: true },
+  {
+    id: "bash",
+    name: "Bash",
+    type: "gojs",
+    wd: "/opfs/home",
+    icon: "terminal",
+    builtin: true,
+  },
   {
     id: "crush",
     name: "Crush",
@@ -287,7 +294,7 @@ export const BUILTIN_TERMINAL_PROFILES = [
     args: "",
     type: "gojs",
     env: "",
-    wd: "",
+    wd: "/opfs/home",
     icon: "bot",
     builtin: true,
   },

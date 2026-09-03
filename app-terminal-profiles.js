@@ -9,7 +9,7 @@ import {
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
 } from "./app-normalize.js";
-import { BASH_ENV, DEFAULT_CMD } from "./app-constants.js";
+import { BASH_ENV, DEFAULT_CMD, HOME } from "./app-constants.js";
 import { loadConfig, saveConfig } from "./app-workspace.js";
 
 export function getTerminalProfiles(config = loadConfig()) {
@@ -18,7 +18,7 @@ export function getTerminalProfiles(config = loadConfig()) {
     program: config.cmd.split(/\s+/, 1)[0] || "bash",
     args: config.cmd.replace(/^\S+\s*/, ""),
     env: config.env,
-    wd: "",
+    wd: HOME,
   };
   const configuredProfiles = new Map(
     config.terminalProfiles.map((profile) => [profile.id, profile]),
