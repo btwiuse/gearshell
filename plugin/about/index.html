@@ -54,9 +54,11 @@
     .info-value { user-select: text; -webkit-user-select: text; }
     .info-label { color: #a5a5aa; }
     .info-value { color: #f5f5f7; }
-    #about-actions { display: flex; justify-content: center; gap: 8px; }
-    .about-button { flex: 1; padding: 8px 18px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; color: #f5f5f7; background: rgba(255,255,255,.08); font: 13px inherit; text-decoration: none; transition: background .12s ease; }
+    #about-actions { display: flex; justify-content: center; align-items: center; gap: 8px; }
+    .about-button { flex: 1; padding: 8px 18px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; color: #f5f5f7; background: rgba(255,255,255,.08); font: 13px inherit; text-decoration: none; cursor: pointer; transition: background .12s ease; display: inline-flex; align-items: center; justify-content: center; }
     .about-button:hover { background: rgba(255,255,255,.16); }
+    .about-icon-btn { flex: 0 0 auto; width: 34px; height: 34px; padding: 0; line-height: 1; }
+    .about-icon-btn img { width: 18px; height: 18px; }
     @media (max-width: 440px) { #about-modal { width: calc(100vw - 24px); } #about-body { padding-left: 18px; padding-right: 18px; } }
     @media (prefers-reduced-motion: reduce) { #about-modal, #about-backdrop, .logo, .about-button { transition: none; } }
   </style>
@@ -77,7 +79,7 @@
           <div class="info-row"><span class="info-label">Channel</span><span class="info-value">Tip</span></div>
           <div class="info-row"><span class="info-label">Commit</span><span class="info-value">main</span></div>
         </div>
-        <div id="about-actions"><a class="about-button" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener">GitHub</a><a class="about-button" href="https://gear.sh" target="_blank" rel="noreferrer noopener">Open App</a><button id="about-play" class="about-button" type="button" aria-label="Play demo music">▶</button></div>
+        <div id="about-actions"><a class="about-button" href="https://github.com/btwiuse/gearshell" target="_blank" rel="noreferrer noopener">GitHub</a><a class="about-button about-icon-btn" href="https://gear.sh" target="_blank" rel="noreferrer noopener" aria-label="Open App"><img src="https://cdn.simpleicons.org/googlechrome" alt=""></a><button id="about-play" class="about-button about-icon-btn" type="button" aria-label="Play demo music">▶</button><button id="about-home" class="about-button about-icon-btn" type="button" aria-label="Open Home"><img src="https://cdn.simpleicons.org/homeassistant" alt=""></button><button id="about-settings" class="about-button about-icon-btn" type="button" aria-label="Open Settings"><img src="https://cdn.simpleicons.org/settings" alt=""></button><button id="about-spotlight" class="about-button about-icon-btn" type="button" aria-label="Open Spotlight"><img src="https://cdn.simpleicons.org/openstreetmap" alt=""></button></div>
       </div>
     </section>
   </div>
@@ -120,6 +122,12 @@
         await refreshPlayback();
       } catch {}
     };
+    const openHome = () => GearShell.panels.open("home").catch(() => {});
+    const openSettings = () => GearShell.panels.open("settings").catch(() => {});
+    const openSpotlight = () => GearShell.panels.open("launcher").catch(() => {});
+    document.getElementById("about-home").onclick = openHome;
+    document.getElementById("about-settings").onclick = openSettings;
+    document.getElementById("about-spotlight").onclick = openSpotlight;
     let index = 0;
     setInterval(() => { const logos = logoWrap.querySelectorAll(".logo"); logos[index].classList.remove("active"); index = (index + 1) % logos.length; logos[index].classList.add("active"); }, 5000);
     refreshPlayback();
