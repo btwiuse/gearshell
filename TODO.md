@@ -2325,3 +2325,109 @@ scripts/regen-weak-icons.mjs
 scripts/regen-weak-icons-2.mjs
 scripts/regen-weak-icons-3.mjs
 ```
+
+## 五十五、Bonsai 本地模型工具调用支持 — 调研(2026-09-03,本轮)
+
+**目标**:确认 Bonsai 27B(`prism-ml/Bonsai-27B-gguf`,1-bit qwen3_5
+hybrid backbone)能不能在浏览器里跑工具调用,以及接上 GearShell 还差什么。
+完整调研报告在 `memory/bonsai-tool-calling.md`,本节只列结论与
+待做 round 计划。
+
+### 结论(底层全部 ready,只差 chat surface 接入)
+
+| 层 | 状态 |
+|---|---|
+| **bitgpu 0.19.1 runtime** | ✅ 完全支持 —— `createChat` / `stream` / `send` 接受 `tools: Tool[]` + `toolChoice` + `onToolCall` callback,底层 `ToolBodyMachine` + `ToolBodyMachineXml` byte-level 状态机强制解码 |
+| **Bonsai-27B 模型** | ✅ 支持 —— qwen3_5 chat template 渲染 `<tools>{tool\|tojson}</tools>` 进 system block,模型用 **XML 协议** 输出(`<tool_call><function=name><parameter=k>v</parameter></function></tool_call>`);token 248058/248059 在 vocab 里 |
+| **bitgpu 协议自动检测** | ✅ —— `prepareTools` 通过 `probe.includes("<function=") ? "xml" : "json"` 选 `ToolBodyMachineXml`(Bonsai-27B)或 `ToolBodyMachine`(dense Bonsai-1.7B/4B/8B);**同一个 `tools` 数组对两类模型都生效** |
+| **bonsai 当前 chat surface** | ❌ 缺中间胶水 —— 事件类型只 `thinking` / `text` / `complete`,没有 `tool_call` 事件;`streamTurn` 的 options 透传链已 ready,调用方没塞 `tools`;没有 `toolRunner` 串多轮循环 |
+| **bonsai → wanix /js/GearShell RPC** | ❌ 未接 —— bonsai buildless HTML 还没读 `window.gear` / `parent.GearShell`,模型建议的 tool_call 没法 dispatch |
+
+### 关键 bitgpu API(给后续实现参考)
+
+```js
+const chat = await createChat(engine, options);
+const it = chat.stream(messages, {
+  tools: [
+    {type: "function", function: {name: "gear", parameters: {type: "object", ...}}},
+  ],
+  toolChoice: "auto",            // "auto" | "none" | {name}
+  onToolCall: (call) => {...},   // 每个 tool call 触发
+  signal: abortController.signal,
+});
+for await (const delta of it) ui.append(delta);  // stream 只 yield string
+const result = await it.return;  // .return() 拿完整结果
+// result = {text, toolCalls: [{name, arguments}], finishReason: "stop"|"tool_calls", ...}
+```
+
+**约束**:`tools` 不能和 `format`(constrained JSON)同用;`toolChoice:
+"none"` 显式禁用;多轮循环由 host 端 `toolRunner` 串 — `finishReason
+=== "tool_calls"` 时跑 tool → 把结果以 `role: "tool"` push 回 message
+history → 续 `chat.stream()` 直到 `finishReason === "stop"`。bitgpu
+的 `reuseCache` + `isToolAppend` 自动处理 KV cache 复用。
+
+### 推荐的集成路线(最小胶水)
+
+bonsai 走 wanix `/js/GearShell` 跟现有 gear CLI 同一通道:
+- bonsai 启动后,模型 prompt 含 `gear` CLI 文档(`fs.*` / `tasks.*` /
+  `events.*` / `config.*` / `agents.*` / `panels.*` / `terminal.*` /
+  `w9y.*` / `music.*` / `vm.*` / `browser.*` / `hotkeys.*` / `shell.*`)
+- 模型发 `tool_call(gear, ["fs.readFileText", "[\"/opfs/home/notes/x.md\"]"])`
+  → host 端 dispatch → 走 wanix jsfs / exec → 返回结果
+- 一次性继承 gear 的全部能力,不用逐个 tool 适配
+- **零额外 fs 安全边界** —— 走的是 agent 已经在用的同一通道
+
+### 待做 round 计划(给未来动手时按序)
+
+按依赖关系排序,每个 ~150-300 行,后续会话接手时按 round 序往下推:
+
+- **round A**(bonsai 仓库):`src/chat/events.js` 增加 `tool_call` 事件 type;
+  保留 `complete` 事件里的 `result.toolCalls` 字段。
+- **round B**(bonsai 仓库):`bonsai-client.js` + `adapter.js` 的
+  `streamTurn` / `stream` options 接受 `tools: Tool[]` + `onToolCall`,
+  接到 chat event 推送。
+- **round C**(bonsai 仓库):`src/core/app.js` 新增 `toolRunner`
+  (host-side function dispatch):`tool_call` → 查注册表 → 执行 →
+  `role: "tool"` push message history → 续 `chat.stream()` 直到
+  `finishReason === "stop"`。
+- **round D**(bonsai 仓库):`src/chat/markdown.js` + `thread.css` 加
+  tool_call 折叠卡片 UI(参数 + 工具名 + 结果)。
+- **round E**(gearshell 仓库):buildless bonsai 入口加 `parent.GearShell`
+  桥(等同 iframe plugin 走 `plugin/gear-bridge.js`),把 `gearShell.fs.*`
+  等 13 个命名空间暴露成 tool 注册表。
+- **round F**(可选,bonsai 仓库):跑 `npm run test:27b` bitgpu 27B
+  live gate 确认端到端 + 验证 GateShell agent side 的 `gear` tool。
+
+### 验证步骤
+
+1. `Bonsai27B.load` 后,`chat.stream(messages, {tools: [fsReadTool]})`
+   人工塞 `role: "tool"` message,看 `onToolCall` 触发 + `result.toolCalls`
+   正确。
+2. 起 `toolRunner` 跑 `console.log` tool,确认 chat loop 走完
+   "tool_call → tool message → finishReason='stop'"三段。
+3. 跑 `npm run test:27b`(bitgpu 仓库)确认 27B 真实权重下工具调用
+   收敛。
+4. 集成到 GearShell:端到端"用 gear 写一个 README" → bonsai 调
+   `gear fs.writeFileText` → README 出现在 /opfs/home。
+
+### memory 同步
+
+- 新增 `memory/bonsai-tool-calling.md`(完整报告约 205 行,
+  含 bitgpu 行号 / tokenizer 细节 / 集成路线 / 验证步骤)
+- `memory/Home.md` Latest rounds 加本条索引
+
+## 待办状态(汇总)
+
+按"做对的事"原则,本里程碑只做调研 + 文档,不写实现代码。后续
+按 round A-F 推进,优先级:
+1. **round A + B** —— 最小胶水,让 bonsai chat surface 能跑通单步
+   tool call。**P0**(解锁一切)。
+2. **round C** —— 多轮循环。**P0**(否则只跑一轮就停)。
+3. **round E** —— GearShell 集成。**P1**(独立路径:bonsai 可先
+   内联 `window.gear` 走 wanix /js/GearShell,绕开 GearShell 框架)。
+4. **round D** —— UI 折叠卡片。**P2**(纯外观)。
+5. **round F** —— 27B live gate 验证。**P2**(可选,bitgpu 仓库
+   自己有 gate)。
+
+如果将来优先级提升,接续工作从 `memory/bonsai-tool-calling.md`
+的"待做 round 计划"段开始。
