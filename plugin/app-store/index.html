@@ -685,11 +685,8 @@ function PluginDetailModal({ plugin, onClose, onOpen }) {
       <button type="button" className="as-detail-close" onClick=${onClose} title="Close" aria-label="Close">
         <${X} size=${14} aria-hidden=${true}/>
       </button>
-      <div className="as-detail-hero">
-        <${PluginPreview} plugin=${plugin}/>
-      </div>
       <header className="as-detail-head">
-        <div className="as-detail-icon"><${Icon} size=${22} aria-hidden=${true}/></div>
+        <div className="as-detail-icon"><${Icon} size=${48} aria-hidden=${true}/></div>
         <div className="as-detail-meta">
           <h2>${plugin.name || plugin.id}</h2>
           <div className="as-detail-sub">${plugin.id} · v${plugin.version}</div>
@@ -723,39 +720,13 @@ function Badges({ plugin }) {
   </div>`;
 }
 
-// 1:1 preview image. Resolves the relative path against the App Store
-// iframe's URL (/plugin/app-store/index.html) so the same pattern works
-// for `previews/<id>.png`. Falls back to a stylised gradient + icon if
-// the PNG is missing (user-installed plugin without a curated preview)
-// so the grid never shows a broken-image glyph.
-function PluginPreview({ plugin }) {
-  const Icon = iconOf(plugin.icon);
-  const src = `previews/${plugin.id}.png`;
-  return html`<div className="as-card-preview">
-    <img
-      src=${src}
-      alt=${`${plugin.name || plugin.id} preview`}
-      loading="lazy"
-      onError=${(e) => {
-        e.currentTarget.style.display = "none";
-        const fallback = e.currentTarget.nextElementSibling;
-        if (fallback) fallback.style.display = "grid";
-      }}
-    />
-    <div className="as-card-preview-fallback">
-      <${Icon} size=${48} aria-hidden=${true}/>
-    </div>
-  </div>`;
-}
-
 function PluginCardGrid({ plugin, onToggle, onEdit, onRemove, onOpen, onShowDetail, onChipClick }) {
   const Icon = iconOf(plugin.icon);
   const perms = plugin.permissions?.api || [];
   return html`<article className=${"as-card " + (plugin.enabled ? "" : "is-disabled") + (plugin.loadError ? " has-error" : "")}>
-    <${PluginPreview} plugin=${plugin}/>
     <div className="as-card-body">
       <div className="as-card-top">
-        <div className="as-card-icon"><${Icon} size=${18} aria-hidden=${true}/></div>
+        <div className="as-card-icon"><${Icon} size=${36} aria-hidden=${true}/></div>
         <div className="as-card-head">
           <div className="as-card-name">${plugin.name || plugin.id}</div>
           <div className="as-card-id">${plugin.id} · v${plugin.version}</div>
