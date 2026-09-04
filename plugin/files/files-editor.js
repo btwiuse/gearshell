@@ -257,6 +257,7 @@ function useEditorSelection(getFs) {
     openEntry,
     setContents,
     setSelectedPath,
+    setSavedContents,
   };
 }
 
