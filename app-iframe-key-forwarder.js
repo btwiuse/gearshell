@@ -24,9 +24,7 @@
 // panels.
 
 import { iframeSessions } from "./app-state.js";
-
-const installedSessions = new WeakSet();
-let pollHandle = 0;
+import { getDockviewApi } from "./app-panels-store.js";
 
 // Re-dispatch a keydown event to the shell window. Synthesizing the
 // event lets the shell's existing hotkey pipeline match it through
@@ -54,41 +52,89 @@ function forwardKeydown(hostEvent) {
   window.dispatchEvent(synthesized);
 }
 
+const installedSessions = new WeakSet();
+
+// Capture phase: see the event before any in-iframe handler that
+// might preventDefault for its own use (still forwarded though —
+// the host's hotkey pipeline is independent).
 function installForSession(session) {
+  if (!session) return;
+  if (installedSessions.has(session)) return;
   const iframe = session.iframe;
   if (!iframe) return;
   const contentWindow = iframe.contentWindow;
   if (!contentWindow) return;
-  if (installedSessions.has(session)) return;
-  // Capture phase: see the event before any in-iframe handler that
-  // might preventDefault for its own use (still forwarded though —
-  // the host's hotkey pipeline is independent).
   contentWindow.addEventListener("keydown", forwardKeydown, true);
   installedSessions.add(session);
 }
 
-// Poll-based install: iframeSessions grows as panels open and the
-// <iframe> elements appear in the DOM. We can't subscribe to "new
-// iframe" cleanly without changing app-sessions.js, so a cheap RAF
-// poll keeps the listener set in sync. Cost is one Map iteration per
-// frame regardless of size, so this scales linearly with iframe count.
 function syncOnce() {
   for (const session of iframeSessions.values()) {
     installForSession(session);
   }
 }
 
+// Event-driven install instead of a per-frame RAF poll: the previous
+// implementation ran `syncOnce()` 60 times/second forever, which
+// saturated the main thread (50 FPS idle instead of 60, ~30 % CPU on
+// the loop alone). dockview's `onDidAddPanel` is the right hook —
+// new iframe sessions only appear when a panel is added.
+//
+// Two notes on race handling:
+//   1. dockview fires onDidAddPanel before the panel's React component
+//      mounts the iframe DOM (panels.js's IframePanel useEffect is
+//      what creates the iframe), so the very first syncOnce() can
+//      race ahead of the iframe insertion. We follow the event with a
+//      one-shot RAF retry — that lands on the next frame, after React
+//      has committed, so the iframe is in place by then.
+//   2. Panels restored from a saved workspace at boot are also covered
+//      because the initial `syncOnce()` runs before the dockview api
+//      events have a chance to fire.
+let unsubscribe = null;
+let retryHandle = 0;
+let retryFrames = 0;
+
+function scheduleRetry() {
+  if (retryHandle) return;
+  retryFrames = 0;
+  const tick = () => {
+    retryHandle = 0;
+    retryFrames += 1;
+    syncOnce();
+    // Two follow-up ticks are enough — React + dockview both commit
+    // within a frame, so the iframe is in `iframeSessions` by then.
+    // Any further retries would indicate a real bug, not a race.
+    if (retryFrames < 2) {
+      retryHandle = requestAnimationFrame(tick);
+    } else {
+      retryFrames = 0;
+    }
+  };
+  retryHandle = requestAnimationFrame(tick);
+}
+
 export function startIframeKeyForwarder() {
   if (typeof window === "undefined") return;
-  if (pollHandle) return;
-  const loop = () => {
+  if (unsubscribe) return;
+  syncOnce();
+  const api = getDockviewApi();
+  if (!api?.onDidAddPanel) return;
+  const offAdd = api.onDidAddPanel(() => {
     syncOnce();
-    pollHandle = requestAnimationFrame(loop);
+    scheduleRetry();
+  });
+  const offRemove = api.onDidRemovePanel?.(() => syncOnce()) ?? null;
+  unsubscribe = () => {
+    offAdd?.dispose?.();
+    offRemove?.dispose?.();
+    if (retryHandle) cancelAnimationFrame(retryHandle);
+    retryHandle = 0;
+    retryFrames = 0;
+    unsubscribe = null;
   };
-  pollHandle = requestAnimationFrame(loop);
 }
 
 export function stopIframeKeyForwarder() {
-  if (pollHandle) cancelAnimationFrame(pollHandle);
-  pollHandle = 0;
+  unsubscribe?.();
+  unsubscribe = null;
 }
