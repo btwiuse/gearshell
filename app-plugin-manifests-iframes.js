@@ -170,11 +170,12 @@ export const IFRAME_PLUGINS = [
   {
     id: "community",
     name: "Community",
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "UsersRound",
     iframe: {
       src: "/plugin/community/index.html",
     },
+    enabled: false,
   },
   {
     id: "crush",

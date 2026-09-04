@@ -211,6 +211,7 @@ export function normalizePlugins(list, defaults) {
         // stale bytes under the old key.
         name: def.name || item.name,
         version: def.version || item.version,
+        enabled: item.version === def.version ? item.enabled : def.enabled,
         entry: def.entry !== undefined ? def.entry : item.entry,
         ...(def.iframe ? { iframe: def.iframe } : {}),
         // permissions ride the same refresh as iframe src: a builtin

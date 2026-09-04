@@ -1,7 +1,7 @@
 export const V86_IFRAME_PLUGIN = {
   id: "v86",
   name: "x86 Linux (v86)",
-  version: "0.1.0",
+  version: "0.1.1",
   icon: "Cpu",
   iframe: {
     src: "/plugin/v86/index.html",
@@ -20,4 +20,5 @@ export const V86_IFRAME_PLUGIN = {
       "events.off",
     ],
   },
+  enabled: false,
 };

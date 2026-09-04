@@ -7,7 +7,7 @@
 export const RV64_IFRAME_PLUGIN = {
   id: "rv64",
   name: "RISC-V 64 Linux (rv64.js)",
-  version: "0.1.0",
+  version: "0.1.1",
   icon: "Cpu",
   iframe: {
     src: "/plugin/rv64/index.html",
@@ -26,4 +26,5 @@ export const RV64_IFRAME_PLUGIN = {
       "events.off",
     ],
   },
+  enabled: false,
 };
