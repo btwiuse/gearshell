@@ -67,7 +67,8 @@ export function HomeHero({ openPanel, openExternal, scrollToId, GH }) {
   return html`
     <header className="mkt-hero">
       <div className="mkt-kicker">WEB NATIVE AGENT SANDBOX</div>
-      <h1>A browser-native shell.</h1>
+      <h1>Your agentic OS,</h1>
+      <h1>born in the browser.</h1>
       <p className="mkt-hero-lede">A kernel. A shell. A terminal. A browser. A tiling workspace. Any AI agent.</p>
       <p className="mkt-hero-tag">All in one tab.</p>
       <p className="mkt-hero-sub">Zero install. Real Linux. Git, Docker, kubectl, esbuild, TypeScript, Go, Claude Code — all running in your browser, persistent across reloads, distributable as a URL.</p>
