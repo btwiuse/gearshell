@@ -1574,6 +1574,27 @@ extras 重打,gearshell 待推):
 - 待办:wtop/wrepeat 的 wexec-js 未在页面实测;fetch relay 慢是已知瓶颈;
   guest 安装不持久(命名空间 RAM)。
 
+## 四十二补、RV64 Linux 7.2.3 / vsock / host9p 发布链(2026-09-05)
+
+- rv64.js `795770a` 将 `nixpkgs` 升到 `nixos-unstable` lock
+  `801bef6`，`pkgsCross.riscv64.linux_latest` 构建 Linux 7.2.3。
+  7.2.3 删除了 `PREEMPT_NONE`，必须从 strict allnoconfig contract 移除。
+- Linux 7.2.3 的 RISC-V vDSO getrandom 编译会留下 `R_RISCV_JUMP_SLOT memcpy`
+  动态重定位，GCC 15/binutils 2.46 的严格 vDSO 检查拒绝它；构建派生删除
+  RISC-V 对 `VDSO_GETRANDOM` 的 select，保留 MMU 与普通 Linux 用户空间。
+- `kernel/rv64-config.nix` 已内建 `NET_9P`、`NET_9P_VIRTIO`、`9P_FS`、
+  `VSOCKETS`、`VIRTIO_VSOCKETS`。构建日志和 guest boot log 都确认
+  `NET: Registered PF_VSOCK protocol family`。
+- `wanix-extras@v0.4.0-rc8` 发布了 Linux 7.2.3 guest image；随后真实
+  WANIX 启动暴露 `root=host9p` panic。根因不是 guest kernel 9P config，
+  而是 `rv64.tgz` 仍使用固定 release `v0.3.0` 的 `rv64_wasm.wasm`，缺少
+  adapter 所需 external-9P exports。`v0.4.0-rc9` 改为 workspace runtime，
+  并验证归档有 `virt_stage_fs_external_tag`、`virt_p9_take_request`、
+  `virt_p9_reply`。必须让 runtime archive 和 adapter 保持同一源码世代。
+- 待办:GearShell pin 升 `v0.4.0-rc9` 后，必须在真实 iframe 内验证
+  `/bin/init`、`root=host9p`、hvc0、hostexport、网络与 tmux；不要仅以
+  standalone ext4 测试替代 WANIX 根挂载验证。
+
 
 ## 四十三、wanix runtime 加载回退(2026-09-02)
 
