@@ -23,6 +23,27 @@ const CONCURRENCY = 3;
 // src URL -> blob URL for this session. Built by primePluginContentCache.
 const blobBySrc = new Map();
 
+function replaceBlobUrl(src, blobUrl) {
+  const previous = blobBySrc.get(src);
+  if (previous && previous !== blobUrl) URL.revokeObjectURL(previous);
+  blobBySrc.set(src, blobUrl);
+}
+
+export function clearPluginContentCache() {
+  for (const blobUrl of blobBySrc.values()) URL.revokeObjectURL(blobUrl);
+  blobBySrc.clear();
+}
+
+function removeUnusedBlobUrls(activeSources) {
+  for (const [src, blobUrl] of blobBySrc) {
+    if (activeSources.has(src)) continue;
+    URL.revokeObjectURL(blobUrl);
+    blobBySrc.delete(src);
+  }
+}
+
+window.addEventListener("pagehide", clearPluginContentCache, { once: true });
+
 let rootPromise = null;
 
 async function cacheRoot() {
@@ -94,6 +115,8 @@ export function primePluginContentCache(plugins) {
     for (const file of plugin.files || []) jobs.push({ plugin, entry: file });
     for (const file of plugin.systemFiles || []) jobs.push({ plugin, entry: file });
   }
+  const activeSources = new Set(jobs.map(({ entry }) => entry.src));
+  removeUnusedBlobUrls(activeSources);
   if (jobs.length === 0) return Promise.resolve();
   let index = 0;
   const workers = Array.from(
@@ -102,7 +125,7 @@ export function primePluginContentCache(plugins) {
       while (index < jobs.length) {
         const { plugin, entry } = jobs[index++];
         const blobUrl = await cacheOne(plugin, entry);
-        if (blobUrl) blobBySrc.set(entry.src, blobUrl);
+        if (blobUrl) replaceBlobUrl(entry.src, blobUrl);
       }
     },
   );
