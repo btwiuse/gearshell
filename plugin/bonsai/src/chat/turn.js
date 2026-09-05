@@ -145,6 +145,25 @@ export function lockContextFull(turn, env) {
   env.scrollDown();
 }
 
+// Drop the heavy accumulator fields from a finished turn so the
+// `turn` object becomes eligible for collection once the chat moves
+// on. The painted text is already in the DOM (turn.tBody for
+// thinking, turn.aBody for the answer); keeping the source strings
+// around serves no display purpose and prevents V8 from reclaiming
+// a multi-KB string per turn in a long session.
+//
+// `turn.msg`, `turn.tBlock`, `turn.tLabel`, `turn.tBody`,
+// `turn.aBody` stay attached — they are needed by future renders
+// (history scroll-back, re-render on visibility change) and the
+// meta line. Their element refs are cheap.
+function releaseTurnBuffers(turn) {
+  turn.phase = null;
+  turn.thinking = "";
+  turn.answer = "";
+  turn.toolStatuses = null;
+  turn.closed = true;
+}
+
 export function finishTurn(turn, env) {
   if (turn.phase === "think" && !turn.closed) {
     turn.tBlock.classList.remove("live");
@@ -179,6 +198,11 @@ export function finishTurn(turn, env) {
     title: env.sessionTitle,
     messages: env.messages,
   });
+  // Now that the thinking/answer text is in the DOM, drop the
+  // raw accumulator strings. This is the single biggest win for
+  // long sessions — a 4 000-token reply was holding two ~12 KB
+  // strings alive per turn for the rest of the session.
+  releaseTurnBuffers(turn);
   env.setGenerating(false);
   env.cLive.textContent = "";
   env.abortController = null;
