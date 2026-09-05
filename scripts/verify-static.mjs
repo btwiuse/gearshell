@@ -112,9 +112,9 @@ for (
     "FilesPanel",
     "RuntimePanel",
     "LandingPanel",
-    "DeckPanel",
     "WorkbenchPanel",
-    "component: 'deck'",
+    'id: "deck"',
+    'src: "/plugin/deck/index.html"',
     "component: 'workbench'",
     'value="import"',
     'data-system="allow-origins"',
@@ -175,7 +175,7 @@ if (!has("onDragStart:") || !has("EyeOff") || !has("Open by default")) {
     "Launcher layout must support drag, visibility icons, and default startup.",
   );
 }
-if (!has("src: '/bonsai/'") || !has("name: 'Bonsai 27B'")) {
+if (!has('src: "/plugin/bonsai/buildless.html"') || !has('name: "Bonsai 27B"')) {
   throw new Error(
     "Launcher must offer Bonsai 27B from the bundled Bonsai app.",
   );
