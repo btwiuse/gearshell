@@ -91,3 +91,45 @@ export function persistSession({ id, title, messages }) {
     bytes: body.length,
   });
 }
+
+// Coalesce rapid persistSession calls into a single write. The hot
+// path (per-turn send) used to fire a synchronous
+// JSON.stringify(localStorage.setItem on every stream finalization;
+// for long sessions that synchronously serialised the entire
+// messages array on the same task the user just hit ENTER.
+//
+// `schedulePersist` debounces writes within a ~500ms window. The
+// most-recent payload wins. We register a flush on `pagehide` and
+// `visibilitychange→hidden` so a tab close / refresh serialises the
+// pending write before unload.
+const PERSIST_DEBOUNCE_MS = 500;
+let pendingPayload = null;
+let pendingHandle = 0;
+function flushPersist() {
+  if (pendingHandle) {
+    clearTimeout(pendingHandle);
+    pendingHandle = 0;
+  }
+  if (pendingPayload) {
+    const payload = pendingPayload;
+    pendingPayload = null;
+    persistSession(payload);
+  }
+}
+function schedulePersist(payload) {
+  pendingPayload = payload;
+  if (pendingHandle) return;
+  pendingHandle = setTimeout(() => {
+    pendingHandle = 0;
+    flushPersist();
+  }, PERSIST_DEBOUNCE_MS);
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flushPersist);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushPersist();
+  });
+}
+
+export { schedulePersist, flushPersist };

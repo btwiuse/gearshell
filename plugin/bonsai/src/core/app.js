@@ -41,6 +41,7 @@ import {
   loadSession,
   readSessionIndex,
   removeSession,
+  schedulePersist,
 } from "../chat/history.js";
 
 const $ = (id) => document.getElementById(id);
@@ -340,6 +341,7 @@ function turnEnv() {
     abortController,
     contextExhausted,
     persistSession,
+    schedulePersist,
     setStatus,
     setGenerating,
     scrollDown,
@@ -373,7 +375,14 @@ async function send() {
   if (!sessionTitle || sessionTitle === "New chat" || sessionTitle === "Untitled chat") {
     sessionTitle = text.length > 60 ? text.slice(0, 57) + "…" : text;
   }
-  persistSession({ id: sessionId, title: sessionTitle, messages });
+  // Debounced: the actual localStorage write batches with the
+  // finishTurn call below, so a single round trip writes once
+  // with the final assistant content included.
+  schedulePersist({
+    id: sessionId,
+    title: sessionTitle,
+    messages,
+  });
   const thinkTurn = thinkingEnabled;
   const turn = createTurnState(thinkTurn);
   setGenerating(true);

@@ -8,6 +8,7 @@
 // into messages and the persistent session at the end of finishTurn.
 
 import { renderAnswer } from "./markdown.js";
+import { schedulePersist } from "./history.js";
 
 export function appendUserNode(cThread, scrollDown, text) {
   const msg = document.createElement("div");
@@ -168,7 +169,12 @@ export function finishTurn(turn, env) {
   env.scrollDown();
   const content = env.chat.lastAssistantContent;
   if (content !== null) env.messages.push({ role: "assistant", content });
-  env.persistSession({
+  // Persist is debounced (history.js's schedulePersist coalesces
+  // multiple finishTurn calls into a single write); a fresh page
+  // (pagehide / visibilitychange→hidden) flushes it before unload so
+  // a tab close doesn't lose the last turn. Pure localStorage write
+  // runs at the trailing edge of the click that finished generation.
+  env.schedulePersist({
     id: env.sessionId,
     title: env.sessionTitle,
     messages: env.messages,
