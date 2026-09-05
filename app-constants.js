@@ -304,7 +304,7 @@ export const BUILTIN_TERMINAL_PROFILES = [
 export const WANIX_RUNTIME = {
   wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.35",
   moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.34/dist/wanix.min.js",
+    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.35/dist/wanix.min.js",
 };
 
 // The shell toolset (bash/w9y/gear binaries + the rc file) now ships as
