@@ -44,38 +44,77 @@ body {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import htm from "htm";
-import * as Lucide from "lucide-react";
 import {
-  Search,
-  LayoutGrid,
-  List,
-  Plus,
-  Store,
-  Pencil,
-  Trash2,
-  ExternalLink,
+  Activity,
   AlertTriangle,
+  BookOpen,
+  Bot,
+  Boxes,
   Check,
-  ShieldCheck,
-  ChevronRight,
   ChevronDown,
+  ChevronRight,
+  Code2,
+  Coffee,
+  Cpu,
+  Dog,
+  ExternalLink,
+  Folder,
+  FolderOpen,
+  Frame,
+  Globe2,
+  Home,
+  House,
+  Info,
   KeyRound,
+  Layers,
+  LayoutDashboard,
+  LayoutGrid,
+  Lightbulb,
+  List,
+  MessageSquare,
+  Monitor,
+  Music2,
+  NotebookPen,
+  Pencil,
+  Plus,
+  Rocket,
+  Search,
+  Server,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Sprout,
+  SquareTerminal,
+  Star,
+  Store,
+  Terminal,
+  Trash2,
+  TreePine,
+  UsersRound,
+  Wrench,
   X,
 } from "lucide-react";
 
 const html = htm.bind(React.createElement);
 
-// Every prop name returned by lucide-react forwardRef icons is
-// PascalCase. We strip the deprecated "XIcon" suffix aliases and any
-// non-icon helper exports (defaultAttributes, icons, etc.) so the
-// App Store's icon picker shows canonical names only.
-const LUCIDE_ICONS = Object.keys(Lucide)
-  .filter((name) => /^[A-Z]/.test(name) && name !== "defaultAttributes")
-  .filter((name) => !name.endsWith("Icon"))
-  .sort();
+// Manifests declare ~35 distinct icons today; new ones must be added
+// here and treeshaking will only pull the explicitly referenced ones.
+// If a manifest points at an icon name not in this map, we fall back
+// to Wrench so the picker never goes blank. The bigger 5000+ icon
+// catalog lives at settings-icons.js (TerminalPresetIconPicker).
+const PLUGIN_ICONS = {
+  Activity, AlertTriangle, BookOpen, Bot, Boxes, Check, ChevronDown,
+  ChevronRight, Code2, Coffee, Cpu, Dog, ExternalLink, Folder, FolderOpen,
+  Frame, Globe2, Home, House, Info, KeyRound, Layers, LayoutDashboard,
+  LayoutGrid, Lightbulb, List, MessageSquare, Monitor, Music2, NotebookPen,
+  Pencil, Plus, Rocket, Search, Server, Settings, ShieldCheck,
+  SlidersHorizontal, Sparkles, Sprout, SquareTerminal, Star, Store, Terminal,
+  Trash2, TreePine, UsersRound, X,
+};
 
 function iconOf(name) {
-  return Lucide[name] || Lucide.Wrench;
+  return PLUGIN_ICONS[name] || Wrench;
 }
 
 // Plugin kind tag (matches normalizePlugin's derived "iframe" /
