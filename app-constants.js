@@ -130,6 +130,7 @@ export const DEFAULT_LAUNCHER_ITEM_ORDER = [
   "playground",
   "music",
   "community",
+  "sponsor",
   "browser",
   "bonsai",
   "codigo",

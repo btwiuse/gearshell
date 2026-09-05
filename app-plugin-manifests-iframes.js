@@ -178,6 +178,18 @@ export const IFRAME_PLUGINS = [
     enabled: false,
   },
   {
+    id: "sponsor",
+    name: "Sponsor",
+    version: "1.0.0",
+    icon: "Coffee",
+    iframe: {
+      src: "/plugin/sponsor/index.html",
+    },
+    // Sponsor page is a single-button entry point (Buy Me a Coffee +
+    // GitHub Sponsors). Not opt-out-by-default — the About dialog
+    // surfaces it as a fifth icon button.
+  },
+  {
     id: "crush",
     name: "Crush",
     version: "1.0.0",
