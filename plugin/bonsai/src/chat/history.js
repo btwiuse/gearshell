@@ -66,7 +66,7 @@ export function loadSession(id) {
   } catch { return null; }
 }
 
-export function persistSession({ id, title, messages }) {
+export function persistSession({ id, title, messages } = {}) {
   if (!id) return;
   const trimmed = trimMessages(messages);
   if (trimmed.length === 0) return;
