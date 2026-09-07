@@ -91,6 +91,10 @@ class BonsaiChat {
         yield event;
       }
     } catch (error) {
+      if (options.signal?.aborted) return;
+      if (/Buffer unmapped|unmapped/i.test(String(error?.message ?? error))) {
+        this.lastAssistantContent = null;
+      }
       if (/maxSeqLen|context/i.test(String(error?.message ?? error))) {
         this.contextFull = true;
       }

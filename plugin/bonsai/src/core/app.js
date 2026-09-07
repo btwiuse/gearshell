@@ -292,7 +292,7 @@ function openSession(id) {
   if (isGenerating) return;
   const data = loadSession(id);
   if (!data) return;
-  persistSession();
+  persistSession({ id: sessionId, title: sessionTitle, messages });
   messages = data.messages ?? [];
   sessionId = data.id ?? id;
   sessionTitle = data.title ?? "Restored chat";
@@ -407,7 +407,9 @@ async function send() {
       }
     } while (toolCalls.length > 0 && !abortController.signal.aborted);
   } catch (error) {
-    handleGenerationError(error, turn, setStatus);
+    if (!abortController?.signal.aborted) {
+      handleGenerationError(error, turn, setStatus);
+    }
   } finally {
     finishTurn(turn, turnEnv());
   }
