@@ -1,4 +1,4 @@
-import { loadChatSettings, saveChatSettings } from "./settings.js";
+import { loadChatSettings, saveChatSettings, loadRuntimeMode, saveRuntimeMode } from "./settings.js";
 
 function byId(id) {
   return document.getElementById(id);
@@ -10,6 +10,11 @@ function fill(settings) {
   byId("topPInput").value = settings.topP;
   byId("topKInput").value = settings.topK;
   byId("maxTokensInput").value = settings.maxTokens;
+  // The runtime select is only in buildless.html; the bundled
+  // index.html may not have it. Guard the assignment so an older
+  // bundle doesn't throw when users reopen the settings overlay.
+  const runtimeSelect = byId("runtimeModeInput");
+  if (runtimeSelect) runtimeSelect.value = loadRuntimeMode();
 }
 
 function read() {
@@ -38,9 +43,19 @@ export function setupSettingsPanel(onSave) {
   });
   byId("settingsSaveBtn").addEventListener("click", () => {
     onSave(saveChatSettings(read()));
+    // Persist the runtime mode independently. It only takes effect on
+    // the next page load (model + worker are already wired by then),
+    // so we don't need to reload here — but we do show a confirmation
+    // so the user knows their choice was saved. Guarded for older
+    // bundles without the runtime select.
+    const runtimeSelect = byId("runtimeModeInput");
+    if (runtimeSelect) saveRuntimeMode(runtimeSelect.value);
     close();
   });
-  byId("settingsResetBtn").addEventListener("click", () => fill(saveChatSettings({})));
+  byId("settingsResetBtn").addEventListener("click", () => {
+    saveRuntimeMode("main");
+    fill(saveChatSettings({}));
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !overlay.hidden) close();
   });

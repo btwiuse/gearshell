@@ -1,4 +1,5 @@
 const SETTINGS_KEY = "bonsai_chat_settings_v1";
+const RUNTIME_KEY = "bonsai_runtime_v1";
 
 const DEFAULTS = {
   systemPrompt: "You are Bonsai, a local AI assistant. Be candid about uncertainty, distinguish verified facts from inference, and never invent tool results or external facts. Do not claim to be GearShell. Reply in the user's language. When tools are enabled, use them for current sandbox facts and report their output faithfully.",
@@ -35,6 +36,31 @@ export function saveChatSettings(settings) {
   const normalized = normalize(settings);
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalized));
   return normalized;
+}
+
+// Runtime mode controls whether inference runs on the main thread
+// (Bonsai27B) or in a Worker (WorkerBonsai27B). Worker keeps inference
+// off the UI thread so the paint throttler / markdown reparse cannot
+// starve the GPU queue; main thread is the original path, useful for
+// debugging or when the worker refuses to load. Default is `main`
+// (round 66 revert of round 65's switch — the user controls the
+// trade-off explicitly). A `?runtime=worker` / `?runtime=main` query
+// always wins so we can A/B test without touching storage.
+export function loadRuntimeMode() {
+  const query = new URLSearchParams(location.search).get("runtime");
+  if (query === "worker" || query === "main") return query;
+  try {
+    const stored = localStorage.getItem(RUNTIME_KEY);
+    if (stored === "worker" || stored === "main") return stored;
+  } catch {}
+  return "main";
+}
+
+export function saveRuntimeMode(mode) {
+  if (mode !== "worker" && mode !== "main") return;
+  try {
+    localStorage.setItem(RUNTIME_KEY, mode);
+  } catch {}
 }
 
 export function buildGenerationOptions(settings) {

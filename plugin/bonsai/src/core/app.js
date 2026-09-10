@@ -33,6 +33,7 @@ import {
   buildConversation,
   buildGenerationOptions,
   loadChatSettings,
+  loadRuntimeMode,
 } from "../chat/settings.js";
 import { setupSettingsPanel } from "../chat/settings-panel.js";
 import {
@@ -46,12 +47,14 @@ import {
 
 const $ = (id) => document.getElementById(id);
 const queryParams = new URLSearchParams(location.search);
-// Default to the worker runtime. The worker host keeps inference off
-// the page's main thread, so per-token UI work (paint throttler,
-// markdown reparse, scroll handling) never starves the GPU command
-// queue the way it does when Bonsai27B runs inline. `?runtime=main`
-// reverts to the original main-thread path for parity debugging.
-const useWorkerRuntime = queryParams.get("runtime") !== "main";
+// Runtime selection. Priority:
+//   1. ?runtime=worker / ?runtime=main  (one-off A/B test)
+//   2. localStorage["bonsai_runtime_v1"] (user toggle in Settings)
+//   3. default: "main"  (round 66: explicit user choice; round 65's
+//      automatic default was reverted after observing it surprised
+//      users who expected parity with the root bonsai/ page.)
+const runtimeMode = loadRuntimeMode();
+const useWorkerRuntime = runtimeMode === "worker";
 const modelRuntime = useWorkerRuntime ? WorkerBonsai27B : Bonsai27B;
 // Opt-in reasoning controls for bitgpu's think mode. Defaults stay untouched,
 // so the page behaves identically without these query parameters.

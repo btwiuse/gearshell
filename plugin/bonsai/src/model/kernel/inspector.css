@@ -150,6 +150,25 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
+.settings-runtime {
+  display: grid;
+  gap: 8px;
+}
+.settings-runtime select {
+  width: 100%;
+  border: 1px solid var(--hair);
+  background: #050609;
+  color: var(--ink);
+  padding: 10px;
+  font: 13px var(--sans);
+}
+.settings-runtime-hint {
+  margin: -4px 0 0;
+  color: var(--faint);
+  font: 9.5px var(--mono);
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+}
 .kx-head {
   display: flex;
   align-items: flex-start;

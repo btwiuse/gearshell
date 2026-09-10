@@ -395,6 +395,18 @@
             <label><span>Top K</span><input id="topKInput" type="number" min="1" max="100" step="1"></label>
             <label><span>Max tokens</span><input id="maxTokensInput" type="number" min="64" max="4096" step="64"></label>
           </div>
+          <label class="settings-runtime">
+            <span>Inference runtime</span>
+            <select id="runtimeModeInput">
+              <option value="main">Main thread (parity with root bonsai/)</option>
+              <option value="worker">Web Worker (off-thread, faster streaming)</option>
+            </select>
+          </label>
+          <p class="settings-runtime-hint">
+            Change applies on the next page load. The worker runtime
+            keeps inference off the UI thread; the main-thread runtime
+            is the original path used by the standalone bonsai/ page.
+          </p>
           <div class="cache-actions">
             <button class="c-btn" id="settingsResetBtn" type="button">RESET</button>
             <button class="c-btn" id="settingsSaveBtn" type="button">SAVE SETTINGS</button>
