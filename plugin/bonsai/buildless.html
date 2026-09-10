@@ -400,12 +400,14 @@
             <select id="runtimeModeInput">
               <option value="main">Main thread (parity with root bonsai/)</option>
               <option value="worker">Web Worker (off-thread, faster streaming)</option>
+              <option value="host">Shell inference host (RFC phase 1)</option>
             </select>
           </label>
           <p class="settings-runtime-hint">
-            Change applies on the next page load. The worker runtime
-            keeps inference off the UI thread; the main-thread runtime
-            is the original path used by the standalone bonsai/ page.
+            Change applies on the next page load. The shell host mode
+            streams through GearShell.inference (one model in VRAM, shared
+            across all consumers). Falls back to main-thread if no host
+            is registered.
           </p>
           <div class="cache-actions">
             <button class="c-btn" id="settingsResetBtn" type="button">RESET</button>

@@ -49,6 +49,7 @@ import { agentsApi } from "./workspace-agents-api.js";
 import { musicApi } from "./music-engine.js";
 import { terminalApi } from "./workspace-terminal-api.js";
 import { bashApi } from "./workspace-bash-api.js";
+import { inferenceApi } from "./workspace-inference-api.js";
 import { fsApi } from "./workspace-fs-api.js";
 import {
   applyW9yMod,
@@ -110,6 +111,10 @@ const api = {
   agents: wrapNamespace(agentsApi),
   music: wrapNamespace(musicApi),
   terminal: wrapNamespace(terminalApi),
+  // Inference host: long-lived Web Worker that owns the bitgpu engine.
+  // Plugin/bonsai consumes this when ?runtime=host so per-tab GPU
+  // contention disappears (RFC: docs/rfc-inference-host.md).
+  inference: wrapNamespace(inferenceApi),
   vm: {
     create: safe(() => ({ ok: false, error: "vm.create is available only to iframe VM plugins" })),
     list: safe(() => ({ ok: true, sessions: [] })),

@@ -1,5 +1,6 @@
 import { Bonsai27B, DEFAULT_GGUF_FILE } from "../model/adapter.js";
 import { WorkerBonsai27B } from "../model/bonsai-client.js";
+import { RemoteBonsai27B, hostModeRequested } from "../model/remote-client.js";
 import { setupModelAccess } from "../model/access.js";
 import { renderAnswer } from "../chat/markdown.js";
 import { renderHistoryPanel } from "../chat/history-panel.js";
@@ -51,14 +52,29 @@ import {
 const $ = (id) => document.getElementById(id);
 const queryParams = new URLSearchParams(location.search);
 // Runtime selection. Priority:
-//   1. ?runtime=worker / ?runtime=main  (one-off A/B test)
-//   2. localStorage["bonsai_runtime_v1"] (user toggle in Settings)
+//   1. ?runtime=host / ?runtime=worker / ?runtime=main  (one-off A/B)
+//   2. localStorage["bonsai_runtime_v1"]  (user toggle in Settings)
 //   3. default: "main"  (round 66: explicit user choice; round 65's
 //      automatic default was reverted after observing it surprised
 //      users who expected parity with the root bonsai/ page.)
+//
+// "host" mode is the new RFC path: when the page is loaded inside a
+// GearShell host iframe that exposes GearShell.inference.*, the plugin
+// skips its own bitgpu engine and streams through the host's long-
+// lived Worker. This is the per-tab GPU contention fix from RFC
+// docs/rfc-inference-host.md. When ?runtime=host is requested but no
+// host is available we silently fall back to "main".
 const runtimeMode = loadRuntimeMode();
-const useWorkerRuntime = runtimeMode === "worker";
-const modelRuntime = useWorkerRuntime ? WorkerBonsai27B : Bonsai27B;
+let modelRuntime;
+if (runtimeMode === "host" && RemoteBonsai27B.isAvailable()) {
+  modelRuntime = RemoteBonsai27B;
+} else if (runtimeMode === "worker") {
+  modelRuntime = WorkerBonsai27B;
+} else {
+  modelRuntime = Bonsai27B;
+}
+const useWorkerRuntime = modelRuntime === WorkerBonsai27B;
+const useHostRuntime = modelRuntime === RemoteBonsai27B;
 // Opt-in reasoning controls for bitgpu's think mode. Defaults stay untouched,
 // so the page behaves identically without these query parameters.
 const thinkBudgetRaw = queryParams.get("thinkBudget");
@@ -117,26 +133,47 @@ const cInput = $("cInput"),
 const cStatus = $("cStatus"),
   cStatusText = $("cStatusText"),
   cLive = $("cLive");
-// Pass both runtimes: network/URL loads use the worker host (off main
-// thread, no per-token UI contention), local-file loads use the main
-// thread (a Blob cannot cross postMessage to the worker). The chat
-// path then runs at full worker speed once the model is resident.
-const modelAccess = setupModelAccess({
-  Bonsai27B: modelRuntime,
-  FileBonsai27B: useWorkerRuntime ? Bonsai27B : modelRuntime,
-  defaultGgufFile: DEFAULT_GGUF_FILE,
-  byId: $,
-  getChat: () => chat,
-  setChat: (nextChat) => {
-    chat = nextChat;
-  },
-  onChatReady: prepChatUi,
+// Pass the runtime that matches the user's choice. Worker host is the
+// default for the network load (off main thread, no per-token UI
+// contention); local-file loads use the main thread (a Blob cannot
+// cross postMessage to the worker). The chat path runs at full worker
+// speed once the model is resident. Shell-host mode skips local load
+// entirely — the host's Worker is the engine.
+const modelAccess = useHostRuntime
+  ? null
+  : setupModelAccess({
+    Bonsai27B: modelRuntime,
+    FileBonsai27B: useWorkerRuntime ? Bonsai27B : modelRuntime,
+    defaultGgufFile: DEFAULT_GGUF_FILE,
+    byId: $,
+    getChat: () => chat,
+    setChat: (nextChat) => {
+      chat = nextChat;
+    },
+    onChatReady: prepChatUi,
+  });
+// Shell-host runtime: the host's Worker owns the model. Skip the
+// local loader UI (gate + LOAD MODEL / LOAD FROM DISK buttons); the
+// bootHostRuntime() call below triggers model creation through the
+// host and reports status via inference events.
+if (useHostRuntime) {
+  for (const id of ["gateContinue", "loadFileCta"]) {
+    const btn = byId(id);
+    if (btn) btn.hidden = true;
+  }
+}
+BonsaiLoader.onReady(() => {
+  if (useHostRuntime) {
+    setTimeout(bootHostRuntime, 1800);
+  } else {
+    setTimeout(enterChat, 1800);
+  }
 });
-BonsaiLoader.onReady(() => setTimeout(enterChat, 1800));
 function enterChat() {
-  if (
-    !modelAccess.isReady() || document.body.classList.contains("stage-chat")
-  ) {
+  // In host runtime mode, `modelAccess` is null — the host Worker
+  // owns the model; we wait on the chat object directly instead.
+  const ready = useHostRuntime ? !!chat : modelAccess.isReady();
+  if (!ready || document.body.classList.contains("stage-chat")) {
     return;
   }
   document.body.classList.add("stage-chat");
@@ -158,6 +195,23 @@ function enterChat() {
     } catch {}
   }
   setTimeout(() => cInput.focus(), 450);
+}
+
+// Host-runtime boot: create the chat through RemoteBonsai27B and run
+// the same prepChatUi() the local load path triggers. Mirrors the
+// ModelAccess.startLoad() flow but skips the loader UI (the host's
+// progress stream lives in the shell's inference.status events).
+async function bootHostRuntime() {
+  try {
+    const nextChat = await modelRuntime.load(DEFAULT_MODEL_ID, {});
+    chat = nextChat;
+    window.__bonsaiChat = nextChat;
+    prepChatUi();
+    BonsaiLoader.done();
+  } catch (error) {
+    console.error(error);
+    BonsaiLoader.set(0, 1, {});
+  }
 }
 function prepChatUi() {
   cInput.disabled = false;

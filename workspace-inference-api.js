@@ -1,0 +1,187 @@
+// workspace-inference-api.js — GearShell.inference.* on the shell side.
+//
+// Spawns a single long-lived inference host Worker (inference/host-worker.js)
+// and exposes its capabilities as the standard GearShell namespace:
+//
+//   await GearShell.inference.list()              // [{id, label, size, ...}]
+//   await GearShell.inference.load(model, opts)   // boots a 3.8 GB model
+//   await GearShell.inference.unload()            // frees VRAM
+//   await GearShell.inference.status()            // {state, model, sessions}
+//   const session = await GearShell.inference.createSession({model, ...})
+//   for await (const event of session.send(messages, options)) { ... }
+//   session.abort(); session.reset(); session.close();
+//
+// Stream events arrive as `{ type: "text"|"thinking"|"tool_call"|"complete", ... }`,
+// matching the shape the plugin's adapter used to emit — see the
+// migration in plugin/bonsai/src/model/remote-client.js.
+
+import { listModels, getModel } from "./inference/manifest.js";
+import { REQUEST, PUSH } from "./inference/protocol.js";
+import { on as onEvent, off as offEvent } from "./workspace-events.js";
+
+const HOST_URL = new URL("./inference/host-worker.js", import.meta.url);
+
+let workerInstance = null;
+let nextRequestId = 0;
+const pendingRequests = new Map();
+const sessionStreams = new Map(); // sessionId -> Set<(event) => void>
+let initPromise = null;
+
+function ensureHost() {
+  if (workerInstance) return workerInstance;
+  if (!initPromise) {
+    initPromise = (async () => {
+      const worker = new Worker(HOST_URL, { type: "module" });
+      worker.addEventListener("message", (event) => onHostMessage(event.data));
+      worker.addEventListener("error", (event) => {
+        // Surface fatal worker errors. Pending requests see them.
+        const err = String(event?.message ?? event);
+        for (const [, pending] of pendingRequests) {
+          pending.reject(new Error(`host worker error: ${err}`));
+        }
+        pendingRequests.clear();
+      });
+      workerInstance = worker;
+      return worker;
+    })();
+  }
+  return initPromise;
+}
+
+function onHostMessage(message) {
+  if (!message || typeof message !== "object") return;
+  if (message.type === PUSH.EVENT) {
+    const listeners = sessionStreams.get(message.sessionId);
+    if (listeners) {
+      for (const fn of [...listeners]) {
+        try { fn(message.event); } catch {}
+      }
+    }
+    return;
+  }
+  if (message.type === PUSH.PROGRESS) {
+    const pending = pendingRequests.get(message.requestId);
+    pending?.onProgress?.(message.progress);
+    return;
+  }
+  if (message.type === PUSH.STATUS) {
+    onEvent("inference.status", message.state);
+    return;
+  }
+  if (typeof message.id === "number") {
+    const pending = pendingRequests.get(message.id);
+    if (!pending) return;
+    pendingRequests.delete(message.id);
+    if (message.type === "ok") pending.resolve(message.result);
+    else pending.reject(new Error(message.error ?? "inference host error"));
+  }
+}
+
+function callHost(type, payload) {
+  return ensureHost().then(
+    (worker) =>
+      new Promise((resolve, reject) => {
+        const id = ++nextRequestId;
+        pendingRequests.set(id, { resolve, reject });
+        worker.postMessage({ id, type, ...payload });
+      }),
+  );
+}
+
+// Each shell-side session wraps the host wire with an AsyncIterable
+// `send()` method. The bridge pulls events from the host via the
+// sessionStreams dispatch table.
+class RemoteSession {
+  constructor({ id, model, contextLength, wire }) {
+    this.id = id;
+    this.model = model;
+    this.contextLength = contextLength;
+    this.wire = wire;
+    this._listeners = new Set();
+    sessionStreams.set(id, this._listeners);
+  }
+
+  send(messages, options = {}) {
+    // Returns an AsyncIterable. The host pushes typed events; we yield
+    // them to the consumer. The host also pushes {type:"_end"} or
+    // {type:"_error", error} which signal stream completion.
+    const wire = this.wire;
+    const listeners = this._listeners;
+    const id = wire.send(messages, options);
+    const queue = [];
+    let wake = null;
+    let closed = false;
+    const push = (event) => {
+      queue.push(event);
+      if (wake) { const w = wake; wake = null; w(); }
+    };
+    const onEvent = (event) => {
+      if (event.type === "_end") closed = true;
+      push(event);
+    };
+    listeners.add(onEvent);
+    return {
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+      async next() {
+        if (queue.length > 0) {
+          const event = queue.shift();
+          if (event.type === "_end") return { done: true, value: undefined };
+          if (event.type === "_error") throw new Error(event.error);
+          return { done: false, value: event };
+        }
+        if (closed) return { done: true, value: undefined };
+        return new Promise((resolve) => {
+          wake = () => {
+            if (queue.length === 0) {
+              resolve({ done: true, value: undefined });
+              return;
+            }
+            const event = queue.shift();
+            if (event.type === "_end") resolve({ done: true, value: undefined });
+            else if (event.type === "_error") resolve(Promise.reject(new Error(event.error)));
+            else resolve({ done: false, value: event });
+          };
+        });
+      },
+      async return() {
+        listeners.delete(onEvent);
+        if (listeners.size === 0) sessionStreams.delete(id);
+        return { done: true, value: undefined };
+      },
+    };
+  }
+
+  abort() { this.wire.abort(); }
+  reset() { this.wire.reset(); }
+  close() {
+    this.wire.close();
+    sessionStreams.delete(this.id);
+  }
+}
+
+export const inferenceApi = {
+  list() {
+    return Promise.resolve(listModels());
+  },
+
+  status() {
+    return callHost(REQUEST.STATUS, {});
+  },
+
+  load(model, options = {}) {
+    return callHost(REQUEST.LOAD, { model, options });
+  },
+
+  unload() {
+    return callHost(REQUEST.UNLOAD, {});
+  },
+
+  async createSession(options = {}) {
+    const wire = await callHost(REQUEST.CREATE_SESSION, { options });
+    return new RemoteSession(wire);
+  },
+};
+
+export default inferenceApi;

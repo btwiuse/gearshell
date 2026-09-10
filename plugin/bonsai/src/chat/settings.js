@@ -94,26 +94,26 @@ function saveChatSettings(settings) {
   return normalized;
 }
 
-// Runtime mode controls whether inference runs on the main thread
-// (Bonsai27B) or in a Worker (WorkerBonsai27B). Worker keeps inference
-// off the UI thread so the paint throttler / markdown reparse cannot
-// starve the GPU queue; main thread is the original path, useful for
-// debugging or when the worker refuses to load. Default is `main`
-// (round 66 revert of round 65's switch — the user controls the
-// trade-off explicitly). A `?runtime=worker` / `?runtime=main` query
-// always wins so we can A/B test without touching storage.
+// Runtime mode controls where inference runs:
+//   - "host": the GearShell.inference host (RFC phase 1) — only when
+//     GearShell.inference is registered. Falls back to "main" silently.
+//   - "worker": per-tab worker, original path (round 64/65 fix)
+//   - "main": per-tab main thread, parity with the root bonsai/ page
+// Default is "main" (round 66 revert; round 65's automatic default was
+// reverted after users expected parity). Query params beat storage so
+// A/B tests don't touch the user's saved choice.
 function loadRuntimeMode() {
   const query = new URLSearchParams(location.search).get("runtime");
-  if (query === "worker" || query === "main") return query;
+  if (query === "worker" || query === "main" || query === "host") return query;
   try {
     const stored = localStorage.getItem(RUNTIME_KEY);
-    if (stored === "worker" || stored === "main") return stored;
+    if (stored === "worker" || stored === "main" || stored === "host") return stored;
   } catch {}
   return "main";
 }
 
 function saveRuntimeMode(mode) {
-  if (mode !== "worker" && mode !== "main") return;
+  if (mode !== "worker" && mode !== "main" && mode !== "host") return;
   try {
     localStorage.setItem(RUNTIME_KEY, mode);
   } catch {}
