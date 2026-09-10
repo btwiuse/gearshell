@@ -396,8 +396,7 @@ async function send() {
         think: thinkTurn,
         thinkBudget,
         thinkEarlyStop,
-        tools: buildStreamTools(),
-        toolChoice: "auto",
+        ...buildStreamTools(),
         consumeTurnEvent: (event, activeTurn) =>
           consumeTurnEvent(event, activeTurn, turnEnv()),
       });

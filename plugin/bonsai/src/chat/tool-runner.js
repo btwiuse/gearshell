@@ -24,7 +24,8 @@ export function appendToolCallCard(turn, call) {
 }
 
 export function buildStreamTools() {
-  return getGearShellTools();
+  const tools = getGearShellTools();
+  return tools.length > 0 ? { tools, toolChoice: "auto" } : {};
 }
 
 export async function runToolRound(turn, calls) {

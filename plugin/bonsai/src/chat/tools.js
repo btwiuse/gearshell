@@ -72,10 +72,12 @@ async function executeBashRun(call) {
 
 function getDisabledToolNames() {
   try {
-    const value = JSON.parse(localStorage.getItem(TOOL_SETTINGS_KEY) || "{}");
+    const stored = localStorage.getItem(TOOL_SETTINGS_KEY);
+    if (stored === null) return new Set(BASH_TOOLS.map((tool) => tool.name));
+    const value = JSON.parse(stored || "{}");
     return new Set(Object.entries(value).filter(([, enabled]) => !enabled).map(([name]) => name));
   } catch {
-    return new Set();
+    return new Set(BASH_TOOLS.map((tool) => tool.name));
   }
 }
 
