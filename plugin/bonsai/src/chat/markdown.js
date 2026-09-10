@@ -177,7 +177,15 @@ export function renderAnswer(el, raw, withCaret) {
 function appendCaret(el) {
   const caret = document.createElement("span");
   caret.className = "a-caret";
-  const DESCEND = /^(P|UL|OL|LI|BLOCKQUOTE|H[1-6]|PRE|CODE|EM|STRONG)$/;
+  // PRE / CODE are deliberately NOT in the descend set. The streaming
+  // caret should sit at the block level as a sibling of the rendered
+  // output, not nested inside a code block where it appears as a
+  // blinking second cursor inside the highlighted source. Walking into
+  // <pre> used to land us in <code>, where the caret's blink animation
+  // showed up as a second visual cursor mid-code. Stop at block
+  // boundaries only; the caret ends up after the last <p>/<pre>/<ul>/...
+  // the way the original bonsai/ root page renders.
+  const DESCEND = /^(P|UL|OL|LI|BLOCKQUOTE|H[1-6]|EM|STRONG)$/;
   let host = el;
   for (;;) {
     let tail = host.lastChild;

@@ -176,6 +176,12 @@ export function finishTurn(turn, env) {
     turn.tBody.scrollTop = turn.tBody.scrollHeight;
   }
   if (turn.answer || !turn.aBody.firstChild) {
+    // The streaming paint appended a blinking .a-caret on every render;
+    // finishTurn should not show a caret, so drop any leftover and
+    // invalidate the fast-path cache so the final re-render actually
+    // paints (otherwise the innerHTML stays as the last streaming
+    // snapshot, caret and all).
+    turn.aBody._lastText = null;
     renderAnswer(turn.aBody, turn.answer, false);
   }
   env.appendTurnMeta(turn.msg, {
