@@ -109,9 +109,7 @@ export function consumeTurnEvent(event, turn, env) {
       finishThinking(turn, env.setStatus);
     }
     turn.answer += turn.answer === "" ? event.delta.replace(/^\s+/, "") : event.delta;
-    env.scheduleStreamPaint(() => {
-      turn.aBody.textContent = turn.answer;
-    });
+    env.scheduleStreamPaint(() => renderAnswer(turn.aBody, turn.answer, true));
   }
   env.updateLiveStat({
     liveEl: env.cLive,
