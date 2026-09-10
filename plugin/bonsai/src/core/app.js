@@ -46,7 +46,12 @@ import {
 
 const $ = (id) => document.getElementById(id);
 const queryParams = new URLSearchParams(location.search);
-const useWorkerRuntime = queryParams.get("runtime") === "worker";
+// Default to the worker runtime. The worker host keeps inference off
+// the page's main thread, so per-token UI work (paint throttler,
+// markdown reparse, scroll handling) never starves the GPU command
+// queue the way it does when Bonsai27B runs inline. `?runtime=main`
+// reverts to the original main-thread path for parity debugging.
+const useWorkerRuntime = queryParams.get("runtime") !== "main";
 const modelRuntime = useWorkerRuntime ? WorkerBonsai27B : Bonsai27B;
 // Opt-in reasoning controls for bitgpu's think mode. Defaults stay untouched,
 // so the page behaves identically without these query parameters.
@@ -91,8 +96,13 @@ const cInput = $("cInput"),
 const cStatus = $("cStatus"),
   cStatusText = $("cStatusText"),
   cLive = $("cLive");
+// Pass both runtimes: network/URL loads use the worker host (off main
+// thread, no per-token UI contention), local-file loads use the main
+// thread (a Blob cannot cross postMessage to the worker). The chat
+// path then runs at full worker speed once the model is resident.
 const modelAccess = setupModelAccess({
   Bonsai27B: modelRuntime,
+  FileBonsai27B: useWorkerRuntime ? Bonsai27B : modelRuntime,
   defaultGgufFile: DEFAULT_GGUF_FILE,
   byId: $,
   getChat: () => chat,
@@ -111,6 +121,21 @@ function enterChat() {
   document.body.classList.add("stage-chat");
   chatx.classList.add("show");
   setStatus("", "READY");
+  // Release the landing-page WebGL context so it stops holding GPU
+  // resources while the model is streaming tokens. Without this, on
+  // macOS the WebGL (Metal) context and bitgpu's WebGPU context share
+  // the same Metal device and the idle background renderer drags the
+  // token rate down. The prism and garden rAF loops already early-
+  // exit when stage-chat is set, but the GL context itself stays
+  // alive until dispose() — that's the leak this fixes.
+  const bg = window.__bonsaiBackgroundScene;
+  if (bg && bg.renderer) {
+    try {
+      bg.renderer.dispose();
+      bg.renderer.forceContextLoss?.();
+      window.__bonsaiBackgroundScene = null;
+    } catch {}
+  }
   setTimeout(() => cInput.focus(), 450);
 }
 function prepChatUi() {

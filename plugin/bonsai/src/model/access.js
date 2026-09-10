@@ -6,6 +6,7 @@ const FALLBACK_BYTES = 3.8e9;
 class ModelAccess {
   constructor({
     Bonsai27B,
+    FileBonsai27B,
     defaultGgufFile,
     byId,
     getChat,
@@ -13,6 +14,12 @@ class ModelAccess {
     onChatReady,
   }) {
     this.Bonsai27B = Bonsai27B;
+    // Optional separate runtime for local-file loads. Worker runtimes
+    // can't take a Blob across postMessage, so when the worker host is
+    // defaulting the chat runtime we route LOAD FROM DISK through the
+    // main-thread implementation. Falls back to `Bonsai27B` when not
+    // provided (parity with the original access.js).
+    this.FileBonsai27B = FileBonsai27B ?? Bonsai27B;
     this.defaultGgufFile = defaultGgufFile;
     this.byId = byId;
     this.getChat = getChat;
@@ -310,11 +317,6 @@ class ModelAccess {
   }
 
   async startLoadFromFile(file) {
-    if (this.query.get("runtime") === "worker") {
-      throw new Error(
-        "LOAD FROM DISK is unavailable with the worker runtime; reload without ?runtime=worker.",
-      );
-    }
     if (
       !file ||
       this.loadState === "loading" ||
@@ -328,7 +330,7 @@ class ModelAccess {
     BonsaiLoader.set(0, file.size || FALLBACK_BYTES);
     BonsaiLoader.phase("READING LOCAL GGUF");
     try {
-      const chat = await this.Bonsai27B.load(MODEL_ID, {
+      const chat = await this.FileBonsai27B.load(MODEL_ID, {
         ...this.modelOptions(),
         file,
         cache: false,

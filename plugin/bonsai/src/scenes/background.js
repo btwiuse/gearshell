@@ -236,7 +236,17 @@ class BackgroundScene {
 
 if (typeof THREE !== "undefined") {
   try {
-    new BackgroundScene();
+    const bg = new BackgroundScene();
+    // Expose for the chat runtime to dispose the WebGL context when
+    // the user enters the chat stage. The previous behaviour was
+    // `display: none` on the canvas, which keeps the GL context alive
+    // and continues holding GPU resources — on macOS the WebGL
+    // (Metal) context and bitgpu's WebGPU context share the same
+    // Metal device, so the idle context competes for bandwidth and
+    // noticeably hurts token throughput. dispose() returns the GL
+    // resources; the canvas stays in the DOM as a static <canvas>
+    // (no GL state) so the page layout doesn't shift.
+    window.__bonsaiBackgroundScene = bg;
   } catch {
     // Renderer creation can fail on unsupported GPUs; the page keeps working.
   }
