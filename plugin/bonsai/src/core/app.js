@@ -1,7 +1,6 @@
 import { Bonsai27B, DEFAULT_GGUF_FILE } from "../model/adapter.js";
 import { WorkerBonsai27B } from "../model/bonsai-client.js";
 import { setupModelAccess } from "../model/access.js";
-import { renderAnswer } from "../chat/markdown.js";
 import { renderHistoryPanel } from "../chat/history-panel.js";
 import { updateLiveStat } from "../chat/live-stats.js";
 import {
