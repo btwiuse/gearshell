@@ -122,7 +122,7 @@ export function renderAnswer(el, raw, withCaret) {
   // toggle, theme change). Skip work; caret stays in place.
   if (el._lastText === text) return;
 
-  if (el._lastText && text.startsWith(el._lastText)) {
+  if (false && el._lastText && text.startsWith(el._lastText)) {
     // Incremental: parse only the appended delta and splice onto
     // the existing DOM as additional siblings. `el` already
     // contains the rendered prefix from the previous paint.

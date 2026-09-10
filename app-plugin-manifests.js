@@ -23,8 +23,7 @@ import { IFRAME_PLUGINS } from "./app-plugin-manifests-iframes.js";
 import { CRUSH_PLUGINS } from "./app-plugin-manifests-crush.js";
 import { EXAMPLES_PLUGIN } from "./app-plugin-manifests-examples.js";
 import { BBTEX_IFRAME_PLUGIN } from "./app-plugin-manifests-bbtex.js";
-import { RV64_IFRAME_PLUGIN } from "./app-plugin-manifests-rv64.js";
-import { V86_IFRAME_PLUGIN } from "./app-plugin-manifests-v86.js";
+import { LINUX_PLAYGROUND_PLUGIN } from "./app-plugin-manifests-linux-playground.js";
 
 // Re-export the shell toolset constants so app-constants.js (and its
 // downstream importers) can keep reading them from this module. The
@@ -58,5 +57,4 @@ DEFAULT_PLUGINS.push(EXAMPLES_PLUGIN);
 DEFAULT_PLUGINS.push(BBTEX_IFRAME_PLUGIN);
 // RISC-V 64 Linux in the browser (rv64.js iframe edition): self-contained
 // page, boots Alpine via the shared vnet gateway, apk works.
-DEFAULT_PLUGINS.push(RV64_IFRAME_PLUGIN);
-DEFAULT_PLUGINS.push(V86_IFRAME_PLUGIN);
+DEFAULT_PLUGINS.push(LINUX_PLAYGROUND_PLUGIN);

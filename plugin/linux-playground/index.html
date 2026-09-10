@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linux Playground</title>
+  <link rel="stylesheet" href="/plugin/linux-playground/linux-playground.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.css">
+</head>
+<body>
+  <main class="playground">
+    <section class="main-content">
+      <div class="workspace-tabs" role="tablist" aria-label="Linux Playground tabs"><button id="homeTab" class="workspace-tab active" type="button" role="tab" aria-selected="true">Home</button><nav id="instanceTabs" class="instance-tabs" aria-label="Linux instances"></nav><button id="newInstanceTab" class="new-instance-tab" type="button">+ New instance</button><span id="status" class="status" data-mode="idle">CONFIGURE</span></div>
+    <section id="setup" class="setup">
+      <div class="intro"><span class="eyebrow">EMULATOR LAB</span><h1>Bring your own Linux.</h1><p>Start with a ready-to-run preset, or choose an architecture and load a bootable archive from your device or a reachable URL.</p></div>
+      <div class="presets" aria-labelledby="preset-title">
+        <div class="section-label" id="preset-title">QUICK START PRESETS</div>
+        <div class="preset-grid">
+          <button class="preset active" type="button" data-preset="v86"><strong>Alpine x86</strong><span>v86 · network ready</span></button>
+          <button class="preset" type="button" data-preset="rv64"><strong>Alpine RISC-V</strong><span>rv64.js · network ready</span></button>
+          <button class="preset custom" type="button" data-preset="custom"><strong>Custom image</strong><span>Bring your own URLs or file</span></button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span>ARCHITECTURE</span><select id="architecture"><option value="v86">x86 · v86</option><option value="rv64">RISC-V 64 · rv64.js</option><option value="arm64" disabled>ARM64 · coming soon</option></select></label>
+        <label class="field"><span>EMULATOR BACKEND URL</span><input id="backendUrl" type="url" placeholder="https://example.com/emulator.tgz" autocomplete="off"></label>
+        <label class="field wide"><span>LINUX IMAGE URL</span><input id="linuxUrl" type="url" placeholder="https://example.com/linux-rootfs.tgz" autocomplete="off"></label>
+        <label class="file-field wide"><span>OR LOAD IMAGE FROM THIS DEVICE</span><input id="linuxFile" type="file" accept=".tgz,.tar,.cpio,.img,.gz,.xz,.zst,application/octet-stream"><small id="fileName">No local image selected</small></label>
+      </div>
+      <div class="actions"><button id="launch" class="primary" type="button">LAUNCH PLAYGROUND <span>→</span></button><button id="reset" class="secondary" type="button">RESET</button></div>
+      <p id="error" class="error" role="alert" hidden></p>
+      <div class="tips"><span>TIP</span><p>Remote resources must allow cross-origin requests. Local files stay in this browser and are never uploaded to a server.</p></div>
+    </section>
+    <section id="terminalPanel" class="terminal-panel" hidden>
+      <div class="terminal-head"><div><span id="terminalTitle">LINUX PLAYGROUND</span><small>Browser-native virtual machine</small></div></div>
+      <div id="instanceMeta" class="instance-meta"><div><span id="machineName">Linux</span><small id="sourceName"></small></div><button id="stop" class="secondary" type="button">STOP VM</button></div>
+      <div id="terminalStage"></div>
+    </section>
+  </section>
+</main>
+  <script src="/plugin/gear-bridge.js"></script>
+  <script type="module" src="/plugin/linux-playground/linux-playground.js"></script>
+</body>
+</html>
