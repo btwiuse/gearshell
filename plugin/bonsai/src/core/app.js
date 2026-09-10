@@ -26,6 +26,7 @@ import {
   appendToolCallCard,
   buildStreamTools,
 } from "../chat/tool-runner.js";
+import { hasActiveTools } from "../chat/tools.js";
 import { setupKernelInspector } from "../model/kernel/inspector.js";
 import { setupModelCachePanel } from "../model/cache-panel.js";
 import { setupToolsPanel } from "../chat/tools-panel.js";
@@ -34,6 +35,8 @@ import {
   buildGenerationOptions,
   loadChatSettings,
   loadRuntimeMode,
+  loadSystemPrompt,
+  resolveSystemPrompt,
 } from "../chat/settings.js";
 import { setupSettingsPanel } from "../chat/settings-panel.js";
 import {
@@ -76,7 +79,22 @@ let contextExhausted = false;
 let abortController = null;
 let sessionTitle = "";
 let sessionId = null;
+// Decide whether a GearShell host is wired at module init. Standalone
+// (gear.sh/plugin/bonsai/buildless.html) and hosted (loaded inside the
+// shell iframe) hit different paths: hosted has GearShell.bash.run and
+// the tool loop is active; standalone falls through to the upstream
+// bonsai/ code path with no tools, no system prompt, and the direct
+// chat.streamTurn loop.
+const hasGearShellHost =
+  typeof window !== "undefined" &&
+  typeof window.GearShell?.bash?.run === "function";
 let chatSettings = loadChatSettings();
+// System prompt is resolved separately from chat settings so the
+// deployment-mode default (hosted vs standalone) takes effect even when
+// the user has touched other settings. Persists via the dedicated
+// bonsai_system_prompt_v1 key so we can tell "user explicitly set this"
+// from "user never touched it".
+chatSettings.systemPrompt = resolveSystemPrompt(hasGearShellHost);
 const SEED_EXAMPLES = [
   {
     label: "LOGIC PUZZLE",
@@ -391,6 +409,32 @@ async function streamAssistantRound(turn, options) {
   return streamAssistantRoundModule(chat, conversation, turn, options);
 }
 
+// Upstream-style stream loop: no tool indirection, no closure capture,
+// direct `for await` over chat.streamTurn. Matches bonsai/src/core/app.js
+// exactly so the standalone build (gear.sh/plugin/bonsai/buildless.html,
+// no GearShell host) gets the same per-token cost as the root page.
+async function streamTurnDirect(turn, env) {
+  const conversation = buildConversation(messages, chatSettings.systemPrompt);
+  const streamOptions = {
+    ...buildGenerationOptions(chatSettings),
+    signal: abortController.signal,
+    think: thinkingEnabled,
+    thinkBudget,
+    thinkEarlyStop,
+  };
+  for await (const event of chat.streamTurn(conversation, streamOptions)) {
+    if (event.type === "tool_call") {
+      // Tools were disabled mid-session (e.g. user toggled them off
+      // while waiting for the model). Surface a card so the user
+      // sees what happened instead of silently dropping the call.
+      env.appendToolCallCard(turn, event.call);
+      env.scheduleStreamPaint(() => {});
+      continue;
+    }
+    consumeTurnEvent(event, turn, env);
+  }
+}
+
 async function send() {
   const text = cInput.value.trim();
   if (!text || !chat || isGenerating || contextExhausted) return;
@@ -417,31 +461,40 @@ async function send() {
   abortController = new AbortController();
   // Build the turn env once for the whole generation. The original
   // bonsai/ root page kept its per-token hot path zero-allocation by
-  // reading the same module-scoped vars directly; the plugin's
-  // refactor wrapped every consumeTurnEvent in a closure that called
-  // turnEnv() on each token, allocating an 18-key object per event.
-  // At 20+ tok/s that GC pressure and extra indirection compounds
-  // with the markdown reparse per paint and noticeably slows the
-  // stream. Capture once, reuse for the whole send.
+  // reading module-scoped vars directly; the plugin's refactor wrapped
+  // every consumeTurnEvent in a closure that called turnEnv() on each
+  // token, allocating an 18-key object per event. At 20+ tok/s that GC
+  // pressure and extra indirection compounds with the markdown reparse
+  // per paint and noticeably slows the stream. Capture once, reuse.
   const env = turnEnv();
+  // Standalone deployment (https://gear.sh/plugin/bonsai/buildless.html,
+  // no GearShell host) skips the tool-loop plumbing entirely. The model
+  // isn't told any tools exist, every event goes straight to the chat
+  // renderer, and we don't pay for streamAssistantRound's per-token
+  // closure. Same code path the upstream bonsai/ root page uses.
+  const toolsActive = hasActiveTools();
   try {
-    let toolCalls;
-    do {
-      toolCalls = await streamAssistantRound(turn, {
-        ...buildGenerationOptions(chatSettings),
-        signal: abortController.signal,
-        think: thinkTurn,
-        thinkBudget,
-        thinkEarlyStop,
-        ...buildStreamTools(),
-        consumeTurnEvent: (event, activeTurn) =>
-          consumeTurnEvent(event, activeTurn, env),
-      });
-      if (toolCalls.length > 0) {
-        messages.push({ role: "assistant", content: chat.lastAssistantContent ?? "" });
-        messages.push(...await runToolRound(turn, toolCalls));
-      }
-    } while (toolCalls.length > 0 && !abortController.signal.aborted);
+    if (toolsActive) {
+      let toolCalls;
+      do {
+        toolCalls = await streamAssistantRound(turn, {
+          ...buildGenerationOptions(chatSettings),
+          signal: abortController.signal,
+          think: thinkTurn,
+          thinkBudget,
+          thinkEarlyStop,
+          ...buildStreamTools(),
+          consumeTurnEvent: (event, activeTurn) =>
+            consumeTurnEvent(event, activeTurn, env),
+        });
+        if (toolCalls.length > 0) {
+          messages.push({ role: "assistant", content: chat.lastAssistantContent ?? "" });
+          messages.push(...await runToolRound(turn, toolCalls));
+        }
+      } while (toolCalls.length > 0 && !abortController.signal.aborted);
+    } else {
+      await streamTurnDirect(turn, env);
+    }
   } catch (error) {
     if (!abortController?.signal.aborted) {
       handleGenerationError(error, turn, setStatus);
@@ -456,4 +509,9 @@ setupModelCachePanel();
 setupToolsPanel();
 setupSettingsPanel((settings) => {
   chatSettings = settings;
-});
+  // The settings form writes the prompt via saveSystemPrompt; mirror it
+  // onto the in-memory chatSettings so the next send uses the user's
+  // edit instead of the deployment-mode default.
+  const userPrompt = loadSystemPrompt();
+  if (userPrompt !== null) chatSettings.systemPrompt = userPrompt;
+}, hasGearShellHost);

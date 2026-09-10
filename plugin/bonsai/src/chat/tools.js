@@ -104,6 +104,21 @@ export function getGearShellTools() {
   }));
 }
 
+// True iff the runtime can actually dispatch tool calls right now.
+// Returns false when:
+//   - GearShell is absent (standalone deployment at
+//     https://gear.sh/plugin/bonsai/buildless.html — no shell to talk to)
+//   - the user disabled every tool in the settings overlay
+//   - the only tool is bash_run and GearShell.bash.run is not registered
+// When false, the chat loop falls back to the upstream bonsai/ path
+// (direct chat.streamTurn, no tool indirection) so the page is fully
+// usable without a host shell.
+export function hasActiveTools() {
+  if (typeof window === "undefined") return false;
+  if (typeof window.GearShell?.bash?.run !== "function") return false;
+  return getGearShellTools().length > 0;
+}
+
 export async function executeToolCall(call) {
   if (call?.name !== BASH_TOOL_NAME) {
     return toolError(`Unknown tool: ${String(call?.name ?? "")}`);

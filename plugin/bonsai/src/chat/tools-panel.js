@@ -28,9 +28,26 @@ function render() {
   }
 }
 
+// Returns false when no GearShell host is available — there's no bash
+// surface to dispatch to, so tool toggles are meaningless and the UI
+// entry point should be hidden. Standalone deployment at
+// https://gear.sh/plugin/bonsai/buildless.html hits this path.
+function hasDispatchableHost() {
+  return typeof window !== "undefined" &&
+    typeof window.GearShell?.bash?.run === "function";
+}
+
 export function setupToolsPanel() {
+  // Standalone / no-host: hide the Tools button entirely. The overlay
+  // stays in the DOM (display:none via the button being absent is enough)
+  // but no listener is attached, so it can't be opened.
+  const btn = byId("toolsBtn");
   const overlay = byId("toolsOverlay");
-  byId("toolsBtn").addEventListener("click", () => {
+  if (!hasDispatchableHost()) {
+    if (btn) btn.hidden = true;
+    return;
+  }
+  btn.addEventListener("click", () => {
     render();
     overlay.hidden = false;
     document.body.classList.add("kx-locked");
