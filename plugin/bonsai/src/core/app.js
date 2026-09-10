@@ -386,6 +386,15 @@ async function send() {
   const turn = createTurnState(thinkTurn);
   setGenerating(true);
   abortController = new AbortController();
+  // Build the turn env once for the whole generation. The original
+  // bonsai/ root page kept its per-token hot path zero-allocation by
+  // reading the same module-scoped vars directly; the plugin's
+  // refactor wrapped every consumeTurnEvent in a closure that called
+  // turnEnv() on each token, allocating an 18-key object per event.
+  // At 20+ tok/s that GC pressure and extra indirection compounds
+  // with the markdown reparse per paint and noticeably slows the
+  // stream. Capture once, reuse for the whole send.
+  const env = turnEnv();
   try {
     let toolCalls;
     do {
@@ -397,7 +406,7 @@ async function send() {
         thinkEarlyStop,
         ...buildStreamTools(),
         consumeTurnEvent: (event, activeTurn) =>
-          consumeTurnEvent(event, activeTurn, turnEnv()),
+          consumeTurnEvent(event, activeTurn, env),
       });
       if (toolCalls.length > 0) {
         messages.push({ role: "assistant", content: chat.lastAssistantContent ?? "" });
@@ -409,7 +418,7 @@ async function send() {
       handleGenerationError(error, turn, setStatus);
     }
   } finally {
-    finishTurn(turn, turnEnv());
+    finishTurn(turn, env);
   }
 }
 
