@@ -1,101 +1,125 @@
-// Browser-facing adapter around the published bitgpu runtime.
-//
-// Keeping this layer local makes the app's model URL, Hugging Face token handling,
-// and UI stream contract explicit while the GPU implementation stays version-pinned on CDN.
-import { createEngine } from "https://cdn.jsdelivr.net/npm/bitgpu@0.19.1/dist/index.js";
-import { createChat } from "https://cdn.jsdelivr.net/npm/bitgpu@0.19.1/dist/chat.js";
-import { fromGguf } from "https://cdn.jsdelivr.net/npm/bitgpu@0.19.1/dist/gguf.js";
-import { BONSAI_27B, resolveGgufUrl, tokenizerDirectory } from "./catalog.js";
-import { createModelFetch } from "./fetch.js";
-import { streamChatEvents } from "../chat/events.js";
-import { loadBitgpuKernelSources } from "./kernel/sources.js";
+// Browser-facing adapter around the bitgpu runtime extracted from
+// index.html. Both entries use the same loader and cache protocol so
+// they can share downloaded weights.
+import {
+  Bonsai27B as IndexBonsai27B,
+  DEFAULT_GGUF_FILE,
+  DEFAULT_MODEL_ID,
+  resolveGGUFUrl,
+} from "./index-runtime.js";
 
-export const DEFAULT_MODEL_ID = BONSAI_27B.id;
-export const DEFAULT_GGUF_FILE = BONSAI_27B.ggufFile;
-export { resolveGgufUrl as resolveGGUFUrl } from "./catalog.js";
+export { DEFAULT_GGUF_FILE, DEFAULT_MODEL_ID, resolveGGUFUrl };
 
-const DEFAULT_CONTEXT_LENGTH = 4096;
-function createProgressReporter(onProgress) {
-  return (progress) => {
-    if (progress.phase === "weights" && Number.isFinite(progress.loaded)) {
-      onProgress({
-        status: "weights",
-        kind: "bytes",
-        loaded: progress.loaded,
-        total: progress.total ?? null,
-        message: "Streaming weights",
-      });
-      return;
+function makeEventStream(runtimeChat, messages, options) {
+  return (async function* () {
+    let phase = "answer";
+    let phaseBuffer = "";
+    let collected = "";
+    let tokenCount = 0;
+    const openId = runtimeChat.thinkOpenTokenId;
+    const closeId = runtimeChat.thinkCloseTokenId;
+    for await (const update of runtimeChat.generate(messages, options)) {
+      if (update.token === null) {
+        if (update.delta) {
+          if (phase === "think") {
+            phaseBuffer += update.delta;
+          } else {
+            collected += update.delta;
+          }
+          yield { type: "text", delta: update.delta };
+        }
+        continue;
+      }
+      tokenCount += 1;
+      if (phase === "answer") {
+        if (openId !== null && update.token === openId) {
+          phase = "think";
+          phaseBuffer = "";
+          continue;
+        }
+        if (update.delta) {
+          collected += update.delta;
+          yield { type: "text", delta: update.delta };
+        }
+      } else {
+        if (closeId !== null && update.token === closeId) {
+          phase = "answer";
+          if (phaseBuffer) {
+            yield { type: "thinking", delta: phaseBuffer };
+            phaseBuffer = "";
+          }
+          const tail = "\n";
+          collected += tail;
+          yield { type: "text", delta: tail };
+          continue;
+        }
+        if (update.delta) {
+          phaseBuffer += update.delta;
+          yield { type: "thinking", delta: update.delta };
+        }
+      }
     }
-
-    if (progress.phase === "pipelines") {
-      onProgress({
-        status: "weights",
-        kind: "tensors",
-        message: "Compiling WebGPU kernels",
-      });
+    if (phase === "think" && phaseBuffer) {
+      yield { type: "thinking", delta: phaseBuffer };
     }
-  };
-}
-
-function assertOverflowSupported(source, overflow) {
-  if (source === BONSAI_27B.id && overflow === "sinks") {
-    throw new Error(
-      "bitgpu: overflow 'sinks' is not supported by Bonsai-27B's qwen3_5 hybrid backbone. Remove ?overflow=sinks.",
-    );
-  }
-}
-
-async function resolveModelSource(source, ggufUrl, request, onProgress) {
-  const useOfficialManifest = source === BONSAI_27B.id;
-  onProgress({
-    status: "init",
-    message: useOfficialManifest ? "Loading model manifest" : "Parsing GGUF header",
-  });
-  const model = useOfficialManifest
-    ? { manifestUrl: BONSAI_27B.manifestUrl, auxUrl: BONSAI_27B.auxUrl }
-    : await fromGguf(ggufUrl, { fetchRange: request.fetchRange });
-  return { model, useOfficialManifest };
+    return { tokens: new Array(tokenCount), text: collected };
+  })();
 }
 
 class BonsaiChat {
-  constructor(engine, nativeChat, defaultGeneration = {}) {
-    this.engine = engine;
-    this.nativeChat = nativeChat;
-    this.defaultGeneration = defaultGeneration;
-    this.contextLength = engine.capabilities.maxSeqLen;
+  constructor(runtimeChat, defaultGeneration = {}) {
+    this.contextLength = runtimeChat.contextLength;
     this.contextFull = false;
     this.lastAssistantContent = null;
-
-    this.runtime = { getShaderSources: loadBitgpuKernelSources };
+    this.thinkOpenTokenId = runtimeChat.thinkOpenTokenId;
+    this.thinkCloseTokenId = runtimeChat.thinkCloseTokenId;
+    this.chatTemplateArgs = {};
+    this._runtimeChat = runtimeChat;
+    this._defaultGeneration = defaultGeneration;
+    const runtime = runtimeChat.runtime ?? {};
+    const shaderSources = async () => {
+      const rendered = runtime.getRenderedShaders?.() ?? [];
+      return rendered.filter((k) => !/\btranscode\b|\.transcode\./i.test(k.name));
+    };
+    this.runtime = {
+      ...runtime,
+      getShaderSources: shaderSources,
+      getRenderedShaders: runtime.getRenderedShaders?.bind(runtime),
+    };
   }
 
   reset() {
-    this.nativeChat.reset();
+    this._runtimeChat.reset?.();
     this.contextFull = false;
     this.lastAssistantContent = null;
   }
 
   async *streamTurn(messages, options = {}) {
+    this.lastAssistantContent = null;
+    if (this.chatTemplateArgs && Object.keys(this.chatTemplateArgs).length > 0) {
+      this._runtimeChat.chatTemplateArgs = this.chatTemplateArgs;
+    }
+    const merged = { ...this._defaultGeneration, ...options };
+    const stream = makeEventStream(this._runtimeChat, messages, {
+      ...merged,
+      signal: options.signal,
+    });
     try {
-      for await (
-        const event of streamChatEvents(
-          this.nativeChat,
-          messages,
-          { ...this.defaultGeneration, ...options },
-        )
-      ) {
-        if (event.type === "complete") {
-          this.lastAssistantContent = event.result.text;
+      for await (const event of stream) {
+        if (event.type === "text" || event.type === "thinking") {
+          if (event.delta) {
+            this.lastAssistantContent = (this.lastAssistantContent ?? "") + event.delta;
+          }
         }
         yield event;
       }
+      yield {
+        type: "complete",
+        result: { tokens: [], text: this.lastAssistantContent ?? "" },
+      };
     } catch (error) {
       if (options.signal?.aborted) return;
-      if (/Buffer unmapped|unmapped/i.test(String(error?.message ?? error))) {
-        this.lastAssistantContent = null;
-      }
-      if (/maxSeqLen|context/i.test(String(error?.message ?? error))) {
+      if (/context/i.test(String(error?.message ?? error))) {
         this.contextFull = true;
       }
       throw error;
@@ -104,75 +128,13 @@ class BonsaiChat {
 }
 
 export class Bonsai27B {
-  static async checkAvailability() {
-    if (!navigator.gpu) {
-      return {
-        ok: false,
-        reason: "WebGPU isn't available in this browser. Try a recent Chrome or Edge.",
-      };
-    }
-
-    const adapter = await navigator.gpu.requestAdapter({
-      powerPreference: "high-performance",
-    });
-    if (!adapter) {
-      return {
-        ok: false,
-        reason: "No WebGPU adapter is available on this device.",
-      };
-    }
-    return { ok: true };
+  static async checkAvailability(source = null, options = {}) {
+    return IndexBonsai27B.checkAvailability(source, options);
   }
 
   static async load(source = DEFAULT_MODEL_ID, options = {}) {
-    const onProgress = options.onProgress ?? (() => {});
-    const localFile = options.file instanceof Blob ? options.file : null;
-    const ggufUrl = localFile
-      ? URL.createObjectURL(localFile)
-      : resolveGgufUrl(source, options.file);
-    assertOverflowSupported(source, options.overflow);
-    const request = createModelFetch({
-      accessToken: options.accessToken,
-      cache: options.cache,
-      signal: options.signal,
-      sourceFile: localFile,
-      ggufUrl,
-    });
-
-    const { model, useOfficialManifest } = await resolveModelSource(
-      source,
-      ggufUrl,
-      request,
-      onProgress,
-    );
-
-    onProgress({ status: "init", message: "Requesting WebGPU device" });
-    const runtime = source === BONSAI_27B.id ? BONSAI_27B.runtime : { kvCache: "q8" };
-    const engine = await createEngine({
-      ...model,
-      dataUrl: ggufUrl,
-      maxSeqLen: options.maxLength ?? DEFAULT_CONTEXT_LENGTH,
-      kvCache: options.kvCache ?? runtime.kvCache,
-      // bitgpu falls back to f32 automatically when shader-f16 is unavailable.
-      activation: options.activation ?? runtime.activation,
-      overflow: options.overflow ?? runtime.overflow,
-      onProgress: createProgressReporter(onProgress),
-      fetchStream: request.fetchStream,
-    });
-
-    onProgress({ status: "tokenizer", message: "Loading tokenizer" });
-    const nativeChat = await createChat(engine, {
-      modelUrl: tokenizerDirectory(source, ggufUrl),
-      fetchJson: request.fetchJson,
-    });
-
-    onProgress({ status: "ready", message: "Ready", fraction: 1 });
-    if (localFile) URL.revokeObjectURL(ggufUrl);
-    return new BonsaiChat(
-      engine,
-      nativeChat,
-      useOfficialManifest ? BONSAI_27B.defaultGeneration : undefined,
-    );
+    const runtimeChat = await IndexBonsai27B.load(source, options);
+    return new BonsaiChat(runtimeChat, options.defaultGeneration ?? {});
   }
 }
 
