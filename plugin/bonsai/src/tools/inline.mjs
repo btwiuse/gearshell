@@ -60,6 +60,11 @@ async function esbuild(args) {
 async function main() {
   await mkdir(outDir, { recursive: true });
   await mkdir(tmpDir, { recursive: true });
+  await execFileP(
+    "node",
+    [resolve(here, "extract-index-runtime.mjs"), "--check"],
+    { cwd: root },
+  );
 
   // 1. Bundle each module entry to a separate ESM file.
   const bundledJs = {};

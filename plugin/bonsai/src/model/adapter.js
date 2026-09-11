@@ -94,6 +94,16 @@ class BonsaiChat {
     this.lastAssistantContent = null;
   }
 
+  generate(messages, options = {}) {
+    if (this.chatTemplateArgs && Object.keys(this.chatTemplateArgs).length > 0) {
+      this._runtimeChat.chatTemplateArgs = this.chatTemplateArgs;
+    }
+    return this._runtimeChat.generate(messages, {
+      ...this._defaultGeneration,
+      ...options,
+    });
+  }
+
   async *streamTurn(messages, options = {}) {
     this.lastAssistantContent = null;
     if (this.chatTemplateArgs && Object.keys(this.chatTemplateArgs).length > 0) {
