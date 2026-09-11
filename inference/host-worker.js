@@ -101,8 +101,15 @@ function ensureBoot(modelId, options) {
   return bootPromise;
 }
 
-function handleInit({ defaultModel, accessToken } = {}) {
-  postReply(0, { type: "ok", result: { initialized: true } });
+function handleInit(requestId, { defaultModel, accessToken } = {}) {
+  // Reply with the real request id — shell-side ensureHost() awaits
+  // this on a pendingRequests entry keyed to the postMessage id, so
+  // a stale hard-coded 0 here would deadlock every callHost() call
+  // behind a never-resolving init promise (initPromise never settles,
+  // the .then(worker => ...) inside callHost never fires, and the
+  // shell's hostState cache still shows "ready" because PUSH.STATUS
+  // pushes do work — masking the bug behind a misleading cache).
+  postReply(requestId, { type: "ok", result: { initialized: true } });
   if (!defaultModel) return;
   // Fire-and-forget: surface progress events as PUSH.PROGRESS so the
   // shell can show a loader. If the load fails the state transition
@@ -261,7 +268,7 @@ self.addEventListener("message", async (event) => {
   try {
     switch (type) {
       case "init":
-        return handleInit(message);
+        return handleInit(id, message);
       case REQUEST.LOAD:
         return await handleLoad(id, message);
       case REQUEST.UNLOAD:
