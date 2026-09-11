@@ -530,22 +530,38 @@ async function send() {
   try {
     if (toolsActive) {
       let toolCalls;
+      let toolRound = 0;
       do {
-        toolCalls = await streamAssistantRound(turn, {
-          ...buildGenerationOptions(chatSettings),
-          signal: abortController.signal,
-          think: thinkTurn,
-          thinkBudget,
-          thinkEarlyStop,
-          ...buildStreamTools(),
-          consumeTurnEvent: (event, activeTurn) =>
-            consumeTurnEvent(event, activeTurn, env),
-        });
+        // Only the first round advertises available tools; once the
+        // model sees tool results it should answer in prose, and re-
+        // handing it the schema tempts it to keep calling tools.
+        const streamOptions = toolRound === 0
+          ? {
+            ...buildGenerationOptions(chatSettings),
+            signal: abortController.signal,
+            think: thinkTurn,
+            thinkBudget,
+            thinkEarlyStop,
+            ...buildStreamTools(),
+            consumeTurnEvent: (event, activeTurn) =>
+              consumeTurnEvent(event, activeTurn, env),
+          }
+          : {
+            ...buildGenerationOptions(chatSettings),
+            signal: abortController.signal,
+            think: thinkTurn,
+            thinkBudget,
+            thinkEarlyStop,
+            consumeTurnEvent: (event, activeTurn) =>
+              consumeTurnEvent(event, activeTurn, env),
+          };
+        toolCalls = await streamAssistantRound(turn, streamOptions);
         if (toolCalls.length > 0) {
           messages.push({ role: "assistant", content: chat.lastAssistantContent ?? "" });
           messages.push(...await runToolRound(turn, toolCalls));
+          toolRound += 1;
         }
-      } while (toolCalls.length > 0 && !abortController.signal.aborted);
+      } while (toolCalls.length > 0 && toolRound < 4 && !abortController.signal.aborted);
     } else {
       await streamTurnDirect(turn, env);
     }

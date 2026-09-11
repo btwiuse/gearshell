@@ -64,12 +64,20 @@ class RemoteChat {
     this.contextLength = loadResult.contextLength ?? 4096;
     this.contextFull = false;
     this.lastAssistantContent = null;
-    // The host doesn't expose its runtime introspection; the kernel
-    // inspector reads getShaderSources off engine.runtime. Until the
-    // host surfaces a runtime handle we hand back an empty stub so
-    // the inspector's openKernels() path falls through to its empty-
-    // kernels branch.
-    this.runtime = { getShaderSources: async () => [] };
+    this.thinkOpenTokenId = loadResult.thinkOpenTokenId ?? null;
+    this.thinkCloseTokenId = loadResult.thinkCloseTokenId ?? null;
+    this.chatTemplateArgs = {};
+    // The host doesn't surface its runtime introspection through
+    // the GearShell.inference namespace (no shader-source handle in
+    // the load reply). The plugin's kernel inspector reads
+    // getShaderSources() to populate the kernels panel; round 69
+    // returns empty until the host exposes that handle. The
+    // inspector's openKernels() path falls through cleanly to its
+    // empty-kernels branch when the array is empty.
+    this.runtime = {
+      getShaderSources: async () => [],
+      getRenderedShaders: () => [],
+    };
     this._sessionPromise = null;
   }
 
@@ -88,7 +96,14 @@ class RemoteChat {
 
   async *streamTurn(messages, options = {}) {
     const session = await this._session();
-    const stream = session.send(messages, options);
+    // Forward chatTemplateArgs alongside the rest of the options
+    // (round 69: think toggle is now carried in chatTemplateArgs
+    // instead of an option field). BitgpuChat in inference/ applies
+    // it to the runtime before generate().
+    const stream = session.send(messages, {
+      ...options,
+      chatTemplateArgs: { ...this.chatTemplateArgs, ...(options.chatTemplateArgs ?? {}) },
+    });
     for await (const event of stream) {
       if (event.type === "complete") {
         this.lastAssistantContent = event.result?.text ?? null;
