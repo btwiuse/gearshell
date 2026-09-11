@@ -146,6 +146,7 @@ export const CONFIG_KEY = "gear-shell-config";
 // they register synchronously at boot). Disabling a built-in hides its
 // panel type; built-ins cannot be removed, only disabled.
 // Entry URLs are unversioned (cache-bust tokens were retired).
+export const DEFAULT_INFERENCE_MODEL = "prism-ml/Bonsai-27B-gguf";
 export const DEFAULT_CONFIG = {
   cmd: DEFAULT_CMD,
   env: "",
@@ -156,6 +157,10 @@ export const DEFAULT_CONFIG = {
   workbenchAssetsUrl: DEFAULT_WORKBENCH_ASSETS_URL,
   wagiDogEnabled: false,
   widgetbot: false,
+  // Inference host pre-warms this model at shell boot. The user picks
+  // it from the Settings → Behavior → Inference section; the host
+  // re-loads when the value changes (next boot).
+  defaultInferenceModel: DEFAULT_INFERENCE_MODEL,
   providers: [],
   plugins: DEFAULT_PLUGINS,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,

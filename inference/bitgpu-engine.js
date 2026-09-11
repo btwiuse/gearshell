@@ -180,11 +180,35 @@ export async function createEngineFor(modelId, options = {}) {
   const model = getModel(modelId);
   if (!model) throw new Error(`unknown model: ${modelId}`);
 
+  const { engine, nativeChat, useOfficialManifest } = await bootBitgpuEngine(
+    modelId, model, options,
+  );
+  onProgressReady(options.onProgress);
+
+  const chat = new BitgpuChat(
+    engine,
+    nativeChat,
+    useOfficialManifest ? model.defaultGeneration : undefined,
+  );
+  scheduleOpfsIngest(modelId, model, options);
+  return chat;
+}
+
+// Resolve the model file URL, create the bitgpu engine, and load the
+// tokenizer. Returns the raw bitgpu handles so the caller can wrap
+// them in BitgpuChat. Split out of createEngineFor() to keep that
+// function under the 50-line rule.
+async function bootBitgpuEngine(modelId, model, options) {
   const onProgress = options.onProgress ?? (() => {});
-  const ggufUrl = resolveGgufUrl(modelId, model.ggufFile);
+  const ggufUrl = await resolveDataUrl(
+    modelId, model, options.accessToken, options.opfs,
+  );
   assertOverflowSupported(model, options.overflow);
 
-  const request = options.fetch ?? defaultFetch({ accessToken: options.accessToken });
+  const request = options.fetch ?? defaultFetch({
+    accessToken: options.accessToken,
+    opfs: options.opfs,
+  });
   const { sourceSpec, useOfficialManifest } = await resolveModelSource(model, onProgress);
 
   onProgress({ status: "init", message: "Requesting WebGPU device" });
@@ -204,19 +228,33 @@ export async function createEngineFor(modelId, options = {}) {
     modelUrl: tokenizerDirectory(modelId, ggufUrl),
     fetchJson: request.fetchJson,
   });
+  return { engine, nativeChat, useOfficialManifest };
+}
 
-  onProgress({ status: "ready", message: "Ready", fraction: 1 });
-  return new BitgpuChat(
-    engine,
-    nativeChat,
-    useOfficialManifest ? model.defaultGeneration : undefined,
-  );
+function onProgressReady(onProgress) {
+  onProgress?.({ status: "ready", message: "Ready", fraction: 1 });
+}
+
+// Fire-and-forget OPFS ingest after the engine is up. The first
+// inference uses the network; subsequent loads hit OPFS instead.
+// Errors are swallowed: a failed ingest means we re-download next
+// time, which is the same fallback we'd hit without OPFS at all.
+function scheduleOpfsIngest(modelId, model, options) {
+  if (!options.opfs) return;
+  const ggufUrl = resolveGgufUrl(modelId, model.ggufFile);
+  if (!ggufUrl.startsWith("http")) return;
+  backgroundIngestOpfs(modelId, model, {
+    opfs: options.opfs,
+    accessToken: options.accessToken,
+    signal: options.signal,
+    onProgress: options.onOpfsProgress,
+  }).catch(() => {});
 }
 
 // Default fetch pipeline: HTTP-only with Cache Storage tier. The
 // plugin's fetch.js had this; we replicate the minimum the host needs
 // and let session/opfs-cache.js add a persistent tier on top.
-function defaultFetch({ accessToken } = {}) {
+function defaultFetch({ accessToken, opfs } = {}) {
   const CACHE_NAME = "gguf-cache-v1";
   async function openCache() {
     if (typeof caches === "undefined") return null;
@@ -245,4 +283,71 @@ function defaultFetch({ accessToken } = {}) {
       return response.body;
     },
   };
+}
+
+// Resolve the dataUrl passed to bitgpu. If OPFS holds a complete
+// cached copy, return a Blob URL pointing at it so bitgpu's WGPUBuffer
+// upload happens via SyncAccessHandle (zero-copy). Otherwise return
+// the upstream-resolved URL and leave OPFS caching for a follow-up
+// ingestion pass.
+export async function resolveDataUrl(modelId, model, accessToken, opfs) {
+  const ggufUrl = resolveGgufUrl(modelId, model.ggufFile);
+  if (!opfs) return ggufUrl;
+  try {
+    await opfs.init();
+  } catch {
+    return ggufUrl;
+  }
+  const cached = await opfs.get(ggufUrl);
+  if (cached instanceof File) {
+    return URL.createObjectURL(cached);
+  }
+  return ggufUrl;
+}
+
+// Background OPFS ingest: streams the GGUF into the on-disk tier
+// while bitgpu is reading from the network. Called after the engine
+// has been created so the warm-cache path (Blob URL → bitgpu) doesn't
+// block the first inference. Subsequent loads hit the OPFS path.
+export async function backgroundIngestOpfs(modelId, model, options = {}) {
+  const { opfs, accessToken, signal, onProgress } = options;
+  if (!opfs) return;
+  try {
+    await opfs.init();
+  } catch {
+    return;
+  }
+  const ggufUrl = resolveGgufUrl(modelId, model.ggufFile);
+  const existing = await opfs.get(ggufUrl);
+  if (existing instanceof File) return;
+  const headers = accessToken
+    ? { Authorization: `Bearer ${accessToken}` }
+    : {};
+  try {
+    // HEAD to learn total size. We trust the GGUF server to expose
+    // Content-Length on the full-file GET (most HF mirrors do).
+    const head = await fetch(ggufUrl, { method: "HEAD", headers });
+    const totalSize = Number(head.headers.get("content-length"));
+    if (!Number.isFinite(totalSize) || totalSize <= 0) return;
+    await opfs.ingest(ggufUrl, {
+      totalSize,
+      signal,
+      onProgress,
+      fetchRange: async (offset, length) => {
+        const response = await fetch(ggufUrl, {
+          headers: {
+            ...headers,
+            Range: `bytes=${offset}-${offset + length - 1}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Range ${offset}+${length} failed: ${response.status}`);
+        }
+        return await response.arrayBuffer();
+      },
+    });
+  } catch {
+    // Best-effort: a failed ingest just means we re-download next
+    // time. Don't surface to the consumer — they're already chatting.
+  }
 }

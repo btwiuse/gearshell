@@ -28,6 +28,7 @@ import {
   DEFAULT_COLLAPSED_LAUNCHER_ITEMS,
   DEFAULT_CONFIG,
   DEFAULT_HUSH_BINARY_URL,
+  DEFAULT_INFERENCE_MODEL,
   DEFAULT_LAUNCHER_ITEM_ORDER,
   DEFAULT_PLUGINS,
   DEFAULT_WORKBENCH_ASSETS_URL,
@@ -245,6 +246,15 @@ export function normalizeShellConfig(config) {
       terminalProfiles,
     ),
     defaultTerminalProfileId: normalizeDefaultTerminalProfileId(config),
+    // Inference host pre-warm target (RFC docs/rfc-inference-host.md).
+    // `null` disables pre-warming; consumers must call
+    // GearShell.inference.load() explicitly. Anything else passes
+    // through as-is so plugin manifests can add new models without
+    // touching the normaliser.
+    defaultInferenceModel: typeof config?.defaultInferenceModel === "string" &&
+      config.defaultInferenceModel.trim().length > 0
+      ? config.defaultInferenceModel.trim()
+      : DEFAULT_INFERENCE_MODEL,
     // Per-workspace generic JSON key-value store (see plugin/crush-playground/kv-api.js).
     // Any plugin can read / write through `GearShell.config.kv.*`.
     kv: normalizeKv(config?.kv),

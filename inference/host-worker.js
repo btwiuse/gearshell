@@ -26,6 +26,12 @@
 import { createEngineFor } from "./bitgpu-engine.js";
 import { SessionRegistry } from "./session.js";
 import { REQUEST, PUSH, HOST_STATE } from "./protocol.js";
+import { OpfsCache } from "./opfs-cache.js";
+
+// One OpfsCache instance per worker. Initialised lazily on first use
+// so workers without storage.getDirectory (Safari < 102, sandboxed
+// iframes) don't pay the init cost and degrade to Cache Storage.
+const opfs = new OpfsCache();
 
 let engine = null;
 let engineModel = null;
@@ -70,6 +76,10 @@ function ensureBoot(modelId, options) {
       const chat = await createEngineFor(modelId, {
         ...options,
         onProgress: progress,
+        // Hand the engine the shared OPFS cache so the bootstrapping
+        // path can short-circuit on a fully-cached model and the
+        // background path can populate OPFS from network on miss.
+        opfs,
       });
       // Drop the previous engine (and any in-flight sessions) only
       // after the new one is resident. This avoids a window where

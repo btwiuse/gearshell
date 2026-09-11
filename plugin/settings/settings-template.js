@@ -237,6 +237,13 @@ export const SETTINGS_TEMPLATE_HTML =
                   <input data-config="widgetbot" type="checkbox">
                 </label>
               </div>
+              <div class="body">
+                <label for="inference-default-model">Inference default model</label>
+                <select id="inference-default-model" data-config="default-inference-model">
+                  <option value="prism-ml/Bonsai-27B-gguf">Bonsai 27B (Prism ML)</option>
+                </select>
+                <p class="hint">Pre-loaded at shell boot so the first chat opens instantly. Reboot the shell after changing.</p>
+              </div>
             </details>
 
             <details>

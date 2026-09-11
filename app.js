@@ -469,11 +469,16 @@ registerHotkey({
 // stream through `inference.progress` so the shell can render a
 // loader while the 3.8 GB model comes down. Subsequent
 // plugin/bonsai or CLI sessions find the model already resident.
+//
+// The default model lives in workspace.shell.defaultInferenceModel so
+// it migrates with workspace snapshots; the Settings → Behavior
+// panel edits it (Settings: data-config="default-inference-model").
 try {
-  const defaultModel = localStorage.getItem("inference.defaultModel")
-    || "prism-ml/Bonsai-27B-gguf";
-  window.GearShell?.inference?.bootstrap?.({ defaultModel })
-    ?.catch?.(() => {});
+  const defaultModel = loadConfig().defaultInferenceModel;
+  if (defaultModel) {
+    window.GearShell?.inference?.bootstrap?.({ defaultModel })
+      ?.catch?.(() => {});
+  }
 } catch {}
 
 // Wire the iframe plugin bridge; must run after initWorkspaceApi.
