@@ -463,6 +463,19 @@ registerHotkey({
   action: { method: "overlay.toggle", args: ["spotlight"] },
 });
 
+// Pre-warm the inference host with the user's preferred default model.
+// Triggered after initWorkspaceApi() so GearShell.inference.* is
+// available. The host fires init + background load; progress events
+// stream through `inference.progress` so the shell can render a
+// loader while the 3.8 GB model comes down. Subsequent
+// plugin/bonsai or CLI sessions find the model already resident.
+try {
+  const defaultModel = localStorage.getItem("inference.defaultModel")
+    || "prism-ml/Bonsai-27B-gguf";
+  window.GearShell?.inference?.bootstrap?.({ defaultModel })
+    ?.catch?.(() => {});
+} catch {}
+
 // Wire the iframe plugin bridge; must run after initWorkspaceApi.
 initIframePluginApi();
 // Forward keydowns fired inside iframe plugin panels back to the

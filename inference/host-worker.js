@@ -15,6 +15,13 @@
 //
 // Multi-model: only one model is resident at a time. A load() call
 // while a model is already loaded first evicts the old one.
+//
+// Boot: the shell sends an init message `{ type: "init", defaultModel,
+// accessToken }` once the Worker is up. If `defaultModel` is set the
+// host kicks off a background load immediately so the first
+// createSession() is fast. createSession() can still trigger a lazy
+// load when the consumer names a different model — sessions created
+// during a model swap wait on the new engine before they stream.
 
 import { createEngineFor } from "./bitgpu-engine.js";
 import { SessionRegistry } from "./session.js";
@@ -22,6 +29,7 @@ import { REQUEST, PUSH, HOST_STATE } from "./protocol.js";
 
 let engine = null;
 let engineModel = null;
+let bootPromise = null;
 const registry = new SessionRegistry({ get engine() { return engine; } });
 let state = HOST_STATE.IDLE;
 let requestSeq = 0;
@@ -47,28 +55,70 @@ function nextState() {
   };
 }
 
+// Background boot of the requested model. Returns a promise that
+// resolves once the model is resident or rejects on load error.
+// Concurrent callers share the same promise so two `createSession`
+// requests during the same boot don't double-spawn the load.
+function ensureBoot(modelId, options) {
+  if (engine && engineModel?.id === modelId) return Promise.resolve();
+  if (bootPromise && engineModel?.id === modelId) return bootPromise;
+  setState(HOST_STATE.LOADING);
+  bootPromise = (async () => {
+    try {
+      const progress = (p) =>
+        postPush(PUSH.PROGRESS, { modelId, progress: p });
+      const chat = await createEngineFor(modelId, {
+        ...options,
+        onProgress: progress,
+      });
+      // Drop the previous engine (and any in-flight sessions) only
+      // after the new one is resident. This avoids a window where
+      // active sessions have no engine to read from.
+      if (engine && engineModel?.id !== modelId) {
+        registry.shutdown();
+      }
+      engine = chat;
+      engineModel = { id: modelId };
+      setState(HOST_STATE.READY);
+    } catch (error) {
+      setState(HOST_STATE.ERROR);
+      throw error;
+    } finally {
+      bootPromise = null;
+    }
+  })();
+  return bootPromise;
+}
+
+function handleInit({ defaultModel, accessToken } = {}) {
+  postReply(0, { type: "ok", result: { initialized: true } });
+  if (!defaultModel) return;
+  // Fire-and-forget: surface progress events as PUSH.PROGRESS so the
+  // shell can show a loader. If the load fails the state transition
+  // to ERROR fires and the consumer's createSession() will see it.
+  ensureBoot(defaultModel, { accessToken }).catch((error) => {
+    postPush(PUSH.STATUS, {
+      state: nextState(),
+      error: String(error?.message ?? error),
+    });
+  });
+}
+
 async function handleLoad(requestId, { model, options }) {
-  if (state === HOST_STATE.LOADING) {
-    postReply(requestId, { type: "error", error: "already loading" });
+  if (!model) {
+    postReply(requestId, { type: "error", error: "model is required" });
     return;
   }
-  setState(HOST_STATE.LOADING);
   try {
-    const progress = (p) =>
-      postPush(PUSH.PROGRESS, { requestId, progress: p });
-    const chat = await createEngineFor(model, { ...options, onProgress: progress });
-    engine = chat;
-    engineModel = { id: model };
-    setState(HOST_STATE.READY);
+    await ensureBoot(model, options ?? {});
     postReply(requestId, {
       type: "ok",
       result: {
         model,
-        contextLength: chat.contextLength,
+        contextLength: engine.contextLength,
       },
     });
   } catch (error) {
-    setState(HOST_STATE.ERROR);
     postReply(requestId, {
       type: "error",
       error: String(error?.message ?? error),
@@ -84,15 +134,27 @@ async function handleUnload(requestId) {
   postReply(requestId, { type: "ok", result: { ok: true } });
 }
 
-function handleCreateSession(requestId, { model, options }) {
-  if (!engine) {
-    postReply(requestId, { type: "error", error: "model not loaded" });
-    return;
-  }
-  if (model && engineModel?.id !== model) {
+async function handleCreateSession(requestId, { model, options }) {
+  const targetModel = model ?? engineModel?.id;
+  if (!targetModel) {
     postReply(requestId, {
       type: "error",
-      error: `host has ${engineModel?.id ?? "no"} model loaded; ${model} requested`,
+      error: "no model specified and none resident",
+    });
+    return;
+  }
+  try {
+    if (!engine || engineModel?.id !== targetModel) {
+      // Lazy load: requested model differs from resident. Wait for
+      // the boot to complete before admitting the session. Bumps
+      // LRU pressure but doesn't evict the previous engine until
+      // the new one is ready (see ensureBoot).
+      await ensureBoot(targetModel, options ?? {});
+    }
+  } catch (error) {
+    postReply(requestId, {
+      type: "error",
+      error: String(error?.message ?? error),
     });
     return;
   }
@@ -113,9 +175,6 @@ function handleCreateSession(requestId, { model, options }) {
 }
 
 function createSessionWire(session) {
-  // Wire handles are needed for the shell to push abort/reset without
-  // a fresh RPC. The host keeps the session in its registry by id; the
-  // wire carries the id and methods that postMessage to the host.
   return {
     id: session.id,
     send(messages, options) {
@@ -162,9 +221,8 @@ async function handleSend(requestId, { sessionId, messages, options }) {
 }
 
 function handleAbort({ sessionId }) {
-  // The session registry doesn't keep per-session abort controllers
-  // today (the consumer's AbortSignal flows through). Future: track
-  // them if we add server-side aborts.
+  // Per-session abort controllers aren't tracked yet. The consumer's
+  // AbortSignal flows through session.send() and surfaces upstream.
 }
 
 function handleReset({ sessionId }) {
@@ -186,12 +244,14 @@ self.addEventListener("message", async (event) => {
   const { id, type } = message;
   try {
     switch (type) {
+      case "init":
+        return handleInit(message);
       case REQUEST.LOAD:
         return await handleLoad(id, message);
       case REQUEST.UNLOAD:
         return handleUnload(id);
       case REQUEST.CREATE_SESSION:
-        return handleCreateSession(id, message);
+        return await handleCreateSession(id, message);
       case REQUEST.SEND:
         return await handleSend(id, message);
       case REQUEST.ABORT:
@@ -213,5 +273,5 @@ self.addEventListener("message", async (event) => {
 });
 
 // Tell the shell we're alive. The shell waits for this before it starts
-// dispatching requests so it can sequence `load` before `createSession`.
+// dispatching requests so it can sequence `init` before `createSession`.
 postPush(PUSH.STATUS, { state: nextState() });

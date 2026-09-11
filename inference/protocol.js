@@ -26,6 +26,7 @@ export const MAX_SESSIONS = 4;
 export const SESSION_IDLE_MS = 10 * 60 * 1000;
 
 export const REQUEST = Object.freeze({
+  INIT: "init",
   LOAD: "load",
   UNLOAD: "unload",
   CREATE_SESSION: "createSession",

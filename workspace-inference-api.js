@@ -4,7 +4,8 @@
 // and exposes its capabilities as the standard GearShell namespace:
 //
 //   await GearShell.inference.list()              // [{id, label, size, ...}]
-//   await GearShell.inference.load(model, opts)   // boots a 3.8 GB model
+//   await GearShell.inference.bootstrap({model})  // pre-warm: load default
+//   await GearShell.inference.load(model, opts)   // explicit load
 //   await GearShell.inference.unload()            // frees VRAM
 //   await GearShell.inference.status()            // {state, model, sessions}
 //   const session = await GearShell.inference.createSession({model, ...})
@@ -21,14 +22,21 @@ import { on as onEvent, off as offEvent } from "./workspace-events.js";
 
 const HOST_URL = new URL("./inference/host-worker.js", import.meta.url);
 
+// Stored config the host was initialised with. The shell's
+// `inference.bootstrap()` (or any first call that needs the engine)
+// flushes this to the worker. `null` means the host is up but no
+// default model was selected — consumers must call load() or pass
+// `model` to createSession() explicitly.
+let hostConfig = null;
 let workerInstance = null;
+let initPromise = null;
 let nextRequestId = 0;
 const pendingRequests = new Map();
 const sessionStreams = new Map(); // sessionId -> Set<(event) => void>
-let initPromise = null;
 
-function ensureHost() {
-  if (workerInstance) return workerInstance;
+function ensureHost(config) {
+  if (config) hostConfig = { ...hostConfig, ...config };
+  if (workerInstance) return initPromise;
   if (!initPromise) {
     initPromise = (async () => {
       const worker = new Worker(HOST_URL, { type: "module" });
@@ -42,6 +50,22 @@ function ensureHost() {
         pendingRequests.clear();
       });
       workerInstance = worker;
+      // Send init with the stored config so the host can pre-warm.
+      if (hostConfig?.defaultModel) {
+        await new Promise((resolve) => {
+          const id = ++nextRequestId;
+          pendingRequests.set(id, {
+            resolve: () => resolve(),
+            reject: () => resolve(),
+          });
+          worker.postMessage({
+            id,
+            type: REQUEST.INIT,
+            defaultModel: hostConfig.defaultModel,
+            accessToken: hostConfig.accessToken,
+          });
+        });
+      }
       return worker;
     })();
   }
@@ -60,8 +84,10 @@ function onHostMessage(message) {
     return;
   }
   if (message.type === PUSH.PROGRESS) {
-    const pending = pendingRequests.get(message.requestId);
-    pending?.onProgress?.(message.progress);
+    // Background loads (from init or earlier bootstrap) don't have a
+    // pending request id; surface progress as an event so the shell
+    // can render a loader. Tagged with the model id from the message.
+    onEvent("inference.progress", message);
     return;
   }
   if (message.type === PUSH.STATUS) {
@@ -168,6 +194,19 @@ export const inferenceApi = {
 
   status() {
     return callHost(REQUEST.STATUS, {});
+  },
+
+  // Pre-warm the host with a default model. Called once at shell boot
+  // (or whenever the user changes their preferred default). The
+  // background load streams progress as `inference.progress` events;
+  // first createSession() is then near-instant. Calling bootstrap
+  // again with a different model triggers a model swap.
+  bootstrap(options = {}) {
+    hostConfig = { ...hostConfig, ...options };
+    return callHost(REQUEST.LOAD, {
+      model: hostConfig.defaultModel,
+      options: { accessToken: hostConfig.accessToken },
+    });
   },
 
   load(model, options = {}) {
