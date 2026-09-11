@@ -66,6 +66,36 @@ function makeEventStream(runtimeChat, messages, options) {
   })();
 }
 
+function applyTemplateOverrides(runtimeChat, options) {
+  if (!runtimeChat) return;
+  const incoming = {};
+  if (typeof options.think === "boolean") {
+    incoming.enable_thinking = options.think;
+  }
+  const userArgs = options.chatTemplateArgs;
+  if (userArgs && typeof userArgs === "object") {
+    Object.assign(incoming, userArgs);
+  }
+  if (Object.keys(incoming).length === 0) return;
+  runtimeChat.chatTemplateArgs = {
+    ...runtimeChat.chatTemplateArgs,
+    ...incoming,
+  };
+}
+
+function stripLegacyOptions(options) {
+  const {
+    think: _think,
+    thinkBudget: _thinkBudget,
+    thinkEarlyStop: _thinkEarlyStop,
+    tools: _tools,
+    streamTools: _streamTools,
+    chatTemplateArgs: _cta,
+    ...rest
+  } = options;
+  return rest;
+}
+
 class BonsaiChat {
   constructor(runtimeChat, defaultGeneration = {}) {
     this.contextLength = runtimeChat.contextLength;
@@ -95,21 +125,17 @@ class BonsaiChat {
   }
 
   generate(messages, options = {}) {
-    if (this.chatTemplateArgs && Object.keys(this.chatTemplateArgs).length > 0) {
-      this._runtimeChat.chatTemplateArgs = this.chatTemplateArgs;
-    }
+    applyTemplateOverrides(this._runtimeChat, options);
     return this._runtimeChat.generate(messages, {
       ...this._defaultGeneration,
-      ...options,
+      ...stripLegacyOptions(options),
     });
   }
 
   async *streamTurn(messages, options = {}) {
     this.lastAssistantContent = null;
-    if (this.chatTemplateArgs && Object.keys(this.chatTemplateArgs).length > 0) {
-      this._runtimeChat.chatTemplateArgs = this.chatTemplateArgs;
-    }
-    const merged = { ...this._defaultGeneration, ...options };
+    applyTemplateOverrides(this._runtimeChat, options);
+    const merged = { ...this._defaultGeneration, ...stripLegacyOptions(options) };
     const stream = makeEventStream(this._runtimeChat, messages, {
       ...merged,
       signal: options.signal,
