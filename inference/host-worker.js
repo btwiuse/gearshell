@@ -174,6 +174,11 @@ async function handleCreateSession(requestId, { model, options }) {
     options: options ?? {},
   });
   const wire = createSessionWire(session);
+  // Refresh the shell's cached status so status() reflects the new
+  // session immediately (the shell never has to RPC the worker for
+  // a snapshot — the worker is authoritative for sessions, state, and
+  // model and pushes PUSH.STATUS on every transition).
+  postPush(PUSH.STATUS, { state: nextState() });
   postReply(requestId, {
     type: "ok",
     result: {

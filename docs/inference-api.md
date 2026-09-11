@@ -167,13 +167,16 @@ shell → host (request):
   { id, type: "send",          sessionId, messages, options }
   { id, type: "abort",         sessionId }
   { id, type: "reset",         sessionId }
-  { id, type: "status" }
+  // "status" request is unused — the shell mirrors PUSH.STATUS into
+  // a local cache and reads from it (see `inference.status()` below).
 
 host → shell (response / push):
   { id, type: "ok",    result }
   { id, type: "error", error }
   { type: "progress", requestId, progress }
   { type: "event",    sessionId, event }   // where event ∈ InferenceEvent
+  // state is the full snapshot object {state, model, sessions:[...]}
+  // — the shell replaces its local hostState cache with each push.
   { type: "status",   state }
 ```
 
@@ -181,6 +184,18 @@ The wire is `postMessage`-based (typed events on the `message`
 channel). `requestId` correlates one request with one terminal
 `ok`/`error` reply; streaming events carry `sessionId` so the
 shell-side `RemoteSession` can multiplex across concurrent sessions.
+
+### `inference.status()` is cached on the shell
+
+`inference.status()` does NOT RPC the worker. The shell maintains
+`hostState` (initialised to `{state:"idle", model:null, sessions:[]}`)
+and overwrites it from every `PUSH.STATUS` payload it receives. The
+worker pushes on every transition (load/unload/loading/ready/error
+plus session create/drop/boot), so the cache is always within one
+state change of being accurate. The call resolves in well under a
+frame — critical for the playground's status probe, which would
+otherwise queue behind the 3.8 GB model load and time out the
+15s bridge timeout.
 
 ## Settings (round 68)
 

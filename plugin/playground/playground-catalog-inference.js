@@ -12,10 +12,13 @@
 // consumer in the shell currently calls inference.*. The catalog
 // is still useful for debugging the host itself: open the
 // playground, run `inference.list()` and `inference.status()` to
-// see the host's reaction. Running `inference.bootstrap(...)` will
-// spawn the Worker (if not already running) and start a background
-// model load. Round 90 is the deadline for removing this whole
-// API if it stays unused.
+// see the host's reaction. `status()` is read from a shell-side
+// cache that mirrors the worker's PUSH.STATUS pushes, so it
+// resolves immediately even while the worker is busy loading
+// weights. Running `inference.bootstrap(...)` will spawn the
+// Worker (if not already running) and start a background model
+// load. Round 90 is the deadline for removing this whole API
+// if it stays unused.
 
 export const inferenceCatalog = [
   {
@@ -36,7 +39,10 @@ export const inferenceCatalog = [
         hint:
           "Current host state and resident model. Returns " +
           "{state: \"idle\"|\"loading\"|\"ready\"|\"error\", model: {id}|null, " +
-          "sessions: [{id, model, messages, lastUsedAt}]}.",
+          "sessions: [{id, model, messages, lastUsedAt}]}. " +
+          "Resolved from a shell-side cache that mirrors the worker's " +
+          "PUSH.STATUS pushes, so the call never queues behind a busy " +
+          "worker (returns in well under a frame).",
       },
       {
         name: "bootstrap",

@@ -7,16 +7,21 @@
 //   await GearShell.inference.bootstrap({model})  // pre-warm: load default
 //   await GearShell.inference.load(model, opts)   // explicit load
 //   await GearShell.inference.unload()            // frees VRAM
-//   await GearShell.inference.status()            // {state, model, sessions}
+//   await GearShell.inference.status()            // {state, model, sessions} — cached
 //   const session = await GearShell.inference.createSession({model, ...})
 //   for await (const event of session.send(messages, options)) { ... }
 //   session.abort(); session.reset(); session.close();
+//
+// `status()` resolves from a shell-side cache that mirrors the
+// worker's PUSH.STATUS pushes, so the playground's probe never
+// queues behind a busy worker (the worker can be stuck streaming
+// a 3.8 GB model load and still owe status replies indefinitely).
 //
 // Stream events arrive as `{ type: "text"|"thinking"|"tool_call"|"complete", ... }`,
 // matching the shape the plugin's adapter used to emit — see the
 // migration in plugin/bonsai/src/model/remote-client.js.
 
-import { listModels, getModel } from "./inference/manifest.js";
+import { listModels } from "./inference/manifest.js";
 import { REQUEST, PUSH } from "./inference/protocol.js";
 import { on as onEvent, off as offEvent } from "./workspace-events.js";
 
@@ -33,6 +38,16 @@ let initPromise = null;
 let nextRequestId = 0;
 const pendingRequests = new Map();
 const sessionStreams = new Map(); // sessionId -> Set<(event) => void>
+
+// Cached host state mirrored from the worker's PUSH.STATUS pushes.
+// The worker is authoritative for {state, model, sessions} and
+// fires PUSH.STATUS on every transition (load/unload/createSession/
+// closeSession/boot). `status()` reads this cache and resolves
+// immediately, so the playground's status probe never gets blocked
+// behind a 3.8 GB model load in the worker's message queue.
+// Shape matches the documented contract:
+//   { state, model: {id}|null, sessions: [{id, model, messages, lastUsedAt}] }
+let hostState = { state: "idle", model: null, sessions: [] };
 
 function ensureHost(config) {
   if (config) hostConfig = { ...hostConfig, ...config };
@@ -91,7 +106,16 @@ function onHostMessage(message) {
     return;
   }
   if (message.type === PUSH.STATUS) {
-    onEvent("inference.status", message.state);
+    // Cache the full status blob; status() resolves from this
+    // snapshot instead of round-tripping the worker. See hostState.
+    if (message.state && typeof message.state === "object") {
+      hostState = message.state;
+    } else if (typeof message.state === "string") {
+      // Defensive: if the worker ever ships a bare string again,
+      // preserve the existing model/sessions and just update state.
+      hostState = { ...hostState, state: message.state };
+    }
+    onEvent("inference.status", hostState);
     return;
   }
   if (typeof message.id === "number") {
@@ -193,7 +217,23 @@ export const inferenceApi = {
   },
 
   status() {
-    return callHost(REQUEST.STATUS, {});
+    // Returns the cached host state synchronously (resolved as a
+    // Promise to keep the API async-only). The worker pushes
+    // PUSH.STATUS on every transition, so this is always fresh
+    // unless the host was never booted — in which case the cache
+    // holds the default IDLE snapshot.
+    //
+    // The worker ships `sessions` as the registry's full status
+    // object ({count, max, sessions: [...]}). Flatten to the
+    // playground-catalog contract (a flat session list) so callers
+    // don't have to know about the inner shape.
+    const raw = hostState.sessions;
+    const sessions = Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.sessions)
+      ? raw.sessions
+      : [];
+    return Promise.resolve({ ...hostState, sessions });
   },
 
   // Pre-warm the host with a default model. Called once at shell boot
