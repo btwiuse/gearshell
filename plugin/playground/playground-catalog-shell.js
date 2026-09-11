@@ -14,6 +14,7 @@
 
 import { configCatalog } from "./playground-catalog-shell-config.js";
 import { panelsCatalog } from "./playground-catalog-shell-panels.js";
+import { inferenceCatalog } from "./playground-catalog-inference.js";
 
 export const shellCatalog = [
   {
@@ -80,4 +81,5 @@ export const shellCatalog = [
   },
   ...configCatalog,
   ...panelsCatalog,
+  ...inferenceCatalog,
 ];
