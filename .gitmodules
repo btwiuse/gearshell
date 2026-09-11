@@ -7,9 +7,6 @@
 [submodule "wanix-workbench"]
 	path = wanix-workbench
 	url = https://github.com/btwiuse/gear-wanix-workbench.git
-[submodule "bonsai"]
-	path = bonsai
-	url = https://github.com/btwiuse/bonsai-webgpu-kernels.git
 [submodule "web-pet"]
 	path = web-pet
 	url = https://github.com/btwiuse/wagi-web-pet.git

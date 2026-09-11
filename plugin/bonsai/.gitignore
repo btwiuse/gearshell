@@ -1,7 +1,0 @@
-# Build artefacts
-dist/
-src/inline-tmp/
-.inline-tmp/
-
-# OS / editor
-.DS_Store

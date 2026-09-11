@@ -20,12 +20,12 @@ export const IFRAME_PLUGINS = [
     },
   },
   {
-    id: "bonsai",
-    name: "Bonsai 27B",
-    version: "1.1.0",
+    id: "webllm",
+    name: "WebLLM",
+    version: "1.0.0",
     icon: "TreePine",
     iframe: {
-      src: "/plugin/bonsai/buildless.html",
+      src: "/plugin/webllm/index.html",
       allow: "clipboard-read; clipboard-write; fullscreen",
       allowFullscreen: true,
     },

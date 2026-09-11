@@ -175,13 +175,13 @@ if (!has("onDragStart:") || !has("EyeOff") || !has("Open by default")) {
     "Launcher layout must support drag, visibility icons, and default startup.",
   );
 }
-if (!has('src: "/plugin/bonsai/buildless.html"') || !has('name: "Bonsai 27B"')) {
+if (!has('src: "/plugin/webllm/index.html"') || !has('name: "WebLLM"')) {
   throw new Error(
-    "Launcher must offer Bonsai 27B from the bundled Bonsai app.",
+    "Launcher must offer WebLLM from the bundled offline AI app.",
   );
 }
-if (!has("DEFAULT_LAUNCHER_ITEM_ORDER") || !has("'bonsai'")) {
-  throw new Error("Launcher layout must include Bonsai 27B.");
+if (!has("DEFAULT_LAUNCHER_ITEM_ORDER") || !has("'webllm'")) {
+  throw new Error("Launcher layout must include WebLLM.");
 }
 if (!has('import("../../web-pet/index.js")')) {
   throw new Error("Wagi Dog must use the bundled web-pet runtime.");
@@ -322,7 +322,7 @@ const RULE_IGNORE_DIRS = new Set([
   "browser",
   "isolation",
   "wanix-workbench",
-  "bonsai",
+  "webllm",
   "web-pet",
   "memory",
   "vendor",

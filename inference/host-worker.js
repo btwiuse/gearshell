@@ -11,7 +11,7 @@
 // dispatched the call. Hosting in a Worker keeps inference off the UI
 // thread so paint throttling / markdown reparse / scroll handling on
 // the consumer side cannot starve the GPU command queue — the same
-// rationale as round 65's worker-runtime default in plugin/bonsai.
+// rationale as round 65's worker-runtime default in plugin/webllm.
 //
 // Multi-model: only one model is resident at a time. A load() call
 // while a model is already loaded first evicts the old one.
@@ -28,9 +28,14 @@ import { SessionRegistry } from "./session.js";
 import { REQUEST, PUSH, HOST_STATE } from "./protocol.js";
 import { OpfsCache } from "./opfs-cache.js";
 
-// One OpfsCache instance per worker. Initialised lazily on first use
-// so workers without storage.getDirectory (Safari < 102, sandboxed
-// iframes) don't pay the init cost and degrade to Cache Storage.
+// OpfsCache is here for the future OPFS-backed fetch override. Round
+// 69 dropped the active path because the vendored runtime's loader
+// (`an.open({fetch, signal, cache, ...})`) owns its own gguf fetch
+// and cache protocol; an OPFS override requires injecting a `fetch`
+// callback that returns ArrayBuffer/File from OPFS, which the runtime
+// exposes via `chat.runtime.fetch` for plugin code but not through
+// `an.open`'s option shape. Keep the module in place so a follow-up
+// can wire it through; for now the cache is just an inventory surface.
 const opfs = new OpfsCache();
 
 let engine = null;
@@ -76,10 +81,6 @@ function ensureBoot(modelId, options) {
       const chat = await createEngineFor(modelId, {
         ...options,
         onProgress: progress,
-        // Hand the engine the shared OPFS cache so the bootstrapping
-        // path can short-circuit on a fully-cached model and the
-        // background path can populate OPFS from network on miss.
-        opfs,
       });
       // Drop the previous engine (and any in-flight sessions) only
       // after the new one is resident. This avoids a window where
