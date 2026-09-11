@@ -5131,3 +5131,14 @@ function _wllmBonsaiStopTool(p,n){if(!n?.length||!p)return!1;const o="<think>",c
 globalThis.BONSAI_DEFAULT_MODEL_ID = Pd;
 globalThis.BONSAI_DEFAULT_GGUF_FILE = Pw;
 globalThis.BonsaiResolveGGUFUrl = Dd;
+
+// ES module re-export shim — exposes the runtime's globals so the
+// inference host's module Worker can do a regular ES module import
+// instead of reaching into globalThis across the module/classic
+// boundary. The classic body above has already run by the time
+// this shim evaluates (the import triggers top-level execution),
+// so the global reads below see the assigned values.
+export const Bonsai27B = globalThis.Bonsai27B;
+export const DEFAULT_MODEL_ID = globalThis.BONSAI_DEFAULT_MODEL_ID;
+export const DEFAULT_GGUF_FILE = globalThis.BONSAI_DEFAULT_GGUF_FILE;
+export const BonsaiResolveGGUFUrl = globalThis.BonsaiResolveGGUFUrl;

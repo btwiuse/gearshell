@@ -5,6 +5,17 @@
 // imported from the jsDelivr CDN, but the plugin switched to a
 // vendored copy in dc54cd2 so the host followed suit here.
 //
+// Round 70 (webllm cutover): plugin/bonsai was replaced by
+// plugin/webllm; the bonsai runtime source moved from a vendored
+// index.html extract (plugin/bonsai/src/model/index-runtime.js) to
+// plugin/webllm/bonsai-27b.js. The runtime is shipped as a CLASSIC
+// script (sets globalThis side effects, no `export` statements). To
+// bridge the gap between the host's module Worker and the classic
+// runtime body, scripts/extract-runtime.mjs appends an ES module
+// shim after the vendored classic body that re-exports the runtime's
+// globals. So `import { Bonsai27B, BonsaiResolveGGUFUrl, ... } from
+// "./runtime.js"` works.
+//
 // Round 69 port notes (vs round 67):
 // - Runtime source: CDN → ./runtime.js (vendored). One extraction step
 //   per bitgpu upgrade, see scripts/extract-runtime.mjs.
@@ -36,7 +47,7 @@ import {
   Bonsai27B as IndexBonsai27B,
   DEFAULT_GGUF_FILE,
   DEFAULT_MODEL_ID,
-  resolveGGUFUrl,
+  BonsaiResolveGGUFUrl as resolveGGUFUrl,
 } from "./runtime.js";
 import {
   getModel,
