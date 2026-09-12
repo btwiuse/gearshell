@@ -211,14 +211,6 @@ function updateHost(idx, h) {
 
 // ─── Server host key manager ──────────────────────────────────────────────────
 
-const serverHostKeyMgr = {
-  trust(fp) {
-    const t = this._get(); t.push(fp);
-    localStorage.setItem('known_host_key_fingerprints', JSON.stringify(t));
-  },
-  isTrusted(fp) { return this._get().includes(fp); },
-  _get() { try { return JSON.parse(localStorage.getItem('known_host_key_fingerprints') || '[]'); } catch { return []; } },
-};
 
 // ─── Worker management ────────────────────────────────────────────────────────
 

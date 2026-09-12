@@ -19,6 +19,8 @@ export function createExternalTerminal({ source, origin, title }) {
     exit: new Set(),
     input: new Set(),
     resize: new Set(),
+    size: null,
+    sizeWaiters: new Set(),
     prompt: new Set(),
     pendingPrompt: null,
     dispose: null,
@@ -93,6 +95,13 @@ export function onExternalTerminalPrompt(sessionId, listener) {
   return () => entry.prompt.delete(listener);
 }
 
+export function pushExternalTerminalEvent(sessionId, topic, payload) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  push(entry, topic, { sessionId, ...payload });
+  return true;
+}
+
 export function onExternalTerminalInput(sessionId, listener) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return () => {};
@@ -104,7 +113,15 @@ export function onExternalTerminalResize(sessionId, listener) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return () => {};
   entry.resize.add(listener);
+  if (entry.size) listener(entry.size);
   return () => entry.resize.delete(listener);
+}
+
+export function waitForExternalTerminalSize(sessionId) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return Promise.reject(new Error("unknown external terminal"));
+  if (entry.size) return Promise.resolve(entry.size);
+  return new Promise((resolve) => entry.sizeWaiters.add(resolve));
 }
 
 export function sendExternalTerminalInput(sessionId, data) {
@@ -117,7 +134,10 @@ export function sendExternalTerminalInput(sessionId, data) {
 export function resizeExternalTerminal(sessionId, cols, rows, xpixel, ypixel) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
-  for (const listener of entry.resize) listener({ cols, rows, xpixel, ypixel });
+  entry.size = { cols, rows, xpixel, ypixel };
+  for (const resolve of entry.sizeWaiters) resolve(entry.size);
+  entry.sizeWaiters.clear();
+  for (const listener of entry.resize) listener(entry.size);
   return true;
 }
 

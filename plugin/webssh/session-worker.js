@@ -64,9 +64,14 @@ async function start(config) {
       title: 'Passphrase', message: `Enter passphrase for ${fingerprint}`, secret: true,
     }),
     onAuthSigned: () => {},
-    onHostKey: async ({ key }) => (await ask({
-      title: 'New host', message: `${key.type} key fingerprint is ${key.fingerprint}\nTrust this host key?`, input: false, confirmLabel: 'Trust',
-    })) !== null,
+    onHostKey: async ({ key }) => {
+      if (config.trustedHostKeys?.includes(key.fingerprint)) return true;
+      const trusted = await ask({
+        title: 'New host', message: `${key.type} key fingerprint is ${key.fingerprint}\nTrust this host key?`, input: false, confirmLabel: 'Trust',
+      });
+      self.postMessage({ type: 'hostKey', fingerprint: key.fingerprint, trusted: trusted !== null });
+      return trusted !== null;
+    },
     onAgentConfirm: (key, payload) => ask({
       title: 'Agent sign', message: `${key}\nPayload: ${Array.from(payload).map((byte) => byte.toString(16).padStart(2, '0')).join(' ')}`, input: false, confirmLabel: 'Allow',
     }).then((value) => value !== null),

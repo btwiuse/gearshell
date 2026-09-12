@@ -39,11 +39,11 @@ function createTerminal(event) {
   reply(event, { id: gear.id, ok: true, result: { sessionId: entry.sessionId, panelId: panel?.id } });
 }
 
-function startWebSshTerminal(event) {
+async function startWebSshTerminal(event) {
   const { id, args } = event.data.gear;
   const [sessionId, config] = args || [];
   try {
-    startWebSshSession(sessionId, config || {});
+    await startWebSshSession(sessionId, config || {});
     reply(event, { id, ok: true });
   } catch (error) {
     reply(event, { id, ok: false, error: error?.message || String(error) });
