@@ -31,6 +31,7 @@ export function ExternalTerminalPanel({ params }) {
     mountTerminal(anchor.current, externalSession(params.sessionId), {
       terminal: { fontSize: 14, theme: { background: "#0b1120" } },
       exitMessage: false,
+      onExit: () => { anchor.current.textContent = "Connection closed."; },
     }).then((mounted) => { handle = mounted; }).catch(() => {});
     return () => handle?.dispose();
   }, [params.sessionId]);

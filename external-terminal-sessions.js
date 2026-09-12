@@ -15,6 +15,7 @@ export function createExternalTerminal({ source, origin, title }) {
     origin,
     title: String(title || "External terminal"),
     output: new Set(),
+    outputBuffer: [],
     exit: new Set(),
   });
   return sessions.get(sessionId);
@@ -27,6 +28,7 @@ export function getExternalTerminal(sessionId) {
 export function writeExternalTerminal(sessionId, data) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
+  if (entry.output.size === 0) entry.outputBuffer.push(data);
   for (const listener of entry.output) listener(data);
   return true;
 }
@@ -42,6 +44,7 @@ export function onExternalTerminalOutput(sessionId, listener) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return () => {};
   entry.output.add(listener);
+  for (const data of entry.outputBuffer.splice(0)) listener(data);
   return () => entry.output.delete(listener);
 }
 
