@@ -144,17 +144,11 @@ is resident, so active sessions never see an empty engine.
 ## Streaming event shape
 
 The host's `BitgpuChat.streamTurn(messages, options)` calls
-`runtimeChat.generate(messages, options)` which yields
-`{token: number | null, delta: string}` updates. The host's
-`streamNativeEvents()` translates those into three typed events:
-
-| Source update | Event emitted |
-|---|---|
-| `update.token === null` and `delta !== ""` | `{type: "text", delta}` |
-| `update.token === thinkOpenTokenId` | (phase switch to "think", no event) |
-| `update.token` in think phase | `{type: "thinking", delta}` |
-| `update.token === thinkCloseTokenId` | `{type: "thinking", delta}` (flush buffer) then `{type: "text", delta: "\n"}` |
-| `update.token` in answer phase (other) | `{type: "text", delta}` |
+`runtimeChat.generate(messages, options)`, which yields cumulative
+`{phase, text, rawText}` snapshots. The host ignores `prefill` chunks
+and emits the suffix of each later `text` snapshot as
+`{type: "text", delta}`. This keeps the host stream contract stable
+for component and iframe consumers.
 
 After the runtime completes, the host pushes internal sentinels
 `{type: "_end"}` (success) or `{type: "_error", error}` (failure)

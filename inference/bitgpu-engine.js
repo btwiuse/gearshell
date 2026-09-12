@@ -20,10 +20,9 @@
 // - Runtime source: CDN → ./runtime.js (vendored). One extraction step
 //   per bitgpu upgrade, see scripts/extract-runtime.mjs.
 // - Chat API: `chat.stream(messages, {onThink})` →
-//   `chat.generate(messages, options)` which yields
-//   `{token, delta}` updates. The host's streamNativeEvents() now
-//   translates those into the legacy event protocol that
-//   RemoteBonsai27B consumes.
+//   `chat.generate(messages, options)` which yields cumulative
+//   `{phase, text, rawText}` snapshots. The host emits text deltas
+//   between successive snapshots for its stable event protocol.
 // - Think toggle: now goes through `chatTemplateArgs.enable_thinking`
 //   instead of the `{think}` option (round 69, plugin commit 4cd0869).
 //   The host's streamTurn maps `options.think` to chatTemplateArgs
@@ -162,92 +161,21 @@ export class BitgpuChat {
   }
 }
 
-// The vendored runtime's `chat.generate(messages, options)` yields
-// `{token, delta}` updates. The plugin's adapter translates those
-// into the legacy `{type: "text"|"thinking", delta}` event stream
-// that app.js / turn.js consume (see
-// plugin/bonsai/src/model/adapter.js:13-67 — makeEventStream).
-// We reproduce the same translation here so the host emits events
-// the plugin understands. The think block boundaries are signalled
-// by the chat's thinkOpenTokenId / thinkCloseTokenId token IDs;
-// any token between them is a thinking delta, anything else is
-// a text delta.
+// The vendored runtime's current `chat.generate(messages, options)`
+// yields snapshots (`{ phase, text, rawText }`), not the older
+// `{ token, delta }` updates. Translate successive visible-text
+// snapshots into deltas for the host's stable streaming API.
 async function* streamNativeEvents(runtimeChat, messages, options) {
-  const state = createThinkPhaseState(runtimeChat);
-  try {
-    for await (const update of runtimeChat.generate(messages, options)) {
-      const events = dispatchThinkUpdate(state, update);
-      for (const event of events) yield event;
-    }
-  } finally {
-    if (state.phase === "think" && state.phaseBuffer) {
-      yield { type: "thinking", delta: state.phaseBuffer };
-    }
+  let previous = "";
+  for await (const update of runtimeChat.generate(messages, options)) {
+    if (update?.phase === "prefill") continue;
+    const text = String(update?.text ?? "");
+    const delta = text.startsWith(previous)
+      ? text.slice(previous.length)
+      : text;
+    previous = text;
+    if (delta) yield { type: "text", delta };
   }
-}
-
-// State machine for the think-block phase translator. Tracks which
-// `phase` we're in ("answer" vs "think"), the buffered thinking text
-// between the open/close token IDs, and the accumulated visible
-// answer text. Pure data so the consumer's accumulator updates
-// (`lastAssistantContent`) can decide what to keep.
-function createThinkPhaseState(runtimeChat) {
-  return {
-    phase: "answer",
-    phaseBuffer: "",
-    collected: "",
-    openId: runtimeChat.thinkOpenTokenId ?? null,
-    closeId: runtimeChat.thinkCloseTokenId ?? null,
-  };
-}
-
-// Translate one `{token, delta}` update into 0+ legacy events.
-// Token-bearing updates switch phase or append to the active phase;
-// delta-only updates (token === null) append to whichever phase is
-// active and emit one event.
-function dispatchThinkUpdate(state, update) {
-  if (update.token === null) {
-    if (!update.delta) return [];
-    if (state.phase === "think") {
-      state.phaseBuffer += update.delta;
-    } else {
-      state.collected += update.delta;
-    }
-    return [{ type: "text", delta: update.delta }];
-  }
-  if (state.phase === "answer") {
-    if (state.openId !== null && update.token === state.openId) {
-      state.phase = "think";
-      state.phaseBuffer = "";
-      return [];
-    }
-    if (update.delta) {
-      state.collected += update.delta;
-      return [{ type: "text", delta: update.delta }];
-    }
-    return [];
-  }
-  // phase === "think"
-  if (state.closeId !== null && update.token === state.closeId) {
-    state.phase = "answer";
-    const out = [];
-    if (state.phaseBuffer) {
-      out.push({ type: "thinking", delta: state.phaseBuffer });
-      state.phaseBuffer = "";
-    }
-    // The runtime emits a newline after `</think>` to separate the
-    // think block from the visible answer; mirror that here so the
-    // chat UI's renderAnswer() sees the same shape the plugin emits.
-    const tail = "\n";
-    state.collected += tail;
-    out.push({ type: "text", delta: tail });
-    return out;
-  }
-  if (update.delta) {
-    state.phaseBuffer += update.delta;
-    return [{ type: "thinking", delta: update.delta }];
-  }
-  return [];
 }
 
 export async function createEngineFor(modelId, options = {}) {
