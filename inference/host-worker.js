@@ -43,7 +43,6 @@ let engineModel = null;
 let bootPromise = null;
 const registry = new SessionRegistry({ get engine() { return engine; } });
 let state = HOST_STATE.IDLE;
-let requestSeq = 0;
 
 function postReply(requestId, payload) {
   self.postMessage({ id: requestId, ...payload });
@@ -180,11 +179,6 @@ async function handleCreateSession(requestId, { model, options }) {
     model: engineModel,
     options: options ?? {},
   });
-  const wire = createSessionWire(session);
-  // Refresh the shell's cached status so status() reflects the new
-  // session immediately (the shell never has to RPC the worker for
-  // a snapshot — the worker is authoritative for sessions, state, and
-  // model and pushes PUSH.STATUS on every transition).
   postPush(PUSH.STATUS, { state: nextState() });
   postReply(requestId, {
     type: "ok",
@@ -192,35 +186,8 @@ async function handleCreateSession(requestId, { model, options }) {
       id: session.id,
       model: engineModel.id,
       contextLength: engine.contextLength,
-      wire,
     },
   });
-}
-
-function createSessionWire(session) {
-  return {
-    id: session.id,
-    send(messages, options) {
-      const requestId = ++requestSeq;
-      self.postMessage({
-        id: requestId,
-        type: REQUEST.SEND,
-        sessionId: session.id,
-        messages,
-        options: options ?? {},
-      });
-      return requestId;
-    },
-    abort() {
-      self.postMessage({ type: REQUEST.ABORT, sessionId: session.id });
-    },
-    reset() {
-      self.postMessage({ type: REQUEST.RESET, sessionId: session.id });
-    },
-    close() {
-      self.postMessage({ type: REQUEST.CLOSE_SESSION, sessionId: session.id });
-    },
-  };
 }
 
 async function handleSend(requestId, { sessionId, messages, options }) {
