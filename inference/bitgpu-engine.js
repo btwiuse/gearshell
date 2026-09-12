@@ -252,7 +252,7 @@ async function bootBitgpuEngine(modelId, model, options) {
     onProgress,
   };
   const runtime = model.runtime === "gemma" ? Gemma4Mobile : IndexBonsai27B;
-  const runtimeChat = await runtime.load(model.runtime === "gemma" ? null : modelId, runtimeOptions);
+  const runtimeChat = await runtime.load(modelId, runtimeOptions);
   return {
     runtimeChat,
     defaultGeneration: model.defaultGeneration ?? {},
