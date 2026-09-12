@@ -22,10 +22,11 @@
         <p id="modelStatus" class="model-status">Checking inference host…</p>
       </section>
       <section class="sidebar-section">
-        <div class="section-title"><span>Workspace tools</span><span class="badge">Agent mode</span></div>
-        <label class="tool-toggle"><input id="readTool" type="checkbox"><span>Read files</span></label>
-        <label class="tool-toggle"><input id="grepTool" type="checkbox"><span>Search workspace</span></label>
-        <p class="tool-help">Tools are constrained to read-only workspace files. GearLLM asks before no write action because it has no write permission.</p>
+        <div class="section-title"><span>Tools</span><span class="badge">Agent mode</span></div>
+        <label class="tool-card"><input id="readTool" type="checkbox"><span><strong>Read files</strong><small>Read a file, or list a directory.</small><code>read(path)</code></span></label>
+        <label class="tool-card"><input id="grepTool" type="checkbox"><span><strong>Search workspace</strong><small>Search readable workspace files by pattern.</small><code>grep(pattern, path?)</code></span></label>
+        <label class="tool-card tool-card-danger"><input id="bashTool" type="checkbox"><span><strong>Run Bash</strong><small>Run a command in the GearShell sandbox and return its output.</small><code>bash(command, cwd?)</code></span></label>
+        <p class="tool-help">Tools run only after the model emits a call. Bash runs in the sandbox, but can read and modify its workspace, so enable it only for tasks you trust.</p>
       </section>
       <section class="sidebar-section">
         <label for="systemPrompt">System prompt</label>

@@ -2,11 +2,11 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   messages: $("messages"), model: $("model"), load: $("loadModel"),
   modelStatus: $("modelStatus"), system: $("systemPrompt"), read: $("readTool"),
-  grep: $("grepTool"), prompt: $("prompt"), composer: $("composer"),
+  grep: $("grepTool"), bash: $("bashTool"), prompt: $("prompt"), composer: $("composer"),
   send: $("send"), stop: $("stop"), status: $("status"), newChat: $("newChat"), think: $("think"),
   sessionList: $("sessionList"), sessionCount: $("sessionCount"),
 };
-const TOOL_PROTOCOL = `When a workspace tool is needed, respond only with this XML:\n<function=read>\n<parameter=path>PATH</parameter>\n</function>\nor\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</function>\nDo not add prose before or after a tool call. Do not invent tool results.`;
+const TOOL_PROTOCOL = `When a workspace tool is needed, respond only with this XML:\n<function=read>\n<parameter=path>PATH</parameter>\n</function>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</function>\n<function=bash>\n<parameter=command>COMMAND</parameter>\n<parameter=cwd>OPTIONAL_DIRECTORY</parameter>\n</function>\nDo not add prose before or after a tool call. Do not invent tool results.`;
 let session = null;
 let modelId = null;
 let history = [];
@@ -144,6 +144,7 @@ function activeTools() {
   const tools = [];
   if (ui.read.checked) tools.push("read");
   if (ui.grep.checked) tools.push("grep");
+  if (ui.bash.checked) tools.push("bash");
   return tools;
 }
 
@@ -155,7 +156,7 @@ function promptMessages() {
 }
 
 function extractToolCall(text) {
-  const match = text.match(/<function=(read|grep)>[\s\S]*?(?:<\/function>|<\/tool_call>|$)/i);
+  const match = text.match(/<function=(read|grep|bash)>[\s\S]*?(?:<\/function>|<\/tool_call>|$)/i);
   if (!match || !activeTools().includes(match[1])) return null;
   const args = {};
   for (const entry of match[0].matchAll(/<parameter=(\w+)>([\s\S]*?)(?:<\/parameter>|(?=<parameter=)|<\/function>|$)/gi)) {
@@ -181,6 +182,15 @@ async function listWorkspace(path = ".", depth = 0, out = []) {
 }
 
 async function runTool(call) {
+  if (call.name === "bash") {
+    const command = call.args.command;
+    if (!command) throw new Error("bash requires command");
+    const result = await GearShell.bash.run(command, {
+      ...(call.args.cwd ? { cwd: call.args.cwd } : {}),
+      timeoutMs: 60000,
+    });
+    return result.output || result.error || "Command completed with no output.";
+  }
   if (call.name === "read") {
     const path = call.args.path;
     if (!path) throw new Error("read requires path");

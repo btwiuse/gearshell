@@ -36,8 +36,14 @@ h1 { font-size: 17px; }
 select, textarea { width: 100%; border: 1px solid #34496c; border-radius: 8px; padding: 9px; color: #eaf2ff; font: inherit; background: #0b1425; }
 #systemPrompt { resize: vertical; line-height: 1.45; font-size: 12px; }
 .secondary { margin-top: 8px; padding: 8px 10px; border: 1px solid #385071; border-radius: 8px; color: #d9e6f8; font: inherit; background: #17253b; cursor: pointer; }
-.tool-toggle { display: flex !important; align-items: center; gap: 8px; margin: 8px 0 !important; font-weight: 500 !important; cursor: pointer; }
-.tool-toggle input { accent-color: #86efac; }
+.tool-card { display: flex !important; align-items: flex-start; gap: 8px; margin: 8px 0 !important; padding: 9px; border: 1px solid #304563; border-radius: 8px; background: #142136; cursor: pointer; }
+.tool-card input { margin-top: 3px; accent-color: #86efac; }
+.tool-card span { display: grid; gap: 2px; min-width: 0; }
+.tool-card strong { color: #dce8f8; font-size: 12px; }
+.tool-card small { color: #91a5c1; font-size: 11px; line-height: 1.35; }
+.tool-card code { color: #67e8f9; font: 10px ui-monospace, monospace; }
+.tool-card-danger { border-color: #67523c; }
+.tool-card-danger code { color: #fde68a; }
 .section-title { display: flex; justify-content: space-between; }
 .badge { color: #86efac; font-size: 10px; }
 .sessions-section { min-height: 0; }

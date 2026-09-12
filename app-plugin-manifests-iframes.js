@@ -53,6 +53,7 @@ export const IFRAME_PLUGINS = [
         "inference.closeSession",
         "fs.readDir",
         "fs.readFileText",
+        "bash.run",
         "events.on",
         "events.off",
       ],
