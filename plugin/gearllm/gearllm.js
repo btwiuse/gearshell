@@ -133,29 +133,39 @@ function append(node, text) {
 }
 
 function splitThinking(text) {
-  const start = text.indexOf("<think>");
-  const end = text.indexOf("</think>");
-  if (start !== -1 && end >= start) {
+  const raw = String(text || "");
+  const gemmaStart = raw.indexOf("<|channel>thought");
+  const gemmaEnd = raw.indexOf("<channel|>", gemmaStart);
+  if (gemmaStart !== -1) {
+    const openEnd = gemmaStart + "<|channel>thought".length;
     return {
-      thinking: text.slice(start + 7, end).trim(),
-      answer: `${text.slice(0, start)}${text.slice(end + 8)}`.trim(),
+      thinking: raw.slice(openEnd, gemmaEnd === -1 ? undefined : gemmaEnd).trim(),
+      answer: (gemmaEnd === -1 ? "" : raw.slice(gemmaEnd + 10)).trim(),
     };
   }
-  const answerStart = text.lastIndexOf("\n\n");
-  if (answerStart === -1 || !/^here'?s a thinking process:/i.test(text.trim())) {
-    return { thinking: "", answer: text };
+  const start = raw.indexOf("<think>");
+  const end = raw.indexOf("</think>");
+  if (start !== -1 && end >= start) {
+    return {
+      thinking: raw.slice(start + 7, end).trim(),
+      answer: `${raw.slice(0, start)}${raw.slice(end + 8)}`.trim(),
+    };
+  }
+  const answerStart = raw.lastIndexOf("\n\n");
+  if (answerStart === -1 || !/^here'?s a thinking process:/i.test(raw.trim())) {
+    return { thinking: "", answer: raw.replaceAll("<|channel>", "").trim() };
   }
   return {
-    thinking: text.slice(0, answerStart).trim(),
-    answer: text.slice(answerStart + 2).trim(),
+    thinking: raw.slice(0, answerStart).trim(),
+    answer: raw.slice(answerStart + 2).trim(),
   };
 }
 
-function renderReply(node, reasoning, raw) {
+function renderReply(node, reasoning, reasoningText, raw, showThinking) {
   const split = splitThinking(raw);
-  node.textContent = split.answer || raw;
-  if (split.thinking && thinkEnabled) {
-    reasoning.querySelector("pre").textContent = split.thinking;
+  node.textContent = split.answer || raw.replaceAll("<|channel>", "").trim();
+  if (split.thinking && showThinking) {
+    reasoningText.textContent = split.thinking;
   } else {
     reasoning.remove();
   }
@@ -269,7 +279,7 @@ async function runTool(call) {
   return hits.length ? hits.join("\n") : "No matches.";
 }
 
-function waitForStream(sessionId, target, reasoning) {
+function waitForStream(sessionId, target, reasoningText, showThinking) {
   let finish;
   let raw = "";
   let metrics = null;
@@ -287,7 +297,7 @@ function waitForStream(sessionId, target, reasoning) {
       if (event?.type === "queued") status("Waiting for the shared inference host…", "loading");
       if (event?.type === "text" || event?.type === "thinking") {
         raw += event.delta;
-        append(thinkEnabled ? reasoning.querySelector("pre") : target, event.delta);
+        append(showThinking ? reasoningText : target, event.delta);
       }
       if (event?.type === "complete") metrics = event.result?.metrics ?? null;
       if (event?.type === "_error") finish(new Error(event.error));
@@ -304,20 +314,22 @@ function waitForStream(sessionId, target, reasoning) {
 }
 
 async function generate(messages) {
+  const showThinking = thinkEnabled;
   const reasoning = document.createElement("details");
   reasoning.className = "message reasoning";
   reasoning.open = true;
   reasoning.innerHTML = "<summary>Reasoning</summary><pre></pre>";
+  const reasoningText = reasoning.querySelector("pre");
   const answer = document.createElement("article");
   answer.className = "message assistant";
-  const stream = waitForStream(session.id, answer, reasoning);
-  await GearShell.inference.send(session.id, messages, { think: thinkEnabled });
+  const stream = waitForStream(session.id, answer, reasoningText, showThinking);
+  await GearShell.inference.send(session.id, messages, { think: showThinking });
   const result = await stream;
-  if (thinkEnabled && reasoning.querySelector("pre").textContent && !reasoning.isConnected) {
+  if (showThinking && reasoningText.textContent && !reasoning.isConnected) {
     ui.messages.append(reasoning);
   }
   if (answer.textContent && !answer.isConnected) ui.messages.append(answer);
-  return { answer, reasoning, text: result.raw, metrics: result.metrics };
+  return { answer, reasoning, reasoningText, showThinking, text: result.raw, metrics: result.metrics };
 }
 
 async function sendTurn(text) {
@@ -330,7 +342,7 @@ async function sendTurn(text) {
     let generated = await generate(promptMessages());
     let reply = generated.text;
     for (let round = 0; round < 8; round += 1) {
-      renderReply(generated.answer, generated.reasoning, reply);
+      renderReply(generated.answer, generated.reasoning, generated.reasoningText, reply, generated.showThinking);
       addMetrics(generated.answer, generated.metrics);
       const call = extractToolCall(reply);
       if (!call) break;
