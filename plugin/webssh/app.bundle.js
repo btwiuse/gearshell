@@ -684,7 +684,7 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
       `}
       <div ref=${termRef}
         aria-hidden="true"
-        style=${{ position: 'fixed', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}
+        style=${{ position: 'fixed', left: '-10000px', top: '-10000px', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}
       ></div>
     </div>
   `;
