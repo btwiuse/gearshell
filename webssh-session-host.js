@@ -18,7 +18,8 @@ function relayPrompt(worker, sessionId, message) {
 export function startWebSshSession(sessionId, config) {
   const worker = new Worker(WORKER_URL);
   const offInput = onExternalTerminalInput(sessionId, (data) => {
-    worker.postMessage({ type: "input", data });
+    const input = data instanceof Uint8Array ? new TextDecoder().decode(data) : data;
+    worker.postMessage({ type: "input", data: input });
   });
   const offResize = onExternalTerminalResize(sessionId, (payload) => {
     worker.postMessage({ type: "resize", payload: { ...payload, type: "resize" } });

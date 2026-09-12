@@ -590,7 +590,7 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
               if (!pwTried && defaultSshPassword) { pwTried = true; return defaultSshPassword; }
               const msg = pwTried ? 'try again.' : '';
               const pw  = await promptInTerminal({ title: 'Password', message: msg, secret: true, saveable: true });
-              if (pw === undefined) { localCancelled = true; throw new Error('aborted'); }
+              if (pw == null) { localCancelled = true; throw new Error('aborted'); }
               pwTried = true;
               if (pw.save) onSavePassword?.(pw.value);
               return pw.value;
@@ -611,7 +611,7 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
                   message: msg,
                   secret: !echos[i],
                 });
-                if (ans === undefined) { localCancelled = true; throw new Error('aborted'); }
+                if (ans == null) { localCancelled = true; throw new Error('aborted'); }
                 answers.push(ans);
               }
               return answers;
