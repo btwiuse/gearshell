@@ -44,9 +44,15 @@ function addMessage(kind, text = "") {
   return node;
 }
 
+function messageKind(message) {
+  if (message.role === "assistant" && /<function=\w+>/i.test(message.content)) return "tool";
+  if (message.role === "user" && message.content.startsWith("Tool result for ")) return "tool";
+  return message.role;
+}
+
 function restoreMessages() {
   ui.messages.replaceChildren();
-  for (const message of history) addMessage(message.role, message.content);
+  for (const message of history) addMessage(messageKind(message), message.content);
   if (!history.length) {
     ui.messages.innerHTML = "<div class=\"empty\"><h3>New GearLLM chat</h3><p>The model remains shared and resident in GearShell.</p></div>";
   }
@@ -64,7 +70,19 @@ function renderSessions() {
     button.textContent = item.title;
     button.type = "button";
     button.addEventListener("click", () => selectSession(item.id));
-    return button;
+    const remove = document.createElement("button");
+    remove.className = "session-delete";
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.title = "Delete conversation";
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteSession(item.id);
+    });
+    const row = document.createElement("div");
+    row.className = "session-row";
+    row.append(button, remove);
+    return row;
   }));
 }
 
@@ -86,6 +104,18 @@ function selectSession(id) {
   history = item.messages || [];
   restoreMessages();
   renderSessions();
+}
+
+function deleteSession(id) {
+  if (sending) return;
+  sessions = sessions.filter((item) => item.id !== id);
+  if (id === activeSessionId) {
+    if (sessions.length) selectSession(sessions[0].id);
+    else createSessionHistory();
+  } else {
+    persistSessions();
+    renderSessions();
+  }
 }
 
 function createSessionHistory() {
@@ -279,7 +309,7 @@ async function sendTurn(text) {
   try {
     let generated = await generate(promptMessages());
     let reply = generated.text;
-    for (let round = 0; round < 3; round += 1) {
+    for (let round = 0; round < 8; round += 1) {
       renderReply(generated.answer, generated.reasoning, reply);
       addMetrics(generated.answer, generated.metrics);
       const call = extractToolCall(reply);
