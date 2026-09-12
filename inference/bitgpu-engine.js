@@ -92,6 +92,7 @@ export class BitgpuChat {
     this.contextLength = runtimeChat.contextLength;
     this.contextFull = false;
     this.lastAssistantContent = null;
+    this.lastMetrics = null;
     this.thinkOpenTokenId = runtimeChat.thinkOpenTokenId ?? null;
     this.thinkCloseTokenId = runtimeChat.thinkCloseTokenId ?? null;
     this.runtime = runtimeChat.runtime;
@@ -102,6 +103,7 @@ export class BitgpuChat {
     this.runtimeChat.reset?.();
     this.contextFull = false;
     this.lastAssistantContent = null;
+    this.lastMetrics = null;
   }
 
   // Map `options.think` onto chatTemplateArgs.enable_thinking, then
@@ -135,6 +137,7 @@ export class BitgpuChat {
 
   async *streamTurn(messages, options = {}) {
     this.lastAssistantContent = null;
+    this.lastMetrics = createGenerationMetrics();
     const prepared = this.prepareOptions(options);
     const merged = { ...this.defaultGeneration, ...prepared };
     const previousTemplateArgs = this.runtimeChat.chatTemplateArgs;
@@ -146,13 +149,18 @@ export class BitgpuChat {
         if (event.type === "text" || event.type === "thinking") {
           if (event.delta) {
             this.lastAssistantContent = (this.lastAssistantContent ?? "") + event.delta;
+            updateGenerationMetrics(this.lastMetrics);
           }
         }
         yield event;
       }
       yield {
         type: "complete",
-        result: { tokens: [], text: this.lastAssistantContent ?? "" },
+        result: {
+          tokens: [],
+          text: this.lastAssistantContent ?? "",
+          metrics: snapshotGenerationMetrics(this.lastMetrics),
+        },
       };
     } catch (error) {
       if (options.signal?.aborted) return;
@@ -164,6 +172,26 @@ export class BitgpuChat {
       this.runtimeChat.chatTemplateArgs = previousTemplateArgs;
     }
   }
+}
+
+function createGenerationMetrics() {
+  return { startedAt: performance.now(), firstTokenAt: null, tokens: 0 };
+}
+
+function updateGenerationMetrics(metrics) {
+  if (!metrics.firstTokenAt) metrics.firstTokenAt = performance.now();
+  metrics.tokens += 1;
+}
+
+function snapshotGenerationMetrics(metrics) {
+  const now = performance.now();
+  const ttft = metrics.firstTokenAt ? (metrics.firstTokenAt - metrics.startedAt) / 1000 : null;
+  const decodeSec = metrics.firstTokenAt ? (now - metrics.firstTokenAt) / 1000 : 0;
+  return {
+    tokens: metrics.tokens,
+    tps: decodeSec > 0 ? Math.max(0, (metrics.tokens - 1) / decodeSec) : 0,
+    ttft,
+  };
 }
 
 // The vendored runtime's current `chat.generate(messages, options)`

@@ -98,6 +98,7 @@ async function ensureSession() {
 }
 
 function appendDelta(target, delta) {
+  if (!target.isConnected) elements.messages.append(target);
   target.textContent += delta;
   scrollMessages();
 }
@@ -121,14 +122,17 @@ function renderAnswer(answer, thinking, raw) {
   } else {
     thinking.remove();
   }
+  if (answer.textContent && !answer.isConnected) elements.messages.append(answer);
 }
 
 async function sendMessage(text) {
   const activeSession = await ensureSession();
   history.push({ role: "user", content: text });
   addMessage("user", text);
-  const answer = addMessage("assistant");
-  const thinking = addMessage("thinking");
+  const answer = document.createElement("article");
+  answer.className = "message assistant";
+  const thinking = document.createElement("article");
+  thinking.className = "message thinking";
   let answerText = "";
   let thinkingText = "";
   setSending(true);
@@ -156,11 +160,17 @@ async function sendMessage(text) {
 
 function openStream(sessionId, answer, thinking, onEvent) {
   let finish;
+  let timeout;
   const stream = new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => finish(new Error("Inference stream timed out.")), 120000);
+    const refreshTimeout = () => {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => finish(new Error("Inference stream timed out.")), 120000);
+    };
+    refreshTimeout();
     const handler = (payload) => {
       if (payload?.sessionId !== sessionId) return;
       const event = payload.event;
+      refreshTimeout();
       if (event?.type === "queued") setStatus("Waiting for the shared inference host…", "loading");
       if (event?.type === "text") appendDelta(answer, event.delta);
       if (event?.type === "thinking") appendDelta(thinking, event.delta);

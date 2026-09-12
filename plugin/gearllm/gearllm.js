@@ -90,6 +90,7 @@ function createSessionHistory() {
 }
 
 function append(node, text) {
+  if (!node.isConnected) ui.messages.append(node);
   node.textContent += text;
   ui.messages.scrollTop = ui.messages.scrollHeight;
 }
@@ -121,6 +122,15 @@ function renderReply(node, reasoning, raw) {
   } else {
     reasoning.remove();
   }
+  if (node.textContent && !node.isConnected) ui.messages.append(node);
+}
+
+function addMetrics(node, metrics) {
+  if (!metrics?.tokens) return;
+  const line = document.createElement("small");
+  line.className = "message-metrics";
+  line.textContent = `${metrics.tokens} tok · ${metrics.tps.toFixed(1)} tok/s · TTFT ${metrics.ttft?.toFixed(1) ?? "—"}s`;
+  node.after(line);
 }
 
 function activeTools() {
@@ -195,23 +205,31 @@ async function runTool(call) {
 function waitForStream(sessionId, target, reasoning) {
   let finish;
   let raw = "";
+  let metrics = null;
+  let timer;
   const promise = new Promise((resolve, reject) => {
-    const timer = setTimeout(() => finish(new Error("Inference stream timed out.")), 120000);
+    const refreshTimeout = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => finish(new Error("Inference stream timed out.")), 120000);
+    };
+    refreshTimeout();
     const listener = (payload) => {
       if (payload?.sessionId !== sessionId) return;
       const event = payload.event;
+      refreshTimeout();
       if (event?.type === "queued") status("Waiting for the shared inference host…", "loading");
       if (event?.type === "text" || event?.type === "thinking") {
         raw += event.delta;
         append(thinkEnabled ? reasoning.querySelector("pre") : target, event.delta);
       }
+      if (event?.type === "complete") metrics = event.result?.metrics ?? null;
       if (event?.type === "_error") finish(new Error(event.error));
       if (event?.type === "_end") finish();
     };
     finish = (error) => {
       clearTimeout(timer);
       GearShell.off("inference.event", listener);
-      error ? reject(error) : resolve(raw);
+      error ? reject(error) : resolve({ raw, metrics });
     };
     GearShell.on("inference.event", listener);
   });
@@ -223,11 +241,16 @@ async function generate(messages) {
   reasoning.className = "message reasoning";
   reasoning.open = true;
   reasoning.innerHTML = "<summary>Reasoning</summary><pre></pre>";
-  const answer = addMessage("assistant");
-  if (thinkEnabled) answer.before(reasoning);
+  const answer = document.createElement("article");
+  answer.className = "message assistant";
   const stream = waitForStream(session.id, answer, reasoning);
   await GearShell.inference.send(session.id, messages, { think: thinkEnabled });
-  return { answer, reasoning, text: await stream };
+  const result = await stream;
+  if (thinkEnabled && reasoning.querySelector("pre").textContent && !reasoning.isConnected) {
+    ui.messages.append(reasoning);
+  }
+  if (answer.textContent && !answer.isConnected) ui.messages.append(answer);
+  return { answer, reasoning, text: result.raw, metrics: result.metrics };
 }
 
 async function sendTurn(text) {
@@ -240,6 +263,7 @@ async function sendTurn(text) {
     let generated = await generate(promptMessages());
     let reply = generated.text;
     renderReply(generated.answer, generated.reasoning, reply);
+    addMetrics(generated.answer, generated.metrics);
     const call = extractToolCall(reply);
     if (call) {
       const toolCard = addMessage("tool", `Using ${call.name}…`);
@@ -250,6 +274,7 @@ async function sendTurn(text) {
       generated = await generate(promptMessages());
       reply = generated.text;
       renderReply(generated.answer, generated.reasoning, reply);
+      addMetrics(generated.answer, generated.metrics);
     }
     history.push({ role: "assistant", content: reply });
     saveActiveSession();

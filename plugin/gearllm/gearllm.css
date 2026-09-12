@@ -81,6 +81,7 @@ h2 { font-size: 22px; }
 .message.reasoning summary { cursor: pointer; font-weight: 700; }
 .message.reasoning pre { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 .message.error { color: #fecaca; background: #451e29; border-color: #8e3348; }
+.message-metrics { align-self: flex-start; margin-top: -9px; color: #8fa5c4; font: 11px ui-monospace, monospace; }
 
 .status { min-height: 18px; color: #9eb0cb; font-size: 13px; }
 .status[data-state="ready"] { color: #86efac; }
