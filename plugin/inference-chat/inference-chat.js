@@ -175,6 +175,11 @@ async function startNewChat() {
 async function boot() {
   try {
     await GearShell.subscribe("inference.event");
+    await GearShell.subscribe("inference.status");
+    GearShell.on("inference.status", (nextStatus) => {
+      elements.modelLabel.textContent = modelLabel(nextStatus);
+      if (!sending) setStatus(nextStatus.state === "ready" ? "Ready" : nextStatus.state, nextStatus.state);
+    });
     await populateModels();
     const status = await refreshStatus();
     if (status.model?.id) {
@@ -182,10 +187,6 @@ async function boot() {
       elements.model.value = selectedModel;
       await ensureSession();
     }
-    GearShell.on("inference.status", (nextStatus) => {
-      elements.modelLabel.textContent = modelLabel(nextStatus);
-      if (!sending) setStatus(nextStatus.state === "ready" ? "Ready" : nextStatus.state, nextStatus.state);
-    });
   } catch (error) {
     setStatus(error?.message || String(error), "error");
   }

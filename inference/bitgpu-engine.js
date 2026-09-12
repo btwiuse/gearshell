@@ -200,6 +200,8 @@ async function bootBitgpuEngine(modelId, model, options) {
   // shape IndexBonsai27B expects.
   const runtimeOptions = {
     ...options,
+    file: model.ggufFile,
+    maxLength: model.ctx,
     onProgress,
   };
   const runtimeChat = await IndexBonsai27B.load(modelId, runtimeOptions);

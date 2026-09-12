@@ -41,7 +41,7 @@ export class ChatSession {
     const streamOptions = {
       ...this.generation,
       ...options,
-      signal: compositeSignal,
+      signal: compositeSignal.signal,
     };
     try {
       for await (const event of this.host.engine.streamTurn(messages, streamOptions)) {

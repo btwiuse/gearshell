@@ -177,7 +177,8 @@ async function handleCreateSession(requestId, { model, options }) {
   }
   const session = registry.create({
     model: engineModel,
-    options: options ?? {},
+    systemPrompt: options?.systemPrompt,
+    generation: options?.generation,
   });
   postPush(PUSH.STATUS, { state: nextState() });
   postReply(requestId, {
