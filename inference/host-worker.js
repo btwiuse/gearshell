@@ -211,8 +211,7 @@ async function handleSend(requestId, { sessionId, messages, options }) {
 }
 
 function handleAbort(requestId, { sessionId } = {}) {
-  // Per-session abort controllers aren't tracked yet. The consumer's
-  // AbortSignal flows through session.send() and surfaces upstream.
+  registry.get(sessionId)?.abort();
   if (requestId !== undefined) postReply(requestId, { type: "ok", result: { ok: true } });
 }
 
@@ -223,6 +222,7 @@ function handleReset(requestId, { sessionId }) {
 
 function handleCloseSession(requestId, { sessionId }) {
   const dropped = registry.drop(sessionId);
+  postPush(PUSH.STATUS, { state: nextState() });
   postReply(requestId, { type: "ok", result: { dropped } });
 }
 

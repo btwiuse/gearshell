@@ -34,6 +34,30 @@ export const IFRAME_PLUGINS = [
     },
   },
   {
+    id: "inference-chat",
+    name: "Inference Chat",
+    version: "1.0.0",
+    icon: "MessageCircle",
+    iframe: {
+      src: "/plugin/inference-chat/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    permissions: {
+      api: [
+        "inference.list",
+        "inference.status",
+        "inference.load",
+        "inference.createSessionInfo",
+        "inference.send",
+        "inference.abort",
+        "inference.closeSession",
+        "events.on",
+        "events.off",
+      ],
+    },
+    enabled: false,
+  },
+  {
     id: "codigo",
     name: "Codigo",
     version: "1.0.0",

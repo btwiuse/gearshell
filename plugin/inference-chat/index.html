@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inference Chat</title>
+  <link rel="stylesheet" href="/plugin/inference-chat/inference-chat.css">
+</head>
+<body>
+  <main class="chat-app">
+    <header class="chat-header">
+      <div>
+        <p class="eyebrow">LOCAL INFERENCE</p>
+        <h1>Inference Chat</h1>
+        <p id="modelLabel" class="model-label">Checking the inference host…</p>
+      </div>
+      <div class="header-actions">
+        <select id="model" aria-label="Inference model"></select>
+        <button id="loadModel" class="ghost" type="button">Load</button>
+        <button id="newChat" class="ghost" type="button">New chat</button>
+        <button id="stop" class="ghost" type="button" disabled>Stop</button>
+      </div>
+    </header>
+
+    <section id="messages" class="messages" aria-live="polite">
+      <div class="empty-state">
+        <h2>Chat with the resident model</h2>
+        <p>The model loads in the GearShell inference host and stays available across this panel.</p>
+      </div>
+    </section>
+
+    <p id="status" class="status" data-state="idle">Idle</p>
+    <form id="composer" class="composer">
+      <textarea id="prompt" rows="1" placeholder="Message the local model" aria-label="Message the local model" disabled></textarea>
+      <button id="send" class="send" type="submit" disabled>Send</button>
+    </form>
+  </main>
+  <script src="/plugin/gear-bridge.js"></script>
+  <script type="module" src="/plugin/inference-chat/inference-chat.js"></script>
+</body>
+</html>

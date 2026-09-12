@@ -96,6 +96,10 @@ function onHostMessage(message) {
         try { fn(message.event); } catch {}
       }
     }
+    onEvent("inference.event", {
+      sessionId: message.sessionId,
+      event: message.event,
+    });
     return;
   }
   if (message.type === PUSH.PROGRESS) {
@@ -280,9 +284,33 @@ export const inferenceApi = {
     return callHost(REQUEST.UNLOAD, {});
   },
 
+  createSessionInfo(options = {}) {
+    return callHost(REQUEST.CREATE_SESSION, {
+      model: options.model,
+      options,
+    });
+  },
+
+  send(sessionId, messages, options = {}) {
+    return callHost(REQUEST.SEND, { sessionId, messages, options });
+  },
+
+  abort(sessionId) {
+    return callHost(REQUEST.ABORT, { sessionId });
+  },
+
+  reset(sessionId) {
+    return callHost(REQUEST.RESET, { sessionId });
+  },
+
+  closeSession(sessionId) {
+    sessionStreams.delete(sessionId);
+    return callHost(REQUEST.CLOSE_SESSION, { sessionId });
+  },
+
   async createSession(options = {}) {
-    const { id, model, contextLength } = await callHost(REQUEST.CREATE_SESSION, { options });
-    return new RemoteSession({ id, model, contextLength });
+    const session = await this.createSessionInfo(options);
+    return new RemoteSession(session);
   },
 };
 

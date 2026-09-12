@@ -31,10 +31,19 @@ interface InferenceApi {
   // Sessions (one model in VRAM, up to 4 concurrent chat sessions)
   createSession(options?: CreateSessionOptions): Promise<Session>;
 
+  // JSON-only controls for iframe plugins. These use the same host session,
+  // but keep functions and AsyncIterables out of the postMessage bridge.
+  createSessionInfo(options?: CreateSessionOptions): Promise<SessionInfo>;
+  send(sessionId: number, messages: ChatMessage[], options?: GenerateOptions): Promise<{ ok: true }>;
+  abort(sessionId: number): Promise<{ ok: true }>;
+  reset(sessionId: number): Promise<{ ok: true }>;
+  closeSession(sessionId: number): Promise<{ dropped: boolean }>;
+
   // Events (best-effort, browser-only; iframe plugin subscribers go
   // through the postMessage bridge)
   inference.status   // {state, model, sessions} on every state transition
   inference.progress // {modelId, progress} during a background load
+  inference.event    // {sessionId, event} for iframe-safe stream delivery
 }
 
 interface ModelSummary {

@@ -25,6 +25,7 @@ export class ChatSession {
     this.messages = [];
     this.lastUsedAt = performance.now();
     this.aborted = false;
+    this.activeAbort = null;
   }
 
   setMessages(messages) {
@@ -35,6 +36,7 @@ export class ChatSession {
   async *send(messages, options = {}) {
     this.lastUsedAt = performance.now();
     const abort = new AbortController();
+    this.activeAbort = abort;
     const compositeSignal = composeSignals(abort.signal, options.signal);
     const streamOptions = {
       ...this.generation,
@@ -47,8 +49,13 @@ export class ChatSession {
         yield event;
       }
     } finally {
+      this.activeAbort = null;
       compositeSignal.dispose();
     }
+  }
+
+  abort() {
+    this.activeAbort?.abort();
   }
 
   pushToolResult() {
@@ -64,6 +71,7 @@ export class ChatSession {
 
   close() {
     this.aborted = true;
+    this.abort();
   }
 }
 
