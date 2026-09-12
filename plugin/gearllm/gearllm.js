@@ -6,7 +6,7 @@ const ui = {
   send: $("send"), stop: $("stop"), status: $("status"), newChat: $("newChat"), think: $("think"),
   sessionList: $("sessionList"), sessionCount: $("sessionCount"),
 };
-const TOOL_PROTOCOL = `When a workspace tool is needed, respond only with this XML:\n<function=read>\n<parameter=path>PATH</parameter>\n</function>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</function>\n<function=bash>\n<parameter=command>COMMAND</parameter>\n<parameter=cwd>OPTIONAL_DIRECTORY</parameter>\n</function>\nDo not add prose before or after a tool call. Do not invent tool results.`;
+const TOOL_PROTOCOL = `The only callable function names are read, grep, and bash. Shell commands such as ls, cat, pwd, whoami, or id are NOT functions: call bash with the command in its command parameter. Never emit <function=ls>, <function=cat>, or any other function name.\n\nWhen a workspace tool is needed, respond only with one of these XML forms:\n<function=read>\n<parameter=path>PATH</parameter>\n</function>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</function>\n<function=bash>\n<parameter=command>COMMAND</parameter>\n<parameter=cwd>OPTIONAL_DIRECTORY</parameter>\n</function>\nDo not add prose before or after a tool call. Do not invent tool results.`;
 let session = null;
 let modelId = null;
 let history = [];
