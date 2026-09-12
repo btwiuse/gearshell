@@ -15,6 +15,7 @@ let activeSessionId = null;
 let ready = false;
 let sending = false;
 let thinkEnabled = false;
+let composing = false;
 
 function status(text, state = "idle") {
   ui.status.textContent = text;
@@ -434,8 +435,12 @@ ui.composer.addEventListener("submit", (event) => {
   ui.prompt.value = "";
   ensureSession().then(() => sendTurn(text));
 });
+ui.prompt.addEventListener("compositionstart", () => { composing = true; });
+ui.prompt.addEventListener("compositionend", () => { composing = false; });
 ui.prompt.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ui.composer.requestSubmit(); }
+  if (event.key !== "Enter" || event.shiftKey || composing || event.isComposing) return;
+  event.preventDefault();
+  ui.composer.requestSubmit();
 });
 ui.model.addEventListener("change", () => {
   if (sending) return;
