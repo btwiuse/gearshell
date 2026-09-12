@@ -670,9 +670,7 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
     };
     doConnect();
     return () => {
-      abortRef.current?.();
       for (const [topic, handler] of externalEvents) GearShell.off(topic, handler);
-      if (externalSessionRef.current) external?.dispose(externalSessionRef.current).catch(() => {});
       term.dispose();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
