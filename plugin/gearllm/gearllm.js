@@ -2,11 +2,11 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   messages: $("messages"), model: $("model"), load: $("loadModel"),
   modelStatus: $("modelStatus"), system: $("systemPrompt"), read: $("readTool"),
-  grep: $("grepTool"), bash: $("bashTool"), prompt: $("prompt"), composer: $("composer"),
+  grep: $("grepTool"), panels: $("panelsTool"), bash: $("bashTool"), prompt: $("prompt"), composer: $("composer"),
   send: $("send"), stop: $("stop"), status: $("status"), newChat: $("newChat"), think: $("think"),
   sessionList: $("sessionList"), sessionCount: $("sessionCount"),
 };
-const TOOL_PROTOCOL = `The only callable function names are read, grep, and bash. Shell commands such as ls, cat, pwd, whoami, or id are NOT functions: call bash with the command in its command parameter. Never emit <function=ls>, <function=cat>, or any other function name.\n\nWhen a workspace tool is needed, respond only with one of these XML forms:\n<function=read>\n<parameter=path>PATH</parameter>\n</function>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</function>\n<function=bash>\n<parameter=command>COMMAND</parameter>\n<parameter=cwd>OPTIONAL_DIRECTORY</parameter>\n</function>\nDo not add prose before or after a tool call. Do not invent tool results.`;
+const TOOL_PROTOCOL = `The only callable function names are read, grep, panels, and bash. Shell commands such as ls, cat, pwd, whoami, or id are NOT functions: call bash with the command in its command parameter. Never emit <function=ls>, <function=cat>, or any other function name.\n\nWhen a workspace tool is needed, respond only with one of these XML forms:\n<function=read>\n<parameter=path>PATH</parameter>\n</function>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</function>\n<function=panels>\n<parameter=action>list|open|focus|close</parameter>\n<parameter=component>PANEL_COMPONENT_FOR_OPEN</parameter>\n<parameter=id>PANEL_ID_FOR_FOCUS_OR_CLOSE</parameter>\n<parameter=direction>OPTIONAL: left|right|above|below</parameter>\n</function>\n<function=bash>\n<parameter=command>COMMAND</parameter>\n<parameter=cwd>OPTIONAL_DIRECTORY</parameter>\n</function>\nFor panels: list returns open panes; open requires a component such as files, terminal, settings, browser, gearllm, or inference-chat; focus and close require an id returned by list. Do not add prose before or after a tool call. Do not invent tool results.`;
 let session = null;
 let modelId = null;
 let history = [];
@@ -174,6 +174,7 @@ function activeTools() {
   const tools = [];
   if (ui.read.checked) tools.push("read");
   if (ui.grep.checked) tools.push("grep");
+  if (ui.panels.checked) tools.push("panels");
   if (ui.bash.checked) tools.push("bash");
   return tools;
 }
@@ -186,7 +187,7 @@ function promptMessages() {
 }
 
 function extractToolCall(text) {
-  const match = text.match(/<function=(read|grep|bash)>[\s\S]*?(?:<\/function>|<\/tool_call>|$)/i);
+  const match = text.match(/<function=(read|grep|panels|bash)>[\s\S]*?(?:<\/function>|<\/tool_call>|$)/i);
   if (!match || !activeTools().includes(match[1])) return null;
   const args = {};
   for (const entry of match[0].matchAll(/<parameter=(\w+)>([\s\S]*?)(?:<\/parameter>|(?=<parameter=)|<\/function>|$)/gi)) {
@@ -211,7 +212,26 @@ async function listWorkspace(path = ".", depth = 0, out = []) {
   return out;
 }
 
+async function runPanelsTool(args) {
+  const action = String(args.action || "").toLowerCase();
+  if (action === "list") return JSON.stringify(await GearShell.panels.list(), null, 2);
+  if (action === "open") {
+    const component = args.component;
+    if (!component) throw new Error("panels open requires component");
+    return JSON.stringify(await GearShell.panels.open(component, {
+      ...(args.direction ? { direction: args.direction } : {}),
+    }));
+  }
+  if (action === "focus" || action === "close") {
+    const id = args.id;
+    if (!id) throw new Error(`panels ${action} requires id`);
+    return JSON.stringify(await GearShell.panels[action](id));
+  }
+  throw new Error("panels action must be list, open, focus, or close");
+}
+
 async function runTool(call) {
+  if (call.name === "panels") return runPanelsTool(call.args);
   if (call.name === "bash") {
     const command = call.args.command;
     if (!command) throw new Error("bash requires command");

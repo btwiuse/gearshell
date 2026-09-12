@@ -25,6 +25,7 @@
         <div class="section-title"><span>Tools</span><span class="badge">Agent mode</span></div>
         <label class="tool-card"><input id="readTool" type="checkbox"><span><strong>Read files</strong><small>Read a file, or list a directory.</small><code>read(path)</code></span></label>
         <label class="tool-card"><input id="grepTool" type="checkbox"><span><strong>Search workspace</strong><small>Search readable workspace files by pattern.</small><code>grep(pattern, path?)</code></span></label>
+        <label class="tool-card"><input id="panelsTool" type="checkbox"><span><strong>Manage panes</strong><small>List, open, focus, or close GearShell panes.</small><code>panels(action, component?, id?)</code></span></label>
         <label class="tool-card tool-card-danger"><input id="bashTool" type="checkbox"><span><strong>Run Bash</strong><small>Run a command in the GearShell sandbox and return its output.</small><code>bash(command, cwd?)</code></span></label>
         <p class="tool-help">Tools run only after the model emits a call. Bash runs in the sandbox, but can read and modify its workspace, so enable it only for tasks you trust.</p>
       </section>
