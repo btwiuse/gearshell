@@ -23,7 +23,7 @@
 
 import { listModels } from "./inference/manifest.js";
 import { REQUEST, PUSH } from "./inference/protocol.js";
-import { on as onEvent, off as offEvent } from "./workspace-events.js";
+import { emit } from "./workspace-events.js";
 
 const HOST_URL = new URL("./inference/host-worker.js", import.meta.url);
 
@@ -96,7 +96,7 @@ function onHostMessage(message) {
         try { fn(message.event); } catch {}
       }
     }
-    onEvent("inference.event", {
+    emit("inference.event", {
       sessionId: message.sessionId,
       event: message.event,
     });
@@ -106,7 +106,7 @@ function onHostMessage(message) {
     // Background loads (from init or earlier bootstrap) don't have a
     // pending request id; surface progress as an event so the shell
     // can render a loader. Tagged with the model id from the message.
-    onEvent("inference.progress", message);
+    emit("inference.progress", message);
     return;
   }
   if (message.type === PUSH.STATUS) {
@@ -119,7 +119,7 @@ function onHostMessage(message) {
       // preserve the existing model/sessions and just update state.
       hostState = { ...hostState, state: message.state };
     }
-    onEvent("inference.status", hostState);
+    emit("inference.status", hostState);
     return;
   }
   if (typeof message.id === "number") {
