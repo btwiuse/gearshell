@@ -376,6 +376,7 @@ function assertBodyWithinLimit(src, headIndex, name, label, file) {
 }
 const RULE_GENERATED_FILES = new Set([
   "inference/runtime.js",
+  "inference/gemma-runtime.js",
   "plugin/gearshell-docs/docs-app.js",
   "plugin/notes/notes-store.js",
   "plugin/spotlight/spotlight-overlay.js",

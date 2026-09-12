@@ -18,6 +18,15 @@ const BITGPU_MODEL_BASE =
 // GGUFs use fromGguf() at load time instead.
 export const MODELS = [
   Object.freeze({
+    id: "google/gemma-4-E2B-it-qat-mobile-transformers",
+    label: "Gemma 4 E2B",
+    description: "Google Gemma 4 E2B mobile model with a 128K context window.",
+    size: 2_458_111_846,
+    ctx: 131_072,
+    runtime: "gemma",
+    defaultGeneration: Object.freeze({ temperature: 0.7, topP: 0.95 }),
+  }),
+  Object.freeze({
     id: "prism-ml/Bonsai-27B-gguf",
     label: "Bonsai 27B",
     description:

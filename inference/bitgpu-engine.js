@@ -48,6 +48,7 @@ import {
   DEFAULT_MODEL_ID,
   BonsaiResolveGGUFUrl as resolveGGUFUrl,
 } from "./runtime.js";
+import { Gemma4Mobile } from "./gemma-runtime.js";
 import {
   getModel,
 } from "./manifest.js";
@@ -87,7 +88,7 @@ function createProgressReporter(onProgress) {
 // Bonsai27B exposes from the plugin's adapter. The translation
 // lives in streamNativeEvents() below.
 export class BitgpuChat {
-  constructor(runtimeChat, defaultGeneration = {}) {
+  constructor(runtimeChat, defaultGeneration = {}, runtimeType = "bonsai") {
     this.runtimeChat = runtimeChat;
     this.contextLength = runtimeChat.contextLength;
     this.contextFull = false;
@@ -96,6 +97,7 @@ export class BitgpuChat {
     this.thinkOpenTokenId = runtimeChat.thinkOpenTokenId ?? null;
     this.thinkCloseTokenId = runtimeChat.thinkCloseTokenId ?? null;
     this.runtime = runtimeChat.runtime;
+    this.runtimeType = runtimeType;
     this.defaultGeneration = defaultGeneration;
   }
 
@@ -113,6 +115,10 @@ export class BitgpuChat {
   // plugin/bonsai/src/model/adapter.js:69-97 — the plugin made the
   // same shape change in commit 4cd0869.
   prepareOptions(options) {
+    if (this.runtimeType === "gemma") {
+      const { think, chatTemplateArgs: _cta, ...rest } = options;
+      return { ...rest, enableThinking: think === true };
+    }
     const chatTemplateArgs = {
       ...this.runtimeChat.chatTemplateArgs,
     };
@@ -141,7 +147,9 @@ export class BitgpuChat {
     const prepared = this.prepareOptions(options);
     const merged = { ...this.defaultGeneration, ...prepared };
     const previousTemplateArgs = this.runtimeChat.chatTemplateArgs;
-    this.runtimeChat.chatTemplateArgs = prepared.chatTemplateArgs;
+    if (prepared.chatTemplateArgs) {
+      this.runtimeChat.chatTemplateArgs = prepared.chatTemplateArgs;
+    }
     try {
       for await (
         const event of streamNativeEvents(this.runtimeChat, messages, merged)
@@ -169,7 +177,9 @@ export class BitgpuChat {
       }
       throw error;
     } finally {
-      this.runtimeChat.chatTemplateArgs = previousTemplateArgs;
+      if (prepared.chatTemplateArgs) {
+        this.runtimeChat.chatTemplateArgs = previousTemplateArgs;
+      }
     }
   }
 }
@@ -220,7 +230,7 @@ export async function createEngineFor(modelId, options = {}) {
     modelId, model, options,
   );
   onProgress({ status: "ready", message: "Ready", fraction: 1 });
-  return new BitgpuChat(runtimeChat, defaultGeneration);
+  return new BitgpuChat(runtimeChat, defaultGeneration, model.runtime);
 }
 
 // Load the GGUF + tokenizer and return the raw runtime chat. Split
@@ -228,16 +238,14 @@ export async function createEngineFor(modelId, options = {}) {
 // 50-line rule.
 async function bootBitgpuEngine(modelId, model, options) {
   const onProgress = createProgressReporter(options.onProgress ?? (() => {}));
-  // The vendored runtime's loader accepts the same `onProgress` shape
-  // the plugin's adapter passes — convert our flat shape into the
-  // shape IndexBonsai27B expects.
   const runtimeOptions = {
     ...options,
     file: model.ggufFile,
     maxLength: model.ctx,
     onProgress,
   };
-  const runtimeChat = await IndexBonsai27B.load(modelId, runtimeOptions);
+  const runtime = model.runtime === "gemma" ? Gemma4Mobile : IndexBonsai27B;
+  const runtimeChat = await runtime.load(model.runtime === "gemma" ? null : modelId, runtimeOptions);
   return {
     runtimeChat,
     defaultGeneration: model.defaultGeneration ?? {},
