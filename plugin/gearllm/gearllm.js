@@ -279,19 +279,21 @@ async function sendTurn(text) {
   try {
     let generated = await generate(promptMessages());
     let reply = generated.text;
-    renderReply(generated.answer, generated.reasoning, reply);
-    addMetrics(generated.answer, generated.metrics);
-    const call = extractToolCall(reply);
-    if (call) {
+    for (let round = 0; round < 3; round += 1) {
+      renderReply(generated.answer, generated.reasoning, reply);
+      addMetrics(generated.answer, generated.metrics);
+      const call = extractToolCall(reply);
+      if (!call) break;
       const toolCard = addMessage("tool", `Using ${call.name}…`);
       const result = await runTool(call);
       toolCard.textContent = `${call.name} result\n${result.slice(0, 12000)}`;
       history.push({ role: "assistant", content: reply });
-      history.push({ role: "user", content: `Tool result for ${call.name}:\n${result}\n\nNow answer the user's request using this result. Do not call another tool.` });
+      history.push({
+        role: "user",
+        content: `Tool result for ${call.name}:\n${result}\n\nContinue the original task. You may call another enabled tool if needed.`,
+      });
       generated = await generate(promptMessages());
       reply = generated.text;
-      renderReply(generated.answer, generated.reasoning, reply);
-      addMetrics(generated.answer, generated.metrics);
     }
     history.push({ role: "assistant", content: reply });
     saveActiveSession();
