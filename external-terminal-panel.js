@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import htm from "htm";
+import { getDockviewApi } from "./app-panels-store.js";
 import { mountTerminal } from "./plugin/terminal-mount.mjs";
 import {
   disposeExternalTerminal,
@@ -32,12 +33,22 @@ export function ExternalTerminalPanel({ params }) {
   useEffect(() => {
     if (!anchor.current) return;
     let handle;
+    let offActive;
     mountTerminal(anchor.current, externalSession(params.sessionId), {
       terminal: { fontSize: 14, theme: { background: "#0b1120" } },
       exitMessage: false,
-      onExit: (payload) => { anchor.current.textContent = payload?.error || "Connection closed."; },
-    }).then((mounted) => { handle = mounted; }).catch(() => {});
-    return () => handle?.dispose();
+    }).then((mounted) => {
+      handle = mounted;
+      const focus = () => requestAnimationFrame(() => mounted.term.focus());
+      offActive = getDockviewApi()?.onDidActivePanelChange((event) => {
+        if (event.panel?.params?.sessionId === params.sessionId) focus();
+      });
+      focus();
+    }).catch(() => {});
+    return () => {
+      offActive?.dispose?.();
+      handle?.dispose();
+    };
   }, [params.sessionId]);
   const respond = (value) => {
     respondExternalTerminalPrompt(params.sessionId, value);

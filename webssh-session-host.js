@@ -7,6 +7,7 @@ import {
   waitForExternalTerminalSize,
   pushExternalTerminalEvent,
   setExternalTerminalDispose,
+  setExternalTerminalReconnect,
   writeExternalTerminal,
 } from "./external-terminal-sessions.js";
 
@@ -52,7 +53,15 @@ export async function startWebSshSession(sessionId, config) {
     if (message?.type === "output") writeExternalTerminal(sessionId, message.data);
     if (message?.type === "prompt") relayPrompt(worker, sessionId, message);
     if (message?.type === "hostKey" && message.trusted) trustHostKey(message.fingerprint);
-    if (message?.type === "exit") exitExternalTerminal(sessionId, message.payload);
+    if (message?.type === "exit") {
+      const reason = message.payload?.error || "Connection closed.";
+      writeExternalTerminal(sessionId, `\r\n\x1b[33m${reason}\x1b[0m\r\nPress any key to reconnect...\r\n`);
+      setExternalTerminalReconnect(sessionId, () => {
+        dispose();
+        startWebSshSession(sessionId, config).catch(() => {});
+      });
+      exitExternalTerminal(sessionId, message.payload);
+    }
   });
   worker.postMessage({
     type: "start",

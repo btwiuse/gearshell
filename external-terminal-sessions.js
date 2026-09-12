@@ -17,6 +17,7 @@ export function createExternalTerminal({ source, origin, title }) {
     output: new Set(),
     outputBuffer: [],
     exit: new Set(),
+    reconnect: null,
     input: new Set(),
     resize: new Set(),
     size: null,
@@ -51,6 +52,13 @@ export function exitExternalTerminal(sessionId, payload = {}) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
   for (const listener of entry.exit) listener(payload);
+  return true;
+}
+
+export function setExternalTerminalReconnect(sessionId, reconnect) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  entry.reconnect = reconnect;
   return true;
 }
 
@@ -102,6 +110,10 @@ export function pushExternalTerminalEvent(sessionId, topic, payload) {
   return true;
 }
 
+export function notifyExternalTerminal(sessionId, notification) {
+  return pushExternalTerminalEvent(sessionId, "terminal.external.notification", notification);
+}
+
 export function onExternalTerminalInput(sessionId, listener) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return () => {};
@@ -127,6 +139,12 @@ export function waitForExternalTerminalSize(sessionId) {
 export function sendExternalTerminalInput(sessionId, data) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
+  if (entry.reconnect) {
+    const reconnect = entry.reconnect;
+    entry.reconnect = null;
+    reconnect();
+    return true;
+  }
   for (const listener of entry.input) listener(data);
   return true;
 }

@@ -1345,10 +1345,6 @@ function App() {
     connectionsRef.current = [...connectionsRef.current, entry];
     setConnections(connectionsRef.current);
     saveTabs(connectionsRef.current);
-    if (activate) {
-      setActiveConnectionId(id);
-      location.hash = `#${id}`;
-    }
   }
 
   function closeConnection(connId) {
@@ -1412,7 +1408,7 @@ function App() {
         </a>
 
         <!-- Connection tabs -->
-        ${connections.length > 0 && html`
+        ${false && connections.length > 0 && html`
           <div class="flex-1 flex items-center gap-0.5 overflow-x-auto min-w-0" style=${{ scrollbarWidth: 'none' }}>
             ${connections.map(c => {
               const statusEmoji = c.status === 'connected' ? ICON.connected : c.status === 'connecting' ? ICON.connecting : ICON.disconnected;
