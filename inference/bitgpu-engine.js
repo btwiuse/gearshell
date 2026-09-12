@@ -137,6 +137,8 @@ export class BitgpuChat {
     this.lastAssistantContent = null;
     const prepared = this.prepareOptions(options);
     const merged = { ...this.defaultGeneration, ...prepared };
+    const previousTemplateArgs = this.runtimeChat.chatTemplateArgs;
+    this.runtimeChat.chatTemplateArgs = prepared.chatTemplateArgs;
     try {
       for await (
         const event of streamNativeEvents(this.runtimeChat, messages, merged)
@@ -158,6 +160,8 @@ export class BitgpuChat {
         this.contextFull = true;
       }
       throw error;
+    } finally {
+      this.runtimeChat.chatTemplateArgs = previousTemplateArgs;
     }
   }
 }
