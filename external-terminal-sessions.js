@@ -17,14 +17,24 @@ export function createExternalTerminal({ source, origin, title }) {
     output: new Set(),
     outputBuffer: [],
     exit: new Set(),
+    input: new Set(),
+    resize: new Set(),
     prompt: new Set(),
     pendingPrompt: null,
+    dispose: null,
   });
   return sessions.get(sessionId);
 }
 
 export function getExternalTerminal(sessionId) {
   return sessions.get(sessionId) ?? null;
+}
+
+export function setExternalTerminalDispose(sessionId, dispose) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  entry.dispose = dispose;
+  return true;
 }
 
 export function writeExternalTerminal(sessionId, data) {
@@ -83,17 +93,31 @@ export function onExternalTerminalPrompt(sessionId, listener) {
   return () => entry.prompt.delete(listener);
 }
 
+export function onExternalTerminalInput(sessionId, listener) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return () => {};
+  entry.input.add(listener);
+  return () => entry.input.delete(listener);
+}
+
+export function onExternalTerminalResize(sessionId, listener) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return () => {};
+  entry.resize.add(listener);
+  return () => entry.resize.delete(listener);
+}
+
 export function sendExternalTerminalInput(sessionId, data) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
-  push(entry, "terminal.external.data", { sessionId, data });
+  for (const listener of entry.input) listener(data);
   return true;
 }
 
 export function resizeExternalTerminal(sessionId, cols, rows, xpixel, ypixel) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
-  push(entry, "terminal.external.resize", { sessionId, cols, rows, xpixel, ypixel });
+  for (const listener of entry.resize) listener({ cols, rows, xpixel, ypixel });
   return true;
 }
 
@@ -101,6 +125,7 @@ export function disposeExternalTerminal(sessionId) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
   entry.pendingPrompt?.resolve(null);
+  entry.dispose?.();
   push(entry, "terminal.external.close", { sessionId });
   sessions.delete(sessionId);
   return true;

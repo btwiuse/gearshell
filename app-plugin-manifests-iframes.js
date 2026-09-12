@@ -32,6 +32,7 @@ export const IFRAME_PLUGINS = [
     permissions: {
       api: [
         "terminal.external.create",
+        "terminal.external.startWebSsh",
         "terminal.external.write",
         "terminal.external.exit",
         "terminal.external.prompt",

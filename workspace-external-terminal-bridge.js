@@ -1,12 +1,16 @@
 import { getDockviewApi } from "./app-panels-store.js";
 import { permitsPath } from "./plugins-scope.js";
 import { addPanelByComponent } from "./panels.js";
+import { startWebSshSession } from "./webssh-session-host.js";
 import {
   createExternalTerminal,
   disposeExternalTerminal,
   exitExternalTerminal,
+  onExternalTerminalInput,
+  onExternalTerminalResize,
   promptExternalTerminal,
   respondExternalTerminalPrompt,
+  setExternalTerminalDispose,
   writeExternalTerminal,
 } from "./external-terminal-sessions.js";
 
@@ -33,6 +37,17 @@ function createTerminal(event) {
     title: entry.title,
   });
   reply(event, { id: gear.id, ok: true, result: { sessionId: entry.sessionId, panelId: panel?.id } });
+}
+
+function startWebSshTerminal(event) {
+  const { id, args } = event.data.gear;
+  const [sessionId, config] = args || [];
+  try {
+    startWebSshSession(sessionId, config || {});
+    reply(event, { id, ok: true });
+  } catch (error) {
+    reply(event, { id, ok: false, error: error?.message || String(error) });
+  }
 }
 
 function writeTerminal(event) {
@@ -81,6 +96,7 @@ export function dispatchExternalTerminalCall(event, plugin) {
   if (!requireTerminal(event, plugin, method)) return;
   const action = method.slice("terminal.external.".length);
   if (action === "create") return createTerminal(event);
+  if (action === "startWebSsh") return startWebSshTerminal(event);
   if (action === "write") return writeTerminal(event);
   if (action === "exit") return exitTerminal(event);
   if (action === "prompt") return promptTerminal(event);

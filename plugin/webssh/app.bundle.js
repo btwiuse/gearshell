@@ -555,8 +555,21 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
       if (cancel) return;
 
       try {
-        await externalReady;
-        const remote    = await getAliveWorker();
+        const sessionId = await externalReady;
+        if (sessionId) {
+          await external.startWebSsh(sessionId, {
+            pipingServerUrl,
+            username,
+            agentForwarding,
+            authKeySets,
+            rows: externalSizeRef.current?.rows || term.rows,
+            cols: externalSizeRef.current?.cols || term.cols,
+          });
+          setConnState('connected');
+          onConnected?.();
+          return;
+        }
+        const remote = await getAliveWorker();
         const transfers = [transport.readable, transport.writable, termReadable, mc.port2];
         await remote.doSsh(
           Comlink.transfer({
