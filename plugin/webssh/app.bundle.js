@@ -409,6 +409,7 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
   const termApi  = useRef(null);
   const wrapperRef = useRef(null);
   const externalSessionRef = useRef(null);
+  const externalSizeRef = useRef(null);
   const mcRef = useRef(null);
   const abortRef = useRef(null);
   const [connState, setConnState] = useState('connecting');
@@ -452,9 +453,9 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
         if (payload.sessionId === externalSessionRef.current) externalInput?.enqueue(payload.data);
       };
       const onResize = (payload) => {
-        if (payload.sessionId === externalSessionRef.current) {
-          mcRef.current?.port1.postMessage({ ...payload, type: 'resize' });
-        }
+        if (payload.sessionId !== externalSessionRef.current) return;
+        externalSizeRef.current = payload;
+        mcRef.current?.port1.postMessage({ ...payload, type: 'resize' });
       };
       const onClose = (payload) => {
         if (payload.sessionId === externalSessionRef.current) abortRef.current?.();
@@ -496,6 +497,9 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
       let kiTried = false;
       const mc = new MessageChannel();
       mcRef.current = mc;
+      if (externalSizeRef.current) {
+        mc.port1.postMessage({ ...externalSizeRef.current, type: 'resize' });
+      }
 
       // WebSocketStream transport
       let cancel = false;
@@ -554,7 +558,8 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
         await remote.doSsh(
           Comlink.transfer({
             transport, termReadable, agentForwarding,
-            initialRows: term.rows, initialCols: term.cols,
+            initialRows: externalSizeRef.current?.rows || term.rows,
+            initialCols: externalSizeRef.current?.cols || term.cols,
             username,
             messagePort: mc.port2,
             authKeySets,
