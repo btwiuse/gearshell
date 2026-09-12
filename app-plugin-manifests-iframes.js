@@ -34,6 +34,32 @@ export const IFRAME_PLUGINS = [
     },
   },
   {
+    id: "gearllm",
+    name: "GearLLM",
+    version: "1.0.0",
+    icon: "BotMessageSquare",
+    iframe: {
+      src: "/plugin/gearllm/index.html",
+      allow: "clipboard-read; clipboard-write",
+    },
+    permissions: {
+      api: [
+        "inference.list",
+        "inference.status",
+        "inference.load",
+        "inference.createSessionInfo",
+        "inference.send",
+        "inference.abort",
+        "inference.closeSession",
+        "fs.readDir",
+        "fs.readFileText",
+        "events.on",
+        "events.off",
+      ],
+    },
+    enabled: false,
+  },
+  {
     id: "inference-chat",
     name: "Inference Chat",
     version: "1.0.0",

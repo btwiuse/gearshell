@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GearLLM</title>
+  <link rel="stylesheet" href="/plugin/gearllm/gearllm.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">G</span><div><h1>GearLLM</h1><p>GearShell-native agent chat</p></div></div>
+      <button id="newChat" class="new-chat" type="button">+ New chat</button>
+      <section class="sidebar-section">
+        <label for="model">Model</label>
+        <select id="model" aria-label="Inference model"></select>
+        <button id="loadModel" class="secondary" type="button">Load selected model</button>
+        <p id="modelStatus" class="model-status">Checking inference host…</p>
+      </section>
+      <section class="sidebar-section">
+        <div class="section-title"><span>Workspace tools</span><span class="badge">Agent mode</span></div>
+        <label class="tool-toggle"><input id="readTool" type="checkbox"><span>Read files</span></label>
+        <label class="tool-toggle"><input id="grepTool" type="checkbox"><span>Search workspace</span></label>
+        <p class="tool-help">Tools are constrained to read-only workspace files. GearLLM asks before no write action because it has no write permission.</p>
+      </section>
+      <section class="sidebar-section">
+        <label for="systemPrompt">System prompt</label>
+        <textarea id="systemPrompt" rows="6">You are GearLLM, a helpful local assistant running in GearShell. Be concise, accurate, and use workspace tools only when they help answer the request.</textarea>
+      </section>
+    </aside>
+    <section class="chat-shell">
+      <header class="chat-header"><div><p class="eyebrow">SHARED LOCAL INFERENCE</p><h2>GearLLM</h2></div><button id="stop" class="secondary" type="button" disabled>Stop</button></header>
+      <section id="messages" class="messages" aria-live="polite"><div class="empty"><h3>Ask the shared local model</h3><p>GearLLM uses the resident GearShell inference host, rather than loading another WebGPU model.</p></div></section>
+      <p id="status" class="status" data-state="idle">Idle</p>
+      <form id="composer" class="composer"><textarea id="prompt" rows="1" placeholder="Message GearLLM" aria-label="Message GearLLM" disabled></textarea><button id="send" type="submit" disabled>Send</button></form>
+    </section>
+  </main>
+  <script src="/plugin/gear-bridge.js"></script>
+  <script type="module" src="/plugin/gearllm/gearllm.js"></script>
+</body>
+</html>
