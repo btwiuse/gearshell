@@ -22,8 +22,7 @@ import { listOverlayIframes, listPluginIframes } from "./plugins.js";
 import { on as onEvent, off as offEvent } from "./workspace-events.js";
 import { dispatchTerminalCall, dispatchVmCall } from "./workspace-terminal-bridge.js";
 
-// origin|topic -> unsubscribe fn (from workspace-events on())
-const subscriptions = new Map();
+const subscriptions = new WeakMap();
 
 // Whitelist: the sender must be the window of one of OUR iframe panels
 // (event.source is a WindowProxy, identical to the <iframe> element's
@@ -108,6 +107,15 @@ function reply(source, origin, payload) {
   }
 }
 
+function subscriptionsFor(source) {
+  let topics = subscriptions.get(source);
+  if (!topics) {
+    topics = new Map();
+    subscriptions.set(source, topics);
+  }
+  return topics;
+}
+
 function handleSubscribe(event, id, args) {
   const topic = String(args?.[0] || "");
   if (!topic) {
@@ -117,23 +125,23 @@ function handleSubscribe(event, id, args) {
       error: "subscribe requires a topic",
     });
   }
-  const key = event.origin + "|" + topic;
-  if (!subscriptions.has(key)) {
+  const topics = subscriptionsFor(event.source);
+  if (!topics.has(topic)) {
     const off = onEvent(topic, (payload) => {
       reply(event.source, event.origin, { event: { topic, payload } });
     });
-    subscriptions.set(key, off);
+    topics.set(topic, off);
   }
   reply(event.source, event.origin, { id, ok: true, result: { topic } });
 }
 
 function handleUnsubscribe(event, id, args) {
   const topic = String(args?.[0] || "");
-  const key = event.origin + "|" + topic;
-  const off = subscriptions.get(key);
+  const topics = subscriptions.get(event.source);
+  const off = topics?.get(topic);
   if (off) {
     off();
-    subscriptions.delete(key);
+    topics.delete(topic);
   }
   reply(event.source, event.origin, { id, ok: true });
 }
