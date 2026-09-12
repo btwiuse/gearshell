@@ -29,6 +29,7 @@ import {
   getPluginIcon,
   openPluginPanel,
 } from "./plugins.js";
+import { ExternalTerminalPanel } from "./external-terminal-panel.js";
 // Wagi Dog web-pet lives in its own ES module so its dependencies
 // (the pet sprite / animation engine) don't bloat the main shell
 // bundle. We load it lazily via a dynamic import so that production
@@ -148,6 +149,20 @@ function addTerminalPanel(
     profile: panelsDep("clone")(profile),
   });
   panel.api.setActive();
+}
+
+function addExternalTerminalPanel(api, group, options = {}) {
+  const sessionId = String(options.sessionId || "");
+  if (!sessionId) throw new Error("external terminal sessionId is required");
+  const panel = api.addPanel({
+    id: `external-terminal-${nextPanelIndex("external-terminal")}`,
+    component: "external-terminal",
+    params: { sessionId, panelType: "external-terminal" },
+    title: options.title || "External terminal",
+    ...(group && { position: { referenceGroup: group } }),
+  });
+  panel.api.setActive();
+  return panel;
 }
 
 // === addWorkbenchPanel ===
@@ -282,6 +297,8 @@ const PANEL_ADDERS = {
     addTerminalPanel(api, group, options?.profile),
   terminal: (api, group, options) =>
     addTerminalPanel(api, group, options?.profile),
+  "external-terminal": (api, group, options) =>
+    addExternalTerminalPanel(api, group, options),
   "workspace-task": (api, group) => addWorkspaceTaskPanel(api, group),
 };
 
@@ -353,6 +370,7 @@ export {
   addIframePanel,
   addPanelByComponent,
   addTerminalPanel,
+  ExternalTerminalPanel,
   addWorkbenchPanel,
   addWorkspaceTaskPanel,
   IframePanel,

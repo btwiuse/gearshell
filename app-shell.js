@@ -11,6 +11,7 @@ const html = htm.bind(React.createElement);
 import { DockviewReact } from "dockview-react";
 import { AddTerminalButton } from "./plugin/launcher/launcher.js";
 import {
+  ExternalTerminalPanel,
   IframePanel,
   PanelTab,
   TerminalPanel,
@@ -339,6 +340,7 @@ export const PANEL_COMPONENTS = {
   task: WorkspaceTaskPanel,
   terminal: TerminalPanel,
   console: TerminalPanel,
+  "external-terminal": ExternalTerminalPanel,
   iframe: IframePanel,
 };
 

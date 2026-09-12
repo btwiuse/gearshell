@@ -20,6 +20,26 @@ export const IFRAME_PLUGINS = [
     },
   },
   {
+    id: "webssh",
+    name: "GearSSH",
+    version: "1.0.0",
+    icon: "Terminal",
+    iframe: {
+      src: "/plugin/webssh/index.html",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+    permissions: {
+      api: [
+        "terminal.external.create",
+        "terminal.external.write",
+        "terminal.external.exit",
+        "terminal.external.dispose",
+      ],
+    },
+    enabled: false,
+  },
+  {
     id: "webllm",
     name: "WebLLM",
     version: "1.0.0",

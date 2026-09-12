@@ -1,0 +1,75 @@
+const sessions = new Map();
+let sessionCounter = 0;
+
+function push(entry, topic, payload) {
+  try {
+    entry.source.postMessage({ gear: { event: { topic, payload } } }, entry.origin);
+  } catch {}
+}
+
+export function createExternalTerminal({ source, origin, title }) {
+  const sessionId = `external-${++sessionCounter}`;
+  sessions.set(sessionId, {
+    sessionId,
+    source,
+    origin,
+    title: String(title || "External terminal"),
+    output: new Set(),
+    exit: new Set(),
+  });
+  return sessions.get(sessionId);
+}
+
+export function getExternalTerminal(sessionId) {
+  return sessions.get(sessionId) ?? null;
+}
+
+export function writeExternalTerminal(sessionId, data) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  for (const listener of entry.output) listener(data);
+  return true;
+}
+
+export function exitExternalTerminal(sessionId, payload = {}) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  for (const listener of entry.exit) listener(payload);
+  return true;
+}
+
+export function onExternalTerminalOutput(sessionId, listener) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return () => {};
+  entry.output.add(listener);
+  return () => entry.output.delete(listener);
+}
+
+export function onExternalTerminalExit(sessionId, listener) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return () => {};
+  entry.exit.add(listener);
+  return () => entry.exit.delete(listener);
+}
+
+export function sendExternalTerminalInput(sessionId, data) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  push(entry, "terminal.external.data", { sessionId, data });
+  return true;
+}
+
+export function resizeExternalTerminal(sessionId, cols, rows, xpixel, ypixel) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  push(entry, "terminal.external.resize", { sessionId, cols, rows, xpixel, ypixel });
+  return true;
+}
+
+export function disposeExternalTerminal(sessionId) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  push(entry, "terminal.external.close", { sessionId });
+  sessions.delete(sessionId);
+  return true;
+}

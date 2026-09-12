@@ -21,6 +21,7 @@ import { workspaceApi } from "./workspace-api.js";
 import { listOverlayIframes, listPluginIframes } from "./plugins.js";
 import { on as onEvent, off as offEvent } from "./workspace-events.js";
 import { dispatchTerminalCall, dispatchVmCall } from "./workspace-terminal-bridge.js";
+import { dispatchExternalTerminalCall } from "./workspace-external-terminal-bridge.js";
 
 const subscriptions = new WeakMap();
 
@@ -209,6 +210,9 @@ export function handleGearMessage(event) {
   // in-page terminal.embed is DOM-based and cannot cross postMessage).
   // Permission checking happens inside the terminal bridge. vm.* methods
   // spawn a VM in the host kernel and reuse the same session plumbing.
+  if (gear.method.startsWith("terminal.external.")) {
+    return dispatchExternalTerminalCall(event, plugin);
+  }
   if (gear.method.startsWith("terminal.")) {
     return dispatchTerminalCall(event, gear, plugin);
   }
