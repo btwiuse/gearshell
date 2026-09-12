@@ -40,6 +40,10 @@ select, textarea { width: 100%; border: 1px solid #34496c; border-radius: 8px; p
 .tool-toggle input { accent-color: #86efac; }
 .section-title { display: flex; justify-content: space-between; }
 .badge { color: #86efac; font-size: 10px; }
+.sessions-section { min-height: 0; }
+.session-list { display: grid; gap: 5px; max-height: 190px; overflow: auto; }
+.session-item { width: 100%; padding: 8px; border: 1px solid transparent; border-radius: 7px; color: #cbd9ed; text-align: left; font: inherit; font-size: 12px; background: #17253b; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-item.active { border-color: #67e8f9; background: #1d3551; }
 
 .chat-shell {
   display: grid;
@@ -73,6 +77,9 @@ h2 { font-size: 22px; }
 .message { max-width: min(800px, 90%); padding: 12px 14px; border: 1px solid #314766; border-radius: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; background: #16243a; }
 .message.user { align-self: flex-end; color: #f8fbff; border: 0; background: linear-gradient(135deg, #2563eb, #7c3aed); }
 .message.tool { color: #c3d1e7; font-family: ui-monospace, monospace; font-size: 12px; background: #182a36; border-color: #436451; }
+.message.reasoning { align-self: flex-start; width: min(800px, 90%); color: #c3d1e7; background: #182335; border-color: #465273; }
+.message.reasoning summary { cursor: pointer; font-weight: 700; }
+.message.reasoning pre { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 .message.error { color: #fecaca; background: #451e29; border-color: #8e3348; }
 
 .status { min-height: 18px; color: #9eb0cb; font-size: 13px; }

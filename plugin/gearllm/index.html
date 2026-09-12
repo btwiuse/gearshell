@@ -11,6 +11,10 @@
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">G</span><div><h1>GearLLM</h1><p>GearShell-native agent chat</p></div></div>
       <button id="newChat" class="new-chat" type="button">+ New chat</button>
+      <section class="sidebar-section sessions-section">
+        <div class="section-title"><span>History</span><span id="sessionCount" class="badge">0</span></div>
+        <div id="sessionList" class="session-list"></div>
+      </section>
       <section class="sidebar-section">
         <label for="model">Model</label>
         <select id="model" aria-label="Inference model"></select>

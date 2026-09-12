@@ -4,11 +4,14 @@ const ui = {
   modelStatus: $("modelStatus"), system: $("systemPrompt"), read: $("readTool"),
   grep: $("grepTool"), prompt: $("prompt"), composer: $("composer"),
   send: $("send"), stop: $("stop"), status: $("status"), newChat: $("newChat"), think: $("think"),
+  sessionList: $("sessionList"), sessionCount: $("sessionCount"),
 };
 const TOOL_PROTOCOL = `When a workspace tool is needed, respond only with this XML:\n<tool_call>\n<function=read>\n<parameter=path>PATH</parameter>\n</tool_call>\nor\n<tool_call>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</tool_call>\nDo not invent tool results.`;
 let session = null;
 let modelId = null;
 let history = [];
+let sessions = [];
+let activeSessionId = null;
 let ready = false;
 let sending = false;
 let thinkEnabled = false;
@@ -35,6 +38,57 @@ function addMessage(kind, text = "") {
   return node;
 }
 
+function restoreMessages() {
+  ui.messages.replaceChildren();
+  for (const message of history) addMessage(message.role, message.content);
+  if (!history.length) {
+    ui.messages.innerHTML = "<div class=\"empty\"><h3>New GearLLM chat</h3><p>The model remains shared and resident in GearShell.</p></div>";
+  }
+}
+
+function persistSessions() {
+  try { localStorage.setItem("gearllm:sessions", JSON.stringify(sessions)); } catch {}
+}
+
+function renderSessions() {
+  ui.sessionCount.textContent = String(sessions.length);
+  ui.sessionList.replaceChildren(...sessions.map((item) => {
+    const button = document.createElement("button");
+    button.className = `session-item${item.id === activeSessionId ? " active" : ""}`;
+    button.textContent = item.title;
+    button.type = "button";
+    button.addEventListener("click", () => selectSession(item.id));
+    return button;
+  }));
+}
+
+function saveActiveSession() {
+  const item = sessions.find((entry) => entry.id === activeSessionId);
+  if (!item) return;
+  item.messages = history;
+  item.updatedAt = Date.now();
+  item.title = history.find((entry) => entry.role === "user")?.content.slice(0, 48) || "New chat";
+  sessions.sort((left, right) => right.updatedAt - left.updatedAt);
+  persistSessions();
+  renderSessions();
+}
+
+function selectSession(id) {
+  const item = sessions.find((entry) => entry.id === id);
+  if (!item || sending) return;
+  activeSessionId = id;
+  history = item.messages || [];
+  restoreMessages();
+  renderSessions();
+}
+
+function createSessionHistory() {
+  activeSessionId = `chat-${Date.now().toString(36)}`;
+  history = [];
+  sessions.unshift({ id: activeSessionId, title: "New chat", messages: history, updatedAt: Date.now() });
+  saveActiveSession();
+}
+
 function append(node, text) {
   node.textContent += text;
   ui.messages.scrollTop = ui.messages.scrollHeight;
@@ -59,15 +113,13 @@ function splitThinking(text) {
   };
 }
 
-function renderReply(node, raw) {
+function renderReply(node, reasoning, raw) {
   const split = splitThinking(raw);
   node.textContent = split.answer || raw;
   if (split.thinking && thinkEnabled) {
-    const details = document.createElement("details");
-    details.className = "message tool";
-    details.innerHTML = `<summary>Reasoning</summary><pre></pre>`;
-    details.querySelector("pre").textContent = split.thinking;
-    node.before(details);
+    reasoning.querySelector("pre").textContent = split.thinking;
+  } else {
+    reasoning.remove();
   }
 }
 
@@ -135,22 +187,26 @@ async function runTool(call) {
   return hits.length ? hits.join("\n") : "No matches.";
 }
 
-function waitForStream(sessionId, target) {
+function waitForStream(sessionId, target, reasoning) {
   let finish;
+  let raw = "";
   const promise = new Promise((resolve, reject) => {
     const timer = setTimeout(() => finish(new Error("Inference stream timed out.")), 120000);
     const listener = (payload) => {
       if (payload?.sessionId !== sessionId) return;
       const event = payload.event;
       if (event?.type === "queued") status("Waiting for the shared inference host…", "loading");
-      if (event?.type === "text" || event?.type === "thinking") append(target, event.delta);
+      if (event?.type === "text" || event?.type === "thinking") {
+        raw += event.delta;
+        append(thinkEnabled ? reasoning.querySelector("pre") : target, event.delta);
+      }
       if (event?.type === "_error") finish(new Error(event.error));
       if (event?.type === "_end") finish();
     };
     finish = (error) => {
       clearTimeout(timer);
       GearShell.off("inference.event", listener);
-      error ? reject(error) : resolve(target.textContent);
+      error ? reject(error) : resolve(raw);
     };
     GearShell.on("inference.event", listener);
   });
@@ -158,10 +214,15 @@ function waitForStream(sessionId, target) {
 }
 
 async function generate(messages) {
+  const reasoning = document.createElement("details");
+  reasoning.className = "message reasoning";
+  reasoning.open = true;
+  reasoning.innerHTML = "<summary>Reasoning</summary><pre></pre>";
   const answer = addMessage("assistant");
-  const stream = waitForStream(session.id, answer);
+  if (thinkEnabled) answer.before(reasoning);
+  const stream = waitForStream(session.id, answer, reasoning);
   await GearShell.inference.send(session.id, messages, { think: thinkEnabled });
-  return stream;
+  return { answer, reasoning, text: await stream };
 }
 
 async function sendTurn(text) {
@@ -171,9 +232,9 @@ async function sendTurn(text) {
   setSending(true);
   status("Generating…", "loading");
   try {
-    let reply = await generate(promptMessages());
-    const answerNode = ui.messages.lastElementChild;
-    renderReply(answerNode, reply);
+    let generated = await generate(promptMessages());
+    let reply = generated.text;
+    renderReply(generated.answer, generated.reasoning, reply);
     const call = extractToolCall(reply);
     if (call) {
       const toolCard = addMessage("tool", `Using ${call.name}…`);
@@ -181,10 +242,12 @@ async function sendTurn(text) {
       toolCard.textContent = `${call.name} result\n${result.slice(0, 12000)}`;
       history.push({ role: "assistant", content: reply });
       history.push({ role: "user", content: `Tool result for ${call.name}:\n${result}\n\nNow answer the user's request using this result. Do not call another tool.` });
-      reply = await generate(promptMessages());
-      renderReply(ui.messages.lastElementChild, reply);
+      generated = await generate(promptMessages());
+      reply = generated.text;
+      renderReply(generated.answer, generated.reasoning, reply);
     }
     history.push({ role: "assistant", content: reply });
+    saveActiveSession();
     status("Ready", "ready");
   } catch (error) {
     addMessage("error", error?.message || String(error));
@@ -224,9 +287,8 @@ async function loadModel() {
 async function resetChat() {
   if (session) await GearShell.inference.closeSession(session.id);
   session = null;
-  history = [];
-  ui.messages.replaceChildren();
-  ui.messages.innerHTML = "<div class=\"empty\"><h3>New GearLLM chat</h3><p>The model remains shared and resident in GearShell.</p></div>";
+  createSessionHistory();
+  restoreMessages();
 }
 
 async function boot() {
@@ -236,6 +298,9 @@ async function boot() {
   const models = await GearShell.inference.list();
   ui.model.replaceChildren(...models.map((model) => new Option(model.label, model.id)));
   modelId = ui.model.value;
+  try { sessions = JSON.parse(localStorage.getItem("gearllm:sessions") || "[]"); } catch {}
+  if (sessions.length) selectSession(sessions[0].id);
+  else createSessionHistory();
   await refreshHost();
   setInterval(() => refreshHost().catch(() => {}), 1000);
 }
