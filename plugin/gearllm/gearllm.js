@@ -43,10 +43,19 @@ function append(node, text) {
 function splitThinking(text) {
   const start = text.indexOf("<think>");
   const end = text.indexOf("</think>");
-  if (start === -1 || end < start) return { thinking: "", answer: text };
+  if (start !== -1 && end >= start) {
+    return {
+      thinking: text.slice(start + 7, end).trim(),
+      answer: `${text.slice(0, start)}${text.slice(end + 8)}`.trim(),
+    };
+  }
+  const answerStart = text.lastIndexOf("\n\n");
+  if (answerStart === -1 || !/^here'?s a thinking process:/i.test(text.trim())) {
+    return { thinking: "", answer: text };
+  }
   return {
-    thinking: text.slice(start + 7, end).trim(),
-    answer: `${text.slice(0, start)}${text.slice(end + 8)}`.trim(),
+    thinking: text.slice(0, answerStart).trim(),
+    answer: text.slice(answerStart + 2).trim(),
   };
 }
 

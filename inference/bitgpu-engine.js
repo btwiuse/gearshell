@@ -116,6 +116,7 @@ export class BitgpuChat {
     };
     if (typeof options.think === "boolean") {
       chatTemplateArgs.enable_thinking = options.think;
+      chatTemplateArgs.preserve_thinking = options.think;
     }
     if (options.chatTemplateArgs && typeof options.chatTemplateArgs === "object") {
       Object.assign(chatTemplateArgs, options.chatTemplateArgs);
