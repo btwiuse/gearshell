@@ -36,10 +36,11 @@ function createTerminal(event) {
 function writeTerminal(event) {
   const { id, args } = event.data.gear;
   const [sessionId, data] = args || [];
-  if (!(data instanceof Uint8Array)) {
-    return reply(event, { id, ok: false, error: "external terminal output requires Uint8Array" });
+  const output = typeof data === "string" ? data : data instanceof Uint8Array ? data : null;
+  if (output == null) {
+    return reply(event, { id, ok: false, error: "external terminal output requires text or Uint8Array" });
   }
-  const ok = writeExternalTerminal(sessionId, data);
+  const ok = writeExternalTerminal(sessionId, output);
   reply(event, { id, ok, ...(ok ? {} : { error: "unknown external terminal" }) });
 }
 
