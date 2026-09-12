@@ -6,7 +6,7 @@ const ui = {
   send: $("send"), stop: $("stop"), status: $("status"), newChat: $("newChat"), think: $("think"),
   sessionList: $("sessionList"), sessionCount: $("sessionCount"),
 };
-const TOOL_PROTOCOL = `When a workspace tool is needed, respond only with this XML:\n<tool_call>\n<function=read>\n<parameter=path>PATH</parameter>\n</tool_call>\nor\n<tool_call>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</tool_call>\nDo not invent tool results.`;
+const TOOL_PROTOCOL = `When a workspace tool is needed, respond only with this XML:\n<function=read>\n<parameter=path>PATH</parameter>\n</function>\nor\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</function>\nDo not add prose before or after a tool call. Do not invent tool results.`;
 let session = null;
 let modelId = null;
 let history = [];
@@ -23,8 +23,8 @@ function status(text, state = "idle") {
 
 function setSending(next) {
   sending = next;
-  ui.send.disabled = next || !ready;
-  ui.prompt.disabled = next || !ready;
+  ui.send.disabled = next;
+  ui.prompt.disabled = next;
   ui.stop.disabled = !next;
 }
 
@@ -138,10 +138,10 @@ function promptMessages() {
 }
 
 function extractToolCall(text) {
-  const match = text.match(/<tool_call>[\s\S]*?<function=(read|grep)>[\s\S]*?<\/tool_call>/i);
+  const match = text.match(/<function=(read|grep)>[\s\S]*?(?:<\/function>|<\/tool_call>|$)/i);
   if (!match || !activeTools().includes(match[1])) return null;
   const args = {};
-  for (const entry of match[0].matchAll(/<parameter=(\w+)>([\s\S]*?)<\/parameter>/gi)) {
+  for (const entry of match[0].matchAll(/<parameter=(\w+)>([\s\S]*?)(?:<\/parameter>|(?=<parameter=)|<\/function>|$)/gi)) {
     args[entry[1]] = entry[2].trim();
   }
   return { name: match[1], args };
@@ -167,8 +167,13 @@ async function runTool(call) {
   if (call.name === "read") {
     const path = call.args.path;
     if (!path) throw new Error("read requires path");
-    const text = await GearShell.fs.readFileText(path);
-    return `${path}:\n${text.slice(0, 12000)}`;
+    try {
+      const entries = await GearShell.fs.readDir(path);
+      return entries.map((entry) => entry.isDirectory ? `${entry.name}/` : entry.name).join("\n");
+    } catch {
+      const text = await GearShell.fs.readFileText(path);
+      return `${path}:\n${text.slice(0, 12000)}`;
+    }
   }
   const pattern = call.args.pattern;
   if (!pattern) throw new Error("grep requires pattern");
@@ -260,6 +265,8 @@ async function sendTurn(text) {
 
 async function ensureSession() {
   if (session) return session;
+  const host = await GearShell.inference.status();
+  if (host.state !== "ready") status("Loading model for your message…", "loading");
   session = await GearShell.inference.createSessionInfo({ model: modelId });
   return session;
 }

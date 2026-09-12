@@ -42,6 +42,9 @@ function queryConfigElements(settingsContent) {
     inferenceModelEl: settingsContent.querySelector(
       '[data-config="default-inference-model"]',
     ),
+    prewarmInferenceEl: settingsContent.querySelector(
+      '[data-config="prewarm-inference"]',
+    ),
     integrationEls: [
       ...settingsContent.querySelectorAll("[data-config-value]"),
     ],
@@ -60,6 +63,9 @@ function fillConfigFields(els, cfg) {
     els.playProgressDoneSoundEl.checked = cfg.playProgressDoneSound !== false;
   }
   if (els.widgetbotEl) els.widgetbotEl.checked = cfg.widgetbot === true;
+  if (els.prewarmInferenceEl) {
+    els.prewarmInferenceEl.checked = cfg.prewarmInference === true;
+  }
   if (els.inferenceModelEl) {
     // Keep the user's stored value if present; otherwise leave the
     // first option (set in the template) selected so the form always
@@ -95,6 +101,7 @@ function wireConfigSave(settingsContent, els, showConfigStatus) {
       playProgressDoneSound: els.playProgressDoneSoundEl?.checked !== false,
       widgetbot: els.widgetbotEl?.checked === true,
       defaultInferenceModel: els.inferenceModelEl?.value || config.defaultInferenceModel,
+      prewarmInference: els.prewarmInferenceEl?.checked === true,
       ...Object.fromEntries(
         els.integrationEls.map((
           input,

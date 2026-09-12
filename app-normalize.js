@@ -255,6 +255,7 @@ export function normalizeShellConfig(config) {
       config.defaultInferenceModel.trim().length > 0
       ? config.defaultInferenceModel.trim()
       : DEFAULT_INFERENCE_MODEL,
+    prewarmInference: config?.prewarmInference === true,
     // Per-workspace generic JSON key-value store (see plugin/crush-playground/kv-api.js).
     // Any plugin can read / write through `GearShell.config.kv.*`.
     kv: normalizeKv(config?.kv),

@@ -157,10 +157,8 @@ export const DEFAULT_CONFIG = {
   workbenchAssetsUrl: DEFAULT_WORKBENCH_ASSETS_URL,
   wagiDogEnabled: false,
   widgetbot: false,
-  // Inference host pre-warms this model at shell boot. The user picks
-  // it from the Settings → Behavior → Inference section; the host
-  // re-loads when the value changes (next boot).
   defaultInferenceModel: DEFAULT_INFERENCE_MODEL,
+  prewarmInference: false,
   providers: [],
   plugins: DEFAULT_PLUGINS,
   collapsedLauncherItems: DEFAULT_COLLAPSED_LAUNCHER_ITEMS,

@@ -463,20 +463,10 @@ registerHotkey({
   action: { method: "overlay.toggle", args: ["spotlight"] },
 });
 
-// Pre-warm the inference host with the user's preferred default model.
-// Triggered after initWorkspaceApi() so GearShell.inference.* is
-// available. The host fires init + background load; progress events
-// stream through `inference.progress` so the shell can render a
-// loader while the 3.8 GB model comes down. Subsequent
-// plugin/bonsai or CLI sessions find the model already resident.
-//
-// The default model lives in workspace.shell.defaultInferenceModel so
-// it migrates with workspace snapshots; the Settings → Behavior
-// panel edits it (Settings: data-config="default-inference-model").
 try {
-  const defaultModel = loadConfig().defaultInferenceModel;
-  if (defaultModel) {
-    window.GearShell?.inference?.bootstrap?.({ defaultModel })
+  const config = loadConfig();
+  if (config.prewarmInference === true && config.defaultInferenceModel) {
+    window.GearShell?.inference?.bootstrap?.({ defaultModel: config.defaultInferenceModel })
       ?.catch?.(() => {});
   }
 } catch {}

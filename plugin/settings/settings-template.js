@@ -242,7 +242,11 @@ export const SETTINGS_TEMPLATE_HTML =
                 <select id="inference-default-model" data-config="default-inference-model">
                   <option value="prism-ml/Bonsai-27B-gguf">Bonsai 27B (Prism ML)</option>
                 </select>
-                <p class="hint">Pre-loaded at shell boot so the first chat opens instantly. Reboot the shell after changing.</p>
+                <label class="cfg-toggle">
+                  <span>Prewarm local inference at shell boot</span>
+                  <input data-config="prewarm-inference" type="checkbox">
+                </label>
+                <p class="hint">Off by default. Chats load the selected model when you send the first message and keep it resident until you unload it.</p>
               </div>
             </details>
 

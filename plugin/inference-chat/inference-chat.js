@@ -26,9 +26,9 @@ function setStatus(text, state = "idle") {
 
 function setSending(next) {
   sending = next;
-  elements.send.disabled = next || !hostReady;
+  elements.send.disabled = next;
   elements.stop.disabled = !next;
-  elements.prompt.disabled = next || !hostReady;
+  elements.prompt.disabled = next;
 }
 
 function scrollMessages() {
@@ -91,12 +91,9 @@ async function loadSelectedModel() {
 async function ensureSession() {
   if (session) return session;
   const status = await refreshStatus();
-  if (status.state !== "ready") {
-    setStatus("Loading model…", "loading");
-  }
+  if (status.state !== "ready") setStatus("Loading model for your message…", "loading");
   session = await GearShell.inference.createSessionInfo({ model: selectedModel });
   elements.modelLabel.textContent = `Model: ${session.model}`;
-  setSending(false);
   return session;
 }
 
