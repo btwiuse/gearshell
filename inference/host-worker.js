@@ -41,6 +41,7 @@ const opfs = new OpfsCache();
 let engine = null;
 let engineModel = null;
 let bootPromise = null;
+let bootModelId = null;
 const registry = new SessionRegistry({ get engine() { return engine; } });
 let state = HOST_STATE.IDLE;
 let generationQueue = Promise.resolve();
@@ -70,15 +71,18 @@ function nextState() {
 // resolves once the model is resident or rejects on load error.
 // Concurrent callers share the same promise so two `createSession`
 // requests during the same boot don't double-spawn the load.
-function ensureBoot(modelId, options) {
+function ensureBoot(model, options) {
+  const modelId = typeof model === "string" ? model : model?.id;
+  if (!modelId) return Promise.reject(new Error("model is required"));
   if (engine && engineModel?.id === modelId) return Promise.resolve();
-  if (bootPromise && engineModel?.id === modelId) return bootPromise;
+  if (bootPromise && bootModelId === modelId) return bootPromise;
   setState(HOST_STATE.LOADING);
+  bootModelId = modelId;
   bootPromise = (async () => {
     try {
       const progress = (p) =>
         postPush(PUSH.PROGRESS, { modelId, progress: p });
-      const chat = await createEngineFor(modelId, {
+      const chat = await createEngineFor(model, {
         ...options,
         onProgress: progress,
       });
@@ -87,6 +91,7 @@ function ensureBoot(modelId, options) {
       // active sessions have no engine to read from.
       if (engine && engineModel?.id !== modelId) {
         registry.shutdown();
+        engine.dispose?.();
       }
       engine = chat;
       engineModel = { id: modelId };
@@ -96,6 +101,7 @@ function ensureBoot(modelId, options) {
       throw error;
     } finally {
       bootPromise = null;
+      bootModelId = null;
     }
   })();
   return bootPromise;
@@ -132,7 +138,7 @@ async function handleLoad(requestId, { model, options }) {
     postReply(requestId, {
       type: "ok",
       result: {
-        model,
+        model: engineModel.id,
         contextLength: engine.contextLength,
       },
     });
@@ -146,6 +152,7 @@ async function handleLoad(requestId, { model, options }) {
 
 async function handleUnload(requestId) {
   registry.shutdown();
+  engine?.dispose?.();
   engine = null;
   engineModel = null;
   setState(HOST_STATE.IDLE);
@@ -154,7 +161,8 @@ async function handleUnload(requestId) {
 
 async function handleCreateSession(requestId, { model, options }) {
   const targetModel = model ?? engineModel?.id;
-  if (!targetModel) {
+  const targetModelId = typeof targetModel === "string" ? targetModel : targetModel?.id;
+  if (!targetModelId) {
     postReply(requestId, {
       type: "error",
       error: "no model specified and none resident",
@@ -162,7 +170,7 @@ async function handleCreateSession(requestId, { model, options }) {
     return;
   }
   try {
-    if (!engine || engineModel?.id !== targetModel) {
+    if (!engine || engineModel?.id !== targetModelId) {
       // Lazy load: requested model differs from resident. Wait for
       // the boot to complete before admitting the session. Bumps
       // LRU pressure but doesn't evict the previous engine until

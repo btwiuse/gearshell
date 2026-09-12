@@ -396,7 +396,11 @@ ui.composer.addEventListener("submit", (event) => {
 ui.prompt.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ui.composer.requestSubmit(); }
 });
-ui.model.addEventListener("change", () => { modelId = ui.model.value; });
+ui.model.addEventListener("change", () => {
+  if (sending) return;
+  modelId = ui.model.value;
+  resetChat().catch((error) => status(error.message, "error"));
+});
 ui.think.addEventListener("click", () => {
   thinkEnabled = !thinkEnabled;
   ui.think.setAttribute("aria-pressed", String(thinkEnabled));

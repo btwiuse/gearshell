@@ -22,6 +22,7 @@
 // migration in plugin/bonsai/src/model/remote-client.js.
 
 import { listModels } from "./inference/manifest.js";
+import { loadConfig } from "./app-workspace.js";
 import { REQUEST, PUSH } from "./inference/protocol.js";
 import { emit } from "./workspace-events.js";
 
@@ -48,6 +49,40 @@ const sessionStreams = new Map(); // sessionId -> Set<(event) => void>
 // Shape matches the documented contract:
 //   { state, model: {id}|null, sessions: [{id, model, messages, lastUsedAt}] }
 let hostState = { state: "idle", model: null, sessions: [] };
+
+function configuredModels(includeSecrets = false) {
+  return loadConfig().providers.flatMap((provider) => {
+    if (provider.enabled === false || !provider.baseURL || !provider.apiKey) return [];
+    return (provider.models || []).map((entry) => {
+      const model = typeof entry === "string" ? { id: entry, name: entry } : entry;
+      if (!model?.id) return null;
+      const configured = {
+        id: `remote:${provider.id}:${model.id}`,
+        label: `${model.name || model.id} · ${provider.name}`,
+        description: `Configured GearShell provider: ${provider.name}.`,
+        ctx: model.contextWindow || 0,
+      };
+      if (!includeSecrets) return configured;
+      return {
+        ...configured,
+        remote: {
+          providerId: provider.id,
+          providerName: provider.name,
+          baseURL: provider.baseURL,
+          apiKey: provider.apiKey,
+          model: model.id,
+          contextLength: model.contextWindow || 0,
+        },
+      };
+    }).filter(Boolean);
+  });
+}
+
+function resolveModel(model) {
+  if (model == null) return model;
+  if (typeof model !== "string") throw new Error("model id is required");
+  return configuredModels(true).find((entry) => entry.id === model) ?? model;
+}
 
 function ensureHost(config) {
   if (config) hostConfig = { ...hostConfig, ...config };
@@ -240,7 +275,7 @@ class RemoteSession {
 
 export const inferenceApi = {
   list() {
-    return Promise.resolve(listModels());
+    return Promise.resolve([...listModels(), ...configuredModels()]);
   },
 
   status() {
@@ -271,13 +306,13 @@ export const inferenceApi = {
   bootstrap(options = {}) {
     hostConfig = { ...hostConfig, ...options };
     return callHost(REQUEST.LOAD, {
-      model: hostConfig.defaultModel,
+      model: resolveModel(hostConfig.defaultModel),
       options: { accessToken: hostConfig.accessToken },
     });
   },
 
   load(model, options = {}) {
-    return callHost(REQUEST.LOAD, { model, options });
+    return callHost(REQUEST.LOAD, { model: resolveModel(model), options });
   },
 
   unload() {
@@ -286,7 +321,7 @@ export const inferenceApi = {
 
   createSessionInfo(options = {}) {
     return callHost(REQUEST.CREATE_SESSION, {
-      model: options.model,
+      model: resolveModel(options.model),
       options,
     });
   },
@@ -309,7 +344,7 @@ export const inferenceApi = {
   },
 
   async createSession(options = {}) {
-    const session = await this.createSessionInfo(options);
+    const session = await inferenceApi.createSessionInfo(options);
     return new RemoteSession(session);
   },
 };

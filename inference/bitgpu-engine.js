@@ -49,6 +49,7 @@ import {
   BonsaiResolveGGUFUrl as resolveGGUFUrl,
 } from "./runtime.js";
 import { Gemma4Mobile } from "./gemma-runtime.js";
+import { createRemoteEngine } from "./remote-engine.js";
 import {
   getModel,
 } from "./manifest.js";
@@ -221,9 +222,11 @@ async function* streamNativeEvents(runtimeChat, messages, options) {
   }
 }
 
-export async function createEngineFor(modelId, options = {}) {
-  const model = getModel(modelId);
+export async function createEngineFor(source, options = {}) {
+  const model = typeof source === "string" ? getModel(source) : source;
+  const modelId = typeof source === "string" ? source : source?.id;
   if (!model) throw new Error(`unknown model: ${modelId}`);
+  if (model.remote) return createRemoteEngine({ ...model.remote, contextLength: model.ctx });
 
   const onProgress = options.onProgress ?? (() => {});
   const { runtimeChat, defaultGeneration } = await bootBitgpuEngine(
