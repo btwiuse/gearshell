@@ -125,10 +125,9 @@ function createSessionHistory() {
   saveActiveSession();
 }
 
-function append(node, text) {
+function updateText(node, text, append = false) {
   const follow = followsLatest();
-  if (!node.isConnected) ui.messages.append(node);
-  node.textContent += text;
+  node.textContent = append ? node.textContent + text : text;
   if (follow) ui.messages.scrollTop = ui.messages.scrollHeight;
 }
 
@@ -140,7 +139,7 @@ function splitThinking(text) {
     const openEnd = gemmaStart + "<|channel>thought".length;
     return {
       thinking: raw.slice(openEnd, gemmaEnd === -1 ? undefined : gemmaEnd).trim(),
-      answer: (gemmaEnd === -1 ? "" : raw.slice(gemmaEnd + 10)).trim(),
+      answer: (gemmaEnd === -1 ? "" : raw.slice(gemmaEnd + "<channel|>".length)).trim(),
     };
   }
   const start = raw.indexOf("<think>");
@@ -152,13 +151,23 @@ function splitThinking(text) {
     };
   }
   const answerStart = raw.lastIndexOf("\n\n");
-  if (answerStart === -1 || !/^here'?s a thinking process:/i.test(raw.trim())) {
+  if (answerStart === -1 || !/^thinking process:/i.test(raw.trim())) {
     return { thinking: "", answer: raw.replaceAll("<|channel>", "").trim() };
   }
   return {
     thinking: raw.slice(0, answerStart).trim(),
     answer: raw.slice(answerStart + 2).trim(),
   };
+}
+
+function renderStream(target, reasoningText, raw, visible, showThinking) {
+  if (!showThinking) {
+    updateText(target, visible, true);
+    return;
+  }
+  const split = splitThinking(raw);
+  updateText(reasoningText, split.thinking);
+  updateText(target, split.answer);
 }
 
 function renderReply(node, reasoning, reasoningText, raw, showThinking) {
@@ -296,8 +305,8 @@ function waitForStream(sessionId, target, reasoningText, showThinking) {
       refreshTimeout();
       if (event?.type === "queued") status("Waiting for the shared inference host…", "loading");
       if (event?.type === "text" || event?.type === "thinking") {
-        raw += event.delta;
-        append(showThinking ? reasoningText : target, event.delta);
+        raw += event.rawDelta ?? event.delta;
+        renderStream(target, reasoningText, raw, event.delta, showThinking);
       }
       if (event?.type === "complete") metrics = event.result?.metrics ?? null;
       if (event?.type === "_error") finish(new Error(event.error));

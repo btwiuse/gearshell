@@ -211,14 +211,18 @@ function snapshotGenerationMetrics(metrics) {
 // snapshots into deltas for the host's stable streaming API.
 async function* streamNativeEvents(runtimeChat, messages, options) {
   let previous = "";
+  let previousRaw = "";
   for await (const update of runtimeChat.generate(messages, options)) {
     if (update?.phase === "prefill") continue;
     const text = String(update?.text ?? "");
-    const delta = text.startsWith(previous)
-      ? text.slice(previous.length)
-      : text;
+    const rawText = String(update?.rawText ?? text);
+    const delta = text.startsWith(previous) ? text.slice(previous.length) : text;
+    const rawDelta = rawText.startsWith(previousRaw)
+      ? rawText.slice(previousRaw.length)
+      : rawText;
     previous = text;
-    if (delta) yield { type: "text", delta };
+    previousRaw = rawText;
+    if (delta || rawDelta) yield { type: "text", delta, rawDelta };
   }
 }
 
