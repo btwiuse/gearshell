@@ -15,6 +15,7 @@ let session = null;
 let history = [];
 let sending = false;
 let selectedModel = null;
+let hostReady = false;
 
 function setStatus(text, state = "idle") {
   elements.status.textContent = text;
@@ -23,9 +24,9 @@ function setStatus(text, state = "idle") {
 
 function setSending(next) {
   sending = next;
-  elements.send.disabled = next || !session;
+  elements.send.disabled = next || !hostReady;
   elements.stop.disabled = !next;
-  elements.prompt.disabled = next || !session;
+  elements.prompt.disabled = next || !hostReady;
 }
 
 function scrollMessages() {
@@ -56,8 +57,10 @@ function modelLabel(status) {
 
 async function refreshStatus() {
   const status = await GearShell.inference.status();
+  hostReady = status.state === "ready";
   elements.modelLabel.textContent = modelLabel(status);
-  setStatus(status.state === "ready" ? "Ready" : status.state, status.state);
+  setStatus(hostReady ? "Ready" : status.state, status.state);
+  setSending(sending);
   return status;
 }
 
@@ -172,21 +175,29 @@ async function startNewChat() {
   elements.prompt.focus();
 }
 
+function applyHostStatus(nextStatus) {
+  hostReady = nextStatus.state === "ready";
+  elements.modelLabel.textContent = modelLabel(nextStatus);
+  if (!sending) setStatus(hostReady ? "Ready" : nextStatus.state, nextStatus.state);
+  setSending(sending);
+}
+
+function pollHostStatus() {
+  refreshStatus().catch((error) => setStatus(error?.message || String(error), "error"));
+}
+
 async function boot() {
   try {
     await GearShell.subscribe("inference.event");
     await GearShell.subscribe("inference.status");
-    GearShell.on("inference.status", (nextStatus) => {
-      elements.modelLabel.textContent = modelLabel(nextStatus);
-      if (!sending) setStatus(nextStatus.state === "ready" ? "Ready" : nextStatus.state, nextStatus.state);
-    });
+    GearShell.on("inference.status", applyHostStatus);
     await populateModels();
     const status = await refreshStatus();
     if (status.model?.id) {
       selectedModel = status.model.id;
       elements.model.value = selectedModel;
-      await ensureSession();
     }
+    window.setInterval(pollHostStatus, 1000);
   } catch (error) {
     setStatus(error?.message || String(error), "error");
   }
