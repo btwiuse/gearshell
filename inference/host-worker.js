@@ -243,13 +243,15 @@ async function handleSend(requestId, { sessionId, messages, options }) {
   }
 }
 
-function handleAbort({ sessionId }) {
+function handleAbort(requestId, { sessionId } = {}) {
   // Per-session abort controllers aren't tracked yet. The consumer's
   // AbortSignal flows through session.send() and surfaces upstream.
+  if (requestId !== undefined) postReply(requestId, { type: "ok", result: { ok: true } });
 }
 
-function handleReset({ sessionId }) {
+function handleReset(requestId, { sessionId }) {
   registry.get(sessionId)?.reset();
+  if (requestId !== undefined) postReply(requestId, { type: "ok", result: { ok: true } });
 }
 
 function handleCloseSession(requestId, { sessionId }) {
@@ -278,9 +280,9 @@ self.addEventListener("message", async (event) => {
       case REQUEST.SEND:
         return await handleSend(id, message);
       case REQUEST.ABORT:
-        return handleAbort(message);
+        return handleAbort(id, message);
       case REQUEST.RESET:
-        return handleReset(message);
+        return handleReset(id, message);
       case REQUEST.CLOSE_SESSION:
         return handleCloseSession(id, message);
       case REQUEST.STATUS:

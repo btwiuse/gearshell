@@ -138,15 +138,23 @@ function callHost(type, payload) {
   );
 }
 
-// Each shell-side session wraps the host wire with an AsyncIterable
-// `send()` method. The bridge pulls events from the host via the
-// sessionStreams dispatch table.
+// Each shell-side session wraps a session id with a streaming
+// AsyncIterable `send()` method. Streams are sent via RPC
+// (callHost(REQUEST.SEND)) and events arrive on the PUSH channel
+// via the sessionStreams dispatch table.
+//
+// Note: the worker previously returned a `wire` object whose methods
+// (send/abort/reset/close) were functions — but postMessage structured
+// cloning strips functions, so by the time the shell saw the wire
+// every method was undefined and the playground's createSession()
+// crashed on the first call. We do the RPC dance entirely on the
+// shell side now; the worker's createSession reply carries only
+// {id, model, contextLength}.
 class RemoteSession {
-  constructor({ id, model, contextLength, wire }) {
+  constructor({ id, model, contextLength }) {
     this.id = id;
     this.model = model;
     this.contextLength = contextLength;
-    this.wire = wire;
     this._listeners = new Set();
     sessionStreams.set(id, this._listeners);
   }
@@ -155,9 +163,8 @@ class RemoteSession {
     // Returns an AsyncIterable. The host pushes typed events; we yield
     // them to the consumer. The host also pushes {type:"_end"} or
     // {type:"_error", error} which signal stream completion.
-    const wire = this.wire;
     const listeners = this._listeners;
-    const id = wire.send(messages, options);
+    const sessionId = this.id;
     const queue = [];
     let wake = null;
     let closed = false;
@@ -170,6 +177,13 @@ class RemoteSession {
       push(event);
     };
     listeners.add(onEvent);
+    // Kick off the worker-side stream. Errors before the worker acks
+    // surface synchronously through this Promise; once acked, errors
+    // come through {type:"_error"} events.
+    callHost(REQUEST.SEND, { sessionId, messages, options }).catch((error) => {
+      push({ type: "_error", error: error?.message ?? String(error) });
+      push({ type: "_end" });
+    });
     return {
       [Symbol.asyncIterator]() {
         return this;
@@ -197,17 +211,26 @@ class RemoteSession {
       },
       async return() {
         listeners.delete(onEvent);
-        if (listeners.size === 0) sessionStreams.delete(id);
+        if (listeners.size === 0) sessionStreams.delete(sessionId);
+        // Best-effort abort so the worker doesn't keep streaming for
+        // a consumer that walked off mid-stream. The worker treats
+        // ABORT as a no-op for now (see handleAbort) but we send it
+        // so a future worker that respects it gets the signal.
+        callHost(REQUEST.ABORT, { sessionId }).catch(() => {});
         return { done: true, value: undefined };
       },
     };
   }
 
-  abort() { this.wire.abort(); }
-  reset() { this.wire.reset(); }
+  abort() {
+    return callHost(REQUEST.ABORT, { sessionId: this.id }).catch(() => {});
+  }
+  reset() {
+    return callHost(REQUEST.RESET, { sessionId: this.id }).catch(() => {});
+  }
   close() {
-    this.wire.close();
     sessionStreams.delete(this.id);
+    return callHost(REQUEST.CLOSE_SESSION, { sessionId: this.id }).catch(() => {});
   }
 }
 
@@ -258,8 +281,8 @@ export const inferenceApi = {
   },
 
   async createSession(options = {}) {
-    const wire = await callHost(REQUEST.CREATE_SESSION, { options });
-    return new RemoteSession(wire);
+    const { id, model, contextLength } = await callHost(REQUEST.CREATE_SESSION, { options });
+    return new RemoteSession({ id, model, contextLength });
   },
 };
 
