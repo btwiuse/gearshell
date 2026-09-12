@@ -28,13 +28,19 @@ function setSending(next) {
   ui.stop.disabled = !next;
 }
 
+function followsLatest() {
+  const { scrollHeight, scrollTop, clientHeight } = ui.messages;
+  return scrollHeight - scrollTop - clientHeight < 24;
+}
+
 function addMessage(kind, text = "") {
+  const follow = followsLatest();
   const node = document.createElement("article");
   node.className = `message ${kind}`;
   node.textContent = text;
   ui.messages.querySelector(".empty")?.remove();
   ui.messages.append(node);
-  ui.messages.scrollTop = ui.messages.scrollHeight;
+  if (follow) ui.messages.scrollTop = ui.messages.scrollHeight;
   return node;
 }
 
@@ -90,9 +96,10 @@ function createSessionHistory() {
 }
 
 function append(node, text) {
+  const follow = followsLatest();
   if (!node.isConnected) ui.messages.append(node);
   node.textContent += text;
-  ui.messages.scrollTop = ui.messages.scrollHeight;
+  if (follow) ui.messages.scrollTop = ui.messages.scrollHeight;
 }
 
 function splitThinking(text) {

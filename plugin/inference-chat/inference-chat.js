@@ -31,17 +31,23 @@ function setSending(next) {
   elements.prompt.disabled = next;
 }
 
+function followsLatest() {
+  const { scrollHeight, scrollTop, clientHeight } = elements.messages;
+  return scrollHeight - scrollTop - clientHeight < 24;
+}
+
 function scrollMessages() {
-  elements.messages.scrollTop = elements.messages.scrollHeight;
+  if (followsLatest()) elements.messages.scrollTop = elements.messages.scrollHeight;
 }
 
 function addMessage(role, text = "") {
+  const follow = followsLatest();
   const message = document.createElement("article");
   message.className = `message ${role}`;
   message.textContent = text;
   elements.messages.querySelector(".empty-state")?.remove();
   elements.messages.append(message);
-  scrollMessages();
+  if (follow) elements.messages.scrollTop = elements.messages.scrollHeight;
   return message;
 }
 
@@ -98,9 +104,10 @@ async function ensureSession() {
 }
 
 function appendDelta(target, delta) {
+  const follow = followsLatest();
   if (!target.isConnected) elements.messages.append(target);
   target.textContent += delta;
-  scrollMessages();
+  if (follow) elements.messages.scrollTop = elements.messages.scrollHeight;
 }
 
 function splitThinking(text) {
