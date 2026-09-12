@@ -1314,14 +1314,6 @@ function App() {
     if (fragmentParams.autoConnect()) startConnection({ hostname: sshHost, port: sshPort, username, password: effectiveSshPassword });
   }, []); // eslint-disable-line
 
-  // Restore tabs on mount
-  useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
-    const saved = loadTabs();
-    saved.forEach(s => startConnection(s, { activate: false }));
-  }, []); // eslint-disable-line
-
   // Close server dropdown on click outside
   useEffect(() => {
     const handler = e => { if (serverDropdownRef.current && !serverDropdownRef.current.contains(e.target)) { setServerDropdownOpen(false); setEditingServerIdx(-1); } };
