@@ -114,7 +114,7 @@ async function sendMessage(text) {
   setSending(true);
   setStatus("Generating…", "loading");
   try {
-    const stream = await openStream(activeSession.id, answer, thinking, (event) => {
+    const stream = openStream(activeSession.id, answer, thinking, (event) => {
       if (event.type === "text") answerText += event.delta;
       if (event.type === "thinking") thinkingText += event.delta;
     });
