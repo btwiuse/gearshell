@@ -9,6 +9,7 @@ const elements = {
   newChat: document.getElementById("newChat"),
   model: document.getElementById("model"),
   loadModel: document.getElementById("loadModel"),
+  think: document.getElementById("think"),
 };
 
 let session = null;
@@ -16,6 +17,7 @@ let history = [];
 let sending = false;
 let selectedModel = null;
 let hostReady = false;
+let thinkEnabled = false;
 
 function setStatus(text, state = "idle") {
   elements.status.textContent = text;
@@ -103,6 +105,27 @@ function appendDelta(target, delta) {
   scrollMessages();
 }
 
+function splitThinking(text) {
+  const start = text.indexOf("<think>");
+  const end = text.indexOf("</think>");
+  if (start === -1 || end < start) return { thinking: "", answer: text };
+  return {
+    thinking: text.slice(start + 7, end).trim(),
+    answer: `${text.slice(0, start)}${text.slice(end + 8)}`.trim(),
+  };
+}
+
+function renderAnswer(answer, thinking, raw) {
+  const split = splitThinking(raw);
+  answer.textContent = split.answer || raw;
+  if (split.thinking) {
+    thinking.textContent = split.thinking;
+    thinking.hidden = !thinkEnabled;
+  } else {
+    thinking.remove();
+  }
+}
+
 async function sendMessage(text) {
   const activeSession = await ensureSession();
   history.push({ role: "user", content: text });
@@ -118,10 +141,10 @@ async function sendMessage(text) {
       if (event.type === "text") answerText += event.delta;
       if (event.type === "thinking") thinkingText += event.delta;
     });
-    await GearShell.inference.send(activeSession.id, history, {});
+    await GearShell.inference.send(activeSession.id, history, { think: thinkEnabled });
     await stream;
+    renderAnswer(answer, thinking, `${thinkingText}${answerText}`);
     if (answerText) history.push({ role: "assistant", content: answerText });
-    if (!thinkingText) thinking.remove();
     setStatus("Ready", "ready");
   } catch (error) {
     thinking.remove();
@@ -141,6 +164,7 @@ function openStream(sessionId, answer, thinking, onEvent) {
     const handler = (payload) => {
       if (payload?.sessionId !== sessionId) return;
       const event = payload.event;
+      if (event?.type === "queued") setStatus("Waiting for the shared inference host…", "loading");
       if (event?.type === "text") appendDelta(answer, event.delta);
       if (event?.type === "thinking") appendDelta(thinking, event.delta);
       if (event?.type === "_error") finish(new Error(event.error));
@@ -221,6 +245,10 @@ elements.prompt.addEventListener("keydown", (event) => {
 elements.stop.addEventListener("click", () => stopGeneration().catch((error) => setStatus(error.message, "error")));
 elements.newChat.addEventListener("click", () => startNewChat().catch((error) => setStatus(error.message, "error")));
 elements.model.addEventListener("change", () => { selectedModel = elements.model.value; });
+elements.think.addEventListener("click", () => {
+  thinkEnabled = !thinkEnabled;
+  elements.think.setAttribute("aria-pressed", String(thinkEnabled));
+});
 elements.loadModel.addEventListener("click", () => loadSelectedModel().catch((error) => {
   elements.loadModel.disabled = false;
   setStatus(error.message, "error");

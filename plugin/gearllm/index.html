@@ -32,7 +32,7 @@
       <header class="chat-header"><div><p class="eyebrow">SHARED LOCAL INFERENCE</p><h2>GearLLM</h2></div><button id="stop" class="secondary" type="button" disabled>Stop</button></header>
       <section id="messages" class="messages" aria-live="polite"><div class="empty"><h3>Ask the shared local model</h3><p>GearLLM uses the resident GearShell inference host, rather than loading another WebGPU model.</p></div></section>
       <p id="status" class="status" data-state="idle">Idle</p>
-      <form id="composer" class="composer"><textarea id="prompt" rows="1" placeholder="Message GearLLM" aria-label="Message GearLLM" disabled></textarea><button id="send" type="submit" disabled>Send</button></form>
+      <form id="composer" class="composer"><textarea id="prompt" rows="1" placeholder="Message GearLLM" aria-label="Message GearLLM" disabled></textarea><button id="think" class="think" type="button" aria-pressed="false" title="Toggle reasoning">💡</button><button id="send" type="submit" disabled>Send</button></form>
     </section>
   </main>
   <script src="/plugin/gear-bridge.js"></script>

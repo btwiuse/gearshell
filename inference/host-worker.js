@@ -43,6 +43,7 @@ let engineModel = null;
 let bootPromise = null;
 const registry = new SessionRegistry({ get engine() { return engine; } });
 let state = HOST_STATE.IDLE;
+let generationQueue = Promise.resolve();
 
 function postReply(requestId, payload) {
   self.postMessage({ id: requestId, ...payload });
@@ -191,24 +192,33 @@ async function handleCreateSession(requestId, { model, options }) {
   });
 }
 
+function enqueueGeneration(run) {
+  const next = generationQueue.then(run, run);
+  generationQueue = next.catch(() => {});
+  return next;
+}
+
+async function runGeneration(sessionId, session, messages, options) {
+  for await (const event of session.send(messages, options)) {
+    postPush(PUSH.EVENT, { sessionId, event });
+  }
+  postPush(PUSH.EVENT, { sessionId, event: { type: "_end" } });
+}
+
 async function handleSend(requestId, { sessionId, messages, options }) {
   const session = registry.get(sessionId);
   if (!session) {
     postReply(requestId, { type: "error", error: `no such session: ${sessionId}` });
     return;
   }
-  postReply(requestId, { type: "ok", result: { ok: true } });
-  try {
-    for await (const event of session.send(messages, options)) {
-      postPush(PUSH.EVENT, { sessionId, event });
-    }
-    postPush(PUSH.EVENT, { sessionId, event: { type: "_end" } });
-  } catch (error) {
+  postReply(requestId, { type: "ok", result: { queued: true } });
+  postPush(PUSH.EVENT, { sessionId, event: { type: "queued" } });
+  enqueueGeneration(() => runGeneration(sessionId, session, messages, options)).catch((error) => {
     postPush(PUSH.EVENT, {
       sessionId,
       event: { type: "_error", error: String(error?.message ?? error) },
     });
-  }
+  });
 }
 
 function handleAbort(requestId, { sessionId } = {}) {

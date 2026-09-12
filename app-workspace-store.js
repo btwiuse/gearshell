@@ -27,11 +27,47 @@ import {
   getWorkspacePreset,
 } from "./app-workspace-presets.js";
 
+function migrateLegacyPanels(migrated) {
+  if (migrated.shell.startupPanels.includes("home")) {
+    migrated.shell.startupPanels = migrated.shell.startupPanels.map((panel) =>
+      panel === "home" ? "deck" : panel
+    );
+  }
+  if (Array.isArray(migrated.ui?.openPanels)) {
+    migrated.ui.openPanels = migrated.ui.openPanels.map((panel) =>
+      panel?.component === "home" ? { ...panel, component: "deck" } : panel
+    );
+  }
+}
+
+function migrateCrushPlaygroundShell(migrated) {
+  const shell = migrated.shell || {};
+  const hasLegacy = Array.isArray(shell.crushRunnerPresets) ||
+    typeof shell.crushRunnerActiveId === "string" ||
+    Array.isArray(shell.crushRunnerPresetOrder);
+  if (!hasLegacy) return;
+  const kv = { ...(shell.kv || {}) };
+  if (!kv["crush-playground:state"]) {
+    kv["crush-playground:state"] = {
+      customs: (shell.crushRunnerPresets || []).filter((preset) =>
+        preset && typeof preset.id === "string"
+      ).map((preset) => ({ ...preset, builtin: false })),
+      activeId: typeof shell.crushRunnerActiveId === "string"
+        ? shell.crushRunnerActiveId : undefined,
+      order: Array.isArray(shell.crushRunnerPresetOrder)
+        ? shell.crushRunnerPresetOrder.slice() : undefined,
+    };
+  }
+  const nextShell = { ...shell, kv };
+  delete nextShell.crushRunnerPresets;
+  delete nextShell.crushRunnerActiveId;
+  delete nextShell.crushRunnerPresetOrder;
+  migrated.shell = nextShell;
+}
+
 export function migrateWorkspace(workspace) {
   if (!workspace || typeof workspace !== "object") return null;
-  if (!workspace.version) {
-    return createWorkspace(workspace.presetId || "empty", workspace);
-  }
+  if (!workspace.version) return createWorkspace(workspace.presetId || "empty", workspace);
   if (workspace.version > WORKSPACE_SCHEMA_VERSION) return null;
   const migrated = {
     ...createWorkspace(workspace.presetId || "empty", workspace),
@@ -39,54 +75,10 @@ export function migrateWorkspace(workspace) {
     updatedAt: workspace.updatedAt || new Date().toISOString(),
   };
   if (workspace.version < 2) {
-    migrated.binds = migrated.binds.filter((bind) =>
-      !isLegacySystemMirrorBind(bind)
-    );
+    migrated.binds = migrated.binds.filter((bind) => !isLegacySystemMirrorBind(bind));
   }
-  if (workspace.version < 4) {
-    if (migrated.shell.startupPanels.includes("home")) {
-      migrated.shell.startupPanels = migrated.shell.startupPanels.map((panel) =>
-        panel === "home" ? "deck" : panel
-      );
-    }
-    if (Array.isArray(migrated.ui?.openPanels)) {
-      migrated.ui.openPanels = migrated.ui.openPanels.map((panel) =>
-        panel?.component === "home" ? { ...panel, component: "deck" } : panel
-      );
-    }
-  }
-  if (workspace.version < 5) {
-    // Pre-v5 workspaces stored Crush Playground presets/active/order
-    // on dedicated shell.crushRunner* fields. Move them into the
-    // generic shell.kv namespace under "crush-playground:state" and
-    // strip the legacy fields.
-    const shell = migrated.shell || {};
-    const hasLegacy =
-      Array.isArray(shell.crushRunnerPresets) ||
-      typeof shell.crushRunnerActiveId === "string" ||
-      Array.isArray(shell.crushRunnerPresetOrder);
-    if (hasLegacy) {
-      const kv = { ...(shell.kv || {}) };
-      if (!kv["crush-playground:state"]) {
-        kv["crush-playground:state"] = {
-          customs: (shell.crushRunnerPresets || []).filter((preset) =>
-            preset && typeof preset.id === "string"
-          ).map((preset) => ({ ...preset, builtin: false })),
-          activeId: typeof shell.crushRunnerActiveId === "string"
-            ? shell.crushRunnerActiveId
-            : undefined,
-          order: Array.isArray(shell.crushRunnerPresetOrder)
-            ? shell.crushRunnerPresetOrder.slice()
-            : undefined,
-        };
-      }
-      const nextShell = { ...shell, kv };
-      delete nextShell.crushRunnerPresets;
-      delete nextShell.crushRunnerActiveId;
-      delete nextShell.crushRunnerPresetOrder;
-      migrated.shell = nextShell;
-    }
-  }
+  if (workspace.version < 4) migrateLegacyPanels(migrated);
+  if (workspace.version < 5) migrateCrushPlaygroundShell(migrated);
   if (!("activeOpenPanelIndex" in (migrated.ui || {}))) {
     migrated.ui = { ...(migrated.ui || {}), activeOpenPanelIndex: null };
   }

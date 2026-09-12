@@ -209,64 +209,52 @@ function isLegacyFolder(record) {
   return record && record.name != null && !record.slug;
 }
 
+function legacyFolders(folders) {
+  const slugs = new Set();
+  return folders.map((folder) => {
+    const slug = uniqueSlug(folder.name, slugs);
+    slugs.add(slug);
+    const { body: _body, ...rest } = folder;
+    return { ...rest, slug };
+  });
+}
+
+function legacyNotes(notes, folders) {
+  const slugs = new Set();
+  return notes.map((note) => {
+    const slug = uniqueSlug(note.title || note.id, slugs);
+    slugs.add(slug);
+    return {
+      id: note.id, folderId: note.folderId, slug, title: note.title || "",
+      pinned: !!note.pinned, createdAt: note.createdAt, updatedAt: note.updatedAt,
+      bodyRef: `${folderSlugFor(folders, note.folderId)}/${slug}.md`,
+    };
+  });
+}
+
+async function materializeLegacyBodies(source, notes, folders) {
+  for (const note of notes) {
+    const oldNote = source.find((item) => item.id === note.id);
+    const folder = folders.find((item) => item.id === note.folderId);
+    const dir = folder && folderDir(folder);
+    if (!isLegacyNote(oldNote) || !dir) continue;
+    await fsMkdir(dir);
+    await fsWriteText(notePath(note, folder), serializeBody(oldNote.title, oldNote.body));
+  }
+}
+
 async function migrateLegacy(state) {
   if (!Array.isArray(state.notes) || !Array.isArray(state.folders)) return state;
-
-  const hasLegacyNotes = state.notes.some(isLegacyNote);
-  const hasLegacyFolders = state.folders.some(isLegacyFolder);
-  if (!hasLegacyNotes && !hasLegacyFolders) {
-    // Drop the marker if present so future boots skip this branch.
+  if (!state.notes.some(isLegacyNote) && !state.folders.some(isLegacyFolder)) {
     await kvDelete(KV.legacy);
     return state;
   }
-
-  // Compute slugs in two passes so child entries can dedup against
-  // sibling allocations.
-  const folderSlugs = new Set();
-  const folders = state.folders.map((f) => {
-    const slug = uniqueSlug(f.name, folderSlugs);
-    folderSlugs.add(slug);
-    const { body: _body, ...rest } = f;
-    return { ...rest, slug };
-  });
-
-  const noteSlugs = new Set();
-  const notes = state.notes.map((n) => {
-    const slug = uniqueSlug(n.title || n.id, noteSlugs);
-    noteSlugs.add(slug);
-    return {
-      id: n.id,
-      folderId: n.folderId,
-      slug,
-      title: n.title || "",
-      pinned: !!n.pinned,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      bodyRef: `${folderSlugFor(folders, n.folderId)}/${slug}.md`,
-    };
-  });
-
-  // Materialise bodies to fs. The index write happens AFTER all bodies
-  // land so a crash mid-migration leaves the old index intact and
-  // the user can retry on next boot.
-  for (const note of notes) {
-    if (isLegacyNote(state.notes.find((n) => n.id === note.id))) {
-      const oldNote = state.notes.find((n) => n.id === note.id);
-      const folder = folders.find((f) => f.id === note.folderId);
-      if (!folder) continue;
-      const dir = folderDir(folder);
-      if (!dir) continue;
-      await fsMkdir(dir);
-      await fsWriteText(notePath(note, folder), serializeBody(oldNote.title, oldNote.body));
-    }
-  }
-
-  // Persist the new index — both shape and slug keys — and drop the
-  // legacy marker only on full success.
+  const folders = legacyFolders(state.folders);
+  const notes = legacyNotes(state.notes, folders);
+  await materializeLegacyBodies(state.notes, notes, folders);
   await kvSet(KV.folders, folders);
   await kvSet(KV.notes, notes);
   await kvDelete(KV.legacy);
-
   return { ...state, folders, notes };
 }
 
@@ -284,24 +272,20 @@ function folderSlugFor(folders, folderId) {
 //   nextId:  number
 //   bodies:  Map<noteId, bodyString> — every note's current body, loaded
 //            from fs in parallel. Missing files surface as "".
-async function loadAll() {
+async function loadIndex() {
   const [folders, notes, nextId, pinned] = await Promise.all([
-    kvGet(KV.folders),
-    kvGet(KV.notes),
-    kvGet(KV.nextId),
-    kvGet(KV.pinned),
+    kvGet(KV.folders), kvGet(KV.notes), kvGet(KV.nextId), kvGet(KV.pinned),
   ]);
-  let state = {
+  return migrateLegacy({
     folders: Array.isArray(folders) ? folders : [],
     notes: Array.isArray(notes) ? notes : [],
     nextId: typeof nextId === "number" ? nextId : 1,
     pinned: Array.isArray(pinned) ? pinned : [],
-  };
-  state = await migrateLegacy(state);
+  });
+}
 
-  // Lazy ensure every note has a slug + bodyRef so legacy-incomplete
-  // records (e.g. partial migrations) still render.
-  const folderSlugs = new Set(state.folders.map((f) => f.slug).filter(Boolean));
+async function ensureBodyRefs(state) {
+  const folderSlugs = new Set(state.folders.map((folder) => folder.slug).filter(Boolean));
   let changed = false;
   for (const folder of state.folders) {
     if (!folder.slug) {
@@ -310,35 +294,31 @@ async function loadAll() {
       changed = true;
     }
   }
-  const noteSlugs = new Set(state.notes.map((n) => n.slug).filter(Boolean));
+  const noteSlugs = new Set(state.notes.map((note) => note.slug).filter(Boolean));
   for (const note of state.notes) {
     if (!note.slug) {
       note.slug = uniqueSlug(note.title || note.id, noteSlugs);
       noteSlugs.add(note.slug);
       changed = true;
     }
-    const folder = state.folders.find((f) => f.id === note.folderId);
-    note.bodyRef = `${folder ? folder.slug : "_orphan"}/${note.slug}.md`;
+    note.bodyRef = `${folderSlugFor(state.folders, note.folderId)}/${note.slug}.md`;
   }
-  if (changed) {
-    await kvSet(KV.folders, state.folders);
-    await kvSet(KV.notes, state.notes);
-  }
+  if (changed) await Promise.all([kvSet(KV.folders, state.folders), kvSet(KV.notes, state.notes)]);
+}
 
-  // Make sure the notes root exists so the first write doesn't 404.
-  await fsMkdir(NOTES_ROOT);
-
-  // Load every body in parallel. Files that 404 fall through to "" —
-  // the user just hasn't created them yet OR the migration hasn't run.
+async function loadBodies(notes) {
   const bodies = new Map();
-  await Promise.all(
-    state.notes.map(async (note) => {
-      const path = `${NOTES_ROOT}/${note.bodyRef}`;
-      bodies.set(note.id, await fsReadText(path));
-    }),
-  );
+  await Promise.all(notes.map(async (note) => {
+    bodies.set(note.id, await fsReadText(`${NOTES_ROOT}/${note.bodyRef}`));
+  }));
+  return bodies;
+}
 
-  return { ...state, bodies };
+async function loadAll() {
+  const state = await loadIndex();
+  await ensureBodyRefs(state);
+  await fsMkdir(NOTES_ROOT);
+  return { ...state, bodies: await loadBodies(state.notes) };
 }
 
 async function loadBody(note, folders) {

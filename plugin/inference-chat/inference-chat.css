@@ -114,6 +114,8 @@ textarea {
 
 textarea::placeholder { color: #7890ae; }
 
+.think { padding: 8px 10px; color: #9fb0ca; background: #263247; }
+.think[aria-pressed="true"] { color: #07111f; background: #fcd34d; }
 .send { padding: 9px 15px; color: #07111f; font-weight: 700; background: #7dd3fc; }
 
 @media (max-width: 560px) {

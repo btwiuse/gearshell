@@ -1,18 +1,3 @@
-// music-engine.js — page-wide music playback singleton (M4).
-//
-// Owns one <audio> element shared by the Music panel and the gear
-// music.* API, so both drive the same playback state. The panel is a
-// user-gesture surface (autoplay policy); the API entry musicPlay is
-// synchronous (jsfs bridge), so VFS paths resolve asynchronously and
-// the panel catches up through MUSIC_STATE_EVENT.
-//
-// The engine also owns the playlist: a queue of tracks with three loop
-// modes (off / all / one) plus shuffle, auto-advance on 'ended', seek,
-// drag reordering, and named playlists persisted to localStorage (so
-// reloads keep them). History de-duplicates by source and counts plays.
-// Metadata + lyrics for VFS files come from audio-tags.js (ID3v2 frames
-// and .lrc sidecars). MUSIC_TIME_EVENT carries just { time } at ~4 Hz
-// for lyric sync, so the panel does not need to re-render whole state.
 
 import { getWanixRoot } from "./app-state.js";
 import { parseAudioTags, parseLrc } from "./audio-tags.js";
@@ -38,14 +23,6 @@ let loopMode = "off";
 let shuffle = false;
 const history = []; // newest first: { src, title, ts, count }
 
-// === Demo seed ===
-// First-time users see an empty queue and have nothing to play. Seed the
-// engine with a single public demo track so the panel has something
-// to render the first time it's opened. Runs exactly once per page
-// load (the next time the engine is re-imported in the same session
-// is rare — HMR re-uses module state). If the user clears the queue
-// they stay empty until the next reload, which is the right behavior
-// for a demo (no surprise replays on every clear).
 const SEED_DEMO_TRACK = {
   src: "/plugin/music/Grapes-I-Dunno.mp3",
   title: "Grapes I Dunno",

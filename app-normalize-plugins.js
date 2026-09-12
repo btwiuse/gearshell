@@ -190,59 +190,39 @@ export function normalizePlugin(plugin = {}) {
 // declares any (the dual-mode switch moved bbtex's 63 binaries to a w9y
 // mod dependency), so stale per-task fetch binds from older saves are
 // pruned here.
+function normalizedPlugins(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(normalizePlugin)
+    .filter((item) => item && item.id !== "vm");
+}
+
+function refreshBuiltinPlugin(item, def) {
+  if (!def) return item;
+  return {
+    ...item,
+    name: def.name || item.name,
+    version: def.version || item.version,
+    enabled: item.version === def.version ? item.enabled : def.enabled,
+    entry: def.entry !== undefined ? def.entry : item.entry,
+    ...(def.iframe ? { iframe: def.iframe } : {}),
+    ...(def.permissions ? { permissions: def.permissions } : {}),
+    ...(Array.isArray(def.routes) && def.routes.length ? { routes: def.routes } : {}),
+    wasm: def.wasm || [],
+    ...(def.preset ? { preset: def.preset } : {}),
+    files: def.files || [],
+    systemFiles: def.systemFiles || [],
+    ...(def.w9y ? { w9y: def.w9y } : {}),
+    css: def.css || [],
+    emptyGrid: def.emptyGrid === true,
+  };
+}
+
 export function normalizePlugins(list, defaults) {
-  const defaultsById = new Map(
-    (Array.isArray(defaults) ? defaults : [])
-      .map(normalizePlugin)
-      .filter(Boolean)
-      .map((item) => [item.id, item]),
-  );
-  const user = (Array.isArray(list) ? list : [])
-    .map(normalizePlugin)
-    .filter((item) => item && item.id !== "vm")
-    .map((item) => {
-      const def = defaultsById.get(item.id);
-      if (!def) return item;
-      return {
-        ...item,
-        // Content version rides the same refresh as content: the OPFS
-        // bind cache keys on <pluginId>@<version>, so a manifest version
-        // bump must land in the saved config or the cache keeps serving
-        // stale bytes under the old key.
-        name: def.name || item.name,
-        version: def.version || item.version,
-        enabled: item.version === def.version ? item.enabled : def.enabled,
-        entry: def.entry !== undefined ? def.entry : item.entry,
-        ...(def.iframe ? { iframe: def.iframe } : {}),
-        // permissions ride the same refresh as iframe src: a builtin
-        // plugin's API surface is a property of the shipped manifest, so
-        // workspace-saved copies must not freeze an old whitelist.
-        ...(def.permissions ? { permissions: def.permissions } : {}),
-        // Deep-link routes for iframe plugins: also a property of the
-        // shipped manifest, so saved workspaces pick up new routes
-        // when the manifest adds them.
-        ...(Array.isArray(def.routes) && def.routes.length
-          ? { routes: def.routes }
-          : {}),
-        wasm: def.wasm || [],
-        ...(def.preset ? { preset: def.preset } : {}),
-        // files/systemFiles are REPLACED even when the default no longer
-        // declares any (mirroring wasm): stale per-task or system fetch
-        // binds from older saves are pruned by the reconcile pass.
-        files: def.files || [],
-        systemFiles: def.systemFiles || [],
-        ...(def.w9y ? { w9y: def.w9y } : {}),
-        css: def.css || [],
-        // emptyGrid is a manifest-only opt-in (not user-editable): the
-        // boot-time plugin kernel reads it from the manifest, so the
-        // default must always win even when the user has never saved
-        // this plugin id (first boot) or saved a stale version.
-        emptyGrid: def.emptyGrid === true,
-      };
-    });
+  const normalizedDefaults = normalizedPlugins(defaults);
+  const defaultsById = new Map(normalizedDefaults.map((item) => [item.id, item]));
+  const user = normalizedPlugins(list)
+    .map((item) => refreshBuiltinPlugin(item, defaultsById.get(item.id)));
   const userIds = new Set(user.map((item) => item.id));
-  const fallback = (Array.isArray(defaults) ? defaults : [])
-    .map(normalizePlugin)
-    .filter((item) => item && !userIds.has(item.id));
+  const fallback = normalizedDefaults.filter((item) => !userIds.has(item.id));
   return [...user, ...fallback];
 }

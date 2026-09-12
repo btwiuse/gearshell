@@ -3,7 +3,7 @@ const ui = {
   messages: $("messages"), model: $("model"), load: $("loadModel"),
   modelStatus: $("modelStatus"), system: $("systemPrompt"), read: $("readTool"),
   grep: $("grepTool"), prompt: $("prompt"), composer: $("composer"),
-  send: $("send"), stop: $("stop"), status: $("status"), newChat: $("newChat"),
+  send: $("send"), stop: $("stop"), status: $("status"), newChat: $("newChat"), think: $("think"),
 };
 const TOOL_PROTOCOL = `When a workspace tool is needed, respond only with this XML:\n<tool_call>\n<function=read>\n<parameter=path>PATH</parameter>\n</tool_call>\nor\n<tool_call>\n<function=grep>\n<parameter=pattern>TEXT</parameter>\n<parameter=path>OPTIONAL_PATH</parameter>\n</tool_call>\nDo not invent tool results.`;
 let session = null;
@@ -11,6 +11,7 @@ let modelId = null;
 let history = [];
 let ready = false;
 let sending = false;
+let thinkEnabled = false;
 
 function status(text, state = "idle") {
   ui.status.textContent = text;
@@ -37,6 +38,28 @@ function addMessage(kind, text = "") {
 function append(node, text) {
   node.textContent += text;
   ui.messages.scrollTop = ui.messages.scrollHeight;
+}
+
+function splitThinking(text) {
+  const start = text.indexOf("<think>");
+  const end = text.indexOf("</think>");
+  if (start === -1 || end < start) return { thinking: "", answer: text };
+  return {
+    thinking: text.slice(start + 7, end).trim(),
+    answer: `${text.slice(0, start)}${text.slice(end + 8)}`.trim(),
+  };
+}
+
+function renderReply(node, raw) {
+  const split = splitThinking(raw);
+  node.textContent = split.answer || raw;
+  if (split.thinking && thinkEnabled) {
+    const details = document.createElement("details");
+    details.className = "message tool";
+    details.innerHTML = `<summary>Reasoning</summary><pre></pre>`;
+    details.querySelector("pre").textContent = split.thinking;
+    node.before(details);
+  }
 }
 
 function activeTools() {
@@ -110,6 +133,7 @@ function waitForStream(sessionId, target) {
     const listener = (payload) => {
       if (payload?.sessionId !== sessionId) return;
       const event = payload.event;
+      if (event?.type === "queued") status("Waiting for the shared inference host…", "loading");
       if (event?.type === "text" || event?.type === "thinking") append(target, event.delta);
       if (event?.type === "_error") finish(new Error(event.error));
       if (event?.type === "_end") finish();
@@ -127,7 +151,7 @@ function waitForStream(sessionId, target) {
 async function generate(messages) {
   const answer = addMessage("assistant");
   const stream = waitForStream(session.id, answer);
-  await GearShell.inference.send(session.id, messages, { think: false });
+  await GearShell.inference.send(session.id, messages, { think: thinkEnabled });
   return stream;
 }
 
@@ -139,6 +163,8 @@ async function sendTurn(text) {
   status("Generating…", "loading");
   try {
     let reply = await generate(promptMessages());
+    const answerNode = ui.messages.lastElementChild;
+    renderReply(answerNode, reply);
     const call = extractToolCall(reply);
     if (call) {
       const toolCard = addMessage("tool", `Using ${call.name}…`);
@@ -147,6 +173,7 @@ async function sendTurn(text) {
       history.push({ role: "assistant", content: reply });
       history.push({ role: "user", content: `Tool result for ${call.name}:\n${result}\n\nNow answer the user's request using this result. Do not call another tool.` });
       reply = await generate(promptMessages());
+      renderReply(ui.messages.lastElementChild, reply);
     }
     history.push({ role: "assistant", content: reply });
     status("Ready", "ready");
@@ -215,6 +242,10 @@ ui.prompt.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ui.composer.requestSubmit(); }
 });
 ui.model.addEventListener("change", () => { modelId = ui.model.value; });
+ui.think.addEventListener("click", () => {
+  thinkEnabled = !thinkEnabled;
+  ui.think.setAttribute("aria-pressed", String(thinkEnabled));
+});
 ui.load.addEventListener("click", () => loadModel().catch((error) => { ui.load.disabled = false; status(error.message, "error"); }));
 ui.newChat.addEventListener("click", () => resetChat().catch((error) => status(error.message, "error")));
 ui.stop.addEventListener("click", () => session && GearShell.inference.abort(session.id));
