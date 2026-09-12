@@ -448,6 +448,9 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
       ? external.create({ title: `${username || 'ssh'}@${new URL(pipingServerUrl).searchParams.get('hostname') || 'host'}` })
         .then(({ sessionId }) => { externalSessionRef.current = sessionId; return sessionId; })
       : Promise.resolve(null);
+    const promptInTerminal = (spec) => externalReady.then((sessionId) =>
+      sessionId ? external.prompt(sessionId, spec) : showPrompt(spec)
+    );
     if (external) {
       const onData = (payload) => {
         if (payload.sessionId === externalSessionRef.current) externalInput?.enqueue(payload.data);
@@ -573,7 +576,7 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
             async onPasswordAuth() {
               if (!pwTried && defaultSshPassword) { pwTried = true; return defaultSshPassword; }
               const msg = pwTried ? 'try again.' : '';
-              const pw  = await showPrompt({ title: 'Password', message: msg, inputType: 'password', saveable: true });
+              const pw  = await promptInTerminal({ title: 'Password', message: msg, secret: true, saveable: true });
               if (pw === undefined) { localCancelled = true; throw new Error('aborted'); }
               pwTried = true;
               if (pw.save) onSavePassword?.(pw.value);
@@ -590,10 +593,10 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
               const answers = [];
               for (let i = 0; i < questions.length; i++) {
                 const msg = [header, questions[i]].filter(Boolean).join('\n');
-                const ans = await showPrompt({
+                const ans = await promptInTerminal({
                   title: 'Authentication',
                   message: msg,
-                  inputType: echos[i] ? 'text' : 'password',
+                  secret: !echos[i],
                 });
                 if (ans === undefined) { localCancelled = true; throw new Error('aborted'); }
                 answers.push(ans);
@@ -604,10 +607,10 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
             async getAuthPrivateKeyPassphrase(fp) {
               const k    = storedKeys.find(k => k.sha256Fingerprint === fp);
               const type = await workerGetAuthPublicKeyType(k.publicKey);
-              const pp   = await showPrompt({
-                title:     'Passphrase',
-                message:   `(${k.name}) ${type}\nEnter passphrase for key`,
-                inputType: 'password',
+              const pp   = await promptInTerminal({
+                title: 'Passphrase',
+                message: `(${k.name}) ${type}\nEnter passphrase for key`,
+                secret: true,
               });
               if (pp === undefined) { localCancelled = true; throw new Error('aborted'); }
               return pp;
@@ -620,11 +623,11 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
 
             async onHostKey({ key }) {
               if (serverHostKeyMgr.isTrusted(key.fingerprint)) return true;
-              const ans = await showPrompt({
-                title:       'New host',
-                message:     `${key.type} key fingerprint is ${key.fingerprint}\nAre you sure you want to continue connecting?`,
-                showsInput:  false,
-                width:       '28rem',
+              const ans = await promptInTerminal({
+                title: 'New host',
+                message: `${key.type} key fingerprint is ${key.fingerprint}\nTrust this host key?`,
+                input: false,
+                confirmLabel: 'Trust',
               });
               if (ans !== undefined) {
                 serverHostKeyMgr.trust(key.fingerprint);
@@ -636,11 +639,11 @@ function PipingSsh({ pipingServerUrl, username, defaultSshPassword, agentForward
 
             async onAgentConfirm(key, payload) {
               const hex = Array.from(payload).map(b => b.toString(16).padStart(2, '0')).join(' ');
-              const ans = await showPrompt({
-                title:       'Agent sign',
-                message:     `${key}\nPayload: ${hex}\nAllow agent sign?`,
-                showsInput:  false,
-                width:       '32rem',
+              const ans = await promptInTerminal({
+                title: 'Agent sign',
+                message: `${key}\nPayload: ${hex}\nAllow agent sign?`,
+                input: false,
+                confirmLabel: 'Allow',
               });
               return ans !== undefined;
             },

@@ -5,6 +5,8 @@ import {
   createExternalTerminal,
   disposeExternalTerminal,
   exitExternalTerminal,
+  promptExternalTerminal,
+  respondExternalTerminalPrompt,
   writeExternalTerminal,
 } from "./external-terminal-sessions.js";
 
@@ -51,6 +53,23 @@ function exitTerminal(event) {
   reply(event, { id, ok, ...(ok ? {} : { error: "unknown external terminal" }) });
 }
 
+async function promptTerminal(event) {
+  const { id, args } = event.data.gear;
+  const [sessionId, prompt] = args || [];
+  try {
+    const value = await promptExternalTerminal(sessionId, prompt);
+    reply(event, { id, ok: true, result: value });
+  } catch (error) {
+    reply(event, { id, ok: false, error: error?.message || String(error) });
+  }
+}
+
+function respondTerminalPrompt(event) {
+  const { id, args } = event.data.gear;
+  const ok = respondExternalTerminalPrompt(args?.[0], args?.[1]);
+  reply(event, { id, ok, ...(ok ? {} : { error: "no pending terminal prompt" }) });
+}
+
 function disposeTerminal(event) {
   const { id, args } = event.data.gear;
   disposeExternalTerminal(args?.[0]);
@@ -64,6 +83,8 @@ export function dispatchExternalTerminalCall(event, plugin) {
   if (action === "create") return createTerminal(event);
   if (action === "write") return writeTerminal(event);
   if (action === "exit") return exitTerminal(event);
+  if (action === "prompt") return promptTerminal(event);
+  if (action === "respond") return respondTerminalPrompt(event);
   if (action === "dispose") return disposeTerminal(event);
   reply(event, { id: event.data.gear.id, ok: false, error: `unknown external terminal method: ${action}` });
 }

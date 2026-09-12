@@ -17,6 +17,8 @@ export function createExternalTerminal({ source, origin, title }) {
     output: new Set(),
     outputBuffer: [],
     exit: new Set(),
+    prompt: new Set(),
+    pendingPrompt: null,
   });
   return sessions.get(sessionId);
 }
@@ -55,6 +57,32 @@ export function onExternalTerminalExit(sessionId, listener) {
   return () => entry.exit.delete(listener);
 }
 
+export function promptExternalTerminal(sessionId, prompt) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry || entry.pendingPrompt) return Promise.reject(new Error("external terminal prompt unavailable"));
+  return new Promise((resolve) => {
+    entry.pendingPrompt = { prompt, resolve };
+    for (const listener of entry.prompt) listener(prompt);
+  });
+}
+
+export function respondExternalTerminalPrompt(sessionId, value) {
+  const entry = getExternalTerminal(sessionId);
+  const pending = entry?.pendingPrompt;
+  if (!pending) return false;
+  entry.pendingPrompt = null;
+  pending.resolve(value);
+  return true;
+}
+
+export function onExternalTerminalPrompt(sessionId, listener) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return () => {};
+  entry.prompt.add(listener);
+  if (entry.pendingPrompt) listener(entry.pendingPrompt.prompt);
+  return () => entry.prompt.delete(listener);
+}
+
 export function sendExternalTerminalInput(sessionId, data) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
@@ -72,6 +100,7 @@ export function resizeExternalTerminal(sessionId, cols, rows, xpixel, ypixel) {
 export function disposeExternalTerminal(sessionId) {
   const entry = getExternalTerminal(sessionId);
   if (!entry) return false;
+  entry.pendingPrompt?.resolve(null);
   push(entry, "terminal.external.close", { sessionId });
   sessions.delete(sessionId);
   return true;

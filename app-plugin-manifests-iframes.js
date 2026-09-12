@@ -34,6 +34,7 @@ export const IFRAME_PLUGINS = [
         "terminal.external.create",
         "terminal.external.write",
         "terminal.external.exit",
+        "terminal.external.prompt",
         "terminal.external.dispose",
       ],
     },
