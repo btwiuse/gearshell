@@ -89,24 +89,23 @@ function getConfiguredUrl({ pipingServerUrl, sshHost, sshPort, sshUsername, sshP
 
 // ─── Auth key sets store ──────────────────────────────────────────────────────
 
-const authKeysStoreTypes = ['memory', 'session_storage', 'local_storage'];
-const storeTypeLabel = { memory: 'memory', session_storage: 'session storage', local_storage: 'local storage' };
-
-const memKeyMap = new Map();
-let sessKeys = (() => { try { return JSON.parse(sessionStorage.getItem('auth_key_sets') || '[]'); } catch { return []; } })();
-let localKeys = (() => { try { return JSON.parse(localStorage.getItem('auth_key_sets') || '[]'); } catch { return []; } })();
-
+const authKeysStoreTypes = ['workspace'];
+const storeTypeLabel = { workspace: 'GearShell workspace' };
+const KEYS_STORAGE_KEY = 'webssh:keys:v1';
 const keySubscribers = new Set();
+let workspaceKeys = [];
 
 function getStoredKeys() {
-  const all = [...memKeyMap.values(), ...sessKeys, ...localKeys];
-  const seen = new Set();
-  return all
-    .filter(k => { if (seen.has(k.sha256Fingerprint)) return false; seen.add(k.sha256Fingerprint); return true; })
-    .sort((a, b) => a.addedAtMillis - b.addedAtMillis);
+  return [...workspaceKeys].sort((a, b) => a.addedAtMillis - b.addedAtMillis);
 }
 
-function notifyKeySubscribers() { keySubscribers.forEach(fn => fn([...getStoredKeys()])); }
+function notifyKeySubscribers() { keySubscribers.forEach(fn => fn(getStoredKeys())); }
+
+async function loadWorkspaceKeys() {
+  const stored = await GearShell.config.kv.get(KEYS_STORAGE_KEY);
+  workspaceKeys = Array.isArray(stored) ? stored : [];
+  notifyKeySubscribers();
+}
 
 function useStoredKeys() {
   const [keys, setKeys] = useState(getStoredKeys);
@@ -114,33 +113,21 @@ function useStoredKeys() {
   return keys;
 }
 
-function _addKey(k) {
-  switch (k.storeType) {
-    case 'memory':
-      memKeyMap.set(k.sha256Fingerprint, k);
-      break;
-    case 'session_storage':
-      sessKeys = [...sessKeys, k];
-      sessionStorage.setItem('auth_key_sets', JSON.stringify(sessKeys));
-      break;
-    case 'local_storage':
-      localKeys = [...localKeys, k];
-      localStorage.setItem('auth_key_sets', JSON.stringify(localKeys));
-      break;
-  }
+function persistKeys(keys) {
+  workspaceKeys = keys;
+  GearShell.config.kv.set(KEYS_STORAGE_KEY, workspaceKeys).catch(() => {});
   notifyKeySubscribers();
+}
+
+function _addKey(key) {
+  persistKeys([...workspaceKeys.filter((item) => item.sha256Fingerprint !== key.sha256Fingerprint), key]);
 }
 
 function removeKey(fp) {
-  memKeyMap.delete(fp);
-  sessKeys  = sessKeys.filter(k => k.sha256Fingerprint !== fp);
-  localKeys = localKeys.filter(k => k.sha256Fingerprint !== fp);
-  sessionStorage.setItem('auth_key_sets', JSON.stringify(sessKeys));
-  localStorage.setItem('auth_key_sets', JSON.stringify(localKeys));
-  notifyKeySubscribers();
+  persistKeys(workspaceKeys.filter((key) => key.sha256Fingerprint !== fp));
 }
 
-function updateKey(k) { removeKey(k.sha256Fingerprint); _addKey(k); }
+function updateKey(key) { _addKey(key); }
 
 // ─── Host presets store ─────────────────────────────────────────────────────
 
@@ -946,6 +933,7 @@ function App() {
 
   useEffect(() => {
     loadWorkspaceHosts().catch(() => {});
+    loadWorkspaceKeys().catch(() => {});
     checkSupportsWebSocketStream().then(s => setSupportsStreams(s));
   }, []);
 
