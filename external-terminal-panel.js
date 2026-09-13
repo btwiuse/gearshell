@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import htm from "htm";
 import { getDockviewApi } from "./app-panels-store.js";
-import { ghosttyIdentity, mountTerminal } from "./plugin/terminal-mount.mjs";
+import { ghosttyIdentity, mountTerminal, progressIndicator } from "./plugin/terminal-mount.mjs";
 import {
   disposeExternalTerminal,
   onExternalTerminalExit,
@@ -27,27 +27,6 @@ function externalSession(sessionId) {
   };
 }
 
-function renderProgress(bar, progress) {
-  const state = progress?.state;
-  bar.hidden = state === 0 || state == null;
-  bar.dataset.state = String(state == null ? 0 : state);
-  bar.firstElementChild.style.width = `${Math.max(0, Math.min(100, Number(progress?.value) || 0))}%`;
-}
-
-function wireProgress(term, libs, bar) {
-  const addon = new libs.ProgressAddon();
-  term.loadAddon(addon);
-  addon.onChange((progress) => renderProgress(bar, progress));
-  let carry = "";
-  return (data) => {
-    const text = carry + (typeof data === "string" ? data : new TextDecoder().decode(data));
-    const matches = [...text.matchAll(/\x1b\]9;4;(\d+)(?:;(\d+))?(?:\x07|\x1b\\)/g)];
-    const latest = matches.at(-1);
-    if (latest) renderProgress(bar, { state: Number(latest[1]), value: Number(latest[2]) || 0 });
-    carry = text.slice(text.lastIndexOf("\x1b"));
-  };
-}
-
 export function ExternalTerminalPanel({ params }) {
   const anchor = useRef(null);
   const progress = useRef(null);
@@ -67,8 +46,8 @@ export function ExternalTerminalPanel({ params }) {
     mountTerminal(anchor.current, externalSession(params.sessionId), {
       ...ghosttyIdentity({ terminal: { fontSize: 14, theme: { background: "#0b1120" } } }),
       exitMessage: false,
-      setupAddons: (term, libs) => { observeProgress = wireProgress(term, libs, progress.current); },
-      onData: (data) => observeProgress(data),
+      setupAddons: () => { observeProgress = progressIndicator(progress.current); },
+      onProgress: (data) => observeProgress(data),
     }).then((mounted) => {
       handle = mounted;
       terminal.current = mounted.term;

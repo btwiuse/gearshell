@@ -288,6 +288,7 @@ export async function mountTerminal(anchor, session, options = {}) {
   const offOutput = session.onOutput(sessionId, (data) => {
     sniffOsc(data);
     term.write(data);
+    options.onProgress?.(data);
     options.onData?.(data);
   });
   const offExit = session.onExit(sessionId, (payload) => {
@@ -363,6 +364,34 @@ export function ghosttyIdentity(options = {}) {
   return {
     terminal: { ...(options.terminal || {}), termName: "ghostty" },
     transformInput: base ? (data) => base(rewrite(data)) : rewrite,
+  };
+}
+
+export function progressIndicator(bar) {
+  let carry = "";
+  let hideFrame = null;
+  const render = (state, value) => {
+    if (state !== 0) {
+      if (hideFrame != null) cancelAnimationFrame(hideFrame);
+      hideFrame = null;
+      bar.hidden = false;
+      bar.dataset.state = String(state);
+      bar.firstElementChild.style.width = `${Math.max(0, Math.min(100, value || 0))}%`;
+      return;
+    }
+    hideFrame = requestAnimationFrame(() => {
+      bar.hidden = true;
+      bar.dataset.state = "0";
+    });
+  };
+  return (data) => {
+    const text = carry + (typeof data === "string" ? data : new TextDecoder().decode(data));
+    for (const match of text.matchAll(/\x1b\]9;4;(\d+)(?:;(\d+))?(?:\x07|\x1b\\)/g)) {
+      render(Number(match[1]), Number(match[2]) || 0);
+    }
+    const start = text.lastIndexOf("\x1b]9;4;");
+    const complete = Math.max(text.lastIndexOf("\x07"), text.lastIndexOf("\x1b\\"));
+    carry = start > complete ? text.slice(start) : "";
   };
 }
 
