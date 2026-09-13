@@ -33,6 +33,7 @@ function wireProgress(term, libs, bar) {
   const subscription = addon.onChange((progress) => {
     const state = progress?.state;
     bar.hidden = state === 0 || state == null;
+    bar.dataset.state = String(state == null ? 0 : state);
     bar.firstElementChild.style.width = `${Math.max(0, Math.min(100, Number(progress?.value) || 0))}%`;
   });
   return () => {
@@ -85,7 +86,8 @@ export function ExternalTerminalPanel({ params }) {
   };
   return html`
     <div className="panel-content" style=${{ position: "relative" }}>
-      <div ref=${progress} hidden style=${{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 3, height: "3px", background: "#334155" }}><div style=${{ width: "0%", height: "100%", background: "#f59e0b", transition: "width 120ms linear" }}></div></div>
+      <style>${"@keyframes external-term-progress-indeterminate { from { transform: translateX(-120%); } to { transform: translateX(320%); } } .external-term-progress[data-state=\"3\"] .external-term-progress-fill { width: 32% !important; background: linear-gradient(90deg, transparent, #f59e0b, transparent) !important; animation: external-term-progress-indeterminate 1.2s ease-in-out infinite; }"}</style>
+      <div ref=${progress} className="external-term-progress" hidden style=${{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 3, height: "3px", background: "#334155", overflow: "hidden" }}><div className="external-term-progress-fill" style=${{ width: "0%", height: "100%", background: "#f59e0b", transition: "width 120ms linear" }}></div></div>
       <div ref=${anchor} style=${{ width: "100%", height: "100%" }}></div>
       ${notification && html`
         <div style=${{
