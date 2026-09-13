@@ -1011,7 +1011,7 @@ function KeyManager() {
 
 // ─── HostManager ─────────────────────────────────────────────────────────────
 
-function HostManager({ onConnect, connections, onDisconnect }) {
+function HostManager({ onConnect }) {
   const hosts = useStoredHosts();
   const [expanded, setExpanded] = useState(null);
   const [edits, setEdits] = useState({});
@@ -1023,10 +1023,8 @@ function HostManager({ onConnect, connections, onDisconnect }) {
     removeHost(idx);
   }
 
-  function isActiveHost(h) {
-    return connections.some(c =>
-      c.hostname === h.hostname && c.port === h.port && c.username === h.username && (c.status === 'connected' || c.status === 'connecting')
-    );
+  function isActiveHost() {
+    return false;
   }
 
   const inputClass = 'w-full bg-transparent border border-gray-800 rounded-sm px-3 py-1.5 text-sm text-white focus:outline-none focus:border-amber-500/50 placeholder-gray-600';
@@ -1055,19 +1053,11 @@ function HostManager({ onConnect, connections, onDisconnect }) {
                 </div>
                 <span class="text-gray-600 text-xs flex-shrink-0">${open ? '▲' : '▼'}</span>
               </button>
-              <!-- Connect / Disconnect button -->
-              ${active
-                ? html`<button type="button" onClick=${() => onDisconnect(h)}
-                    class="px-2 py-1 hover:bg-red-700/50 rounded text-sm transition-colors flex-shrink-0 leading-none"
-                    title="Disconnect">
-                    ${ICON.disconnect}
-                  </button>`
-                : html`<button type="button" onClick=${() => onConnect(h)}
-                    class="px-2 py-1 hover:bg-amber-600/50 rounded text-sm transition-colors flex-shrink-0 leading-none"
-                    title="Connect">
-                    ${ICON.connect}
-                  </button>`
-              }
+              <button type="button" onClick=${() => onConnect(h)}
+                class="px-2 py-1 hover:bg-amber-600/50 rounded text-sm transition-colors flex-shrink-0 leading-none"
+                title="Connect">
+                ${ICON.connect}
+              </button>
             </div>
 
             <!-- Expanded panel -->
@@ -1257,29 +1247,11 @@ function App() {
   const [hostVer, setHostVer] = useState(0);
   const [newKeyOpen,        setNewKeyOpen]        = useState(false);
   const [genKeyOpen,        setGenKeyOpen]        = useState(false);
-  const [connections,       setConnections]       = useState([]);
-  const [activeConnectionId, setActiveConnectionId] = useState(null);
-  const connIdCounter = useRef(0);
-  const connectionsRef = useRef(connections);
-  connectionsRef.current = connections;
-  const restoredRef = useRef(false);
   const serverDropdownRef = useRef(null);
   const hostDropdownRef = useRef(null);
 
-  // Sync route with hash changes
   useEffect(() => {
-    const handler = () => {
-      const r = location.hash || '#';
-      setRoute(r);
-      if (r === '#keys' || r === '#hosts') {
-        setActiveConnectionId(null);
-      } else if (/^#\d+$/.test(r)) {
-        const id = parseInt(r.substring(1), 10);
-        if (connectionsRef.current.some(c => c.id === id)) setActiveConnectionId(id);
-      } else if (r === '#') {
-        setActiveConnectionId(null);
-      }
-    };
+    const handler = () => setRoute(location.hash || '#');
     window.addEventListener('hashchange', handler);
     return () => window.removeEventListener('hashchange', handler);
   }, []);
@@ -1316,49 +1288,31 @@ function App() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  function startConnection({ hostname, port, username, password, agentForwarding, pipingFullUrl }, { activate = true } = {}) {
-    let fullUrl = pipingFullUrl;
-    if (!fullUrl) {
-      try {
-        const url = new URL(pipingServerUrl);
-        url.searchParams.set('hostname', hostname);
-        url.searchParams.set('port', port);
-        fullUrl = url.href;
-      } catch {}
-    }
-    const id = ++connIdCounter.current;
-    const entry = {
-      id,
-      hostname,
-      port,
+  async function startConnection({ hostname, port, username, agentForwarding }) {
+    const url = new URL(pipingServerUrl);
+    url.searchParams.set('hostname', hostname);
+    url.searchParams.set('port', port);
+    const authKeySets = await Promise.all(getStoredKeys().filter(s => s.enabled).map(async s => ({
+      publicKey: s.publicKey,
+      privateKey: s.privateKey,
+      encrypted: await workerIsEncrypted(s.privateKey),
+    })));
+    const title = `${username || 'ssh'}@${hostname}`;
+    const terminal = await GearShell.terminal.external.create({ title });
+    await GearShell.terminal.external.startWebSsh(terminal.sessionId, {
+      pipingServerUrl: url.href,
       username,
-      password: password || '',
-      agentForwarding: agentForwarding ?? false,
-      pipingFullUrl: fullUrl,
-      status: 'connecting',
-      name: `${username}@${hostname}`,
-    };
-    connectionsRef.current = [...connectionsRef.current, entry];
-    setConnections(connectionsRef.current);
-    saveTabs(connectionsRef.current);
-  }
-
-  function closeConnection(connId) {
-    const next = connectionsRef.current.filter(c => c.id !== connId);
-    connectionsRef.current = next;
-    setConnections(next);
-    saveTabs(connectionsRef.current);
-    if (activeConnectionId === connId) {
-      setActiveConnectionId(next.length > 0 ? next[next.length-1].id : null);
-    }
+      agentForwarding: agentForwarding === true,
+      authKeySets,
+    });
   }
 
   function connect(host) {
     if (host) {
-      startConnection(host);
+      startConnection(host).catch((error) => showSnackbar({ message: error.message }));
       addPipingServer(host.pipingServerUrl || pipingServerUrl);
     } else {
-      startConnection({ hostname: sshHost, port: sshPort, username, password: effectiveSshPassword, agentForwarding: false });
+      startConnection({ hostname: sshHost, port: sshPort, username, agentForwarding: false }).catch((error) => showSnackbar({ message: error.message }));
       addPipingServer(pipingServerUrl);
       // Save to host presets
       const hosts = getStoredHosts();
@@ -1397,7 +1351,7 @@ function App() {
 
       <!-- App bar -->
       <header class="flex-shrink-0 flex items-center px-3 py-1 gap-1 z-10 border-b border-gray-800/50">
-        <a href="#" onClick=${e => { e.preventDefault(); setActiveConnectionId(null); window.scrollTo(0, 0); location.hash = ''; }} class="flex items-center gap-1 text-xs font-medium text-gray-200 no-underline mr-2 tracking-tight flex-shrink-0">
+        <a href="#" onClick=${e => { e.preventDefault(); window.scrollTo(0, 0); location.hash = ''; }} class="flex items-center gap-1 text-xs font-medium text-gray-200 no-underline mr-2 tracking-tight flex-shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l4-4-4-4"/><path d="M12 19h8"/></svg>
           GearSSH
         </a>
@@ -1451,26 +1405,7 @@ function App() {
 
       <!-- Main content -->
       <main class="flex-1 flex flex-col">
-        ${connections.map(c => html`
-          <div key=${c.id} style=${{ display: c.id === activeConnectionId ? 'flex' : 'none', flex: 1 }}>
-            <${PipingSsh} key=${c.id}
-              isActive=${c.id === activeConnectionId}
-              pipingServerUrl=${c.pipingFullUrl}
-              username=${c.username}
-              defaultSshPassword=${c.password}
-              agentForwarding=${c.agentForwarding}
-              onConnected=${() => { const next = connectionsRef.current.map(cc => cc.id === c.id ? {...cc, status: 'connected'} : cc); connectionsRef.current = next; setConnections(next); saveTabs(next); }}
-              onReconnecting=${() => { const next = connectionsRef.current.map(cc => cc.id === c.id ? {...cc, status: 'connecting'} : cc); connectionsRef.current = next; setConnections(next); saveTabs(next); }}
-              onEnd=${() => { const next = connectionsRef.current.map(cc => cc.id === c.id ? {...cc, status: 'finished'} : cc); connectionsRef.current = next; setConnections(next); saveTabs(next); }}
-              onSavePassword=${pw => {
-                const hosts = getStoredHosts();
-                const idx = hosts.findIndex(h => h.hostname === c.hostname && h.port === c.port && h.username === c.username);
-                if (idx !== -1) { hosts[idx] = {...hosts[idx], password: pw}; persistHosts(hosts); }
-              }}
-            />
-          </div>
-        `)}
-        ${!activeConnectionId && (route === '#keys'
+        ${route === '#keys'
           ? html`
             <div class="flex-1 px-6 py-8" style=${{ maxWidth: '40rem', margin: '0 auto', width: '100%' }}>
               <div class="flex items-center gap-3 mb-6">
@@ -1493,9 +1428,7 @@ function App() {
           ? html`
             <div class="flex-1 px-6 py-8" style=${{ maxWidth: '40rem', margin: '0 auto', width: '100%' }}>
               <h2 class="text-base font-semibold mb-6">SSH Hosts</h2>
-              <${HostManager} onConnect=${connect} connections=${connections} onDisconnect=${(h) => {
-                connections.filter(c => c.hostname === h.hostname && c.port === h.port && c.username === h.username).forEach(c => closeConnection(c.id));
-              }} />
+              <${HostManager} onConnect=${connect} />
             </div>
           `
           : html`
@@ -1689,7 +1622,7 @@ function App() {
             </div>
             </div>
           `
-        )}
+        }
       </main>
 
       <!-- Globals -->
