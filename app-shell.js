@@ -40,6 +40,7 @@ import {
   destroyWorkbenchSession,
 } from "./app-sessions.js";
 import { destroyWorkspaceTaskSession } from "./app-workspace-task-sessions.js";
+import { disposeExternalTerminal } from "./external-terminal-sessions.js";
 import {
   autoStartWorkspaceTasks,
   restoreSavedPanels,
@@ -73,6 +74,9 @@ function handlePanelRemoved(api, panel) {
   const workspaceTaskMatch = /^workspace-task-(\d+)$/.exec(panel.id);
   if (workspaceTaskMatch) {
     destroyWorkspaceTaskSession(Number(workspaceTaskMatch[1]));
+  }
+  if (panel.params?.panelType === "external-terminal") {
+    disposeExternalTerminal(panel.params.sessionId);
   }
   forgetOpenPanel(panel.id);
   // Empty-workspace fallback: when the user closes the last panel,

@@ -47,7 +47,8 @@ async function start(config) {
     authKeySets: config.authKeySets || [],
   }, {
     termWrite: (data) => self.postMessage({ type: 'output', data }),
-    onPasswordAuth: () => ask({ title: 'Password', secret: true, saveable: true }),
+    onPasswordAuth: () => ask({ title: 'Password', secret: true, saveable: true })
+      .then((answer) => answer == null ? answer : typeof answer === 'object' ? answer.value : answer),
     onKeyboardInteractive: async (name, instruction, questions, echos) => {
       const header = [name, instruction].filter(Boolean).join('\n');
       const answers = [];

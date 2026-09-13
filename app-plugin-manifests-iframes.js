@@ -44,6 +44,27 @@ export const IFRAME_PLUGINS = [
     enabled: false,
   },
   {
+    id: "wetty",
+    name: "Gear WeTTY",
+    version: "1.0.0",
+    icon: "Cable",
+    iframe: {
+      src: "/plugin/wetty/index.html",
+      allow: "clipboard-read; clipboard-write; fullscreen",
+      allowFullscreen: true,
+    },
+    permissions: {
+      api: [
+        "terminal.external.create",
+        "terminal.external.startWetty",
+        "terminal.external.dispose",
+        "config.kv.get",
+        "config.kv.set",
+      ],
+    },
+    enabled: false,
+  },
+  {
     id: "webllm",
     name: "WebLLM",
     version: "1.0.0",

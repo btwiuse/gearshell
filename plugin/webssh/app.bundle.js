@@ -47,46 +47,6 @@ const ICON = {
   plus:         '+',
 };
 
-// ─── Fragment params ──────────────────────────────────────────────────────────
-
-const P = {
-  pipingServerUrl:      'server',
-  sshHost:              'host',
-  sshPort:              'port',
-  sshUsername:          'user',
-  sshPassword:          'password',
-  autoConnect:          'auto_connect',
-};
-
-function parseFragmentParams() {
-  return new URL(`a://a${location.hash.substring(1)}`).searchParams;
-}
-
-const fragmentParams = {
-  pipingServerUrl()      { return parseFragmentParams().get(P.pipingServerUrl) ?? undefined; },
-  sshHost()              { return parseFragmentParams().get(P.sshHost) ?? undefined; },
-  sshPort()              { return parseFragmentParams().get(P.sshPort) ?? undefined; },
-  sshUsername()          { return parseFragmentParams().get(P.sshUsername) ?? undefined; },
-  sshPassword()          { return parseFragmentParams().get(P.sshPassword) ?? undefined; },
-  autoConnect()          {
-    const s = parseFragmentParams().get(P.autoConnect);
-    return s !== null && ['', '1', 'true'].includes(s);
-  },
-};
-
-function getConfiguredUrl({ pipingServerUrl, sshHost, sshPort, sshUsername, sshPassword, autoConnect }) {
-  const sp = new URLSearchParams();
-  if (pipingServerUrl)                           sp.set(P.pipingServerUrl, pipingServerUrl);
-  if (sshHost)                                   sp.set(P.sshHost, sshHost);
-  if (sshPort && sshPort !== '')                 sp.set(P.sshPort, sshPort);
-  if (sshUsername)                               sp.set(P.sshUsername, sshUsername);
-  if (sshPassword !== undefined)                 sp.set(P.sshPassword, sshPassword);
-  if (autoConnect)                               sp.set(P.autoConnect, '1');
-  const url = new URL(location.href);
-  url.hash = `?${sp.toString()}`;
-  return url.href.replaceAll('%3A', ':').replaceAll('%2F', '/');
-}
-
 // ─── Auth key sets store ──────────────────────────────────────────────────────
 
 const authKeysStoreTypes = ['workspace'];
@@ -855,15 +815,7 @@ const BUILTIN_SERVERS = [
   'https://websocket-tcp-proxy.navigaid.workers.dev/',
   'https://websocket-tcp-proxy.up.railway.app/',
 ];
-const FORM_STORAGE_KEY = 'piping-ssh-form';
 const PIPING_SERVERS_KEY = 'piping-ssh-servers';
-
-function loadSaved(key, fallback) {
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(FORM_STORAGE_KEY) || '{}');
-    return saved[key] !== undefined ? saved[key] : fallback;
-  } catch { return fallback; }
-}
 
 function getStoredPipingServers() {
   try { return JSON.parse(localStorage.getItem(PIPING_SERVERS_KEY) || '[]'); } catch { return []; }
@@ -893,15 +845,10 @@ function updatePipingServer(oldUrl, newUrl) {
 }
 
 function App() {
-  const [pipingServerUrl,   setPipingServerUrl]   = useState(loadSaved('pipingServerUrl', fragmentParams.pipingServerUrl() ?? BUILTIN_SERVERS[0]));
-  const [sshHost,           setSshHost]           = useState(loadSaved('sshHost', fragmentParams.sshHost() ?? 'terminal.shop'));
-  const [sshPort,           setSshPort]           = useState(loadSaved('sshPort', fragmentParams.sshPort() ?? '22'));
-  const [username,          setUsername]          = useState(loadSaved('username', fragmentParams.sshUsername() ?? ''));
-  const [sshPassword,       setSshPassword]       = useState(loadSaved('sshPassword', fragmentParams.sshPassword() ?? ''));
-  const [showSshPw,         setShowSshPw]         = useState(false);
-  const [emptySshPw,        setEmptySshPw]        = useState(loadSaved('emptySshPw', fragmentParams.sshPassword() === ''));
-  const [inclPwInUrl,       setInclPwInUrl]       = useState(loadSaved('inclPwInUrl', fragmentParams.sshPassword() !== undefined));
-  const [autoConnect,       setAutoConnect]       = useState(loadSaved('autoConnect', fragmentParams.autoConnect() ?? false));
+  const [pipingServerUrl,   setPipingServerUrl]   = useState(BUILTIN_SERVERS[0]);
+  const [sshHost,           setSshHost]           = useState('terminal.shop');
+  const [sshPort,           setSshPort]           = useState('22');
+  const [username,          setUsername]          = useState('');
   const [showMore,          setShowMore]          = useState(false);
   const [supportsStreams,   setSupportsStreams]   = useState(true);
   const [route,             setRoute]             = useState(location.hash || '#');
@@ -922,24 +869,11 @@ function App() {
     return () => window.removeEventListener('hashchange', handler);
   }, []);
 
-  // Persist form state to sessionStorage
-  useEffect(() => {
-    const state = { pipingServerUrl, sshHost, sshPort, username, sshPassword, emptySshPw, inclPwInUrl, autoConnect };
-    try { sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(state)); } catch {}
-  }, [pipingServerUrl, sshHost, sshPort, username, sshPassword, emptySshPw, inclPwInUrl, autoConnect]);
-
-  // Effective ssh password
-  const effectiveSshPassword = (sshPassword === '' && !emptySshPw) ? undefined : sshPassword;
-
   useEffect(() => {
     loadWorkspaceHosts().catch(() => {});
     loadWorkspaceKeys().catch(() => {});
     checkSupportsWebSocketStream().then(s => setSupportsStreams(s));
   }, []);
-
-  useEffect(() => {
-    if (fragmentParams.autoConnect()) startConnection({ hostname: sshHost, port: sshPort, username, password: effectiveSshPassword });
-  }, []); // eslint-disable-line
 
   // Close server dropdown on click outside
   useEffect(() => {
@@ -963,6 +897,7 @@ function App() {
       publicKey: s.publicKey,
       privateKey: s.privateKey,
       encrypted: await workerIsEncrypted(s.privateKey),
+      sha256Fingerprint: s.sha256Fingerprint,
     })));
     const title = `${username || 'ssh'}@${hostname}`;
     const terminal = await GearShell.terminal.external.create({ title });
@@ -1000,15 +935,6 @@ function App() {
     setGenKeyOpen(false);
     const result = await storeAuthKeySet(authKeySet);
     showSnackbar({ message: result === 'already_exist' ? 'Key already exists' : 'Key saved' });
-  }
-
-  function setConfiguredUrl() {
-    location.href = getConfiguredUrl({
-      pipingServerUrl, sshHost, sshPort, sshUsername: username,
-      sshPassword: inclPwInUrl ? effectiveSshPassword : undefined,
-      autoConnect,
-    });
-    showSnackbar({ message: 'URL updated' });
   }
 
   const inputClass = 'w-full bg-transparent border border-gray-800 rounded-sm px-4 py-3 text-white text-base focus:outline-none focus:border-amber-500/50 placeholder-gray-600 transition-colors';
@@ -1116,7 +1042,7 @@ function App() {
                         const current = username === h.username && sshHost === h.hostname && sshPort === h.port;
                         return html`
                           <div class="flex items-center gap-1 px-2 py-1.5 text-xs border-b border-gray-800 last:border-b-0 hover:bg-gray-800/50 group ${current ? 'bg-gray-800' : ''}">
-                            <button type="button" onClick=${() => { setUsername(h.username); setSshHost(h.hostname); setSshPort(h.port); setSshPassword(h.password ?? ''); setHostDropdownOpen(false); }}
+                            <button type="button" onClick=${() => { setUsername(h.username); setSshHost(h.hostname); setSshPort(h.port); setHostDropdownOpen(false); }}
                               class="flex-1 text-left truncate py-0.5 ${current ? 'text-amber-400' : 'text-gray-300'}">${label}</button>
                             <button type="button" onClick=${() => { location.hash = '#hosts'; setHostDropdownOpen(false); }}
                               class="text-gray-600 hover:text-gray-300 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" title="Edit in Hosts">
@@ -1129,7 +1055,7 @@ function App() {
                           </div>
                         `;
                       })}
-                      <button type="button" onClick=${() => { addHost({ name: `${username}@${sshHost}`, hostname: sshHost, port: sshPort, username, password: sshPassword, agentForwarding: false }); setHostDropdownOpen(false); }}
+                      <button type="button" onClick=${() => { addHost({ name: `${username}@${sshHost}`, hostname: sshHost, port: sshPort, username, agentForwarding: false }); setHostDropdownOpen(false); }}
                         class="flex items-center gap-1.5 w-full px-2 py-1.5 text-xs text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 border-t border-gray-800">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add current as host
@@ -1215,46 +1141,6 @@ function App() {
                       `}
                     </div>
 
-                    <!-- SSH password -->
-                    <div>
-                      <label class="block text-xs text-gray-600 mb-1.5 tracking-wide uppercase">SSH password</label>
-                      <div class="relative">
-                        <input type=${showSshPw ? 'text' : 'password'} value=${sshPassword}
-                          onInput=${e => setSshPassword(e.target.value)}
-                          class="${inputClass} pr-10" />
-                        <button type="button" onClick=${() => setShowSshPw(p => !p)}
-                          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 p-1">
-                          ${showSshPw ? ICON.hidden : ICON.visible}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-x-6 gap-y-2">
-                      <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-400 transition-colors">
-                        <input type="checkbox" checked=${emptySshPw}
-                          onChange=${e => setEmptySshPw(e.target.checked)}
-                          class="accent-amber-500" />
-                        Empty password
-                      </label>
-
-                      <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-400 transition-colors">
-                        <input type="checkbox" checked=${inclPwInUrl}
-                          onChange=${e => setInclPwInUrl(e.target.checked)}
-                          class="accent-amber-500" />
-                        Include password in URL
-                      </label>
-
-                      <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-400 transition-colors">
-                        <input type="checkbox" checked=${autoConnect}
-                          onChange=${e => setAutoConnect(e.target.checked)}
-                          class="accent-amber-500" />
-                        Auto connect
-                      </label>
-                    </div>
-                  <button type="button" onClick=${setConfiguredUrl}
-                    class="text-xs text-gray-500 hover:text-gray-400 transition-colors w-full text-center border border-gray-300 rounded py-1.5 mt-1">
-                    Generate link
-                  </button>
                   </div>
                 `}
 

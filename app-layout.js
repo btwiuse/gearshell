@@ -33,6 +33,7 @@ import {
 } from "./app-panels-store.js";
 import { clone } from "./app-normalize.js";
 import { reservePanelIds } from "./app-panel-ids.js";
+import { restoreExternalTerminalSessions } from "./external-terminal-recovery.js";
 
 const LAYOUT_SAVE_DELAY = 400;
 let layoutSaveTimer = null;
@@ -145,6 +146,7 @@ export function restoreSavedLayout(api) {
   try {
     api.fromJSON(layout);
     reservePanelIds(api.panels);
+    restoreExternalTerminalSessions(api);
     for (const panel of api.panels) {
       const snapshot = panelSnapshotFor(panel);
       if (snapshot) rememberOpenPanel(panel, snapshot);

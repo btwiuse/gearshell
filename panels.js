@@ -157,7 +157,11 @@ function addExternalTerminalPanel(api, group, options = {}) {
   const panel = api.addPanel({
     id: `external-terminal-${nextPanelIndex("external-terminal")}`,
     component: "external-terminal",
-    params: { sessionId, panelType: "external-terminal" },
+    params: {
+      sessionId,
+      panelType: "external-terminal",
+      ...(options.recovery ? { recovery: options.recovery } : {}),
+    },
     title: options.title || "External terminal",
     ...(group && { position: { referenceGroup: group } }),
   });

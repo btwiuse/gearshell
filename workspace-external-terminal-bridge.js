@@ -1,7 +1,10 @@
+import { saveLayoutSnapshot } from "./app-layout.js";
+import { getExternalTerminalAction } from "./external-terminal-actions.js";
 import { getDockviewApi } from "./app-panels-store.js";
 import { permitsPath } from "./plugins-scope.js";
 import { addPanelByComponent } from "./panels.js";
-import { startWebSshSession } from "./webssh-session-host.js";
+import "./webssh-session-host.js";
+import "./wetty-session-host.js";
 import {
   createExternalTerminal,
   disposeExternalTerminal,
@@ -39,11 +42,18 @@ function createTerminal(event) {
   reply(event, { id: gear.id, ok: true, result: { sessionId: entry.sessionId, panelId: panel?.id } });
 }
 
-async function startWebSshTerminal(event) {
+async function startExternalTerminal(event, actionName) {
   const { id, args } = event.data.gear;
   const [sessionId, config] = args || [];
+  const action = getExternalTerminalAction(actionName);
+  if (!action) return reply(event, { id, ok: false, error: `unknown external terminal action: ${actionName}` });
   try {
-    await startWebSshSession(sessionId, config || {});
+    const api = getDockviewApi();
+    const panel = api?.panels.find((item) => item.params?.sessionId === sessionId);
+    if (!panel) throw new Error("external terminal panel is unavailable");
+    panel.params.recovery = action.recovery(config || {});
+    saveLayoutSnapshot(api);
+    await action.start(sessionId, config || {});
     reply(event, { id, ok: true });
   } catch (error) {
     reply(event, { id, ok: false, error: error?.message || String(error) });
@@ -96,7 +106,7 @@ export function dispatchExternalTerminalCall(event, plugin) {
   if (!requireTerminal(event, plugin, method)) return;
   const action = method.slice("terminal.external.".length);
   if (action === "create") return createTerminal(event);
-  if (action === "startWebSsh") return startWebSshTerminal(event);
+  if (action.startsWith("start")) return startExternalTerminal(event, action);
   if (action === "write") return writeTerminal(event);
   if (action === "exit") return exitTerminal(event);
   if (action === "prompt") return promptTerminal(event);

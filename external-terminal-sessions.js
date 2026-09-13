@@ -1,14 +1,14 @@
 const sessions = new Map();
-let sessionCounter = 0;
 
 function push(entry, topic, payload) {
   try {
-    entry.source.postMessage({ gear: { event: { topic, payload } } }, entry.origin);
+    entry.source?.postMessage({ gear: { event: { topic, payload } } }, entry.origin);
   } catch {}
 }
 
-export function createExternalTerminal({ source, origin, title }) {
-  const sessionId = `external-${++sessionCounter}`;
+export function createExternalTerminal({ source, origin, title, sessionId: requestedSessionId }) {
+  const sessionId = String(requestedSessionId || crypto.randomUUID());
+  if (sessions.has(sessionId)) throw new Error(`external terminal already exists: ${sessionId}`);
   sessions.set(sessionId, {
     sessionId,
     source,

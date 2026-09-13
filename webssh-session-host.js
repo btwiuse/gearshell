@@ -1,3 +1,5 @@
+import { registerExternalTerminalAction } from "./external-terminal-actions.js";
+import { registerExternalTerminalRecovery } from "./external-terminal-recovery.js";
 import { kvGet, kvSet } from "./plugin/crush-playground/kv-api.js";
 import {
   exitExternalTerminal,
@@ -6,13 +8,13 @@ import {
   notifyExternalTerminal,
   promptExternalTerminal,
   waitForExternalTerminalSize,
-  pushExternalTerminalEvent,
   setExternalTerminalDispose,
   setExternalTerminalReconnect,
   writeExternalTerminal,
 } from "./external-terminal-sessions.js";
 
 const WORKER_URL = new URL("./plugin/webssh/session-worker.js", import.meta.url);
+const KEYS_STORAGE_KEY = "webssh:keys:v1";
 const KNOWN_HOSTS_KEY = "webssh:known-host-key-fingerprints";
 
 function knownHostKeys() {
@@ -26,11 +28,48 @@ function trustHostKey(fingerprint) {
   kvSet(KNOWN_HOSTS_KEY, [...next]);
 }
 
+function restoreAuthKeySets(fingerprints) {
+  const stored = kvGet(KEYS_STORAGE_KEY);
+  const wanted = new Set(Array.isArray(fingerprints) ? fingerprints : []);
+  if (!Array.isArray(stored)) return [];
+  return stored
+    .filter((key) => key?.enabled !== false && wanted.has(key?.sha256Fingerprint))
+    .map(({ publicKey, privateKey, encrypted }) => ({ publicKey, privateKey, encrypted }));
+}
+
 function relayPrompt(worker, sessionId, message) {
   promptExternalTerminal(sessionId, message.prompt)
     .then((value) => worker.postMessage({ type: "response", id: message.id, value }))
     .catch(() => worker.postMessage({ type: "response", id: message.id, value: null }));
 }
+
+function restoreWebSshSession({ sessionId, recovery }) {
+  const connection = recovery.connection;
+  if (!connection?.pipingServerUrl) return;
+  const config = {
+    ...connection,
+    authKeySets: restoreAuthKeySets(recovery.authKeyFingerprints),
+  };
+  startWebSshSession(sessionId, config).catch((error) => {
+    notifyExternalTerminal(sessionId, { message: error?.message || String(error) });
+    writeExternalTerminal(sessionId, "\r\n\x1b[90mPress any key to reconnect.\x1b[0m\r\n");
+  });
+}
+
+registerExternalTerminalRecovery("webssh", restoreWebSshSession);
+
+function webSshRecovery(config) {
+  const { authKeySets, ...connection } = config;
+  const authKeyFingerprints = Array.isArray(authKeySets)
+    ? authKeySets.map((key) => key?.sha256Fingerprint).filter(Boolean)
+    : [];
+  return { kind: "webssh", connection, authKeyFingerprints };
+}
+
+registerExternalTerminalAction("startWebSsh", {
+  recovery: webSshRecovery,
+  start: startWebSshSession,
+});
 
 export async function startWebSshSession(sessionId, config) {
   const size = await waitForExternalTerminalSize(sessionId);
