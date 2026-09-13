@@ -37,6 +37,8 @@ export const IFRAME_PLUGINS = [
         "terminal.external.exit",
         "terminal.external.prompt",
         "terminal.external.dispose",
+        "config.kv.get",
+        "config.kv.set",
       ],
     },
     enabled: false,

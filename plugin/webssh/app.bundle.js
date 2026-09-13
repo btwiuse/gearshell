@@ -159,26 +159,26 @@ const presetHosts = [
   { name: 'SSH-J',          hostname: 'ssh-j.com',    port: '22', username: '', password: '', agentForwarding: false },
 ];
 
-const HOSTS_STORAGE_KEY = 'preset_hosts';
+const HOSTS_STORAGE_KEY = 'webssh:hosts:v1';
 const hostSubscribers = new Set();
+let workspaceHosts = [...presetHosts];
 
-function getStoredHosts() {
-  let cached;
-  try { cached = JSON.parse(localStorage.getItem(HOSTS_STORAGE_KEY) || 'null'); } catch { cached = null; }
-  if (!cached || !cached.length) return [...presetHosts];
-  const cacheKey = h => `${h.hostname}:${h.port}:${h.username}`;
-  const cachedMap = new Map(cached.map(h => [cacheKey(h), h]));
-  // Presets first, overlaid with cached data if same host/port/user
-  const merged = presetHosts.map(p => cachedMap.get(cacheKey(p)) ?? p);
-  // Append cached entries not in presets
-  const seen = new Set(merged.map(cacheKey));
-  for (const c of cached) {
-    if (!seen.has(cacheKey(c))) { merged.push(c); seen.add(cacheKey(c)); }
-  }
-  return merged;
+function storedHost(host) {
+  const { password: _password, ...safe } = host;
+  return safe;
 }
 
-function notifyHostSubscribers() { hostSubscribers.forEach(fn => fn([...getStoredHosts()])); }
+function getStoredHosts() {
+  return workspaceHosts;
+}
+
+function notifyHostSubscribers() { hostSubscribers.forEach(fn => fn([...workspaceHosts])); }
+
+async function loadWorkspaceHosts() {
+  const stored = await GearShell.config.kv.get(HOSTS_STORAGE_KEY);
+  if (Array.isArray(stored)) workspaceHosts = stored;
+  notifyHostSubscribers();
+}
 
 function useStoredHosts() {
   const [hosts, setHosts] = useState(getStoredHosts);
@@ -187,26 +187,21 @@ function useStoredHosts() {
 }
 
 function persistHosts(hosts) {
-  localStorage.setItem(HOSTS_STORAGE_KEY, JSON.stringify(hosts));
+  workspaceHosts = hosts.map(storedHost);
+  GearShell.config.kv.set(HOSTS_STORAGE_KEY, workspaceHosts).catch(() => {});
   notifyHostSubscribers();
 }
 
 function addHost(h) {
-  const hosts = getStoredHosts();
-  hosts.push({ ...h, agentForwarding: false, addedAtMillis: Date.now() });
-  persistHosts(hosts);
+  persistHosts([...getStoredHosts(), { ...h, agentForwarding: false, addedAtMillis: Date.now() }]);
 }
 
 function removeHost(idx) {
-  const hosts = getStoredHosts();
-  hosts.splice(idx, 1);
-  persistHosts(hosts);
+  persistHosts(getStoredHosts().filter((_host, index) => index !== idx));
 }
 
 function updateHost(idx, h) {
-  const hosts = getStoredHosts();
-  hosts[idx] = h;
-  persistHosts(hosts);
+  persistHosts(getStoredHosts().map((host, index) => index === idx ? h : host));
 }
 
 // ─── Server host key manager ──────────────────────────────────────────────────
@@ -1299,6 +1294,7 @@ function App() {
   const effectiveSshPassword = (sshPassword === '' && !emptySshPw) ? undefined : sshPassword;
 
   useEffect(() => {
+    loadWorkspaceHosts().catch(() => {});
     checkSupportsWebSocketStream().then(s => setSupportsStreams(s));
   }, []);
 
@@ -1336,7 +1332,7 @@ function App() {
       hostname,
       port,
       username,
-      password: password || getStoredHosts().find(h => h.hostname === hostname && h.port === port && h.username === username)?.password || '',
+      password: password || '',
       agentForwarding: agentForwarding ?? false,
       pipingFullUrl: fullUrl,
       status: 'connecting',
@@ -1367,8 +1363,7 @@ function App() {
       // Save to host presets
       const hosts = getStoredHosts();
       const idx   = hosts.findIndex(h => h.hostname === sshHost && h.port === sshPort && h.username === username);
-      const existingPw = idx !== -1 ? hosts[idx].password : '';
-      const entry = { name: `${username}@${sshHost}`, hostname: sshHost, port: sshPort, username, password: sshPassword || existingPw, addedAtMillis: Date.now() };
+      const entry = { name: `${username}@${sshHost}`, hostname: sshHost, port: sshPort, username, addedAtMillis: Date.now() };
       if (idx !== -1) { hosts[idx] = entry; }
       else            { hosts.push(entry); }
       persistHosts(hosts);
