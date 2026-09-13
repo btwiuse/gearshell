@@ -63,6 +63,10 @@ wanix-term { flex: 1; min-width: 0; }
 .workbench-session .explorer-folders-view .monaco-list-row[aria-level]:not([aria-level="1"]) .indent-guide { transform: translateX(-4px); }
 
 .panel-content { height: 100%; min-height: 0; }
+.panel-content .xterm,
+.panel-content .xterm .xterm-screen,
+.panel-content .xterm .xterm-viewport,
+.panel-content .xterm .xterm-rows { font-family: ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace; }
 
 .panel-actions { position: relative; display: flex; height: 100%; }
 .dv-groupview.panel-action-host { overflow: visible !important; }

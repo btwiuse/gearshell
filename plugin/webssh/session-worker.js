@@ -88,7 +88,12 @@ self.addEventListener('message', (event) => {
   if (message?.type === 'start') start(message.config).catch((error) => {
     self.postMessage({ type: 'exit', payload: { error: String(error?.message || error) } });
   });
-  if (message?.type === 'input') inputController?.enqueue(message.data);
+  if (message?.type === 'input') {
+    const data = message.data instanceof Uint8Array
+      ? message.data
+      : new TextEncoder().encode(message.data || '');
+    inputController?.enqueue(data);
+  }
   if (message?.type === 'resize') {
     latestResize = message.payload;
     resizePort?.postMessage(latestResize);

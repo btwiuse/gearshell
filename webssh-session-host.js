@@ -106,8 +106,8 @@ export async function startWebSshSession(sessionId, config) {
   const size = await waitForExternalTerminalSize(sessionId);
   const worker = new Worker(WORKER_URL);
   const offInput = onExternalTerminalInput(sessionId, (data) => {
-    const input = data instanceof Uint8Array ? new TextDecoder().decode(data) : data;
-    worker.postMessage({ type: "input", data: input });
+    const input = data instanceof Uint8Array ? data : new TextEncoder().encode(String(data));
+    worker.postMessage({ type: "input", data: input }, [input.buffer]);
   });
   const offResize = onExternalTerminalResize(sessionId, (payload) => {
     worker.postMessage({ type: "resize", payload: { ...payload, type: "resize" } });

@@ -243,8 +243,9 @@ export async function mountTerminal(anchor, session, options = {}) {
   let lastChimeState = null;
   let chimeTimer = null;
   let oscCarry = "";
+  const oscDecoder = new TextDecoder();
   function sniffOsc(chunk) {
-    const text = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
+    const text = typeof chunk === "string" ? chunk : oscDecoder.decode(chunk, { stream: true });
     const haystack = oscCarry + text;
     oscCarry = "";
     OSC_9_4_RE.lastIndex = 0;
@@ -386,7 +387,7 @@ export function progressIndicator(bar) {
   };
   return (data) => {
     const text = carry + (typeof data === "string" ? data : new TextDecoder().decode(data));
-    for (const match of text.matchAll(/\x1b\]9;4;(\d+)(?:;(\d+))?(?:\x07|\x1b\\)/g)) {
+    for (const match of text.matchAll(/\x1b\]9;4;(\d+)(?:;(\d*))?(?:\x07|\x1b\\)/g)) {
       render(Number(match[1]), Number(match[2]) || 0);
     }
     const start = text.lastIndexOf("\x1b]9;4;");

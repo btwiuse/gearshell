@@ -42,12 +42,11 @@ export function ExternalTerminalPanel({ params }) {
     if (!anchor.current) return;
     let handle;
     let offActive;
-    let observeProgress = () => {};
+    const observeProgress = progressIndicator(progress.current);
     mountTerminal(anchor.current, externalSession(params.sessionId), {
       ...ghosttyIdentity({ terminal: { fontSize: 14, theme: { background: "#0b1120" } } }),
       exitMessage: false,
-      setupAddons: () => { observeProgress = progressIndicator(progress.current); },
-      onProgress: (data) => observeProgress(data),
+      onProgress: observeProgress,
     }).then((mounted) => {
       handle = mounted;
       terminal.current = mounted.term;
