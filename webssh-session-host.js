@@ -144,4 +144,5 @@ export async function startWebSshSession(sessionId, config) {
     type: "start",
     config: { ...config, trustedHostKeys: knownHostKeys(), ...size },
   });
+  worker.postMessage({ type: "init" });
 }

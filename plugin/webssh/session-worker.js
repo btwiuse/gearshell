@@ -93,6 +93,10 @@ self.addEventListener('message', (event) => {
     latestResize = message.payload;
     resizePort?.postMessage(latestResize);
   }
+  if (message?.type === 'init') {
+    const prefix = 'export TERM_PROGRAM=ghostty COLORTERM=truecolor TERM=xterm-ghostty WT_SESSION=ghostty XTERM_PROGRAM=ghostty; clear\n';
+    inputController?.enqueue(prefix);
+  }
   if (message?.type === 'response') {
     const resolve = pending.get(message.id);
     pending.delete(message.id);
