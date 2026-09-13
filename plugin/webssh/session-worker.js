@@ -10,6 +10,7 @@ let inputController = null;
 let requestId = 0;
 let resizePort = null;
 let latestResize = null;
+const inputDecoder = new TextDecoder();
 
 (async () => {
   const response = await fetch(wasmURL);
@@ -90,8 +91,8 @@ self.addEventListener('message', (event) => {
   });
   if (message?.type === 'input') {
     const data = message.data instanceof Uint8Array
-      ? message.data
-      : new TextEncoder().encode(message.data || '');
+      ? inputDecoder.decode(message.data, { stream: true })
+      : String(message.data || '');
     inputController?.enqueue(data);
   }
   if (message?.type === 'resize') {
