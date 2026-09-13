@@ -105,8 +105,12 @@ registerExternalTerminalAction("startWebSsh", {
 export async function startWebSshSession(sessionId, config) {
   const size = await waitForExternalTerminalSize(sessionId);
   const worker = new Worker(WORKER_URL);
+  const inputDecoder = new TextDecoder();
   const offInput = onExternalTerminalInput(sessionId, (data) => {
-    worker.postMessage({ type: "input", data: String(data) });
+    const input = data instanceof Uint8Array
+      ? inputDecoder.decode(data, { stream: true })
+      : String(data);
+    worker.postMessage({ type: "input", data: input });
   });
   const offResize = onExternalTerminalResize(sessionId, (payload) => {
     worker.postMessage({ type: "resize", payload: { ...payload, type: "resize" } });
