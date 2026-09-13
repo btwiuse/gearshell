@@ -165,13 +165,8 @@ function enableTapFocus(term, host) {
 // The winch frame the wanix-term element writes: "cols rows xpixel ypixel"
 // where the pixels are the terminal element's CSS size (elements/term.js).
 function winchFor(anchor, term) {
-  const screen = anchor.querySelector(".xterm-screen") || anchor;
-  return [
-    term.cols,
-    term.rows,
-    screen.offsetWidth || 0,
-    screen.offsetHeight || 0,
-  ];
+  const rect = anchor.getBoundingClientRect();
+  return [term.cols, term.rows, Math.round(rect.width), Math.round(rect.height)];
 }
 
 // Mount and drive a headless kernel terminal session into `anchor` via the

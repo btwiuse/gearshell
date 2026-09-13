@@ -9,6 +9,7 @@ const pending = new Map();
 let inputController = null;
 let requestId = 0;
 let resizePort = null;
+let latestResize = null;
 
 (async () => {
   const response = await fetch(wasmURL);
@@ -29,6 +30,7 @@ function startInput() {
 function createResizePort() {
   const channel = new MessageChannel();
   resizePort = channel.port1;
+  if (latestResize) resizePort.postMessage(latestResize);
   return channel.port2;
 }
 
@@ -87,7 +89,10 @@ self.addEventListener('message', (event) => {
     self.postMessage({ type: 'exit', payload: { error: String(error?.message || error) } });
   });
   if (message?.type === 'input') inputController?.enqueue(message.data);
-  if (message?.type === 'resize') resizePort?.postMessage(message.payload);
+  if (message?.type === 'resize') {
+    latestResize = message.payload;
+    resizePort?.postMessage(latestResize);
+  }
   if (message?.type === 'response') {
     const resolve = pending.get(message.id);
     pending.delete(message.id);

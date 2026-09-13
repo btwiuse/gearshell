@@ -62,7 +62,7 @@ function handleClose(sessionId, config, event) {
 }
 
 export async function startWettySession(sessionId, config) {
-  const size = await waitForExternalTerminalSize(sessionId);
+  let size = await waitForExternalTerminalSize(sessionId);
   const url = normalizeUrl(config.url);
   const socket = new WebSocket(url);
   socket.binaryType = "arraybuffer";
@@ -71,6 +71,7 @@ export async function startWettySession(sessionId, config) {
     for (let offset = 0; offset < text.length; offset += 4000) send(socket, [0, "i", text.slice(offset, offset + 4000)]);
   });
   const offResize = onExternalTerminalResize(sessionId, (next) => {
+    size = next;
     send(socket, { version: 2, width: next.cols, height: next.rows });
   });
   let closedByOwner = false;
