@@ -215,6 +215,7 @@ export async function mountTerminal(anchor, session, options = {}) {
   // forward current size to the kernel winch (xterm resize events);
   // NOT fit() — fit()→resize→fit() would loop.
   const forwardSize = () => {
+    if (anchor.offsetWidth <= 0 || anchor.offsetHeight <= 0) return;
     try {
       session.resize(sessionId, ...winchFor(anchor, term));
     } catch {}
@@ -227,6 +228,7 @@ export async function mountTerminal(anchor, session, options = {}) {
   // measured size matches the new container.
   const refitAndResize = () => {
     requestAnimationFrame(() => {
+      if (anchor.offsetWidth <= 0 || anchor.offsetHeight <= 0) return;
       try {
         fit.fit();
         forwardSize();
@@ -324,6 +326,7 @@ export async function mountTerminal(anchor, session, options = {}) {
     // so a partially-torn-down handle does not break the caller.
     fitTerminal() {
       requestAnimationFrame(() => {
+        if (anchor.offsetWidth <= 0 || anchor.offsetHeight <= 0) return;
         try {
           if (typeof fit?.fit === "function") {
             fit.fit();

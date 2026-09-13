@@ -29,6 +29,7 @@ function externalSession(sessionId) {
 
 export function ExternalTerminalPanel({ params }) {
   const anchor = useRef(null);
+  const terminal = useRef(null);
   const [prompt, setPrompt] = useState(null);
   const [notification, setNotification] = useState(null);
   useEffect(() => onExternalTerminalPrompt(params.sessionId, setPrompt), [params.sessionId]);
@@ -45,13 +46,18 @@ export function ExternalTerminalPanel({ params }) {
       exitMessage: false,
     }).then((mounted) => {
       handle = mounted;
-      const focus = () => requestAnimationFrame(() => mounted.term.focus());
+      terminal.current = mounted.term;
+      const activate = () => {
+        mounted.fitTerminal();
+        requestAnimationFrame(() => mounted.term.focus());
+      };
       offActive = getDockviewApi()?.onDidActivePanelChange((event) => {
-        if (event.panel?.params?.sessionId === params.sessionId) focus();
+        if (event.panel?.params?.sessionId === params.sessionId) activate();
       });
-      focus();
+      activate();
     }).catch(() => {});
     return () => {
+      terminal.current = null;
       offActive?.dispose?.();
       handle?.dispose();
     };
@@ -59,6 +65,7 @@ export function ExternalTerminalPanel({ params }) {
   const respond = (value) => {
     respondExternalTerminalPrompt(params.sessionId, value);
     setPrompt(null);
+    requestAnimationFrame(() => terminal.current?.focus());
   };
   return html`
     <div className="panel-content" style=${{ position: "relative" }}>

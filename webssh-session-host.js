@@ -16,6 +16,7 @@ import {
 const WORKER_URL = new URL("./plugin/webssh/session-worker.js", import.meta.url);
 const KEYS_STORAGE_KEY = "webssh:keys:v1";
 const KNOWN_HOSTS_KEY = "webssh:known-host-key-fingerprints";
+const PASSWORDS_KEY = "webssh:saved-passwords:v1";
 
 function knownHostKeys() {
   const stored = kvGet(KNOWN_HOSTS_KEY);
@@ -37,9 +38,39 @@ function restoreAuthKeySets(fingerprints) {
     .map(({ publicKey, privateKey, encrypted }) => ({ publicKey, privateKey, encrypted }));
 }
 
-function relayPrompt(worker, sessionId, message) {
+function passwordKey(config) {
+  try {
+    const endpoint = new URL(config.pipingServerUrl);
+    return JSON.stringify({ host: endpoint.searchParams.get("hostname") || "", port: endpoint.searchParams.get("port") || "22", username: config.username || "" });
+  } catch {
+    return "";
+  }
+}
+
+function savedPassword(config) {
+  const passwords = kvGet(PASSWORDS_KEY);
+  return passwords?.[passwordKey(config)] || null;
+}
+
+function savePassword(config, password) {
+  const key = passwordKey(config);
+  if (!key || typeof password !== "string") return;
+  kvSet(PASSWORDS_KEY, { ...(kvGet(PASSWORDS_KEY) || {}), [key]: password });
+}
+
+function relayPrompt(worker, sessionId, message, config) {
+  if (message.prompt?.kind === "password") {
+    const password = savedPassword(config);
+    if (password !== null) {
+      worker.postMessage({ type: "response", id: message.id, value: password });
+      return;
+    }
+  }
   promptExternalTerminal(sessionId, message.prompt)
-    .then((value) => worker.postMessage({ type: "response", id: message.id, value }))
+    .then((value) => {
+      if (message.prompt?.kind === "password" && value?.save) savePassword(config, value.value);
+      worker.postMessage({ type: "response", id: message.id, value });
+    })
     .catch(() => worker.postMessage({ type: "response", id: message.id, value: null }));
 }
 
@@ -91,7 +122,7 @@ export async function startWebSshSession(sessionId, config) {
   worker.addEventListener("message", (event) => {
     const message = event.data;
     if (message?.type === "output") writeExternalTerminal(sessionId, message.data);
-    if (message?.type === "prompt") relayPrompt(worker, sessionId, message);
+    if (message?.type === "prompt") relayPrompt(worker, sessionId, message, config);
     if (message?.type === "hostKey" && message.trusted) trustHostKey(message.fingerprint);
     if (message?.type === "exit") {
       const reason = message.payload?.error || "Connection closed.";
