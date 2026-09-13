@@ -10,7 +10,6 @@ let inputController = null;
 let requestId = 0;
 let resizePort = null;
 let latestResize = null;
-const inputDecoder = new TextDecoder();
 
 (async () => {
   const response = await fetch(wasmURL);
@@ -89,12 +88,7 @@ self.addEventListener('message', (event) => {
   if (message?.type === 'start') start(message.config).catch((error) => {
     self.postMessage({ type: 'exit', payload: { error: String(error?.message || error) } });
   });
-  if (message?.type === 'input') {
-    const data = message.data instanceof Uint8Array
-      ? inputDecoder.decode(message.data, { stream: true })
-      : String(message.data || '');
-    inputController?.enqueue(data);
-  }
+  if (message?.type === 'input') inputController?.enqueue(String(message.data || ''));
   if (message?.type === 'resize') {
     latestResize = message.payload;
     resizePort?.postMessage(latestResize);

@@ -38,12 +38,23 @@ function initialFrame(config, size) {
   return frame;
 }
 
-function writeWettyOutput(sessionId, data) {
-  try {
-    const frame = JSON.parse(decoder.decode(data));
-    if (typeof frame?.[2] === "string") writeExternalTerminal(sessionId, frame[2]);
-  } catch {
-    notifyExternalTerminal(sessionId, { message: "WeTTY sent an invalid terminal frame." });
+function writeWettyOutput(sessionId, data, state) {
+  const bytes = data instanceof ArrayBuffer
+    ? new Uint8Array(data)
+    : ArrayBuffer.isView(data)
+    ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+    : null;
+  state.buffer += bytes ? state.decoder.decode(bytes, { stream: true }) : String(data || "");
+  const lines = state.buffer.split("\n");
+  state.buffer = lines.pop() || "";
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    try {
+      const frame = JSON.parse(line);
+      if (typeof frame?.[2] === "string") writeExternalTerminal(sessionId, frame[2]);
+    } catch {
+      notifyExternalTerminal(sessionId, { message: "WeTTY sent an invalid terminal frame." });
+    }
   }
 }
 
@@ -66,6 +77,7 @@ export async function startWettySession(sessionId, config) {
   const url = normalizeUrl(config.url);
   const socket = new WebSocket(url);
   socket.binaryType = "arraybuffer";
+  const outputState = { buffer: "", decoder: new TextDecoder() };
   const offInput = onExternalTerminalInput(sessionId, (data) => {
     const text = data instanceof Uint8Array ? decoder.decode(data) : String(data);
     for (let offset = 0; offset < text.length; offset += 4000) send(socket, [0, "i", text.slice(offset, offset + 4000)]);
@@ -85,7 +97,7 @@ export async function startWettySession(sessionId, config) {
     socket.close();
   });
   socket.addEventListener("open", () => send(socket, initialFrame(config, size)));
-  socket.addEventListener("message", (event) => writeWettyOutput(sessionId, event.data));
+  socket.addEventListener("message", (event) => writeWettyOutput(sessionId, event.data, outputState));
   socket.addEventListener("close", (event) => {
     cleanup();
     if (!closedByOwner) handleClose(sessionId, config, event);
