@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import htm from "htm";
 import { getDockviewApi } from "./app-panels-store.js";
-import { mountTerminal } from "./plugin/terminal-mount.mjs";
+import { ghosttyIdentity, mountTerminal } from "./plugin/terminal-mount.mjs";
 import {
   disposeExternalTerminal,
   onExternalTerminalExit,
@@ -27,8 +27,23 @@ function externalSession(sessionId) {
   };
 }
 
+function wireProgress(term, libs, bar) {
+  const addon = new libs.ProgressAddon();
+  term.loadAddon(addon);
+  const subscription = addon.onChange((progress) => {
+    const state = progress?.state;
+    bar.hidden = state === 0 || state == null;
+    bar.firstElementChild.style.width = `${Math.max(0, Math.min(100, Number(progress?.value) || 0))}%`;
+  });
+  return () => {
+    subscription?.dispose?.();
+    addon.dispose();
+  };
+}
+
 export function ExternalTerminalPanel({ params }) {
   const anchor = useRef(null);
+  const progress = useRef(null);
   const terminal = useRef(null);
   const [prompt, setPrompt] = useState(null);
   const [notification, setNotification] = useState(null);
@@ -42,8 +57,9 @@ export function ExternalTerminalPanel({ params }) {
     let handle;
     let offActive;
     mountTerminal(anchor.current, externalSession(params.sessionId), {
-      terminal: { fontSize: 14, theme: { background: "#0b1120" } },
+      ...ghosttyIdentity({ terminal: { fontSize: 14, theme: { background: "#0b1120" } } }),
       exitMessage: false,
+      setupAddons: (term, libs) => wireProgress(term, libs, progress.current),
     }).then((mounted) => {
       handle = mounted;
       terminal.current = mounted.term;
@@ -69,6 +85,7 @@ export function ExternalTerminalPanel({ params }) {
   };
   return html`
     <div className="panel-content" style=${{ position: "relative" }}>
+      <div ref=${progress} hidden style=${{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 3, height: "3px", background: "#334155" }}><div style=${{ width: "0%", height: "100%", background: "#f59e0b", transition: "width 120ms linear" }}></div></div>
       <div ref=${anchor} style=${{ width: "100%", height: "100%" }}></div>
       ${notification && html`
         <div style=${{
