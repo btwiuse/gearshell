@@ -44,7 +44,21 @@ export function ExternalTerminalPanel({ params }) {
     let offActive;
     const observeProgress = progressIndicator(progress.current);
     mountTerminal(anchor.current, externalSession(params.sessionId), {
-      ...ghosttyIdentity({ terminal: { fontSize: 14, theme: { background: "#0b1120" } } }),
+      ...ghosttyIdentity({
+        terminal: {
+          convertEol: false,
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+          fontSize: 14,
+          lineHeight: 1.25,
+          scrollback: 10000,
+          theme: {
+            background: "#0b1120",
+            foreground: "#e6edf3",
+            cursor: "#58a6ff",
+            selectionBackground: "#1f6feb66",
+          },
+        },
+      }),
       exitMessage: false,
       onProgress: observeProgress,
     }).then((mounted) => {
