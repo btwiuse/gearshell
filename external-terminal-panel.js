@@ -7,6 +7,7 @@ import {
   onExternalTerminalExit,
   onExternalTerminalOutput,
   onExternalTerminalPrompt,
+  onExternalTerminalNotification,
   resizeExternalTerminal,
   respondExternalTerminalPrompt,
   sendExternalTerminalInput,
@@ -29,7 +30,12 @@ function externalSession(sessionId) {
 export function ExternalTerminalPanel({ params }) {
   const anchor = useRef(null);
   const [prompt, setPrompt] = useState(null);
+  const [notification, setNotification] = useState(null);
   useEffect(() => onExternalTerminalPrompt(params.sessionId, setPrompt), [params.sessionId]);
+  useEffect(() => onExternalTerminalNotification(params.sessionId, (next) => {
+    setNotification(next);
+    if (next?.timeoutMs) setTimeout(() => setNotification(null), next.timeoutMs);
+  }), [params.sessionId]);
   useEffect(() => {
     if (!anchor.current) return;
     let handle;
@@ -57,6 +63,13 @@ export function ExternalTerminalPanel({ params }) {
   return html`
     <div className="panel-content" style=${{ position: "relative" }}>
       <div ref=${anchor} style=${{ width: "100%", height: "100%" }}></div>
+      ${notification && html`
+        <div style=${{
+          position: "absolute", right: "20px", bottom: "20px", zIndex: 3, maxWidth: "420px",
+          padding: "12px 16px", border: "1px solid #854d0e", borderRadius: "8px",
+          color: "#fde68a", background: "#1c1917", boxShadow: "0 12px 32px #0009",
+        }}>${notification.message}</div>
+      `}
       ${prompt && html`
         <form style=${{
           position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",

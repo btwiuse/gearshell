@@ -18,6 +18,8 @@ export function createExternalTerminal({ source, origin, title }) {
     outputBuffer: [],
     exit: new Set(),
     reconnect: null,
+    notification: new Set(),
+    pendingNotification: null,
     input: new Set(),
     resize: new Set(),
     size: null,
@@ -111,7 +113,19 @@ export function pushExternalTerminalEvent(sessionId, topic, payload) {
 }
 
 export function notifyExternalTerminal(sessionId, notification) {
-  return pushExternalTerminalEvent(sessionId, "terminal.external.notification", notification);
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return false;
+  entry.pendingNotification = notification;
+  for (const listener of entry.notification) listener(notification);
+  return true;
+}
+
+export function onExternalTerminalNotification(sessionId, listener) {
+  const entry = getExternalTerminal(sessionId);
+  if (!entry) return () => {};
+  entry.notification.add(listener);
+  if (entry.pendingNotification) listener(entry.pendingNotification);
+  return () => entry.notification.delete(listener);
 }
 
 export function onExternalTerminalInput(sessionId, listener) {

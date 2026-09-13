@@ -3,6 +3,7 @@ import {
   exitExternalTerminal,
   onExternalTerminalInput,
   onExternalTerminalResize,
+  notifyExternalTerminal,
   promptExternalTerminal,
   waitForExternalTerminalSize,
   pushExternalTerminalEvent,
@@ -55,8 +56,14 @@ export async function startWebSshSession(sessionId, config) {
     if (message?.type === "hostKey" && message.trusted) trustHostKey(message.fingerprint);
     if (message?.type === "exit") {
       const reason = message.payload?.error || "Connection closed.";
-      writeExternalTerminal(sessionId, `\r\n\x1b[33m${reason}\x1b[0m\r\nPress any key to reconnect...\r\n`);
+      notifyExternalTerminal(sessionId, { message: reason });
+      writeExternalTerminal(sessionId, "\r\n\x1b[90mPress any key to reconnect.\x1b[0m\r\n");
       setExternalTerminalReconnect(sessionId, () => {
+        writeExternalTerminal(sessionId, "\x1b[2J\x1b[H");
+        notifyExternalTerminal(sessionId, {
+          message: "Reconnecting…",
+          timeoutMs: 5000,
+        });
         dispose();
         startWebSshSession(sessionId, config).catch(() => {});
       });
