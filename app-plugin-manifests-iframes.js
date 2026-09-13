@@ -45,7 +45,7 @@ export const IFRAME_PLUGINS = [
   },
   {
     id: "wetty",
-    name: "Gear WeTTY",
+    name: "WeTTY",
     version: "1.0.0",
     icon: "Cable",
     iframe: {

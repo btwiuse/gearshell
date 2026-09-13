@@ -40,25 +40,26 @@ async function connect(host) {
 }
 
 function ConnectionForm({ onConnect, onSave }) {
+  const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [command, setCommand] = useState("");
-  const host = () => ({ url, command: command.trim().split(/\s+/).filter(Boolean) });
+  const host = () => ({ name, url });
   return html`
     <form onSubmit=${(event) => { event.preventDefault(); onConnect(host()); }} class="space-y-4">
+      <div><label class="block text-xs text-gray-500 mb-1.5">Name</label><input value=${name} onInput=${(event) => setName(event.target.value)} placeholder="Production terminal" class="w-full rounded-sm border border-gray-700 bg-transparent px-4 py-3 text-white focus:border-amber-500/50 focus:outline-none" /></div>
       <div><label class="block text-xs text-gray-500 mb-1.5">WebSocket URL</label><input required value=${url} onInput=${(event) => setUrl(event.target.value)} placeholder="wss://host.example/terminal" class="w-full rounded-sm border border-gray-700 bg-transparent px-4 py-3 text-white focus:border-amber-500/50 focus:outline-none" /></div>
-      <div><label class="block text-xs text-gray-500 mb-1.5">Command (optional)</label><input value=${command} onInput=${(event) => setCommand(event.target.value)} placeholder="bash" class="w-full rounded-sm border border-gray-700 bg-transparent px-4 py-3 text-white focus:border-amber-500/50 focus:outline-none" /></div>
       <div class="flex gap-3"><button class="flex-1 rounded-sm bg-amber-600 py-3 text-sm font-medium text-white hover:bg-amber-500">Connect</button><button type="button" onClick=${() => onSave(host())} class="rounded-sm border border-gray-700 px-4 py-3 text-sm text-gray-300 hover:border-gray-500">Save host</button></div>
     </form>
   `;
 }
 
-function HostsList({ hosts, onConnect, onDelete }) {
+function HostsList({ hosts, onConnect, onDelete, onRename }) {
   if (hosts.length === 0) return null;
   return html`
     <section class="space-y-2"><h2 class="text-sm font-medium text-gray-300">Saved hosts</h2>
       ${hosts.map((host, index) => html`
         <div class="flex items-center gap-3 rounded-sm border border-gray-800 px-3 py-2">
           <button type="button" onClick=${() => onConnect(host)} class="min-w-0 flex-1 text-left"><span class="block truncate text-sm text-gray-200">${host.name}</span><span class="block truncate text-xs text-gray-500">${host.url}</span></button>
+          <button type="button" onClick=${() => onRename(index)} class="text-xs text-gray-500 hover:text-gray-300">Rename</button>
           <button type="button" onClick=${() => onDelete(index)} class="text-xs text-gray-500 hover:text-red-400">Delete</button>
         </div>
       `)}
@@ -83,7 +84,10 @@ function App() {
       <header><h1 class="text-lg font-semibold">Gear WeTTY</h1><p class="mt-1 text-sm text-gray-500">Open a remote WeTTY terminal in a native GearShell tab.</p></header>
       <${ConnectionForm} onConnect=${run} onSave=${save} />
       ${status && html`<p class="text-sm text-amber-300">${status}</p>`}
-      <${HostsList} hosts=${hosts} onConnect=${run} onDelete=${(index) => persist(hosts.filter((_host, i) => i !== index))} />
+      <${HostsList} hosts=${hosts} onConnect=${run} onDelete=${(index) => persist(hosts.filter((_host, i) => i !== index))} onRename=${(index) => {
+        const name = window.prompt("Profile name", hosts[index].name);
+        if (name?.trim()) persist(hosts.map((host, i) => i === index ? { ...host, name: name.trim() } : host));
+      }} />
     </section></main>
   `;
 }
