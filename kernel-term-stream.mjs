@@ -26,6 +26,7 @@ import { getWanixRoot } from "./app-state.js";
 
 const WAIT_TIMEOUT = 30000;
 const ROOT_DEADLINE = 60000;
+const winchEncoder = new TextEncoder();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -102,7 +103,7 @@ export function attachKernelTermStream({
     const stream = await root.openWritable(paths.winch());
     const writer = stream.getWriter();
     await writer
-      .write(new TextEncoder().encode(`${cols} ${rows} ${xpixel} ${ypixel}\n`))
+      .write(winchEncoder.encode(`${cols} ${rows} ${xpixel} ${ypixel}\n`))
       .then(() => writer.close());
   };
 

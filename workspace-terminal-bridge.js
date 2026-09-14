@@ -228,8 +228,8 @@ function handleVmCreate(event, id, args) {
   sessions.set(sessionId, entry);
   reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
   startVmSession(vmSession, { renderTerm: false })
-    .then(() => startVmStream(entry))
-    .catch((error) => failVmBridge(entry, sessionId, id, error));
+    .then(() => startBridgeStream(entry))
+    .catch((error) => failBridgeSession(entry, error));
   return sessionId;
 }
 
@@ -253,17 +253,20 @@ function buildVmCreateConfig(rawArgs) {
   return config;
 }
 
-function startVmStream(entry) {
+function startBridgeStream(entry) {
   try {
     entry.stream = attachKernelStream(entry);
   } catch (error) {
-    failVmBridge(entry, entry.sessionId, null, error);
+    failBridgeSession(entry, error);
   }
 }
 
-function failVmBridge(entry, sessionId, id, error) {
+// Surface a non-recoverable session failure to the iframe and tear the
+// session down. Used by both the shell-session create path and the VM
+// create path, so the name is intentionally generic.
+function failBridgeSession(entry, error) {
   push(entry.source, entry.origin, "term.exit", {
-    sessionId,
+    sessionId: entry.sessionId,
     code: null,
     error: error?.message || String(error),
   });
