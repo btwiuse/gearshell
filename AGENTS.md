@@ -40,6 +40,15 @@ pitch and `memory/repo-layout.md` for the structure.
   resolution pass after rewriting any module; see
   `memory/verification-pitfalls.md` for the scripts and the heredoc/splice
   traps that caused the last regression.
+- **Review for dead imports after every split**: `node --input-type=module --check`
+  and `scripts/verify-static.mjs` both silently allow unused named imports
+  (declared names are valid syntax; the script only checks `?v=` tokens and
+  the 500-line rule). When you move functions across files during a split —
+  e.g. extracting bind CRUD from `workspace-config-api.js` into
+  `workspace-config-binds.js` — the slimmed file can keep importing symbols
+  it no longer uses and ESM tooling won't flag it. Always grep both sides
+  for every imported name after a split (a one-liner per name, e.g.
+  `grep -c "\b$symbol\b" file.js` ≤ 1 means import-only).
 - Reusable research notes live in `memory/` (one Markdown file per topic,
   `Home.md` as the index, auto-loaded every session via `option
   context-path memory/Home.md` in `.crushrc`).
