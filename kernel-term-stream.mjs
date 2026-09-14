@@ -32,13 +32,21 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+let cachedRoot = null;
+let cachedRootDeadline = 0;
 async function waitForRoot(deadlineMs) {
-  const deadline = Date.now() + deadlineMs;
+  const now = Date.now();
+  if (cachedRoot && now < cachedRootDeadline) return cachedRoot;
+  const deadline = now + deadlineMs;
   let root = null;
   while (Date.now() < deadline) {
     try {
       root = getWanixRoot();
-      if (root) return root;
+      if (root) {
+        cachedRoot = root;
+        cachedRootDeadline = deadline;
+        return root;
+      }
     } catch {
       // wanix not yet wired up
     }
@@ -51,6 +59,7 @@ export function attachKernelTermStream({
   paths,
   onChunk,
   onStreamEnd,
+  onConnectError,
   pollExit,
   beforeConnect,
 }) {
@@ -123,8 +132,11 @@ export function attachKernelTermStream({
   };
 
   // Fire-and-forget connect; callers can ignore the promise because the
-  // pumps will eventually emit chunks / stream-end / exit events.
-  connect().catch(() => onStreamEnd?.());
+  // pumps will eventually emit chunks / stream-end / exit events. A
+  // connect failure (kernel not ready, term device never appeared,
+  // beforeConnect threw) is reported via onConnectError so the caller
+  // can surface the real reason instead of a generic "stream closed".
+  connect().catch((error) => onConnectError?.(error));
 
   return { dispose, write, writeWinch, isConnected };
 }

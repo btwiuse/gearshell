@@ -93,6 +93,11 @@ function createTerminal(profileArg) {
       emit(entry, "exit", { code: null });
       disposeTerminal(id);
     },
+    onConnectError: (error) => {
+      if (entry.disposed) return;
+      emit(entry, "exit", { code: null, error: error?.message || String(error) });
+      disposeTerminal(id);
+    },
   });
   return { ok: true, sessionId: id };
 }

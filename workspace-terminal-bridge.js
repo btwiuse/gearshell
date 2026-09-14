@@ -148,6 +148,7 @@ function attachKernelStream(entry) {
       });
     },
     onStreamEnd: () => cleanupSession(entry, { code: null, note: "stream closed" }),
+    onConnectError: (error) => failBridgeSession(entry, error),
     pollExit,
   });
 }
@@ -191,18 +192,10 @@ function handleCreate(event, id, args) {
   };
   sessions.set(sessionId, entry);
   // Reply immediately; the pump connects asynchronously and the first
-  // term.data push only arrives once the kernel stream is open.
+  // term.data push only arrives once the kernel stream is open. Any
+  // connect failure is surfaced via onConnectError -> failBridgeSession.
   reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
-  try {
-    entry.stream = attachKernelStream(entry);
-  } catch (error) {
-    push(entry.source, entry.origin, "term.exit", {
-      sessionId,
-      code: null,
-      error: error?.message || String(error),
-    });
-    cleanupSession(entry);
-  }
+  entry.stream = attachKernelStream(entry);
   return sessionId;
 }
 
@@ -228,7 +221,9 @@ function handleVmCreate(event, id, args) {
   sessions.set(sessionId, entry);
   reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
   startVmSession(vmSession, { renderTerm: false })
-    .then(() => startBridgeStream(entry))
+    .then(() => {
+      entry.stream = attachKernelStream(entry);
+    })
     .catch((error) => failBridgeSession(entry, error));
   return sessionId;
 }
@@ -251,14 +246,6 @@ function buildVmCreateConfig(rawArgs) {
     config.netdev += ",mac=" + nextVmMac();
   }
   return config;
-}
-
-function startBridgeStream(entry) {
-  try {
-    entry.stream = attachKernelStream(entry);
-  } catch (error) {
-    failBridgeSession(entry, error);
-  }
 }
 
 // Surface a non-recoverable session failure to the iframe and tear the
