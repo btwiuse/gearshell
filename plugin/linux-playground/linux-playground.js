@@ -23,7 +23,7 @@ const presets = {
   v86: {
     architecture: "v86",
     backend: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc23/v86.tgz",
-    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc18/wanix-linux.tgz",
+    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc24/wanix-linux-x86.tgz",
   },
   rv64: {
     architecture: "rv64",
