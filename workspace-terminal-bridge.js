@@ -73,26 +73,36 @@ function push(source, origin, topic, payload) {
 // The task element self-activates: base.js connectedCallback ->
 // _connect -> _activate -> _awake() runs allocate(+start when the task
 // has start="") as soon as the kernel is up, for sessions created after
-// boot too. Calling _awake() from here RACES that: both see rid unset
-// and allocate twice, the second _setupNamespace re-reads the
-// fetch-bound binaries' streams and the kernel panics ("Response body
-// object should not be disturbed or locked") — the intermittent
-// "terminal shows nothing" failure. So wait for the element to finish
-// allocating; fall back to an explicit wake only if it never does.
+// boot too. _awake() has its own `if (this.rid) return;` guard so a
+// direct call from here is idempotent — both paths converge on a
+// single allocate(). Wait on the kernel's `ready` promise (avoids
+// polling _kernel being assigned) then on the task element's rid. If
+// allocate still hasn't run by then (rare: iframe fired create before
+// the element's microtask had a chance), invoke _awake() ourselves as
+// a deterministic fallback. The legacy 250ms polling saw use only on
+// the cold-boot path where the iframe outpaced the connect chain; the
+// explicit await here covers both cases without a timer.
 async function wakeTask(entry) {
   const task = entry.session.task;
-  const deadline = Date.now() + 30000;
-  while (!task.rid) {
-    if (Date.now() > deadline) {
-      entry.session.started = true;
-      try {
-        await task._awake?.();
-      } catch {
-        // task element failed to start; the pump's waitFor will surface it
-      }
-      break;
+  // If the element is not yet connected (no _kernelHost), let
+  // connectedCallback -> _connect start; wait on its microtask.
+  const kernelHost = task._kernelHost ||
+    task.closest?.("wanix-system, wanix-namespace");
+  if (kernelHost?._kernelReady) {
+    await kernelHost._kernelReady;
+  } else if (!task._kernel) {
+    // No kernel host found yet (task element not attached) — let the
+    // element's own connect chain run via one microtask round-trip
+    // then re-evaluate.
+    await new Promise((resolve) => queueMicrotask(resolve));
+  }
+  if (!task.rid && task._kernel && typeof task._awake === "function") {
+    entry.session.started = true;
+    try {
+      await task._awake();
+    } catch {
+      // task element failed to start; the pump's waitFor will surface it
     }
-    await new Promise((resolve) => setTimeout(resolve, 250));
   }
 }
 

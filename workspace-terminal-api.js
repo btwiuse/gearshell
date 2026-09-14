@@ -43,19 +43,26 @@ function emit(entry, type, payload) {
 }
 
 // Wait for the task element to allocate (its rid), falling back to an
-// explicit _awake only if it never does. Calling _awake while the element
-// self-activates RACES allocation and panics the kernel ("Response body
-// object should not be disturbed or locked") — mirror the bridge's
-// wakeTask exactly: poll rid, only _awake after the timeout.
+// explicit _awake only if it never does. _awake() has its own
+// `if (this.rid) return;` guard so a direct call is idempotent — the
+// legacy 250ms polling existed for the case where an iframe created a
+// session before the element's connect-chain microtask ran; we now
+// await the kernel's ready promise (covers cold-boot) then call
+// _awake() directly. No timer.
 async function waitReady(entry) {
-  const deadline = Date.now() + 30000;
-  while (!entry.session.task.rid && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 250));
+  const task = entry.session.task;
+  const kernelHost = task._kernelHost ||
+    task.closest?.("wanix-system, wanix-namespace");
+  if (kernelHost?._kernelReady) {
+    await kernelHost._kernelReady;
+  } else if (!task._kernel) {
+    await new Promise((resolve) => queueMicrotask(resolve));
   }
-  if (entry.session.task.rid) return;
+  if (task.rid) return;
+  if (!task._kernel) return;
   entry.session.started = true;
   try {
-    await entry.session.task._awake?.();
+    await task._awake?.();
   } catch {}
 }
 
