@@ -14,12 +14,12 @@ import {
   parseWorkspaceJson,
   renameWorkspace,
   replaceActiveWorkspace,
-  resetConfig,
   saveWorkspace,
   setActiveWorkspaceId,
   uniqueWorkspaceName,
   updateActiveWorkspace,
-} from "./app-workspace.js";
+} from "./app-workspace-store.js";
+import { resetConfig } from "./app-workspace.js";
 import {
   addWorkspaceBind,
   addWorkspaceSystemBind,

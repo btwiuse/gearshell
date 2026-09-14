@@ -48,10 +48,10 @@ import {
 } from "./app-panels.js";
 import {
   loadActiveWorkspace,
-  loadConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js";
+} from "./app-workspace-store.js";
+import { loadConfig } from "./app-workspace.js";
 import { addPanelByComponent } from "./panels.js";
 import {
   restoreSavedLayout,

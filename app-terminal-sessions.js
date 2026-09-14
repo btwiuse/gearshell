@@ -14,7 +14,7 @@ import {
   terminalCommand,
 } from "./app-terminal-profiles.js";
 import { DEFAULT_CMD } from "./app-constants.js";
-import { loadActiveWorkspace } from "./app-workspace.js";
+import { loadActiveWorkspace } from "./app-workspace-store.js";
 import { cachedBlobUrl } from "./app-plugin-cache.js";
 import { html } from "./dom-html.js";
 import { wireNativeProgressChime } from "./plugin/terminal-mount.mjs";

@@ -5,7 +5,7 @@ import {
   loadActiveWorkspace,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js";
+} from "./app-workspace-store.js";
 import { clone } from "./app-normalize-system.js";
 import { STARTUP_PANEL_TYPES } from "./app-constants.js";
 

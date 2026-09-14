@@ -11,8 +11,8 @@ import {
 import { addWorkspaceTaskPanel } from "./panels.js";
 import {
   addWorkspaceTask,
-  loadActiveWorkspace,
-} from "./app-workspace.js";
+} from "./app-workspace-binds.js";
+import { loadActiveWorkspace } from "./app-workspace-store.js";
 import {
   normalizeTask,
   validateTask,

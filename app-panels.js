@@ -4,7 +4,7 @@ import { systemReady, wanixSystem } from "./app-state.js";
 import {
   loadActiveWorkspace,
   loadWorkspace,
-} from "./app-workspace.js";
+} from "./app-workspace-store.js";
 import {
   getDefaultTerminalProfile,
   getWorkbenchPanelConfig,

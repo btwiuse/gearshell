@@ -3,7 +3,7 @@
 
 import { WANIX_RUNTIME } from "./app-constants.js";
 import { cachedBlobUrl } from "./app-plugin-cache.js";
-import { loadActiveWorkspace } from "./app-workspace.js";
+import { loadActiveWorkspace } from "./app-workspace-store.js";
 import { html } from "./dom-html.js";
 
 export function createWanixBindElement(bind) {

@@ -20,10 +20,10 @@
 import {
   loadActiveWorkspace,
   notifyWorkspaceChange,
-  saveConfig,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js";
+} from "./app-workspace-store.js";
+import { saveConfig } from "./app-workspace.js";
 import { normalizeSystemConfig } from "./app-normalize-system.js";
 
 const AUDIT_KEY = "gear-shell-agent-audit";

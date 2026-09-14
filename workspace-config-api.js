@@ -13,15 +13,16 @@
 
 import {
   loadActiveWorkspace,
-  loadConfig,
   removeWorkspaceSystemBind,
-  saveConfig,
   saveWorkspace,
-  saveWorkspaceSystemSettings,
   updateWorkspaceIndex,
+} from "./app-workspace-store.js";
+import {
+  saveWorkspaceSystemSettings,
   updateWorkspaceSystemBind,
   validateSystemBind,
-} from "./app-workspace.js";
+} from "./app-workspace-binds.js";
+import { loadConfig, saveConfig } from "./app-workspace.js";
 import { normalizePlugin } from "./app-normalize-plugins.js";
 import { normalizeProviders } from "./app-normalize.js";
 import {

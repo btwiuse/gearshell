@@ -26,7 +26,7 @@ import {
   loadActiveWorkspace,
   saveWorkspace,
   updateWorkspaceIndex,
-} from "./app-workspace.js";
+} from "./app-workspace-store.js";
 import {
   openPanelSnapshots,
   rememberOpenPanel,

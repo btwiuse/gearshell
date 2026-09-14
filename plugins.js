@@ -7,12 +7,14 @@
 //   api — a permission-scoped view of window.GearShell
 // Iframe plugins are entry-less ({ iframe: { src } }), registered sync
 // so the boot/restore path sees them before any module import resolves.
+//
+// Registry Maps + read-only helpers live in plugins-registries.js; this
+// module owns the register / unregister / boot-promise lifecycle.
 
 import { getDockviewApi } from "./app-panels-store.js";
 import { nextPanelId } from "./app-panel-ids.js";
 import {
   DEFAULT_LAUNCHER_ITEM_ORDER,
-  DEFAULT_PLUGINS,
   STARTUP_PANEL_TYPES,
 } from "./app-constants.js";
 import {
@@ -41,60 +43,39 @@ import {
   registerOverlay,
   removeOverlaysForPlugin,
 } from "./plugins-overlays.js";
+import {
+  getEmptyGridPanel,
+  getPluginIcon,
+  getPluginIframeConfig,
+  getPluginLoadResults,
+  isPluginPanel,
+  listPluginIframes,
+  listPluginPanels,
+  listSettingsSections,
+  mergePluginStatus,
+  pluginIframes,
+  pluginLoadResults,
+  pluginManifests,
+  pluginPanels,
+  pluginSettingsSections,
+} from "./plugins-registries.js";
 
 // Re-export the kernel surface importers keep reading from plugins.js.
-export { initPlugins, listOverlayIframes, PLUGIN_CHANGED_EVENT, listOverlays };
-
-// --- Registry state ---
-const pluginManifests = new Map(); // id -> normalized manifest
-const pluginPanels = new Map(); // component -> { manifest, label, title, render }
-const pluginIframes = new Map(); // component -> { manifest, title, src, allow, allowFullscreen }
-const pluginLoadResults = new Map(); // id -> { ok, error?, at }
-
-export function getPluginLoadResults() {
-  return [...pluginLoadResults.entries()].map(([id, result]) => ({
-    id,
-    ...result,
-  }));
-}
-
-export function isPluginPanel(component) {
-  return pluginPanels.has(component) || pluginIframes.has(component);
-}
-
-// Empty-grid fallback lookup. First enabled { emptyGrid: true }
-// entry wins across both registries; disabled providers skipped so
-// toggling in the Plugins page changes the default without code.
-export function getEmptyGridPanel() {
-  for (const [component, entry] of pluginPanels) {
-    if (!entry.emptyGrid) continue;
-    if (entry.manifest?.enabled === false) continue;
-    return { component, open: entry.open || null };
-  }
-  for (const [component, entry] of pluginIframes) {
-    if (!entry.emptyGrid) continue;
-    if (entry.manifest?.enabled === false) continue;
-    return { component, open: null };
-  }
-  return null;
-}
-
-export function listPluginPanels() {
-  return [
-    ...[...pluginPanels.entries()].map(([component, entry]) => ({
-      component,
-      label: entry.label,
-      pluginId: entry.manifest.id,
-    })),
-    ...[...pluginIframes.entries()].map(([component, entry]) => ({
-      component,
-      label: entry.title,
-      pluginId: entry.manifest.id,
-    })),
-  ];
-}
-
-
+export {
+  initPlugins,
+  listOverlayIframes,
+  PLUGIN_CHANGED_EVENT,
+  listOverlays,
+  getPluginLoadResults,
+  isPluginPanel,
+  getEmptyGridPanel,
+  listPluginPanels,
+  listPluginIframes,
+  getPluginIcon,
+  getPluginIframeConfig,
+  listSettingsSections,
+  mergePluginStatus,
+};
 
 // --- Panel registration ---
 function ensureLauncherKnown(component) {
@@ -181,66 +162,8 @@ export function registerSyncPlugins() {
   return results;
 }
 
-// The iframe plugin registry snapshot (component -> { src, manifest }),
-// consumed by the iframe bridge (plugins-iframe-api.js) to whitelist
-// sender origins against registered iframe srcs.
-export function listPluginIframes() {
-  return [...pluginIframes.entries()].map(([component, entry]) => ({
-    component,
-    src: entry.src,
-    manifest: entry.manifest,
-  }));
-}
-
-// Config lookup for the panels.js addPanelByComponent iframe branch.
-// Returns the addIframePanel-shaped config ({ title, src, panelType,
-// allow, allowFullscreen }) or null when the component is not a
-// plugin-provided iframe panel.
-export function getPluginIcon(component) {
-  return pluginPanels.get(component)?.manifest?.icon || pluginIframes.get(component)?.manifest?.icon || null;
-}
-
-export function getPluginIframeConfig(component) {
-  const entry = pluginIframes.get(component);
-  if (!entry) return null;
-  return {
-    title: entry.title,
-    src: entry.src,
-    icon: entry.manifest.icon,
-    panelType: component,
-    ...(entry.allow ? { allow: entry.allow } : {}),
-    ...(entry.allowFullscreen ? { allowFullscreen: true } : {}),
-    // Deep-link routes for Spotlight. The kernel turns `route=<name>`
-    // in `options` into the matching query string on the iframe URL.
-    // Routes are filtered+deduped at the catalog layer; we just
-    // surface whatever the manifest declared.
-    ...(Array.isArray(entry.manifest?.routes) ? { routes: entry.manifest.routes } : {}),
-    // Iframe plugins with a w9y dep install lazily on first open
-    // (see addIframePanel in panels.js). ensureW9yDependencies skips
-    // iframe plugins on boot so the install cost is paid only when
-    // the user actually opens the panel — the page renders an
-    // "install on first run" affordance if the registry still shows
-    // missing when it mounts. Pinned-version parity with the boot
-    // path is preserved: the apply uses dep.version when set.
-    ...(entry.manifest?.w9y ? { w9y: entry.manifest.w9y } : {}),
-  };
-}
-
-// --- Settings sections ---
-// Plugins may also contribute settings UI: `registerSettingsSection`
-// mirrors registerPanel for the Settings page, letting a plugin's own
-// preferences / management UI live inside the shell's settings. The
-// section render is a DOM function `(root, ctx) => disposeFn`; ctx.api
-// is the same permission-scoped view plugins already get for panels.
-// The built-in Settings > Apps card lives in the iframe settings
-// plugin (plugin/settings/index.html) and is the canonical example of
-// a settings-section consumer: third parties that want their own
-// card in the shell's Settings page can register one through this
-// same path, in either the host shell or an iframe.
-
-const pluginSettingsSections = new Map(); // id -> { manifest, label, render, ctx }
-
-export function registerSettingsSection(
+// --- Settings sections (register side; read side lives in registries) ---
+function registerSettingsSection(
   manifest,
   { id, label, render },
 ) {
@@ -270,17 +193,6 @@ export function registerSettingsSection(
   };
   pluginSettingsSections.set(id, entry);
   return entry;
-}
-
-// Ordered (insertion-ordered) list of registered settings sections for
-// the Settings panel to mount after its built-in template content.
-export function listSettingsSections() {
-  return [...pluginSettingsSections.entries()].map(([id, entry]) => ({
-    id,
-    label: entry.label,
-    render: entry.render,
-    ctx: entry.ctx,
-  }));
 }
 
 // --- Panel registration (component panels) ---
@@ -472,28 +384,6 @@ export function unregisterPlugin(id) {
   removePluginCss(id);
   emitPluginChanged({ id, ok: true, unregistered: true });
   return { ok: true, id };
-}
-
-// Merge the kernel's live load status onto a config manifest (the
-// config.plugins.list view). Missing status = not loaded (disabled or
-// failed before the kernel tracked it).
-export function mergePluginStatus(manifest) {
-  const result = pluginLoadResults.get(manifest.id);
-  return {
-    ...manifest,
-    builtin: (DEFAULT_PLUGINS || []).some((item) => item.id === manifest.id),
-    loaded: pluginManifests.has(manifest.id),
-    loadError: result && !result.ok ? result.error : null,
-    loadAt: result?.at ?? null,
-    panels: [
-      ...[...pluginPanels.entries()]
-        .filter(([, entry]) => entry.manifest.id === manifest.id)
-        .map(([component]) => component),
-      ...[...pluginIframes.entries()]
-        .filter(([, entry]) => entry.manifest.id === manifest.id)
-        .map(([component]) => component),
-    ],
-  };
 }
 
 // --- Panel opener (routed from addPanelByComponent + panels.open) ---
