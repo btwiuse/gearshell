@@ -22,13 +22,13 @@ const sourceName = $("sourceName");
 const presets = {
   v86: {
     architecture: "v86",
-    backend: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc12/v86.tgz",
-    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc12/wanix-linux.tgz",
+    backend: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc18/v86.tgz",
+    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc18/wanix-linux.tgz",
   },
   rv64: {
     architecture: "rv64",
-    backend: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc10/rv64.tgz",
-    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc10/wanix-linux-rv64.tgz",
+    backend: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc18/rv64.tgz",
+    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc18/wanix-linux-rv64.tgz",
   },
 };
 
