@@ -11,7 +11,8 @@ import {
 import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js";
 import { normalizeTask } from "./app-normalize.js";
 import { buildEnv } from "./app-terminal-profiles.js";
-import { attachOverlayTerminalSession } from "./app-terminal-sessions.js";
+import { attachOverlayTerminalSession } from "./app-terminal-overlay.js";
+import { startExitFilePolling } from "./app-terminal-sessions.js";
 import { html } from "./dom-html.js";
 import { wireNativeProgressChime } from "./plugin/terminal-mount.mjs";
 
@@ -199,24 +200,49 @@ export function createWorkspaceTaskSession(id, taskDefinition, workspace) {
     error: null,
     waitsForSystemReady: !systemReady,
     autoActivates: "_connectStarted" in task,
+    exitPoller: null,
   };
-  task.addEventListener("error", (event) => {
+  wireTaskSessionEvents(session);
+  workspaceTaskSessions.set(id, session);
+  primeTaskSession(session);
+  startTaskSessionTelemetry(session);
+  return session;
+}
+
+function wireTaskSessionEvents(session) {
+  session.task.addEventListener("error", (event) => {
     setWorkspaceTaskStatus(
       session,
       "failed",
       event.detail?.error || event.detail || event,
     );
   });
-  workspaceTaskSessions.set(id, session);
-  // Self-activating runtimes start the task on their own; surface that as
-  // "running" once the system is up (the error listener still flips failed).
+}
+
+function primeTaskSession(session) {
+  // Self-activating runtimes start the task on their own; surface that
+  // as "running" once the system is up (the error listener still flips
+  // failed). Capture-less headless tasks need the log pump going.
   if (session.autoActivates && systemReady) {
     session.started = true;
     setWorkspaceTaskStatus(session, "running");
   }
-  if (!def.term) startTaskOutputCapture(session);
-  startTaskExitPolling(session);
-  return session;
+  if (!session.taskDefinition.term) startTaskOutputCapture(session);
+}
+
+function startTaskSessionTelemetry(session) {
+  session.exitPoller = startExitFilePolling({
+    path: `task/workspace-task-${session.id}/exit`,
+    isAlive: () => workspaceTaskSessions.has(session.id),
+    onExit: (trimmed) => {
+      if (trimmed === "0") {
+        setWorkspaceTaskStatus(session, "succeeded");
+      } else {
+        setWorkspaceTaskStatus(session, "failed", `exit ${trimmed}`);
+      }
+    },
+    termNotice: { wanixTerm: session.term },
+  });
 }
 
 export function getWorkspaceTaskSession(id, taskDefinition, workspace) {
@@ -229,7 +255,7 @@ export function destroyWorkspaceTaskSession(id) {
   if (!session) return;
   workspaceTaskSessions.delete(id);
   stopTaskOutputCapture(session);
-  stopTaskExitPolling(session);
+  session.exitPoller?.stop();
   session.anchor = null;
   session.wrapper.remove();
 }
@@ -253,79 +279,11 @@ export function setWorkspaceTaskStatus(session, status, error = null) {
 
 // Task status: poll the kernel's exit file for the task. Wanix writes
 // the process exit code (or "" while alive) to task/<taskId>/exit; a
-// non-empty value means the process is gone. We surface exit=0 as
-// "succeeded" and anything else as "failed" so the existing
-// WORKSPACE_TASK_STATUS_EVENT listeners (panels, agents, runHeadlessTask)
-// get a real terminal state. The poll is cheap (small file, ramfs-backed)
-// and stops as soon as it sees an exit value.
-function startTaskExitPolling(session) {
-  const path = `task/workspace-task-${session.id}/exit`;
-  const poll = async () => {
-    if (!workspaceTaskSessions.has(session.id)) return;
-    let text;
-    try {
-      const root = getWanixRoot();
-      if (!root) return;
-      text = await root.readText(path);
-    } catch {
-      return;
-    }
-    if (text == null) return;
-    const trimmed = text.trim();
-    if (trimmed === "") return;
-    stopTaskExitPolling(session);
-    if (trimmed === "0") {
-      setWorkspaceTaskStatus(session, "succeeded");
-    } else {
-      setWorkspaceTaskStatus(session, "failed", `exit ${trimmed}`);
-    }
-    // Interactive terminals: surface the exit in the buffer (VS Code
-    // style) so a process that quits cleanly (a bbtex example on "q",
-    // bash running a one-shot script) does not leave a blank terminal
-    // with no explanation. The term element is connected by the time a
-    // process has run and exited, so _term is available. The kernel
-    // homes the cursor when the process exits, so the notice must be
-    // repositioned after the last output line - a bare writeln would
-    // land at the top and overwrite the first output line.
-    const term = session.term?._term;
-    if (term && typeof term.writeln === "function") {
-      const text = trimmed === "0"
-        ? `[Process completed (exit code ${trimmed})]`
-        : `[Process exited with code ${trimmed}]`;
-      writeAtContentEnd(term, text);
-    }
-  };
-  poll();
-  session._exitTimer = setInterval(poll, 500);
-}
-
-// Write a line at the end of the terminal's existing content. The kernel
-// homes the cursor when a task process exits (and apps that used the
-// alternate screen leave it frozen), so the current cursor position is
-// unreliable - find the last non-empty buffer row and write there.
-function writeAtContentEnd(term, text) {
-  const buffer = term.buffer?.active || term._buffer?.active || term._core?.buffer?.active;
-  let row = null;
-  if (buffer && typeof buffer.getLine === "function") {
-    const viewportRows = buffer.rows || 24;
-    for (let i = 0; i < buffer.length; i++) {
-      const line = buffer.getLine(i);
-      // row tracks the 1-based line AFTER the last content line
-      if (line && line.translateToString(true).trim() !== "") row = i + 2;
-    }
-    // The visible screen is at most the viewport tall; content that
-    // scrolled away is already above it, so clamp to the bottom row.
-    if (row === null) row = 1;
-    if (row > viewportRows) row = viewportRows;
-  }
-  if (row !== null) term.write(`\x1b[${row};1H`);
-  term.writeln(text);
-}
-
-function stopTaskExitPolling(session) {
-  if (session._exitTimer) clearInterval(session._exitTimer);
-  session._exitTimer = null;
-}
+// non-empty value means the process is gone. Surfaced via
+// startExitFilePolling (shared with app-terminal-sessions.js). On exit:
+//   - "succeeded" for code 0, "failed" otherwise
+//   - VS Code-style "[Process completed/exited ...]" line into the term
+//     buffer (interactive terminals only)
 
 export function wakeWorkspaceTaskSession(session) {
   if (!systemReady || session.started) return;

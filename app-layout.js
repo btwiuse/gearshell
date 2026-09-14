@@ -33,7 +33,7 @@ import {
 } from "./app-panels-store.js";
 import { clone } from "./app-normalize.js";
 import { reservePanelIds } from "./app-panel-ids.js";
-import { restoreExternalTerminalSessions } from "./external-terminal-recovery.js";
+import { restoreExternalTerminalSessions } from "./external-terminal-sessions.js";
 
 const LAYOUT_SAVE_DELAY = 400;
 let layoutSaveTimer = null;

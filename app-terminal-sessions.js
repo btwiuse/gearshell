@@ -83,26 +83,38 @@ export function createTerminalSession(
     profile,
     waitsForSystemReady: !systemReady,
     autoActivates: "_connectStarted" in task,
+    exitPoller: null,
   };
   terminalSessions.set(id, session);
   // The process may exit on its own (a one-shot cmd, a bbtex example
   // quitting on q): surface the exit in the buffer instead of leaving a
   // blank/alt-screen terminal. For interactive shells the exit file
   // stays empty and the poll is a no-op until the session is destroyed.
-  startReplExitPolling(session);
+  session.exitPoller = startExitFilePolling({
+    path: `#task/repl-${id}/exit`,
+    isAlive: () => terminalSessions.has(id),
+    termNotice: { wanixTerm: term },
+  });
   return session;
 }
 
-// Poll the kernel exit file (#task/repl-<id>/exit) for a repl/embed
-// terminal session and write a VS Code-style notice once the process is
-// gone. The poll is cheap (small ramfs file) and stops on the first
-// non-empty exit value. The notice lands after the last output line
-// (writeAtContentEnd); the kernel homes the cursor on process exit, so a
-// bare writeln would overwrite the first line.
-function startReplExitPolling(session) {
-  const path = `#task/repl-${session.id}/exit`;
+// Poll a kernel exit file for a task/repl session and fire callbacks once
+// the process is gone. The poll is cheap (small ramfs file) and stops on
+// the first non-empty exit value. Shared by:
+//   - panel repl sessions (this module)
+//   - workspace task sessions (app-workspace-task-sessions.js)
+//   - iframe bridge sessions (workspace-terminal-bridge.js)
+//
+// `path`     kernel exit-file path (e.g. `#task/repl-3/exit`).
+// `isAlive`  () => bool; poll stops when it returns false.
+// `onExit`   (trimmed) => void; called once the process exits.
+// `termNotice`  optional `{ term }` pair: when set, a VS Code-style
+//                "[Process completed/exited ...]" line is written via
+//                writeAtContentEnd after onExit.
+export function startExitFilePolling({ path, isAlive, onExit, termNotice }) {
+  let timer = null;
   const poll = async () => {
-    if (!terminalSessions.has(session.id)) return;
+    if (!isAlive()) return;
     let text;
     try {
       const root = getWanixRoot();
@@ -114,24 +126,36 @@ function startReplExitPolling(session) {
     if (text == null) return;
     const trimmed = text.trim();
     if (trimmed === "") return;
-    stopReplExitPolling(session);
-    const term = session.term?._term;
-    if (term && typeof term.writeln === "function") {
-      const notice = trimmed === "0"
-        ? `[Process completed (exit code ${trimmed})]`
-        : `[Process exited with code ${trimmed}]`;
-      writeAtContentEnd(term, notice);
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    onExit?.(trimmed);
+    if (termNotice?.wanixTerm) {
+      const term = termNotice.wanixTerm?._term;
+      if (term && typeof term.writeln === "function") {
+        const notice = trimmed === "0"
+          ? `[Process completed (exit code ${trimmed})]`
+          : `[Process exited with code ${trimmed}]`;
+        writeAtContentEnd(term, notice);
+      }
     }
   };
+  timer = setInterval(poll, 500);
   poll();
-  session._exitTimer = setInterval(poll, 500);
+  return {
+    stop: () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    },
+  };
 }
 
 // Write a line at the end of the terminal's existing content. The kernel
 // homes the cursor when a task process exits (and apps that used the
 // alternate screen leave it frozen), so the current cursor position is
 // unreliable - find the last non-empty buffer row and write there.
-function writeAtContentEnd(term, text) {
+export function writeAtContentEnd(term, text) {
   const buffer = term.buffer?.active || term._buffer?.active || term._core?.buffer?.active;
   let row = null;
   if (buffer && typeof buffer.getLine === "function") {
@@ -148,11 +172,6 @@ function writeAtContentEnd(term, text) {
   }
   if (row !== null) term.write(`\x1b[${row};1H`);
   term.writeln(text);
-}
-
-function stopReplExitPolling(session) {
-  if (session._exitTimer) clearInterval(session._exitTimer);
-  session._exitTimer = null;
 }
 
 function createTaskElement(id, profile) {
@@ -261,7 +280,7 @@ export function destroyTerminalSession(id) {
   const session = terminalSessions.get(id);
   if (!session) return;
   terminalSessions.delete(id);
-  stopReplExitPolling(session);
+  session.exitPoller?.stop();
   session.anchor = null;
   session.wrapper.remove();
 }
@@ -279,11 +298,3 @@ export function wakeTerminalSession(session) {
     session.term._awake?.();
   });
 }
-
-
-// Overlay attach machinery lives in app-terminal-overlay.js; re-exported
-// here so existing importers keep reading from app-terminal-sessions.js.
-export {
-  attachOverlayTerminalSession,
-  attachTerminalSession,
-} from "./app-terminal-overlay.js";

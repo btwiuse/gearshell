@@ -182,3 +182,36 @@ export function disposeExternalTerminal(sessionId) {
   sessions.delete(sessionId);
   return true;
 }
+
+// Action registry: how an external terminal is started (e.g. WebSSH, WeTTY)
+// and how its connection descriptor is rebuilt for layout recovery.
+const actions = new Map();
+
+export function registerExternalTerminalAction(name, action) {
+  actions.set(name, action);
+}
+
+export function getExternalTerminalAction(name) {
+  return actions.get(name) ?? null;
+}
+
+// Recovery registry: kind -> (panel, recovery) -> restored session. The
+// layout layer calls restoreExternalTerminalSessions after a page reload
+// with the live dockview panel list; each registered adapter rebuilds its
+// specific kind of session.
+const recoveryAdapters = new Map();
+
+export function registerExternalTerminalRecovery(kind, restore) {
+  recoveryAdapters.set(kind, restore);
+}
+
+export function restoreExternalTerminalSessions(api) {
+  for (const panel of api.panels) {
+    if (panel.params?.panelType !== "external-terminal") continue;
+    const recovery = panel.params.recovery;
+    const restore = recoveryAdapters.get(recovery?.kind);
+    if (!restore) continue;
+    createExternalTerminal({ sessionId: panel.params.sessionId, title: panel.title });
+    restore({ sessionId: panel.params.sessionId, recovery });
+  }
+}

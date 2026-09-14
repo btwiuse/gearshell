@@ -94,7 +94,7 @@ self.addEventListener('message', (event) => {
     resizePort?.postMessage(latestResize);
   }
   if (message?.type === 'init') {
-    const prefix = 'export TERM_PROGRAM=ghostty COLORTERM=truecolor TERM=xterm-ghostty WT_SESSION=ghostty XTERM_PROGRAM=ghostty; clear\n';
+    const prefix = 'export TERM=ghostty; clear\n';
     inputController?.enqueue(prefix);
   }
   if (message?.type === 'response') {

@@ -1,5 +1,4 @@
-import { registerExternalTerminalAction } from "./external-terminal-actions.js";
-import { registerExternalTerminalRecovery } from "./external-terminal-recovery.js";
+import { registerExternalTerminalAction, registerExternalTerminalRecovery } from "./external-terminal-sessions.js";
 import {
   exitExternalTerminal,
   notifyExternalTerminal,

@@ -1,5 +1,5 @@
 import { saveLayoutSnapshot } from "./app-layout.js";
-import { getExternalTerminalAction } from "./external-terminal-actions.js";
+import { getExternalTerminalAction } from "./external-terminal-sessions.js";
 import { getDockviewApi } from "./app-panels-store.js";
 import { permitsPath } from "./plugins-scope.js";
 import { addPanelByComponent } from "./panels.js";

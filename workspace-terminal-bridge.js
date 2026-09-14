@@ -27,6 +27,7 @@
 // timeout arg to waitFor MUST be an integer literal — a float reaches
 // the kernel as a CBOR number and panics it ("arg 1 is not a uint64").
 
+import { attachKernelTermStream } from "./kernel-term-stream.mjs";
 import { permitsPath } from "./plugins-scope.js";
 import {
   createHeadlessTerminalSession,
@@ -40,7 +41,6 @@ import {
 import {
   getDefaultTerminalProfile,
 } from "./app-terminal-profiles.js";
-import { getWanixRoot } from "./app-state.js";
 import { nextVmMac } from "./workspace-vm-mac.js";
 
 // The standalone VM panel was removed; vm.create is driven by plugins
@@ -51,8 +51,9 @@ const FALLBACK_VM_BACKEND_URL =
 const FALLBACK_VM_LINUX_URL =
   "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
 
-// sessionId -> { session|vmSession, kind, reader, writer, source, origin,
-// exitTimer, disposed } — kind is "task" (shell session) or "vm".
+// sessionId -> { session|vmSession, kind, stream, source, origin, disposed }
+// — kind is "task" (shell session) or "vm". The kernel stream (reader +
+// writer + exit poll) is owned by `stream` (see kernel-term-stream.mjs).
 const sessions = new Map();
 
 let sessionCounter = 0;
@@ -69,17 +70,6 @@ function push(source, origin, topic, payload) {
   reply(source, origin, { event: { topic, payload } });
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// The task element self-activates via the namespace `ready` event when
-// created before boot; sessions created after boot need the explicit
-// wake (mirrors wakeTerminalSession, minus the wanix-term deref).
-// Callers racing the boot (e.g. the iframe's initial winch resize) must
-// await the SAME _awake promise, not just a started flag: the term is
-// only allocated after _awake resolves, so a resize that skips an
-// in-flight _awake writes to a winch path that does not exist yet.
 // The task element self-activates: base.js connectedCallback ->
 // _connect -> _activate -> _awake() runs allocate(+start when the task
 // has start="") as soon as the kernel is up, for sessions created after
@@ -102,7 +92,7 @@ async function wakeTask(entry) {
       }
       break;
     }
-    await sleep(250);
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
 }
 
@@ -130,80 +120,42 @@ function whenReady(entry) {
     : wakeTask(entry);
 }
 
-async function connectStreams(entry) {
-  const root = getWanixRoot();
-  // Integer literal timeout: floats panic the kernel (see header note).
-  await root.waitFor(dataPath(entry), 30000);
-  const readable = await root.openReadable(dataPath(entry));
-  const writable = await root.openWritable(dataPath(entry));
-  entry.reader = readable.getReader();
-  entry.writer = writable.getWriter();
-  pumpOutput(entry);
-  if (entry.kind !== "vm") {
-    startExitPolling(entry);
-  }
-}
-
-// Forward kernel output chunks to the creating iframe. The payload data
-// is a Uint8Array — postMessage structured-clones it across the frame
-// boundary without a JSON round trip.
-async function pumpOutput(entry) {
-  try {
-    while (!entry.disposed) {
-      const { done, value } = await entry.reader.read();
-      if (done) break;
-      if (value && value.length) {
-        push(entry.source, entry.origin, "term.data", {
-          sessionId: entry.sessionId,
-          data: value,
-        });
-      }
-    }
-  } catch {
-    // stream closed by dispose or kernel teardown
-  }
-  if (!entry.disposed) {
-    cleanupSession(entry, { code: null, note: "stream closed" });
-  }
-}
-
-// Poll the task exit file like the shell's own terminals (startReplExit-
-// Polling) and surface the code to the iframe once the process is gone.
-function startExitPolling(entry) {
-  const poll = async () => {
-    if (entry.disposed || !sessions.has(entry.sessionId)) return;
-    let text;
-    try {
-      text = await getWanixRoot().readText(exitPath(entry.sessionId));
-    } catch {
-      return;
-    }
-    const code = (text || "").trim();
-    if (code === "") return;
-    push(entry.source, entry.origin, "term.exit", {
-      sessionId: entry.sessionId,
-      code,
-    });
-    cleanupSession(entry, { code });
-  };
-  poll();
-  entry.exitTimer = setInterval(poll, 500);
+function attachKernelStream(entry) {
+  // VM sessions have no kernel exit file (their "exit" is whatever the
+  // guest does, and the host never writes to a task-shaped exit path for
+  // a vm-panel). Skip the exit poller for them; the stream-end event
+  // still drives cleanupSession via onStreamEnd.
+  const pollExit = entry.kind === "vm"
+    ? null
+    : (trimmed) => {
+      push(entry.source, entry.origin, "term.exit", {
+        sessionId: entry.sessionId,
+        code: trimmed,
+      });
+      cleanupSession(entry, { code: trimmed });
+    };
+  return attachKernelTermStream({
+    paths: {
+      data: () => dataPath(entry),
+      winch: () => winchPath(entry),
+      exit: () => exitPath(entry.sessionId),
+    },
+    beforeConnect: () => whenReady(entry),
+    onChunk: (data) => {
+      push(entry.source, entry.origin, "term.data", {
+        sessionId: entry.sessionId,
+        data,
+      });
+    },
+    onStreamEnd: () => cleanupSession(entry, { code: null, note: "stream closed" }),
+    pollExit,
+  });
 }
 
 function cleanupSession(entry, { code = null } = {}) {
   if (entry.disposed) return;
   entry.disposed = true;
-  if (entry.exitTimer) clearInterval(entry.exitTimer);
-  try {
-    entry.reader?.cancel?.();
-  } catch {
-    // already closed
-  }
-  try {
-    entry.writer?.close?.();
-  } catch {
-    // already closed
-  }
+  entry.stream?.dispose();
   try {
     if (entry.kind === "vm") {
       destroyVmSession(entry.vmSession.id);
@@ -231,27 +183,26 @@ function handleCreate(event, id, args) {
   const entry = {
     sessionId,
     session,
-    reader: null,
-    writer: null,
+    kind: "task",
+    stream: null,
     source: event.source,
     origin: event.origin,
-    exitTimer: null,
     disposed: false,
   };
   sessions.set(sessionId, entry);
   // Reply immediately; the pump connects asynchronously and the first
   // term.data push only arrives once the kernel stream is open.
   reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
-  wakeTask(entry)
-    .then(() => connectStreams(entry))
-    .catch((error) => {
-      push(entry.source, entry.origin, "term.exit", {
-        sessionId,
-        code: null,
-        error: error?.message || String(error),
-      });
-      cleanupSession(entry);
+  try {
+    entry.stream = attachKernelStream(entry);
+  } catch (error) {
+    push(entry.source, entry.origin, "term.exit", {
+      sessionId,
+      code: null,
+      error: error?.message || String(error),
     });
+    cleanupSession(entry);
+  }
   return sessionId;
 }
 
@@ -263,10 +214,30 @@ function handleCreate(event, id, args) {
 // them with terminal.write / terminal.resize.
 function handleVmCreate(event, id, args) {
   const sessionId = `bridge-vm-${++sessionCounter}`;
-  // The standalone VM panel was removed; vm.create is driven by plugins
-  // (v86) that pass their own assets. A minimal inline default keeps an
-  // unparameterized session working without re-introducing host VM config.
-  const req = (args[0] && typeof args[0] === "object") ? args[0] : {};
+  const config = buildVmCreateConfig(args[0]);
+  const vmSession = createVmSession(`bridge-${sessionId}`, config);
+  const entry = {
+    sessionId,
+    kind: "vm",
+    vmSession,
+    stream: null,
+    source: event.source,
+    origin: event.origin,
+    disposed: false,
+  };
+  sessions.set(sessionId, entry);
+  reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
+  startVmSession(vmSession, { renderTerm: false })
+    .then(() => startVmStream(entry))
+    .catch((error) => failVmBridge(entry, sessionId, id, error));
+  return sessionId;
+}
+
+// The standalone VM panel was removed; vm.create is driven by plugins
+// (v86) that pass their own assets. A minimal inline default keeps an
+// unparameterized session working without re-introducing host VM config.
+function buildVmCreateConfig(rawArgs) {
+  const req = (rawArgs && typeof rawArgs === "object") ? rawArgs : {};
   const config = {
     backendUrl: req.backendUrl || FALLBACK_VM_BACKEND_URL,
     linuxUrl: req.linuxUrl || FALLBACK_VM_LINUX_URL,
@@ -276,35 +247,27 @@ function handleVmCreate(event, id, args) {
   };
   // The vnet gateway assigns IPs by the guest NIC's MAC, so every VM
   // instance needs a unique MAC or concurrent guests collide onto one IP.
-  // Inject one into the netdev unless the caller already supplied it.
   if (config.netdev && !config.netdev.includes("mac=")) {
     config.netdev += ",mac=" + nextVmMac();
   }
-  const vmSession = createVmSession(`bridge-${sessionId}`, config);
-  const entry = {
+  return config;
+}
+
+function startVmStream(entry) {
+  try {
+    entry.stream = attachKernelStream(entry);
+  } catch (error) {
+    failVmBridge(entry, entry.sessionId, null, error);
+  }
+}
+
+function failVmBridge(entry, sessionId, id, error) {
+  push(entry.source, entry.origin, "term.exit", {
     sessionId,
-    kind: "vm",
-    vmSession,
-    reader: null,
-    writer: null,
-    source: event.source,
-    origin: event.origin,
-    exitTimer: null,
-    disposed: false,
-  };
-  sessions.set(sessionId, entry);
-  reply(event.source, event.origin, { id: id, ok: true, result: { sessionId } });
-  startVmSession(vmSession, { renderTerm: false })
-    .then(() => connectStreams(entry))
-    .catch((error) => {
-      push(entry.source, entry.origin, "term.exit", {
-        sessionId,
-        code: null,
-        error: error?.message || String(error),
-      });
-      cleanupSession(entry);
-    });
-  return sessionId;
+    code: null,
+    error: error?.message || String(error),
+  });
+  cleanupSession(entry);
 }
 
 function handleWrite(event, id, args) {
@@ -325,35 +288,17 @@ function handleWrite(event, id, args) {
       error: "terminal.write requires a Uint8Array payload",
     });
   }
-  if (!entry.writer) {
+  if (!entry.stream) {
     return reply(event.source, event.origin, {
       id: id,
       ok: false,
       error: "terminal session is not connected yet",
     });
   }
-  entry.writer.write(data).catch(() => {
+  entry.stream.write(data).catch(() => {
     // kernel stream closed; the pump teardown handles the rest
   });
   reply(event.source, event.origin, { id: id, ok: true });
-}
-
-// The term device's winch path is a signal broadcaster whose reader
-// blocks until the first frame, so the very first winch write must land
-// or apps (cat /winch, bubbletea-style TERM_WINCH readers) hang forever.
-function writeWinch(root, entry, cols, rows, xpixel, ypixel) {
-  // openWritable, not writeFile: the root writeFile helper chmods after
-  // writing and the signal FS rejects chmod, silently killing every winch
-  // update (the shell's own terminals use openWritable for the same
-  // reason — elements/term.js).
-  return root
-    .openWritable(winchPath(entry))
-    .then((stream) => {
-      const writer = stream.getWriter();
-      return writer
-        .write(new TextEncoder().encode(`${cols} ${rows} ${xpixel} ${ypixel}\n`))
-        .then(() => writer.close());
-    });
 }
 
 function handleResize(event, id, args) {
@@ -371,12 +316,10 @@ function handleResize(event, id, args) {
   const xpixel = Number(sessionArgs(args, 3)) || 0;
   const ypixel = Number(sessionArgs(args, 4)) || 0;
   // The iframe resizes right after create(), which races kernel boot;
-  // wait for readiness AND the term device itself (the winch path only
-  // exists once the VM element finished allocating its term) so the
-  // initial winch frame cannot be lost.
+  // whenReady() runs the same wake path the stream attach uses, so the
+  // first winch frame cannot be lost to a race with allocate/start.
   whenReady(entry)
-    .then(() => getWanixRoot().waitFor(winchPath(entry), 30000))
-    .then(() => writeWinch(getWanixRoot(), entry, cols, rows, xpixel, ypixel))
+    .then(() => entry.stream?.writeWinch(cols, rows, xpixel, ypixel))
     .then(() => reply(event.source, event.origin, { id: id, ok: true }))
     .catch((error) =>
       reply(event.source, event.origin, {

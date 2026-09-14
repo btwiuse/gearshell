@@ -16,6 +16,7 @@
 // data/exit listeners may race it, so output is buffered until the first
 // listener attaches.
 
+import { attachKernelTermStream } from "./kernel-term-stream.mjs";
 import { getDockviewApi } from "./app-panels-store.js";
 import {
   createHeadlessTerminalSession,
@@ -24,22 +25,12 @@ import {
 import {
   getDefaultTerminalProfile,
 } from "./app-terminal-profiles.js";
-import { getWanixRoot } from "./app-state.js";
 
 const sessions = new Map();
 let sessionCounter = 0;
 
 function requireDockview() {
   if (!getDockviewApi()) throw new Error("terminal.create requires a mounted dockview");
-}
-function dataPath(id) {
-  return `#task/repl-${id}/term/data`;
-}
-function winchPath(id) {
-  return `#task/repl-${id}/term/winch`;
-}
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function emit(entry, type, payload) {
@@ -58,54 +49,14 @@ function emit(entry, type, payload) {
 // wakeTask exactly: poll rid, only _awake after the timeout.
 async function waitReady(entry) {
   const deadline = Date.now() + 30000;
-  while (!entry.session.task.rid && Date.now() < deadline) await sleep(250);
+  while (!entry.session.task.rid && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
   if (entry.session.task.rid) return;
   entry.session.started = true;
   try {
     await entry.session.task._awake?.();
   } catch {}
-}
-
-// Shell tasks self-activate once the kernel is up; sessions created
-// before boot (e.g. a Home demo mounted while the kernel cold-boots)
-// must wait for readiness rather than fail. Retry connect until the
-// kernel root + term device are available.
-async function connect(entry) {
-  let root = null;
-  const deadline = Date.now() + 60000;
-  while (Date.now() < deadline && !entry.disposed) {
-    try {
-      root = getWanixRoot();
-      if (root) break;
-    } catch {}
-    await sleep(250);
-  }
-  if (!root || entry.disposed) {
-    throw new Error("wanix system is not ready");
-  }
-  await waitReady(entry);
-  await root.waitFor(dataPath(entry.id), 30000);
-  const readable = await root.openReadable(dataPath(entry.id));
-  const writable = await root.openWritable(dataPath(entry.id));
-  entry.reader = readable.getReader();
-  entry.writer = writable.getWriter();
-  pump(entry);
-}
-
-async function pump(entry) {
-  try {
-    while (!entry.disposed) {
-      const { done, value } = await entry.reader.read();
-      if (done) break;
-      if (value?.length) emit(entry, "data", value);
-    }
-  } catch {
-    // stream torn down by dispose or kernel shutdown
-  }
-  if (!entry.disposed) {
-    emit(entry, "exit", { code: null });
-    disposeTerminal(entry.id);
-  }
 }
 
 function createTerminal(profileArg) {
@@ -121,47 +72,47 @@ function createTerminal(profileArg) {
   const entry = {
     id,
     session,
-    reader: null,
-    writer: null,
+    stream: null,
     disposed: false,
     pending: [],
     listeners: { data: new Set(), exit: new Set() },
   };
   sessions.set(id, entry);
-  connect(entry).catch((error) => {
-    emit(entry, "exit", { code: null, error: error?.message || String(error) });
-    disposeTerminal(id);
+  entry.stream = attachKernelTermStream({
+    paths: {
+      data: () => `#task/repl-${id}/term/data`,
+      winch: () => `#task/repl-${id}/term/winch`,
+      exit: () => `#task/repl-${id}/exit`,
+    },
+    beforeConnect: () => waitReady(entry),
+    onChunk: (value) => {
+      if (value?.length) emit(entry, "data", value);
+    },
+    onStreamEnd: () => {
+      if (entry.disposed) return;
+      emit(entry, "exit", { code: null });
+      disposeTerminal(id);
+    },
   });
   return { ok: true, sessionId: id };
 }
 
 function writeTerminal(id, data) {
   const entry = sessions.get(String(id));
-  if (!entry?.writer) throw new Error("terminal session is not connected yet");
-  entry.writer.write(data);
+  if (!entry?.stream?.isConnected()) {
+    throw new Error("terminal session is not connected yet");
+  }
+  entry.stream.write(data).catch(() => {
+    // kernel stream closed; the pump teardown handles the rest
+  });
   return { ok: true };
 }
 
 async function resizeTerminal(id, cols, rows, xpixel = 0, ypixel = 0) {
   const entry = sessions.get(String(id));
   if (!entry) throw new Error(`unknown terminal session: ${id}`);
-  let root = null;
-  const deadline = Date.now() + 60000;
-  while (Date.now() < deadline && !entry.disposed && !root) {
-    try {
-      root = getWanixRoot();
-    } catch {}
-    if (!root) await sleep(250);
-  }
-  if (!root || entry.disposed) throw new Error("wanix system is not ready");
   await waitReady(entry);
-  await root.waitFor(winchPath(entry.id), 30000);
-  // openWritable, not writeFile: writeFile chmods after writing and the
-  // signal FS rejects chmod, silently killing every winch update.
-  const stream = await root.openWritable(winchPath(entry.id));
-  const writer = stream.getWriter();
-  await writer.write(new TextEncoder().encode(`${cols} ${rows} ${xpixel} ${ypixel}\n`));
-  await writer.close();
+  await entry.stream.writeWinch(cols, rows, xpixel, ypixel);
   return { ok: true };
 }
 
@@ -169,8 +120,7 @@ function disposeTerminal(id) {
   const entry = sessions.get(String(id));
   if (!entry) return { ok: true };
   entry.disposed = true;
-  entry.reader?.cancel?.();
-  entry.writer?.close?.();
+  entry.stream?.dispose();
   destroyTerminalSession(entry.session.id);
   sessions.delete(String(id));
   return { ok: true };

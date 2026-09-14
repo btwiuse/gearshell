@@ -119,6 +119,8 @@ import {
 import {
   attachOverlayTerminalSession,
   attachTerminalSession,
+} from "./app-terminal-overlay.js";
+import {
   createTerminalSession,
   destroyTerminalSession,
   wakeTerminalSession,
