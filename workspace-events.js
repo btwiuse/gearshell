@@ -137,6 +137,20 @@ export function emit(topic, payload) {
   return { ok: true };
 }
 
+// Best-effort fs.changed emitter used by the fs surface (mount
+// lifecycle + OPFS watcher). The wrapper swallows listener errors so
+// a buggy subscriber cannot break a mount call or the observer
+// callback; the underlying `emit` already isolates individual
+// listener failures internally.
+export function emitFsChanged(payload) {
+  try {
+    emit("fs.changed", payload);
+  } catch {
+    // event bus is best-effort; never break the caller on a logger
+    // failure.
+  }
+}
+
 // Dockview panel lifecycle -> event ring buffer. Called from app-shell's
 // onReady where the other dockview hooks live (getDockviewApi() is null
 // before then, so the api instance is passed in).

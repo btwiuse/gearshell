@@ -24,7 +24,7 @@ import {
   saveWorkspace,
   updateWorkspaceIndex,
 } from "./app-workspace.js";
-import { normalizeSystemConfig } from "./app-normalize.js";
+import { normalizeSystemConfig } from "./app-normalize-system.js";
 
 const AUDIT_KEY = "gear-shell-agent-audit";
 const AUDIT_CAP = 50;

@@ -48,13 +48,15 @@ import {
 } from "./app-terminal-profiles.js";
 import {
   normalizeBind,
-  normalizeLauncherOrder,
   normalizeSystemBind,
-  normalizeTerminalProfile,
-  normalizeTerminalProfileOrder,
   normalizeTask,
   validateBind,
   validateTask,
+} from "./app-normalize-system.js";
+import {
+  normalizeLauncherOrder,
+  normalizeTerminalProfile,
+  normalizeTerminalProfileOrder,
 } from "./app-normalize.js";
 import { redactSecrets } from "./workspace-audit.js";
 import {

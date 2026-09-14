@@ -31,7 +31,7 @@ import {
   openPanelSnapshots,
   rememberOpenPanel,
 } from "./app-panels-store.js";
-import { clone } from "./app-normalize.js";
+import { clone } from "./app-normalize-system.js";
 import { reservePanelIds } from "./app-panel-ids.js";
 import { restoreExternalTerminalSessions } from "./external-terminal-sessions.js";
 

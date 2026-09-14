@@ -12,7 +12,7 @@ import {
   normalizeTask,
   validateBind,
   validateTask,
-} from "./app-normalize.js";
+} from "./app-normalize-system.js";
 import {
   loadActiveWorkspace,
   updateActiveWorkspace,

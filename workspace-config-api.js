@@ -22,12 +22,12 @@ import {
   updateWorkspaceSystemBind,
   validateSystemBind,
 } from "./app-workspace.js";
+import { normalizePlugin } from "./app-normalize-plugins.js";
+import { normalizeProviders } from "./app-normalize.js";
 import {
-  normalizePlugin,
-  normalizeProviders,
   normalizeSystemBind,
   normalizeSystemConfig,
-} from "./app-normalize.js";
+} from "./app-normalize-system.js";
 import {
   ensurePluginSystemFiles,
   ensurePluginToolBinds,

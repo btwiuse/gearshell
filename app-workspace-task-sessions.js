@@ -9,7 +9,7 @@ import {
   workspaceTaskSessions,
 } from "./app-state.js";
 import { WORKSPACE_TASK_STATUS_EVENT } from "./app-constants.js";
-import { normalizeTask } from "./app-normalize.js";
+import { normalizeTask } from "./app-normalize-system.js";
 import { buildEnv } from "./app-terminal-profiles.js";
 import { attachOverlayTerminalSession } from "./app-terminal-overlay.js";
 import { startExitFilePolling } from "./app-terminal-sessions.js";
@@ -50,8 +50,10 @@ export function taskEnvAttribute(def) {
 // without losing or stalling bytes. (The gojs runtime routes fd 1 to the
 // worker console at the runtime level, so kernel fd-binding cannot capture
 // gojs stdout — the wrapper is the reliable path.)
-const taskOutputs = new Map();
-
+//
+// The last mirror is kept on the session itself (`session._lastOutput`)
+// instead of a module-level Map: the session lifecycle owns its
+// output, and `getTaskOutput` becomes a one-line session lookup.
 export function taskLogPath(def) {
   // Absolute path inside the task's own namespace: /tmp is the ramfs
   // mount every task gets, so the log lands in ns/tmp regardless of the
@@ -66,16 +68,17 @@ export function taskLogKernelPath(session) {
 }
 
 export function getTaskOutput(id) {
-  return taskOutputs.get(id) ?? "";
+  return workspaceTaskSessions.get(id)?._lastOutput ?? "";
 }
 
 export function startTaskOutputCapture(session) {
+  session._lastOutput = "";
   const path = taskLogKernelPath(session);
   const poll = async () => {
     try {
       const root = getWanixRoot();
       if (!root) return;
-      taskOutputs.set(session.id, await root.readText(path));
+      session._lastOutput = await root.readText(path);
     } catch {
       // Task namespace not provisioned yet (kernel busy / task not
       // started); keep the last mirrored value.

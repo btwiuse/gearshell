@@ -2,25 +2,6 @@
 // tasks (500-line rule split). Pure functions.
 
 import {
-  isLegacyWanixRuntimeUrl,
-  normalizeRuntimeConfig,
-} from "./app-normalize-runtime.js";
-import {
-  normalizePlugin,
-  normalizePlugins,
-} from "./app-normalize-plugins.js";
-
-// Runtime + plugin normalizers live in app-normalize-runtime.js /
-// app-normalize-plugins.js; re-exported so existing importers (app.js,
-// workspace-config-api, app-workspace-presets) keep working unchanged.
-export {
-  isLegacyWanixRuntimeUrl,
-  normalizeRuntimeConfig,
-  normalizePlugin,
-  normalizePlugins,
-};
-
-import {
   BUILTIN_TERMINAL_PROFILES,
   CANONICAL_LUCIDE_ICON_IDS,
   CONFIG_KEY,
@@ -54,29 +35,12 @@ import {
 } from "./plugin/crush-playground/preset-api.js";
 import { createWorkspaceId } from "./app-storage.js";
 import {
-  clone,
-  isLegacySystemMirrorBind,
-  LEGACY_RAMFS_MOUNT_IDS,
-  LEGACY_SYSTEM_MIRROR_BINDS,
   normalizeBind,
-  normalizeSystemBind,
   normalizeSystemConfig,
   normalizeTask,
-  validateBind,
-  validateTask,
 } from "./app-normalize-system.js";
-export {
-  clone,
-  isLegacySystemMirrorBind,
-  LEGACY_RAMFS_MOUNT_IDS,
-  LEGACY_SYSTEM_MIRROR_BINDS,
-  normalizeBind,
-  normalizeSystemBind,
-  normalizeSystemConfig,
-  normalizeTask,
-  validateBind,
-  validateTask,
-} from "./app-normalize-system.js";
+import { normalizeRuntimeConfig } from "./app-normalize-runtime.js";
+import { normalizePlugins } from "./app-normalize-plugins.js";
 
 export function normalizePresetDescription(description) {
   return typeof description === "string" ? description.trim() : "";

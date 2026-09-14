@@ -100,11 +100,11 @@ import {
   saveCustomWorkspacePreset,
   uniqueWorkspacePresetName,
 } from "./app-workspace-presets.js";
+import { clone } from "./app-normalize-system.js";
+import { normalizePlugin } from "./app-normalize-plugins.js";
 import {
-  clone,
   getTerminalPresetIcon,
   normalizeLauncherOrder,
-  normalizePlugin,
   normalizeTerminalProfile,
   normalizeTerminalProfileOrder,
 } from "./app-normalize.js";
@@ -266,7 +266,6 @@ initPanels({
   getTerminalPresetIcon,
   getWorkbenchPanelConfig,
   getDefaultTerminalProfile,
-  // Cross-module add*Panel dispatchers so panels.js can route every
   // Cross-module add*Panel dispatchers: panels.js's PANEL_ADDERS routes
   // every kernel panel through this table; pluginized components (home,
   // settings, files, runtime, playground, workbench, vm, music, deck,

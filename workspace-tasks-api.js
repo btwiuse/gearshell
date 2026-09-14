@@ -234,7 +234,7 @@ function makeHeadlessStatusHandler(taskId, finish) {
     const status = event.detail.status;
     if (status !== "succeeded" && status !== "failed") return;
     // Read the log file directly instead of trusting the polled
-    // taskOutputs cache: the 800ms output poll can lag a fast-exiting
+    // session._lastOutput cache: the 800ms output poll can lag a fast-exiting
     // task, so a short-lived probe (type -a) would otherwise resolve
     // with empty output. The kernel keeps the task namespace alive
     // until the session is destroyed, so the file is still readable.

@@ -9,14 +9,15 @@ import {
 } from "./app-constants.js";
 import {
   clone,
-  isLegacySystemMirrorBind,
   normalizeBind,
-  normalizeCustomWorkspacePreset,
-  normalizePresetDescription,
-  normalizeRuntimeConfig,
-  normalizeShellConfig,
   normalizeSystemConfig,
   normalizeTask,
+} from "./app-normalize-system.js";
+import { normalizeRuntimeConfig } from "./app-normalize-runtime.js";
+import {
+  normalizeCustomWorkspacePreset,
+  normalizePresetDescription,
+  normalizeShellConfig,
 } from "./app-normalize.js";
 import {
   createWorkspaceId,

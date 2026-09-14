@@ -13,9 +13,9 @@ import {
 import {
   isLegacySystemMirrorBind,
   normalizeBind,
-  normalizeShellConfig,
   normalizeTask,
-} from "./app-normalize.js";
+} from "./app-normalize-system.js";
+import { normalizeShellConfig } from "./app-normalize.js";
 import {
   createWorkspaceId,
   readStoredJson,
