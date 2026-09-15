@@ -47,9 +47,9 @@ import { nextVmMac } from "./workspace-vm-mac.js";
 // (v86) that pass their own assets. These are the host fallback used only
 // when a session arrives without an explicit archive/rootfs.
 const FALLBACK_VM_BACKEND_URL =
-  "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc3/v86.tgz";
+  "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/wanix-v86-v0.4.36/v86.tgz";
 const FALLBACK_VM_LINUX_URL =
-  "https://cdn.jsdelivr.net/npm/wanix-extras@0.4.0-rc2/dist/wanix-linux.tgz";
+  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-guests-rc33/wanix-linux-x86.tgz";
 
 // sessionId -> { session|vmSession, kind, stream, source, origin, disposed }
 // — kind is "task" (shell session) or "vm". The kernel stream (reader +

@@ -2437,6 +2437,48 @@ bonsai 走 wanix `/js/GearShell` 跟现有 gear CLI 同一通道:
   含 bitgpu 行号 / tokenizer 细节 / 集成路线 / 验证步骤)
 - `memory/Home.md` Latest rounds 加本条索引
 
+## Linux 7.2.6 guest kernel/rootfs 发布交接（2026-09-14）
+
+- [x] 修正 `rv64.js/flake.nix` 的 kernel override，使 `linux_latest` 真正使用 Linux 7.2.6；仅改 `version/src` 不够，Nix 的 inherited configure/install 脚本仍会校验旧的 `modDirVersion`。
+- [x] 保持三架构配置通过 Kconfig：RV64 使用 `kernel/rv64-config.nix`，v86 使用 `kernel/x86-v86-config.nix`，ARM64 使用 `kernel/arm64-config.nix`；不要把 `MOUNT_NS`、`CLONE3` 当作可独立传入的符号。`MOUNT_NS` 会随 `NAMESPACES=y` 自动产生，`clone3()` 不是 `CONFIG_CLONE3`。
+- [x] 目标版本确认：官方 `linux-7.2.6.tar.xz` SHA-256 `039aef84f2b0994aeda3f4fcfc3d02ec9d7a9bbb9020ea264c43f446c860f606`，Nix SRI `sha256-A5rvhPKwmUrto/T8/D0C7J16m7uQIOomTEP0Rshg9gY=`。
+- [x] Apple Silicon 上 Docker 构建 Nix kernel 必须用 `--platform=linux/amd64`；复用持久化 Nix volume 可避免重复下载。推荐命令：
+
+```sh
+DOCKER_CONFIG=/tmp/gearshell-docker-config docker run --rm \
+  --platform=linux/amd64 --security-opt seccomp=unconfined \
+  -v "/Users/gear/GitHub/rv64.js:/src" \
+  -v rv64-nix-store-x86-clean:/nix -w /src \
+  nixos/nix:2.30.2 sh -c \
+  'nix --extra-experimental-features nix-command \
+   --extra-experimental-features flakes \
+   --option build-users-group "" \
+   --option sandbox false --option filter-syscalls false \
+   build .#virt-kernel-fast .#v86-kernel .#arm64-kernel \
+   --no-link --print-out-paths'
+```
+
+- [x] 失败排查：不要重复启动多个 kernel build；用 `docker ps`、`docker stats --no-stream`、`docker logs --tail 20 <container>` 判断是否仍在高 CPU 编译。旧 Nix store 可能含 7.2.5 derivation，必须确认最终输出路径/`file` 版本为 7.2.6。
+- [x] kernel 导出：从输出 store 复制 `Image`、`bzImage` 到 `rv64.js/target/{arm64,riscv64,x86}/`，再传给 rootfs builder。rootfs 命令示例：
+
+```sh
+DOCKER_CONFIG=/tmp/gearshell-docker-config \
+DOCKER_HOST=unix:///Users/gear/.orbstack/run/docker.sock \
+WANIX_KERNEL=/Users/gear/GitHub/rv64.js/target/x86/bzImage \
+WANIX_GUEST_ARCH=x86 WANIX_ROOTFS_PROFILE=minimal \
+  bash rv64.js/integrations/wanix/build-linux-bundle.sh \
+  /Users/gear/GitHub/wanix-extras/wanix-linux-x86.tgz
+```
+
+- [x] rootfs builder 默认使用 Docker Alpine 3.24；full profile 通过 `WANIX_ROOTFS_PROFILE=full` 安装 bash/tmux/vim/curl/ca-certificates/docker/podman，mini profile 保持无额外工具。交叉架构安装需要 `apk --initdb --allow-untrusted`，显式 Alpine v3.24 仓库；tar writer 必须 `recursive=False`，并清除 `._*`。
+- [x] 发布前逐包验证：`tar -xzf`、`file boot/Image` 或 `file boot/bzImage`、检查 `tar -tzf`，实际启动后用 `zcat /proc/config.gz` 检查 kernel；`boot/kernel.config` 只是 rootfs 遗留元数据，不能代表运行 kernel。
+- [x] 已完成 Linux 7.2.6 profile 重构与云端构建验证：`minimal`、`container`、`container-full`，三架构共 9 个 archive 由 `justwasm/rv64.js` 的 `WANIX guest release` workflow 生成，Release `wanix-guests-rc33` 已含全部 rootfs。
+- [x] 已完成 x86 `COMPAT_32BIT_TIME` 恢复与验证；所有 9 个 profile build 在 GitHub Actions 中成功。`ignoreConfigErrors=false` 分支也全绿，main 已关闭该宽容开关。
+- [x] 已将 GearShell 的 v86 / rv64 backend 及 rootfs 链接切到 justwasm Releases，Linux Playground 在选预设时用 IndexedDB 预下载并缓存 rootfs，启动直接使用 Blob URL。
+- [ ] 在真实 v86 guest 验证 `zcat /proc/config.gz | grep COMPAT_32BIT_TIME` 为 `y`，以及 `touch aaa` 不再返回 `Function not implemented`；发布后的 x86 archive 需通过该 live gate。
+- [ ] 将所有硬编码的临时 Release tag 升级为每个上游仓库的正式稳定 tag；目前 GearShell 指向 `justwasm/wanix` v86 archive、`justwasm/rv64.js` rv64 archive，以及 `wanix-guests-rc33` rootfs。
+- [ ] 为 large Release assets 部署受限 allowlist 的 CORS/R2 Worker；不要以公共第三方 CORS proxy 作为生产依赖。
+
 ## 待办状态(汇总)
 
 按"做对的事"原则,本里程碑只做调研 + 文档,不写实现代码。后续

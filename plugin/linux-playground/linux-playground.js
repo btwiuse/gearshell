@@ -1,4 +1,5 @@
 import { mountTerminal, ghosttyIdentity } from "/plugin/terminal-mount.mjs";
+import { loadLinuxArchive } from "/plugin/linux-playground/linux-image-cache.js";
 
 const $ = (id) => document.getElementById(id);
 const architecture = $("architecture");
@@ -22,13 +23,13 @@ const sourceName = $("sourceName");
 const presets = {
   v86: {
     architecture: "v86",
-    backend: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc23/v86.tgz",
-    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc26/wanix-linux-x86.tgz",
+    backend: "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/wanix-v86-v0.4.36/v86.tgz",
+    image: "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-guests-rc33/wanix-linux-x86.tgz",
   },
   rv64: {
     architecture: "rv64",
-    backend: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc18/rv64.tgz",
-    image: "https://cdn.jsdelivr.net/gh/btwiuse/wanix-extras@v0.4.0-rc18/wanix-linux-rv64.tgz",
+    backend: "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-rv64-v0.3.0/rv64.tgz",
+    image: "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-guests-rc33/wanix-linux-rv64.tgz",
   },
 };
 
@@ -40,6 +41,7 @@ let localPath = null;
 let activeInstance = null;
 let instanceCounter = 0;
 const instances = new Map();
+const imageLoads = new Map();
 
 function applyPreset(name) {
   document.querySelectorAll(".preset").forEach((button) => {
@@ -58,8 +60,13 @@ function applyPreset(name) {
   backendUrl.value = preset.backend;
   linuxUrl.value = preset.image;
   linuxFile.value = "";
-  fileName.textContent = "Using preset remote image";
+  fileName.textContent = "Preparing preset image…";
   localPath = null;
+  preloadImage(preset.image).then((archive) => {
+    fileName.textContent = `Preset cached · ${(archive.size / 1048576).toFixed(1)} MB`;
+  }).catch((reason) => {
+    fileName.textContent = `Preset download failed: ${String(reason?.message || reason)}`;
+  });
 }
 
 function setStatus(mode, text) {
@@ -83,6 +90,19 @@ function selectedSource() {
   const url = linuxUrl.value.trim();
   if (url) return { kind: "remote", url };
   throw new Error("Choose a local Linux image or enter a remote image URL.");
+}
+
+function preloadImage(url) {
+  let load = imageLoads.get(url);
+  if (!load) {
+    load = loadLinuxArchive(url, ({ cached, loaded, total }) => {
+      const progress = total ? `${(loaded / total * 100).toFixed(0)}%` : `${(loaded / 1048576).toFixed(1)} MB`;
+      fileName.textContent = cached ? `Preset cached · ${(loaded / 1048576).toFixed(1)} MB` : `Downloading preset · ${progress}`;
+    });
+    imageLoads.set(url, load);
+    load.catch(() => imageLoads.delete(url));
+  }
+  return load;
 }
 
 function vmSession(config) {
@@ -167,7 +187,8 @@ async function startVm() {
   const source = selectedSource();
   setStatus("loading", "PREPARING IMAGE");
   launch.disabled = true;
-  const localUrl = source.kind === "local" ? URL.createObjectURL(source.file) : null;
+  const archive = source.kind === "local" ? source.file : await preloadImage(source.url);
+  const localUrl = URL.createObjectURL(archive);
   const id = `instance-${++instanceCounter}`;
   const host = document.createElement("div");
   host.className = "instance-host";
@@ -201,6 +222,16 @@ linuxFile.addEventListener("change", () => {
   if (file) linuxUrl.value = "";
 });
 linuxUrl.addEventListener("input", () => { if (linuxUrl.value.trim()) linuxFile.value = ""; });
+linuxUrl.addEventListener("change", () => {
+  const url = linuxUrl.value.trim();
+  if (!url) return;
+  fileName.textContent = "Preparing remote image…";
+  preloadImage(url).then((archive) => {
+    fileName.textContent = `Image cached · ${(archive.size / 1048576).toFixed(1)} MB`;
+  }).catch((reason) => {
+    fileName.textContent = `Image download failed: ${String(reason?.message || reason)}`;
+  });
+});
 architecture.addEventListener("change", () => { localPath = null; });
 launch.addEventListener("click", () => startVm().catch((reason) => { launch.disabled = false; setup.hidden = false; terminalPanel.hidden = true; showError(String(reason?.message || reason)); }));
 stop.addEventListener("click", () => stopVm().catch((reason) => showError(String(reason?.message || reason))));
