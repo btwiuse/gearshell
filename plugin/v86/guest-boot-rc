@@ -3,3 +3,13 @@ mount -t tmpfs tmpfs /tmp 2>/dev/null
 ifconfig lo up 2>/dev/null
 ifconfig eth0 up 2>/dev/null
 udhcpc -i eth0 -s /bin/post-dhcp 2>/dev/null
+
+# Mount cgroup v2 so dockerd / podman / runc can manage resources
+# inside the guest. Minimal kernels (CGROUPS=no) have no sysfs marker
+# under /sys/fs/cgroup and no cgroup2 controller, so probe /proc/filesystems
+# before attempting the mount; on minimal this whole block is a no-op.
+# See memory/gearshell-vm-cgroup.md for why container kernels need both overlays.
+if grep -qw cgroup2 /proc/filesystems && [ -d /sys/fs/cgroup ]; then
+  mount -t tmpfs tmpfs /sys/fs/cgroup 2>/dev/null
+  mount -t cgroup2 cgroup2 /sys/fs/cgroup 2>/dev/null
+fi
