@@ -195,8 +195,8 @@ const presets = {
 };
 
 const VNET_URL = "wss://vnet.net.k0s.io/x/net";
-const bootRc = { v86: "/plugin/v86/guest-boot-rc", rv64: "/plugin/rv64/guest-boot-rc" };
-const postDhcp = { v86: "/plugin/v86/guest-post-dhcp", rv64: "/plugin/rv64/guest-post-dhcp" };
+const bootRcDefaults = { v86: "/plugin/v86/guest-boot-rc", rv64: "/plugin/rv64/guest-boot-rc" };
+const postDhcpDefaults = { v86: "/plugin/v86/guest-post-dhcp", rv64: "/plugin/rv64/guest-post-dhcp" };
 let handle = null;
 let localPath = null;
 let activeInstance = null;
