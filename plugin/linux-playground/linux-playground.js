@@ -2,7 +2,16 @@ import { mountTerminal, ghosttyIdentity } from "/plugin/terminal-mount.mjs";
 import { loadLinuxArchive } from "/plugin/linux-playground/linux-image-cache.js";
 
 const $ = (id) => document.getElementById(id);
-const architecture = $("architecture");
+// Architecture radios (replaces the legacy <select>); all radios share
+// name="architecture" so getArchitecture() returns the currently checked one.
+const architectureInputs = document.querySelectorAll('input[name="architecture"]');
+const getArchitecture = () => {
+  for (const input of architectureInputs) if (input.checked) return input;
+  return architectureInputs[0];
+};
+const setArchitecture = (value) => {
+  for (const input of architectureInputs) input.checked = input.value === value;
+};
 const backendUrl = $("backendUrl");
 const linuxUrl = $("linuxUrl");
 const linuxFile = $("linuxFile");
@@ -82,7 +91,7 @@ function applyPreset(name) {
     localPath = null;
     return;
   }
-  architecture.value = preset.architecture;
+  setArchitecture(preset.architecture);
   backendUrl.value = preset.backend;
   linuxUrl.value = preset.image;
   linuxFile.value = "";
@@ -225,7 +234,7 @@ async function startVm() {
   const id = `instance-${++instanceCounter}`;
   const host = document.createElement("div");
   host.className = "instance-host";
-  const instance = { id, host, handle: null, localUrl, ready: false, label: `${architecture.value.toUpperCase()} #${instanceCounter}`, machine: `${architecture.options[architecture.selectedIndex].text} Linux`, source: source.kind === "local" ? source.file.name : source.url };
+  const instance = { id, host, handle: null, localUrl, ready: false, label: `${getArchitecture().value.toUpperCase()} #${instanceCounter}`, machine: `${getArchitecture().dataset.label} Linux`, source: source.kind === "local" ? source.file.name : source.url };
   instances.set(id, instance);
   setup.hidden = true;
   terminalPanel.hidden = false;
@@ -234,7 +243,7 @@ async function startVm() {
   machineName.textContent = instance.machine;
   sourceName.textContent = instance.source;
   renderTabs();
-  instance.handle = await mountTerminal(host, vmSession({ architecture: architecture.value, backend, image: localUrl || linuxUrl.value.trim(), memory: memoryForArchive(archive, activePreset), append: activePreset?.append }), {
+  instance.handle = await mountTerminal(host, vmSession({ architecture: getArchitecture().value, backend, image: localUrl || linuxUrl.value.trim(), memory: memoryForArchive(archive, activePreset), append: activePreset?.append }), {
     ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
     onData: () => { instance.ready = true; if (activeInstance === id) setStatus("ready", "RUNNING"); },
     onExit: (event) => { if (activeInstance === id) showError(event?.error || "The virtual machine stopped."); },
@@ -265,7 +274,9 @@ linuxUrl.addEventListener("change", () => {
     fileName.textContent = `Image download failed: ${String(reason?.message || reason)}`;
   });
 });
-architecture.addEventListener("change", () => { localPath = null; activePreset = null; });
+for (const input of architectureInputs) {
+  input.addEventListener("change", () => { localPath = null; activePreset = null; });
+}
 launch.addEventListener("click", () => startVm().catch((reason) => { launch.disabled = false; setup.hidden = false; terminalPanel.hidden = true; showError(String(reason?.message || reason)); }));
 stop.addEventListener("click", () => stopVm().catch((reason) => showError(String(reason?.message || reason))));
 newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "READY TO CONFIGURE"); renderTabs(); });
