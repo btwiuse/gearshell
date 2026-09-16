@@ -28,7 +28,13 @@ body { min-height: 100vh; overflow: hidden; }
    Thin, low-contrast scrollbar keeps the page calm without hiding the
    affordance (overflow:hidden would silently clip the form on small
    viewports — that was the old regression). */
-.setup { box-sizing: border-box; flex: 1 1 0; min-height: 0; width: min(960px, 100%); margin: 0 auto; padding: 32px 30px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2a3447 #0b1018; }
+.setup { box-sizing: border-box; flex: 1 1 0; min-height: 0; width: 100%; margin: 0; padding: 32px 30px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2a3447 #0b1018; }
+/* Re-create the original 960px visual column on wide viewports. The
+   .setup scroll context now spans the full viewport width so hovering
+   the empty whitespace on either side of the centred form participates
+   in the scroll. .intro keeps its tighter 720px max-width via its own
+   rule below; the universal selector caps everything else at 960px. */
+.setup > * { width: min(960px, 100%); margin-left: auto; margin-right: auto; }
 .setup::-webkit-scrollbar { width: 8px; height: 8px; }
 .setup::-webkit-scrollbar-thumb { background: #2a3447; border-radius: 4px; }
 .setup::-webkit-scrollbar-thumb:hover { background: #3a4a66; }
