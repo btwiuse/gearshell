@@ -20,16 +20,40 @@ const status = $("status");
 const error = $("error");
 const machineName = $("machineName");
 const sourceName = $("sourceName");
+const RV64_RELEASE = "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.0";
+const V86_RELEASE = "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48";
+const guestImage = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
 const presets = {
   v86: {
     architecture: "v86",
-    backend: "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48/v86.tgz",
-    image: "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-guests-rc33/wanix-linux-x86.tgz",
+    backend: `${V86_RELEASE}/v86.tgz`,
+    image: guestImage("x86"),
+  },
+  "v86-container": {
+    architecture: "v86",
+    backend: `${V86_RELEASE}/v86.tgz`,
+    image: guestImage("x86", "-container"),
+  },
+  "v86-container-full": {
+    architecture: "v86",
+    backend: `${V86_RELEASE}/v86.tgz`,
+    image: guestImage("x86", "-container-full"),
   },
   rv64: {
     architecture: "rv64",
-    backend: "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-rv64-v0.3.0/rv64.tgz",
-    image: "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-guests-rc33/wanix-linux-rv64.tgz",
+    backend: `${RV64_RELEASE}/rv64.tgz`,
+    image: guestImage("rv64"),
+  },
+  "rv64-container": {
+    architecture: "rv64",
+    backend: `${RV64_RELEASE}/rv64.tgz`,
+    image: guestImage("rv64", "-container"),
+  },
+  "rv64-container-full": {
+    architecture: "rv64",
+    backend: `${RV64_RELEASE}/rv64.tgz`,
+    image: guestImage("rv64", "-container-full"),
+    append: "rv64.jit=off",
   },
 };
 
@@ -39,6 +63,7 @@ const postDhcp = { v86: "/plugin/v86/guest-post-dhcp", rv64: "/plugin/rv64/guest
 let handle = null;
 let localPath = null;
 let activeInstance = null;
+let activePreset = presets.v86;
 let instanceCounter = 0;
 const instances = new Map();
 const imageLoads = new Map();
@@ -48,6 +73,7 @@ function applyPreset(name) {
     button.classList.toggle("active", button.dataset.preset === name);
   });
   const preset = presets[name];
+  activePreset = preset || null;
   if (!preset) {
     backendUrl.value = "";
     linuxUrl.value = "";
@@ -92,7 +118,8 @@ function selectedSource() {
   throw new Error("Choose a local Linux image or enter a remote image URL.");
 }
 
-function memoryForArchive(archive) {
+function memoryForArchive(archive, preset) {
+  if (preset?.memory) return preset.memory;
   return archive.size >= 100 * 1048576 ? "2G" : "512M";
 }
 
@@ -115,6 +142,7 @@ function vmSession(config) {
     backendUrl: config.backend,
     linuxUrl: config.image,
     memory: config.memory,
+    append: config.append,
     netdev: `user,type=virtio,relay_url=${VNET_URL}`,
     bootRc: bootRc[config.architecture],
     postDhcp: postDhcp[config.architecture],
@@ -163,7 +191,7 @@ function switchInstance(id) {
   handle = next.handle;
   machineName.textContent = next.machine;
   sourceName.textContent = next.source;
-  setStatus(next.ready ? "ready" : "loading", next.ready ? "RUNNING" : "BOOTING LINUX");
+  setStatus(next.ready ? "ready" : "loading", next.ready ? "RUNNING" : "STARTING");
   renderTabs();
 }
 
@@ -180,7 +208,7 @@ async function stopVm() {
     handle = null;
     terminalPanel.hidden = true;
     setup.hidden = false;
-    setStatus("idle", "CONFIGURE");
+    setStatus("idle", "READY TO CONFIGURE");
   }
   renderTabs();
 }
@@ -206,13 +234,13 @@ async function startVm() {
   machineName.textContent = instance.machine;
   sourceName.textContent = instance.source;
   renderTabs();
-  instance.handle = await mountTerminal(host, vmSession({ architecture: architecture.value, backend, image: localUrl || linuxUrl.value.trim(), memory: memoryForArchive(archive) }), {
+  instance.handle = await mountTerminal(host, vmSession({ architecture: architecture.value, backend, image: localUrl || linuxUrl.value.trim(), memory: memoryForArchive(archive, activePreset), append: activePreset?.append }), {
     ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
     onData: () => { instance.ready = true; if (activeInstance === id) setStatus("ready", "RUNNING"); },
     onExit: (event) => { if (activeInstance === id) showError(event?.error || "The virtual machine stopped."); },
   });
   if (activeInstance === id) handle = instance.handle;
-  setStatus("loading", "BOOTING LINUX");
+  setStatus("loading", "STARTING");
   launch.disabled = false;
 }
 
@@ -224,9 +252,9 @@ applyPreset("v86");
 linuxFile.addEventListener("change", () => {
   const file = linuxFile.files[0];
   fileName.textContent = file ? `${file.name} · ${(file.size / 1048576).toFixed(1)} MB` : "No local image selected";
-  if (file) linuxUrl.value = "";
+  if (file) { linuxUrl.value = ""; activePreset = null; }
 });
-linuxUrl.addEventListener("input", () => { if (linuxUrl.value.trim()) linuxFile.value = ""; });
+linuxUrl.addEventListener("input", () => { if (linuxUrl.value.trim()) { linuxFile.value = ""; activePreset = null; } });
 linuxUrl.addEventListener("change", () => {
   const url = linuxUrl.value.trim();
   if (!url) return;
@@ -237,9 +265,9 @@ linuxUrl.addEventListener("change", () => {
     fileName.textContent = `Image download failed: ${String(reason?.message || reason)}`;
   });
 });
-architecture.addEventListener("change", () => { localPath = null; });
+architecture.addEventListener("change", () => { localPath = null; activePreset = null; });
 launch.addEventListener("click", () => startVm().catch((reason) => { launch.disabled = false; setup.hidden = false; terminalPanel.hidden = true; showError(String(reason?.message || reason)); }));
 stop.addEventListener("click", () => stopVm().catch((reason) => showError(String(reason?.message || reason))));
-newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "CONFIGURE"); renderTabs(); });
+newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "READY TO CONFIGURE"); renderTabs(); });
 homeTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); renderTabs(); });
 reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); });

@@ -381,6 +381,7 @@ export function startVmSession(session, options = {}) {
       type=${vmType}
       export="ttyS0"
       mem=${session.config.memory}
+      append=${session.config.append || null}
       netdev=${session.config.netdev || null}
       term=""
       start=""

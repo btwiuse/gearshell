@@ -49,7 +49,7 @@ import { nextVmMac } from "./workspace-vm-mac.js";
 const FALLBACK_VM_BACKEND_URL =
   "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48/v86.tgz";
 const FALLBACK_VM_LINUX_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-guests-rc33/wanix-linux-x86.tgz";
+  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.0/wanix-linux-x86.tgz";
 
 // sessionId -> { session|vmSession, kind, stream, source, origin, disposed }
 // — kind is "task" (shell session) or "vm". The kernel stream (reader +

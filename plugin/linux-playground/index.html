@@ -10,14 +10,22 @@
 <body>
   <main class="playground">
     <section class="main-content">
-      <div class="workspace-tabs" role="tablist" aria-label="Linux Playground tabs"><button id="homeTab" class="workspace-tab active" type="button" role="tab" aria-selected="true">Home</button><nav id="instanceTabs" class="instance-tabs" aria-label="Linux instances"></nav><button id="newInstanceTab" class="new-instance-tab" type="button">+ New instance</button><span id="status" class="status" data-mode="idle">CONFIGURE</span></div>
+      <div class="workspace-tabs" role="tablist" aria-label="Linux Playground tabs">
+        <button id="homeTab" class="workspace-tab active" type="button" role="tab" aria-selected="true">Home</button>
+        <nav id="instanceTabs" class="instance-tabs" aria-label="Linux instances"></nav>
+        <button id="newInstanceTab" class="new-instance-tab" type="button">+ New instance</button>
+      </div>
     <section id="setup" class="setup">
       <div class="intro"><span class="eyebrow">EMULATOR LAB</span><h1>Bring your own Linux.</h1><p>Start with a ready-to-run preset, or choose an architecture and load a bootable archive from your device or a reachable URL.</p></div>
       <div class="presets" aria-labelledby="preset-title">
         <div class="section-label" id="preset-title">QUICK START PRESETS</div>
         <div class="preset-grid">
-          <button class="preset active" type="button" data-preset="v86"><strong>Alpine x86</strong><span>v86 · network ready</span></button>
-          <button class="preset" type="button" data-preset="rv64"><strong>Alpine RISC-V</strong><span>rv64.js · network ready</span></button>
+          <button class="preset active" type="button" data-preset="v86"><strong>Alpine x86</strong><span>v86 · minimal</span></button>
+          <button class="preset" type="button" data-preset="v86-container"><strong>x86 Containers</strong><span>v86 · container kernel</span></button>
+          <button class="preset" type="button" data-preset="v86-container-full"><strong>x86 Container Full</strong><span>v86 · Docker and tools</span></button>
+          <button class="preset" type="button" data-preset="rv64"><strong>Alpine RISC-V</strong><span>rv64.js · minimal</span></button>
+          <button class="preset" type="button" data-preset="rv64-container"><strong>RISC-V Containers</strong><span>rv64.js · container kernel</span></button>
+          <button class="preset" type="button" data-preset="rv64-container-full"><strong>RISC-V Container Full</strong><span>rv64.js · interpreter fallback</span></button>
           <button class="preset custom" type="button" data-preset="custom"><strong>Custom image</strong><span>Bring your own URLs or file</span></button>
         </div>
       </div>
@@ -33,7 +41,7 @@
     </section>
     <section id="terminalPanel" class="terminal-panel" hidden>
       <div class="terminal-head"><div><span id="terminalTitle">LINUX PLAYGROUND</span><small>Browser-native virtual machine</small></div></div>
-      <div id="instanceMeta" class="instance-meta"><div><span id="machineName">Linux</span><small id="sourceName"></small></div><button id="stop" class="secondary" type="button">STOP VM</button></div>
+      <div id="instanceMeta" class="instance-meta"><div><span id="machineName">Linux</span><small id="sourceName"></small></div><div class="instance-actions"><span id="status" class="status" data-mode="idle">READY TO CONFIGURE</span><button id="stop" class="secondary" type="button">STOP VM</button></div></div>
       <div id="terminalStage"></div>
     </section>
   </section>
