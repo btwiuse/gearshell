@@ -23,7 +23,7 @@ const sourceName = $("sourceName");
 const presets = {
   v86: {
     architecture: "v86",
-    backend: "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/wanix-v86-v0.4.36/v86.tgz",
+    backend: "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48/v86.tgz",
     image: "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/wanix-guests-rc33/wanix-linux-x86.tgz",
   },
   rv64: {
