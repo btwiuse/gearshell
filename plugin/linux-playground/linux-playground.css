@@ -49,6 +49,18 @@ h1 { margin: 10px 0 8px; font-size: clamp(26px, 4.6vw, 44px); letter-spacing: -.
    share a 2-col row at desktop widths and stack on narrow viewports. */
 .form-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
 .form-grid-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Mutual exclusion: when one Linux-image source is filled, dim the
+   other so the user sees which is currently "active" at a glance.
+   The transition keeps the swap from feeling jumpy. */
+.form-grid-pair .field,
+.form-grid-pair .file-field { transition: opacity .15s ease, filter .15s ease; }
+.form-grid-pair[data-active="url"] .file-field,
+.form-grid-pair[data-active="file"] > .field:first-child {
+  opacity: .38;
+  pointer-events: none;
+  filter: saturate(.4);
+}
 .field, .file-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .field span, .file-field > span { color: #8b9ab2; font: 10px ui-monospace, monospace; letter-spacing: .12em; }
 

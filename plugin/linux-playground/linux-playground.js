@@ -19,6 +19,30 @@ const fileName = $("fileName");
 const launch = $("launch");
 const reset = $("reset");
 const stop = $("stop");
+const formPair = $("formPair");
+
+/* Mutex UI for the Linux-image source pair: flip data-active on the
+   parent so CSS dims the inactive child. Keeping the state on the DOM
+   (single source of truth) means a CSS-only reader can render without
+   re-deriving from inputs. */
+function setActiveSource(kind) {
+  formPair.dataset.active = kind;
+}
+
+/* Replace the launch button's leading text node (the arrow <span>
+   stays put). aria-busy tracks whether the button is mid-transition so
+   assistive tech announces the state change. */
+function updateLaunchLabel(text) {
+  const first = launch.firstChild;
+  if (first && first.nodeType === Node.TEXT_NODE) {
+    first.nodeValue = text + " ";
+  } else {
+    launch.prepend(document.createTextNode(text + " "));
+  }
+  if (text === "LAUNCH PLAYGROUND") launch.removeAttribute("aria-busy");
+  else launch.setAttribute("aria-busy", "true");
+}
+
 const setup = $("setup");
 const newInstanceTab = $("newInstanceTab");
 const homeTab = $("homeTab");
@@ -89,6 +113,7 @@ function applyPreset(name) {
     linuxFile.value = "";
     fileName.textContent = "No local image selected";
     localPath = null;
+    setActiveSource("none");
     return;
   }
   setArchitecture(preset.architecture);
@@ -97,6 +122,7 @@ function applyPreset(name) {
   linuxFile.value = "";
   fileName.textContent = "Preparing preset image…";
   localPath = null;
+  setActiveSource("url");
   preloadImage(preset.image).then((archive) => {
     fileName.textContent = `Preset cached · ${(archive.size / 1048576).toFixed(1)} MB`;
   }).catch((reason) => {
@@ -138,6 +164,11 @@ function preloadImage(url) {
     load = loadLinuxArchive(url, ({ cached, loaded, total }) => {
       const progress = total ? `${(loaded / total * 100).toFixed(0)}%` : `${(loaded / 1048576).toFixed(1)} MB`;
       fileName.textContent = cached ? `Preset cached · ${(loaded / 1048576).toFixed(1)} MB` : `Downloading preset · ${progress}`;
+      // Mirror the same progress on the LAUNCH button so the user sees
+      // the download moving even while staring at the form.
+      if (launch.disabled && !cached) {
+        updateLaunchLabel(total ? `LOADING ${Math.round((loaded / total) * 100)}%` : "DOWNLOADING…");
+      }
     });
     imageLoads.set(url, load);
     load.catch(() => imageLoads.delete(url));
@@ -229,6 +260,7 @@ async function startVm() {
   const source = selectedSource();
   setStatus("loading", "PREPARING IMAGE");
   launch.disabled = true;
+  updateLaunchLabel("PREPARING IMAGE");
   const archive = source.kind === "local" ? source.file : await preloadImage(source.url);
   const localUrl = URL.createObjectURL(archive);
   const id = `instance-${++instanceCounter}`;
@@ -243,6 +275,7 @@ async function startVm() {
   machineName.textContent = instance.machine;
   sourceName.textContent = instance.source;
   renderTabs();
+  updateLaunchLabel("LAUNCHING…");
   instance.handle = await mountTerminal(host, vmSession({ architecture: getArchitecture().value, backend, image: localUrl || linuxUrl.value.trim(), memory: memoryForArchive(archive, activePreset), append: activePreset?.append }), {
     ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
     onData: () => { instance.ready = true; if (activeInstance === id) setStatus("ready", "RUNNING"); },
@@ -250,6 +283,7 @@ async function startVm() {
   });
   if (activeInstance === id) handle = instance.handle;
   setStatus("loading", "STARTING");
+  updateLaunchLabel("LAUNCH PLAYGROUND");
   launch.disabled = false;
 }
 
@@ -261,9 +295,23 @@ applyPreset("v86");
 linuxFile.addEventListener("change", () => {
   const file = linuxFile.files[0];
   fileName.textContent = file ? `${file.name} · ${(file.size / 1048576).toFixed(1)} MB` : "No local image selected";
-  if (file) { linuxUrl.value = ""; activePreset = null; }
+  if (file) {
+    linuxUrl.value = "";
+    activePreset = null;
+    setActiveSource("file");
+  } else {
+    setActiveSource("none");
+  }
 });
-linuxUrl.addEventListener("input", () => { if (linuxUrl.value.trim()) { linuxFile.value = ""; activePreset = null; } });
+linuxUrl.addEventListener("input", () => {
+  if (linuxUrl.value.trim()) {
+    linuxFile.value = "";
+    activePreset = null;
+    setActiveSource("url");
+  } else {
+    setActiveSource("none");
+  }
+});
 linuxUrl.addEventListener("change", () => {
   const url = linuxUrl.value.trim();
   if (!url) return;
@@ -277,8 +325,24 @@ linuxUrl.addEventListener("change", () => {
 for (const input of architectureInputs) {
   input.addEventListener("change", () => { localPath = null; activePreset = null; });
 }
-launch.addEventListener("click", () => startVm().catch((reason) => { launch.disabled = false; setup.hidden = false; terminalPanel.hidden = true; showError(String(reason?.message || reason)); }));
+launch.addEventListener("click", () => startVm().catch((reason) => {
+  launch.disabled = false;
+  updateLaunchLabel("LAUNCH PLAYGROUND");
+  setup.hidden = false;
+  terminalPanel.hidden = true;
+  showError(String(reason?.message || reason));
+}));
 stop.addEventListener("click", () => stopVm().catch((reason) => showError(String(reason?.message || reason))));
 newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "READY TO CONFIGURE"); renderTabs(); });
 homeTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); renderTabs(); });
-reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); });
+reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
+
+/* Cmd/Ctrl+Enter fires LAUNCH from any field in the form. The shortcut is
+   intentional and additive — it does not block native form submission
+   (there is no <form> here, just buttons). */
+document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    event.preventDefault();
+    if (!launch.disabled) launch.click();
+  }
+});
