@@ -21,6 +21,77 @@ const reset = $("reset");
 const stop = $("stop");
 const clearCache = $("clearCache");
 const extraArgs = $("extraArgs");
+const bootRcText = $("bootRc");
+const postDhcpText = $("postDhcp");
+const resetBootRc = $("resetBootRc");
+const resetPostDhcp = $("resetPostDhcp");
+
+// Per-preset localStorage keys so an edit on the rv64 preset survives
+// a switch to (and back from) v86. Shell scripts are tiny so quota
+// is never a concern.
+function scriptLsKey(script, presetName) {
+  return `linux-playground:${script}-edit:${presetName}`;
+}
+function saveScriptEdit(script, presetName, content) {
+  try { localStorage.setItem(scriptLsKey(script, presetName), content); } catch (e) {}
+}
+function loadScriptEdit(script, presetName) {
+  try { return localStorage.getItem(scriptLsKey(script, presetName)); } catch (e) { return null; }
+}
+function clearScriptEdit(script, presetName) {
+  try { localStorage.removeItem(scriptLsKey(script, presetName)); } catch (e) {}
+}
+
+// Resolve the URL backing the script for the active preset. Preset-level
+// override wins; otherwise fall back to the architecture default.
+function effectiveBootRcUrl() {
+  if (!activePreset) return bootRcDefaults.rv64;
+  return activePreset.bootRc || bootRcDefaults[activePreset.architecture] || bootRcDefaults.rv64;
+}
+function effectivePostDhcpUrl() {
+  if (!activePreset) return postDhcpDefaults.rv64;
+  return activePreset.postDhcp || postDhcpDefaults[activePreset.architecture] || postDhcpDefaults.rv64;
+}
+
+async function refreshBootRcText() {
+  const presetName = activePresetName || "default";
+  const saved = loadScriptEdit("boot-rc", presetName);
+  if (saved !== null) { bootRcText.value = saved; return; }
+  const url = effectiveBootRcUrl();
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    bootRcText.value = res.ok ? await res.text() : `# HTTP ${res.status} fetching ${url}`;
+  } catch (e) {
+    bootRcText.value = `# Failed to fetch ${url}\n# ${e.message}`;
+  }
+}
+async function refreshPostDhcpText() {
+  const presetName = activePresetName || "default";
+  const saved = loadScriptEdit("post-dhcp", presetName);
+  if (saved !== null) { postDhcpText.value = saved; return; }
+  const url = effectivePostDhcpUrl();
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    postDhcpText.value = res.ok ? await res.text() : `# HTTP ${res.status} fetching ${url}`;
+  } catch (e) {
+    postDhcpText.value = `# Failed to fetch ${url}\n# ${e.message}`;
+  }
+}
+
+bootRcText.addEventListener("input", () => {
+  if (activePresetName) saveScriptEdit("boot-rc", activePresetName, bootRcText.value);
+});
+postDhcpText.addEventListener("input", () => {
+  if (activePresetName) saveScriptEdit("post-dhcp", activePresetName, postDhcpText.value);
+});
+resetBootRc.addEventListener("click", async () => {
+  if (activePresetName) clearScriptEdit("boot-rc", activePresetName);
+  await refreshBootRcText();
+});
+resetPostDhcp.addEventListener("click", async () => {
+  if (activePresetName) clearScriptEdit("post-dhcp", activePresetName);
+  await refreshPostDhcpText();
+});
 // Linux-image source pair: each field has its own id (set in HTML) so
 // dim is applied directly. CSS owns the visual; JS only toggles the
 // data-active-dimmed attribute so the active field stays full opacity.
@@ -65,6 +136,11 @@ const presets = {
     architecture: "v86",
     backend: `${V86_RELEASE}/v86.tgz`,
     image: guestImage("x86"),
+    // Script overrides are intentionally empty: bootRc / postDhcp fall
+    // through to the architecture default (/plugin/v86/guest-boot-rc etc.)
+    // unless the user edits the textarea in the Advanced panel.
+    bootRc: null,
+    postDhcp: null,
     // No kernel cmdline overrides; wanix-adapter defaults apply
     // (console=hvc0, init=/bin/init, root=host9p, rootflags=cache=loose,
     // access=any, msize=131072). The Advanced Kernel Args panel layers
@@ -75,30 +151,41 @@ const presets = {
     architecture: "v86",
     backend: `${V86_RELEASE}/v86.tgz`,
     image: guestImage("x86", "-container"),
+    bootRc: null,
+    postDhcp: null,
     append: "",
   },
   "v86-container-full": {
     architecture: "v86",
     backend: `${V86_RELEASE}/v86.tgz`,
     image: guestImage("x86", "-container-full"),
+    bootRc: null,
+    postDhcp: null,
     append: "",
   },
   rv64: {
     architecture: "rv64",
     backend: `${RV64_RELEASE}/rv64.tgz`,
     image: guestImage("rv64"),
+    bootRc: null,
+    postDhcp: null,
     append: "",
   },
   "rv64-container": {
     architecture: "rv64",
     backend: `${RV64_RELEASE}/rv64.tgz`,
     image: guestImage("rv64", "-container"),
+    bootRc: null,
+    postDhcp: null,
     append: "",
   },
   "rv64-container-full": {
     architecture: "rv64",
     backend: `${RV64_RELEASE}/rv64.tgz`,
     image: guestImage("rv64", "-container-full"),
+    bootRc: null,
+    postDhcp: null,
+    // (JIT history comment block preserved)
     // v0.4.1+ runs the JIT path cleanly without the old "rv64.jit=off"
     // workaround (the DBT lowering fix landed in commit 04ac422 in the
     // rv64.js repo). If the unreachable trap returns on a future release,
@@ -114,6 +201,7 @@ let handle = null;
 let localPath = null;
 let activeInstance = null;
 let activePreset = presets.v86;
+let activePresetName = "v86";
 let instanceCounter = 0;
 const instances = new Map();
 const imageLoads = new Map();
@@ -124,6 +212,9 @@ function applyPreset(name) {
   });
   const preset = presets[name];
   activePreset = preset || null;
+  activePresetName = name;
+  refreshBootRcText();
+  refreshPostDhcpText();
   if (!preset) {
     backendUrl.value = "";
     linuxUrl.value = "";
@@ -201,8 +292,12 @@ function vmSession(config) {
     memory: config.memory,
     append: config.append,
     netdev: `user,type=virtio,relay_url=${VNET_URL}`,
-    bootRc: bootRc[config.architecture],
-    postDhcp: postDhcp[config.architecture],
+    bootRc: bootRcText.value.trim()
+      ? `data:text/plain;base64,${btoa(bootRcText.value)}`
+      : (config.bootRc || bootRcDefaults[config.architecture] || bootRcDefaults.rv64),
+    postDhcp: postDhcpText.value.trim()
+      ? `data:text/plain;base64,${btoa(postDhcpText.value)}`
+      : (config.postDhcp || postDhcpDefaults[config.architecture] || postDhcpDefaults.rv64),
   }) };
   return {
     create: session.create,

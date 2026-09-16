@@ -57,6 +57,14 @@
             <span>EXTRA KERNEL ARGS (space-separated, appended after preset defaults)</span>
             <input id="extraArgs" type="text" placeholder="e.g. rootflags=trans=virtio,cache=strict quiet" autocomplete="off" spellcheck="false">
           </label>
+          <label class="field wide with-action" for="bootRc">
+            <span>BOOT RC SCRIPT (wanix guest init sources this as /boot/rc)<button id="resetBootRc" class="link-button" type="button">RESET</button></span>
+            <textarea id="bootRc" rows="18" spellcheck="false" autocomplete="off" placeholder="Loading script content…"></textarea>
+          </label>
+          <label class="field wide with-action" for="postDhcp">
+            <span>POST-DHCP SCRIPT (udhcpc -s callback at /bin/post-dhcp)<button id="resetPostDhcp" class="link-button" type="button">RESET</button></span>
+            <textarea id="postDhcp" rows="14" spellcheck="false" autocomplete="off" placeholder="Loading script content…"></textarea>
+          </label>
         </details>
         <div class="actions"><button id="launch" class="primary" type="button">LAUNCH PLAYGROUND <span>→</span></button><button id="reset" class="secondary" type="button">RESET</button></div>
         <p id="error" class="error" role="alert" hidden></p>
