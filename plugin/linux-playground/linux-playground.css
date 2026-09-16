@@ -32,20 +32,19 @@ body { min-height: 100vh; overflow: hidden; }
 /* Re-create the original 960px visual column on wide viewports. The
    .setup scroll context now spans the full viewport width so hovering
    the empty whitespace on either side of the centred form participates
-   in the scroll. .intro keeps its tighter 720px max-width via its own
-   rule below; the universal selector caps everything else at 960px. */
+   in the scroll. .intro now spans the full 960px so its left and
+   right edges line up with the .form-grid below it. */
 .setup > * { width: min(960px, 100%); margin-left: auto; margin-right: auto; }
 .setup::-webkit-scrollbar { width: 8px; height: 8px; }
 .setup::-webkit-scrollbar-thumb { background: #2a3447; border-radius: 4px; }
 .setup::-webkit-scrollbar-thumb:hover { background: #3a4a66; }
 .setup::-webkit-scrollbar-track { background: transparent; }
-.intro { max-width: 720px; }
 .eyebrow { color: #60a5fa; font: 11px ui-monospace, monospace; letter-spacing: .16em; }
 h1 { margin: 10px 0 8px; font-size: clamp(26px, 4.6vw, 44px); letter-spacing: -.04em; }
 .intro p { margin: 0; color: #9aa9bd; line-height: 1.55; }
 .presets { margin-top: 24px; }
 .section-label { margin-bottom: 10px; color: #8b9ab2; font: 10px ui-monospace, monospace; letter-spacing: .12em; }
-.preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.preset-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .preset { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 13px; text-align: left; border-color: #344156; background: #151e2d; }
 .preset strong { color: #e6edf3; font: 12px ui-sans-serif, system-ui, sans-serif; letter-spacing: 0; }
 .preset span { color: #8291a7; font: 10px ui-monospace, monospace; letter-spacing: 0; }
@@ -194,6 +193,12 @@ button:disabled { cursor: wait; opacity: .55; }
 #terminalStage { display: flex; flex: 1 1 0; height: 0; min-height: 0; overflow: hidden; }
 .instance-host { display: flex; flex: 1 1 0; min-width: 0; min-height: 0; height: 100%; padding: 8px; overflow: hidden; }
 .instance-host .xterm { height: 100%; }
+
+/* Tablet: drop preset cards from 3 to 2 columns so each card stays
+   readable. Phones (below) collapse to a single column. */
+@media (max-width: 960px) {
+  .preset-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 @media (max-width: 720px) {
   .workspace-tabs { padding: 8px 10px 0; flex-wrap: wrap; }
