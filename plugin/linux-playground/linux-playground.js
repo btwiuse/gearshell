@@ -65,31 +65,45 @@ const presets = {
     architecture: "v86",
     backend: `${V86_RELEASE}/v86.tgz`,
     image: guestImage("x86"),
+    // No kernel cmdline overrides; wanix-adapter defaults apply
+    // (console=hvc0, init=/bin/init, root=host9p, rootflags=cache=loose,
+    // access=any, msize=131072). The Advanced Kernel Args panel layers
+    // user input on top of this empty default.
+    append: "",
   },
   "v86-container": {
     architecture: "v86",
     backend: `${V86_RELEASE}/v86.tgz`,
     image: guestImage("x86", "-container"),
+    append: "",
   },
   "v86-container-full": {
     architecture: "v86",
     backend: `${V86_RELEASE}/v86.tgz`,
     image: guestImage("x86", "-container-full"),
+    append: "",
   },
   rv64: {
     architecture: "rv64",
     backend: `${RV64_RELEASE}/rv64.tgz`,
     image: guestImage("rv64"),
+    append: "",
   },
   "rv64-container": {
     architecture: "rv64",
     backend: `${RV64_RELEASE}/rv64.tgz`,
     image: guestImage("rv64", "-container"),
+    append: "",
   },
   "rv64-container-full": {
     architecture: "rv64",
     backend: `${RV64_RELEASE}/rv64.tgz`,
     image: guestImage("rv64", "-container-full"),
+    // v0.4.1+ runs the JIT path cleanly without the old "rv64.jit=off"
+    // workaround (the DBT lowering fix landed in commit 04ac422 in the
+    // rv64.js repo). If the unreachable trap returns on a future release,
+    // this is the place to add the escape hatch back.
+    append: "",
   },
 };
 
