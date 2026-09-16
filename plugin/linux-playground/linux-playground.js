@@ -55,7 +55,7 @@ const status = $("status");
 const error = $("error");
 const machineName = $("machineName");
 const sourceName = $("sourceName");
-const RV64_RELEASE = "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.0";
+const RV64_RELEASE = "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.1";
 const V86_RELEASE = "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48";
 const guestImage = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
 const presets = {
@@ -88,7 +88,6 @@ const presets = {
     architecture: "rv64",
     backend: `${RV64_RELEASE}/rv64.tgz`,
     image: guestImage("rv64", "-container-full"),
-    append: "rv64.jit=off",
   },
 };
 
