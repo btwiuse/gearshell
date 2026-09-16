@@ -20,6 +20,7 @@ const launch = $("launch");
 const reset = $("reset");
 const stop = $("stop");
 const clearCache = $("clearCache");
+const extraArgs = $("extraArgs");
 // Linux-image source pair: each field has its own id (set in HTML) so
 // dim is applied directly. CSS owns the visual; JS only toggles the
 // data-active-dimmed attribute so the active field stays full opacity.
@@ -278,7 +279,13 @@ async function startVm() {
   sourceName.textContent = instance.source;
   renderTabs();
   updateLaunchLabel("LAUNCHING…");
-  instance.handle = await mountTerminal(host, vmSession({ architecture: getArchitecture().value, backend, image: localUrl || linuxUrl.value.trim(), memory: memoryForArchive(archive, activePreset), append: activePreset?.append }), {
+  instance.handle = await mountTerminal(host, vmSession({
+        architecture: getArchitecture().value,
+        backend,
+        image: localUrl || linuxUrl.value.trim(),
+        memory: memoryForArchive(archive, activePreset),
+        append: [activePreset?.append, extraArgs.value.trim()].filter((s) => s && s.length > 0).join(" "),
+      }), {
     ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
     onData: () => { instance.ready = true; if (activeInstance === id) setStatus("ready", "RUNNING"); },
     onExit: (event) => { if (activeInstance === id) showError(event?.error || "The virtual machine stopped."); },

@@ -53,6 +53,36 @@ h1 { margin: 10px 0 8px; font-size: clamp(26px, 4.6vw, 44px); letter-spacing: -.
 .field, .file-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .field span, .file-field > span { color: #8b9ab2; font: 10px ui-monospace, monospace; letter-spacing: .12em; }
 
+/* Collapsible advanced panel. Collapsed by default so casual users see
+   a tight 4-field form; expanded exposes the kernel-args override that
+   forwards verbatim into wanix-adapter --appendArgs. */
+.advanced {
+  margin-top: 4px;
+  border: 1px solid #253044;
+  border-radius: 8px;
+  background: #0d1420;
+}
+.advanced > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  color: #8b9ab2;
+  font: 10px ui-monospace, monospace;
+  letter-spacing: .12em;
+  user-select: none;
+}
+.advanced > summary::-webkit-details-marker { display: none; }
+.advanced > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  width: 1em;
+  transition: transform .15s ease;
+}
+.advanced[open] > summary::before { content: "▾ "; }
+.advanced > summary:hover { color: #60a5fa; }
+.advanced[open] > .field { padding: 0 12px 12px; }
+.advanced > .field span { display: block; margin-bottom: 6px; }
+
 /* Mutual exclusion dim — by-id selectors on the now-flat fields. */
 .field, .file-field { transition: opacity .15s ease, filter .15s ease; }
 #linuxUrlField[data-active-dimmed],

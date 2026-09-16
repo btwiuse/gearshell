@@ -51,6 +51,13 @@
           <label class="field" id="linuxUrlField"><span>LINUX IMAGE URL</span><input id="linuxUrl" type="url" placeholder="https://example.com/linux-rootfs.tgz" autocomplete="off"></label>
           <label class="file-field" id="linuxFileField"><span>OR LOAD IMAGE FROM THIS DEVICE</span><input id="linuxFile" type="file" accept=".tgz,.tar,.cpio,.img,.gz,.xz,.zst,application/octet-stream"><small id="fileName">No local image selected</small></label>
         </div>
+        <details class="advanced">
+          <summary>ADVANCED KERNEL ARGS</summary>
+          <label class="field wide" for="extraArgs">
+            <span>EXTRA KERNEL ARGS (space-separated, appended after preset defaults)</span>
+            <input id="extraArgs" type="text" placeholder="e.g. rootflags=trans=virtio,cache=strict quiet" autocomplete="off" spellcheck="false">
+          </label>
+        </details>
         <div class="actions"><button id="launch" class="primary" type="button">LAUNCH PLAYGROUND <span>→</span></button><button id="reset" class="secondary" type="button">RESET</button></div>
         <p id="error" class="error" role="alert" hidden></p>
         <div class="tips"><span>TIP</span><p>Remote resources must allow cross-origin requests. Local files stay in this browser and are never uploaded to a server.</p><button id="clearCache" class="link-button" type="button" title="Drop the IndexedDB archive cache; in-memory caches reload on next preset.">CLEAR IMAGE CACHE</button></div>
