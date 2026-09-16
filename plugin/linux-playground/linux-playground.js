@@ -92,6 +92,10 @@ function selectedSource() {
   throw new Error("Choose a local Linux image or enter a remote image URL.");
 }
 
+function memoryForArchive(archive) {
+  return archive.size >= 100 * 1048576 ? "2G" : "512M";
+}
+
 function preloadImage(url) {
   let load = imageLoads.get(url);
   if (!load) {
@@ -110,6 +114,7 @@ function vmSession(config) {
     type: config.architecture,
     backendUrl: config.backend,
     linuxUrl: config.image,
+    memory: config.memory,
     netdev: `user,type=virtio,relay_url=${VNET_URL}`,
     bootRc: bootRc[config.architecture],
     postDhcp: postDhcp[config.architecture],
@@ -201,7 +206,7 @@ async function startVm() {
   machineName.textContent = instance.machine;
   sourceName.textContent = instance.source;
   renderTabs();
-  instance.handle = await mountTerminal(host, vmSession({ architecture: architecture.value, backend, image: localUrl || linuxUrl.value.trim() }), {
+  instance.handle = await mountTerminal(host, vmSession({ architecture: architecture.value, backend, image: localUrl || linuxUrl.value.trim(), memory: memoryForArchive(archive) }), {
     ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
     onData: () => { instance.ready = true; if (activeInstance === id) setStatus("ready", "RUNNING"); },
     onExit: (event) => { if (activeInstance === id) showError(event?.error || "The virtual machine stopped."); },
