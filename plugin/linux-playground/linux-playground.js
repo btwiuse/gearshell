@@ -19,6 +19,7 @@ const fileName = $("fileName");
 const launch = $("launch");
 const reset = $("reset");
 const stop = $("stop");
+const clearCache = $("clearCache");
 // Linux-image source pair: each field has its own id (set in HTML) so
 // dim is applied directly. CSS owns the visual; JS only toggles the
 // data-active-dimmed attribute so the active field stays full opacity.
@@ -337,6 +338,40 @@ stop.addEventListener("click", () => stopVm().catch((reason) => showError(String
 newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "READY TO CONFIGURE"); renderTabs(); });
 homeTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); renderTabs(); });
 reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
+
+
+// Debug utility: drop the IndexedDB archive cache (Linux images keyed
+// by URL) so the next preset / launch re-fetches. The in-memory
+// imageLoads Map and wanix bind archive caches reset naturally on
+// reload / next VM create.
+clearCache.addEventListener("click", () => {
+  if (clearCache.disabled) return;
+  const original = clearCache.textContent;
+  clearCache.disabled = true;
+  clearCache.textContent = "CLEARING…";
+  const finish = (text, ok) => {
+    clearCache.textContent = text;
+    clearCache.disabled = false;
+    clearCache.classList.toggle("link-button-error", !ok);
+    setTimeout(() => {
+      clearCache.textContent = original;
+      clearCache.classList.remove("link-button-error");
+    }, 1800);
+  };
+  if (!globalThis.indexedDB) { finish("NO INDEXEDDB", false); return; }
+  const request = indexedDB.deleteDatabase("gearshell-linux-images");
+  let settled = false;
+  const done = (ok) => {
+    if (settled) return;
+    settled = true;
+    finish(ok ? "CACHE CLEARED" : "CLEAR FAILED", ok);
+  };
+  request.onsuccess = () => done(true);
+  request.onerror = () => done(false);
+  // onblocked fires when another tab / worker still holds the DB open;
+  // surface that to the user instead of silently hanging.
+  request.onblocked = () => { clearCache.textContent = "CLOSE OTHER TABS"; };
+});
 
 /* Cmd/Ctrl+Enter fires LAUNCH from any field in the form. The shortcut is
    intentional and additive — it does not block native form submission

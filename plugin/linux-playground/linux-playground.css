@@ -87,6 +87,26 @@ button:hover { border-color: #60a5fa; }
 button:disabled { cursor: wait; opacity: .55; }
 .primary { border-color: #2563eb; background: #1d4ed8; color: white; }
 .secondary { color: #aebbd0; }
+
+/* Debug-only utility: live next to the tips paragraph so it doesn't
+   compete with primary actions. Destructively drops the IndexedDB
+   archive store; in-memory caches (imageLoads Map, wanix bind archive)
+   reload naturally on the next preset / launch. */
+.link-button {
+  background: transparent;
+  border: 1px solid #344156;
+  color: #60a5fa;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font: 10px ui-monospace, monospace;
+  letter-spacing: .12em;
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.link-button:hover { border-color: #60a5fa; background: #172d4b; }
+.link-button:disabled { cursor: wait; opacity: .55; }
+.tips { align-items: center; }
 .error { margin: 18px 0 0; padding: 11px 13px; border: 1px solid #7f1d1d; border-radius: 7px; color: #fecaca; background: #35151c; font: 12px ui-monospace, monospace; }
 .tips { display: flex; gap: 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid #253044; color: #7e8da3; font-size: 12px; line-height: 1.5; }
 .tips span { color: #60a5fa; font: 10px ui-monospace, monospace; }
