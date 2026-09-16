@@ -19,14 +19,16 @@ const fileName = $("fileName");
 const launch = $("launch");
 const reset = $("reset");
 const stop = $("stop");
-const formPair = $("formPair");
+// Linux-image source pair: each field has its own id (set in HTML) so
+// dim is applied directly. CSS owns the visual; JS only toggles the
+// data-active-dimmed attribute so the active field stays full opacity.
+const linuxUrlField = $("linuxUrlField");
+const linuxFileField = $("linuxFileField");
 
-/* Mutex UI for the Linux-image source pair: flip data-active on the
-   parent so CSS dims the inactive child. Keeping the state on the DOM
-   (single source of truth) means a CSS-only reader can render without
-   re-deriving from inputs. */
 function setActiveSource(kind) {
-  formPair.dataset.active = kind;
+  // kind: "url" | "file" | "none"
+  linuxUrlField.toggleAttribute("data-active-dimmed", kind === "file");
+  linuxFileField.toggleAttribute("data-active-dimmed", kind === "url");
 }
 
 /* Replace the launch button's leading text node (the arrow <span>
