@@ -1,6 +1,7 @@
 import { mountTerminal, ghosttyIdentity } from "/plugin/terminal-mount.mjs";
-import { clampMemory, DEFAULT_PROXY_URL, loadCustomPresets, memoryFromSlider, presetGroups as presetGroupsConfig, presets, saveCustomPresets, sliderFromMemory } from "/plugin/linux-playground/linux-playground-config.js";
-import { loadLinuxArchive } from "/plugin/linux-playground/linux-image-cache.js";
+import { clampMemory, DEFAULT_PROXY_URL, memoryFromSlider, presets, sliderFromMemory } from "/plugin/linux-playground/linux-playground-config.js";
+import { initPresetLibrary } from "/plugin/linux-playground/linux-playground-presets.js";
+import { initScriptEditors } from "/plugin/linux-playground/linux-playground-scripts.js";
 
 const $ = (id) => document.getElementById(id);
 // Architecture radios (replaces the legacy <select>); all radios share
@@ -35,72 +36,6 @@ const postDhcpText = $("postDhcp");
 const resetBootRc = $("resetBootRc");
 const resetPostDhcp = $("resetPostDhcp");
 
-// Per-preset localStorage keys so an edit on the rv64 preset survives
-// a switch to (and back from) v86. Shell scripts are tiny so quota
-// is never a concern.
-function scriptLsKey(script, presetName) {
-  return `linux-playground:${script}-edit:${presetName}`;
-}
-function saveScriptEdit(script, presetName, content) {
-  try { localStorage.setItem(scriptLsKey(script, presetName), content); } catch (e) {}
-}
-function loadScriptEdit(script, presetName) {
-  try { return localStorage.getItem(scriptLsKey(script, presetName)); } catch (e) { return null; }
-}
-function clearScriptEdit(script, presetName) {
-  try { localStorage.removeItem(scriptLsKey(script, presetName)); } catch (e) {}
-}
-
-// Resolve the URL backing the script for the active preset. Preset-level
-// override wins; otherwise fall back to the architecture default.
-function effectiveBootRcUrl() {
-  if (!activePreset) return bootRcDefaults.rv64;
-  return activePreset.bootRc || bootRcDefaults[activePreset.architecture] || bootRcDefaults.rv64;
-}
-function effectivePostDhcpUrl() {
-  if (!activePreset) return postDhcpDefaults.rv64;
-  return activePreset.postDhcp || postDhcpDefaults[activePreset.architecture] || postDhcpDefaults.rv64;
-}
-
-async function refreshBootRcText() {
-  const presetName = activePresetName || "default";
-  const saved = loadScriptEdit("boot-rc", presetName);
-  if (saved !== null) { bootRcText.value = saved; return; }
-  const url = effectiveBootRcUrl();
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    bootRcText.value = res.ok ? await res.text() : `# HTTP ${res.status} fetching ${url}`;
-  } catch (e) {
-    bootRcText.value = `# Failed to fetch ${url}\n# ${e.message}`;
-  }
-}
-async function refreshPostDhcpText() {
-  const presetName = activePresetName || "default";
-  const saved = loadScriptEdit("post-dhcp", presetName);
-  if (saved !== null) { postDhcpText.value = saved; return; }
-  const url = effectivePostDhcpUrl();
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    postDhcpText.value = res.ok ? await res.text() : `# HTTP ${res.status} fetching ${url}`;
-  } catch (e) {
-    postDhcpText.value = `# Failed to fetch ${url}\n# ${e.message}`;
-  }
-}
-
-bootRcText.addEventListener("input", () => {
-  if (activePresetName) saveScriptEdit("boot-rc", activePresetName, bootRcText.value);
-});
-postDhcpText.addEventListener("input", () => {
-  if (activePresetName) saveScriptEdit("post-dhcp", activePresetName, postDhcpText.value);
-});
-resetBootRc.addEventListener("click", async () => {
-  if (activePresetName) clearScriptEdit("boot-rc", activePresetName);
-  await refreshBootRcText();
-});
-resetPostDhcp.addEventListener("click", async () => {
-  if (activePresetName) clearScriptEdit("post-dhcp", activePresetName);
-  await refreshPostDhcpText();
-});
 // Linux-image source pair: each field has its own id (set in HTML) so
 // dim is applied directly. CSS owns the visual; JS only toggles the
 // data-active-dimmed attribute so the active field stays full opacity.
@@ -141,14 +76,20 @@ const VNET_URL = "wss://vnet.net.k0s.io/x/net";
 const bootRcDefaults = { v86: "/plugin/v86/guest-boot-rc", rv64: "/plugin/rv64/guest-boot-rc" };
 const postDhcpDefaults = { v86: "/plugin/v86/guest-post-dhcp", rv64: "/plugin/rv64/guest-post-dhcp" };
 let handle = null;
-let localPath = null;
 let activeInstance = null;
 let activePreset = presets.v86;
 let activePresetName = "v86";
 let instanceCounter = 0;
 const instances = new Map();
-const imageLoads = new Map();
-let savedPresets = loadCustomPresets();
+const { refreshBootRcText, refreshPostDhcpText, saveScriptEdit } = initScriptEditors({
+  bootRcText,
+  postDhcpText,
+  resetBootRc,
+  resetPostDhcp,
+  getPresetName: () => activePresetName,
+  getBootRcUrl: () => activePreset?.bootRc || bootRcDefaults[activePreset?.architecture] || bootRcDefaults.rv64,
+  getPostDhcpUrl: () => activePreset?.postDhcp || postDhcpDefaults[activePreset?.architecture] || postDhcpDefaults.rv64,
+});
 
 function memoryInMiB() {
   return clampMemory(memoryInput.value);
@@ -166,95 +107,26 @@ function setMemory(value) {
   updateMemoryValue();
 }
 
-function proxiedUrl(url) {
-  const proxy = proxyUrl.value.trim();
-  return proxy ? `${proxy}${url}` : url;
-}
-
-function makePresetButton(preset, id, description) {
-  const button = document.createElement("button");
-  button.className = "preset";
-  button.type = "button";
-  button.dataset.preset = id;
-  const title = document.createElement("strong");
-  title.textContent = preset.label || preset.name;
-  const detail = document.createElement("span");
-  detail.textContent = description;
-  button.replaceChildren(title, detail);
-  button.addEventListener("click", () => applyPreset(id));
-  return button;
-}
-
-function renderPresetGroups() {
-  presetGroups.replaceChildren(...presetGroupsConfig.map((group) => {
-    const section = document.createElement("section");
-    section.className = "preset-group";
-    const title = document.createElement("div");
-    title.className = "section-label";
-    title.textContent = group.title;
-    const grid = document.createElement("div");
-    grid.className = "preset-grid";
-    grid.replaceChildren(...Object.entries(presets)
-      .filter(([, preset]) => preset.architecture === group.architecture)
-      .map(([id, preset]) => makePresetButton(preset, id, preset.profile)));
-    section.replaceChildren(title, grid);
-    return section;
-  }));
-}
-
-function renderCustomPresets() {
-  customPresets.replaceChildren(...savedPresets.map((preset) => {
-    const button = document.createElement("button");
-    button.className = "preset";
-    button.type = "button";
-    button.dataset.preset = preset.id;
-    const title = document.createElement("strong");
-    title.textContent = preset.name;
-    const description = document.createElement("span");
-    description.textContent = "Saved custom preset";
-    button.replaceChildren(title, description);
-    button.addEventListener("click", () => applyPreset(preset.id));
-    return button;
-  }));
-}
-
-function findPreset(name) {
-  return presets[name] || savedPresets.find((preset) => preset.id === name) || null;
-}
-
-function applyPreset(name) {
-  document.querySelectorAll(".preset").forEach((button) => {
-    button.classList.toggle("active", button.dataset.preset === name);
-  });
-  const preset = findPreset(name);
-  activePreset = preset || null;
-  activePresetName = name;
-  refreshBootRcText();
-  refreshPostDhcpText();
-  if (!preset) {
-    backendUrl.value = "";
-    linuxUrl.value = "";
-    linuxFile.value = "";
-    fileName.textContent = "No local image selected";
-    localPath = null;
-    setActiveSource("none");
-    return;
-  }
-  setArchitecture(preset.architecture);
-  backendUrl.value = preset.backend;
-  linuxUrl.value = preset.image;
-  proxyUrl.value = preset.proxyUrl || DEFAULT_PROXY_URL;
-  setMemory(Number.parseInt(preset.memory, 10) || 0);
-  linuxFile.value = "";
-  fileName.textContent = "Preparing preset image…";
-  localPath = null;
-  setActiveSource("url");
-  preloadImage(proxiedUrl(preset.image)).then((archive) => {
-    fileName.textContent = `Preset cached · ${(archive.size / 1048576).toFixed(1)} MB`;
-  }).catch((reason) => {
-    fileName.textContent = `Preset download failed: ${String(reason?.message || reason)}`;
-  });
-}
+const presetLibrary = initPresetLibrary({
+  presetGroupsElement: presetGroups,
+  customPresetsElement: customPresets,
+  backendUrl,
+  linuxUrl,
+  proxyUrl,
+  linuxFile,
+  fileName,
+  setArchitecture,
+  setMemory,
+  setActiveSource,
+  updateLaunchLabel,
+  refreshBootRcText,
+  refreshPostDhcpText,
+  onPresetChange: (preset, name) => {
+    activePreset = preset;
+    activePresetName = name;
+  },
+});
+const { applyPreset, preloadImage, proxiedUrl, renderGroups, renderCustomPresets, savePreset: persistPreset } = presetLibrary;
 
 function setStatus(mode, text) {
   status.dataset.mode = mode;
@@ -279,23 +151,6 @@ function selectedSource() {
   throw new Error("Choose a local Linux image or enter a remote image URL.");
 }
 
-function preloadImage(url) {
-  let load = imageLoads.get(url);
-  if (!load) {
-    load = loadLinuxArchive(url, ({ cached, loaded, total }) => {
-      const progress = total ? `${(loaded / total * 100).toFixed(0)}%` : `${(loaded / 1048576).toFixed(1)} MB`;
-      fileName.textContent = cached ? `Preset cached · ${(loaded / 1048576).toFixed(1)} MB` : `Downloading preset · ${progress}`;
-      // Mirror the same progress on the LAUNCH button so the user sees
-      // the download moving even while staring at the form.
-      if (launch.disabled && !cached) {
-        updateLaunchLabel(total ? `LOADING ${Math.round((loaded / total) * 100)}%` : "DOWNLOADING…");
-      }
-    });
-    imageLoads.set(url, load);
-    load.catch(() => imageLoads.delete(url));
-  }
-  return load;
-}
 
 function vmSession(config) {
   const session = { create: () => GearShell.vm.create({
@@ -418,7 +273,7 @@ async function startVm() {
   launch.disabled = false;
 }
 
-renderPresetGroups();
+renderGroups();
 renderCustomPresets();
 applyPreset("v86-minimal");
 
@@ -453,7 +308,7 @@ linuxUrl.addEventListener("change", () => {
   });
 });
 for (const input of architectureInputs) {
-  input.addEventListener("change", () => { localPath = null; activePreset = null; });
+  input.addEventListener("change", () => { activePreset = null; });
 }
 memory.addEventListener("input", () => {
   memoryInput.value = memoryFromSlider(memory.value);
@@ -470,7 +325,7 @@ savePreset.addEventListener("click", () => {
     return;
   }
   const id = `custom-${crypto.randomUUID()}`;
-  savedPresets = [...savedPresets, {
+  persistPreset({
     id,
     name,
     architecture: getArchitecture().value,
@@ -481,8 +336,7 @@ savePreset.addEventListener("click", () => {
     append: extraArgs.value.trim(),
     bootRc: null,
     postDhcp: null,
-  }];
-  saveCustomPresets(savedPresets);
+  });
   saveScriptEdit("boot-rc", id, bootRcText.value);
   saveScriptEdit("post-dhcp", id, postDhcpText.value);
   presetName.value = "";
