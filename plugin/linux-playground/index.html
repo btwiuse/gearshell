@@ -44,7 +44,7 @@
           <label class="field"><span>EMULATOR BACKEND URL</span><input id="backendUrl" type="url" placeholder="https://example.com/emulator.tgz" autocomplete="off"></label>
           <label class="field" id="linuxUrlField"><span>LINUX IMAGE URL</span><input id="linuxUrl" type="url" placeholder="https://example.com/linux-rootfs.tgz" autocomplete="off"></label>
           <label class="field"><span>RESOURCE PROXY URL (OPTIONAL PREFIX)</span><input id="proxyUrl" type="url" value="https://no-cors.up.railway.app/" placeholder="https://proxy.example/" autocomplete="off"><small>Applied separately to backend and Linux image requests. Leave empty to fetch both URLs directly.</small></label>
-          <label class="field"><span>RAM <output id="memoryValue" for="memory">1024 MiB</output></span><div class="memory-control"><input id="memory" type="range" min="0" max="9" step="1" value="7"><input id="memoryInput" type="number" min="0" max="4096" step="1" value="1024" inputmode="numeric" aria-label="RAM in MiB"><span>MiB</span></div></label>
+          <label class="field"><span>RAM <output id="memoryValue" for="memory">1024 MiB</output></span><div class="memory-control"><input id="memory" type="range" min="0" max="1000" step="1" value="500"><input id="memoryInput" type="number" min="0" max="4096" step="1" value="1024" inputmode="numeric" aria-label="RAM in MiB"><span>MiB</span></div></label>
           <label class="file-field" id="linuxFileField"><span>OR LOAD IMAGE FROM THIS DEVICE</span><input id="linuxFile" type="file" accept=".tgz,.tar,.cpio,.img,.gz,.xz,.zst,application/octet-stream"><small id="fileName">No local image selected</small></label>
         </div>
         <details class="advanced">

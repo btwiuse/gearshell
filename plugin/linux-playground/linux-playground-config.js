@@ -4,14 +4,19 @@ const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4
 const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.48";
 const guestImage = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
 const customPresetsKey = "linux-playground:custom-presets";
-export const memoryStops = [0, 16, 64, 128, 256, 512, 768, 1024, 2048, 4096];
+export const memorySliderMax = 1000;
 
 export function clampMemory(value) {
-  return Math.min(4096, Math.max(0, Number.parseInt(value, 10) || 0));
+  return Math.min(4096, Math.max(0, Math.round(Number(value) || 0)));
 }
 
-export function nearestMemoryStop(value) {
-  return memoryStops.reduce((nearest, stop) => Math.abs(stop - value) < Math.abs(nearest - value) ? stop : nearest);
+export function memoryFromSlider(value) {
+  return clampMemory((2 ** (Number(value) / memorySliderMax * 12) - 1) / 4095 * 4096);
+}
+
+export function sliderFromMemory(value) {
+  const memory = clampMemory(value);
+  return Math.round(Math.log2(memory / 4096 * 4095 + 1) / 12 * memorySliderMax);
 }
 
 const preset = (architecture, backend, image, memory = "1024M") => ({ architecture, backend, image, bootRc: null, postDhcp: null, append: "", memory });

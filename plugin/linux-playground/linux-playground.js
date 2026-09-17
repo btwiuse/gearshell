@@ -1,5 +1,5 @@
 import { mountTerminal, ghosttyIdentity } from "/plugin/terminal-mount.mjs";
-import { clampMemory, DEFAULT_PROXY_URL, loadCustomPresets, memoryStops, nearestMemoryStop, presetGroups as presetGroupsConfig, presets, saveCustomPresets } from "/plugin/linux-playground/linux-playground-config.js";
+import { clampMemory, DEFAULT_PROXY_URL, loadCustomPresets, memoryFromSlider, presetGroups as presetGroupsConfig, presets, saveCustomPresets, sliderFromMemory } from "/plugin/linux-playground/linux-playground-config.js";
 import { loadLinuxArchive } from "/plugin/linux-playground/linux-image-cache.js";
 
 const $ = (id) => document.getElementById(id);
@@ -157,7 +157,7 @@ function memoryInMiB() {
 function updateMemoryValue() {
   const value = memoryInMiB();
   memoryInput.value = value;
-  memory.value = memoryStops.indexOf(nearestMemoryStop(value));
+  memory.value = sliderFromMemory(value);
   memoryValue.textContent = `${value} MiB`;
 }
 
@@ -456,7 +456,7 @@ for (const input of architectureInputs) {
   input.addEventListener("change", () => { localPath = null; activePreset = null; });
 }
 memory.addEventListener("input", () => {
-  memoryInput.value = memoryStops[Number.parseInt(memory.value, 10)];
+  memoryInput.value = memoryFromSlider(memory.value);
   updateMemoryValue();
 });
 memoryInput.addEventListener("input", updateMemoryValue);
