@@ -202,21 +202,18 @@ button:disabled { cursor: wait; opacity: .55; }
    flex:1 1 0 collapses to 0 and the xterm renders into a 0-height
    container (terminal mount succeeds, data flows, but the screen
    stays blank). */
-.terminal-panel { display: flex; flex: 1 1 0; min-height: 0; flex-direction: column; background: #0b1120; }
+.terminal-panel { display: flex; flex: 1 1 0; min-height: 0; flex-direction: column; }
 .terminal-progress { flex: none; height: 3px; overflow: hidden; background: #334155; }
 .terminal-progress-fill { width: 0; height: 100%; background: #f59e0b; transition: width 120ms linear; }
 .terminal-progress[data-state="3"] .terminal-progress-fill { width: 32% !important; background: linear-gradient(90deg, transparent, #f59e0b, transparent); animation: terminal-progress-indeterminate 1.2s ease-in-out infinite; }
-.instance-meta { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border-bottom: 1px solid #29364b; background: #0b1120; }
+.instance-meta { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border-bottom: 1px solid #29364b; background: #111827; }
 .instance-meta .instance-info { display: flex; flex-direction: column; min-width: 0; }
 .instance-meta .instance-actions { display: flex; align-items: center; gap: 10px; }
 .instance-meta span { font: 12px ui-monospace, monospace; }
 .instance-meta small { max-width: min(60vw, 700px); margin-top: 3px; overflow: hidden; color: #7e8da3; text-overflow: ellipsis; white-space: nowrap; }
-#terminalStage { display: flex; flex: 1 1 0; height: 0; min-height: 0; overflow: hidden; background: #0b1120; }
-.instance-host { display: flex; flex: 1 1 0; min-width: 0; min-height: 0; height: 100%; overflow: hidden; background: #0b1120; }
-.instance-host .xterm,
-.instance-host .xterm .xterm-viewport { height: 100%; background: #0b1120; }
-.instance-host .xterm .xterm-screen,
-.instance-host .xterm .xterm-screen canvas { background: #0b1120; }
+#terminalStage { display: flex; flex: 1 1 0; height: 0; min-height: 0; overflow: hidden; }
+.instance-host { display: flex; flex: 1 1 0; min-width: 0; min-height: 0; height: 100%; padding: 8px; overflow: hidden; }
+.instance-host .xterm { height: 100%; }
 
 /* Tablet: drop preset cards from 3 to 2 columns so each card stays
    readable. Phones (below) collapse to a single column. */
