@@ -1,4 +1,5 @@
 import { mountTerminal, ghosttyIdentity } from "/plugin/terminal-mount.mjs";
+import { clampMemory, DEFAULT_PROXY_URL, loadCustomPresets, memoryStops, nearestMemoryStop, presetGroups as presetGroupsConfig, presets, saveCustomPresets } from "/plugin/linux-playground/linux-playground-config.js";
 import { loadLinuxArchive } from "/plugin/linux-playground/linux-image-cache.js";
 
 const $ = (id) => document.getElementById(id);
@@ -14,6 +15,14 @@ const setArchitecture = (value) => {
 };
 const backendUrl = $("backendUrl");
 const linuxUrl = $("linuxUrl");
+const proxyUrl = $("proxyUrl");
+const memory = $("memory");
+const memoryInput = $("memoryInput");
+const memoryValue = $("memoryValue");
+const presetName = $("presetName");
+const savePreset = $("savePreset");
+const presetGroups = $("presetGroups");
+const customPresets = $("customPresets");
 const linuxFile = $("linuxFile");
 const fileName = $("fileName");
 const launch = $("launch");
@@ -128,72 +137,6 @@ const status = $("status");
 const error = $("error");
 const machineName = $("machineName");
 const sourceName = $("sourceName");
-const RV64_RELEASE = "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.1";
-const V86_RELEASE = "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48";
-const guestImage = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
-const presets = {
-  v86: {
-    architecture: "v86",
-    backend: `${V86_RELEASE}/v86.tgz`,
-    image: guestImage("x86"),
-    // Script overrides are intentionally empty: bootRc / postDhcp fall
-    // through to the architecture default (/plugin/v86/guest-boot-rc etc.)
-    // unless the user edits the textarea in the Advanced panel.
-    bootRc: null,
-    postDhcp: null,
-    // No kernel cmdline overrides; wanix-adapter defaults apply
-    // (console=hvc0, init=/bin/init, root=host9p, rootflags=cache=loose,
-    // access=any, msize=131072). The Advanced Kernel Args panel layers
-    // user input on top of this empty default.
-    append: "",
-  },
-  "v86-container": {
-    architecture: "v86",
-    backend: `${V86_RELEASE}/v86.tgz`,
-    image: guestImage("x86", "-container"),
-    bootRc: null,
-    postDhcp: null,
-    append: "",
-  },
-  "v86-container-full": {
-    architecture: "v86",
-    backend: `${V86_RELEASE}/v86.tgz`,
-    image: guestImage("x86", "-container-full"),
-    bootRc: null,
-    postDhcp: null,
-    append: "",
-  },
-  rv64: {
-    architecture: "rv64",
-    backend: `${RV64_RELEASE}/rv64.tgz`,
-    image: guestImage("rv64"),
-    bootRc: null,
-    postDhcp: null,
-    append: "",
-  },
-  "rv64-container": {
-    architecture: "rv64",
-    backend: `${RV64_RELEASE}/rv64.tgz`,
-    image: guestImage("rv64", "-container"),
-    bootRc: null,
-    postDhcp: null,
-    append: "",
-  },
-  "rv64-container-full": {
-    architecture: "rv64",
-    backend: `${RV64_RELEASE}/rv64.tgz`,
-    image: guestImage("rv64", "-container-full"),
-    bootRc: null,
-    postDhcp: null,
-    // (JIT history comment block preserved)
-    // v0.4.1+ runs the JIT path cleanly without the old "rv64.jit=off"
-    // workaround (the DBT lowering fix landed in commit 04ac422 in the
-    // rv64.js repo). If the unreachable trap returns on a future release,
-    // this is the place to add the escape hatch back.
-    append: "",
-  },
-};
-
 const VNET_URL = "wss://vnet.net.k0s.io/x/net";
 const bootRcDefaults = { v86: "/plugin/v86/guest-boot-rc", rv64: "/plugin/rv64/guest-boot-rc" };
 const postDhcpDefaults = { v86: "/plugin/v86/guest-post-dhcp", rv64: "/plugin/rv64/guest-post-dhcp" };
@@ -205,12 +148,85 @@ let activePresetName = "v86";
 let instanceCounter = 0;
 const instances = new Map();
 const imageLoads = new Map();
+let savedPresets = loadCustomPresets();
+
+function memoryInMiB() {
+  return clampMemory(memoryInput.value);
+}
+
+function updateMemoryValue() {
+  const value = memoryInMiB();
+  memoryInput.value = value;
+  memory.value = memoryStops.indexOf(nearestMemoryStop(value));
+  memoryValue.textContent = `${value} MiB`;
+}
+
+function setMemory(value) {
+  memoryInput.value = Number.parseInt(value, 10) || 0;
+  updateMemoryValue();
+}
+
+function proxiedUrl(url) {
+  const proxy = proxyUrl.value.trim();
+  return proxy ? `${proxy}${url}` : url;
+}
+
+function makePresetButton(preset, id, description) {
+  const button = document.createElement("button");
+  button.className = "preset";
+  button.type = "button";
+  button.dataset.preset = id;
+  const title = document.createElement("strong");
+  title.textContent = preset.label || preset.name;
+  const detail = document.createElement("span");
+  detail.textContent = description;
+  button.replaceChildren(title, detail);
+  button.addEventListener("click", () => applyPreset(id));
+  return button;
+}
+
+function renderPresetGroups() {
+  presetGroups.replaceChildren(...presetGroupsConfig.map((group) => {
+    const section = document.createElement("section");
+    section.className = "preset-group";
+    const title = document.createElement("div");
+    title.className = "section-label";
+    title.textContent = group.title;
+    const grid = document.createElement("div");
+    grid.className = "preset-grid";
+    grid.replaceChildren(...Object.entries(presets)
+      .filter(([, preset]) => preset.architecture === group.architecture)
+      .map(([id, preset]) => makePresetButton(preset, id, preset.profile)));
+    section.replace(title, grid);
+    return section;
+  }));
+}
+
+function renderCustomPresets() {
+  customPresets.replaceChildren(...savedPresets.map((preset) => {
+    const button = document.createElement("button");
+    button.className = "preset";
+    button.type = "button";
+    button.dataset.preset = preset.id;
+    const title = document.createElement("strong");
+    title.textContent = preset.name;
+    const description = document.createElement("span");
+    description.textContent = "Saved custom preset";
+    button.replaceChildren(title, description);
+    button.addEventListener("click", () => applyPreset(preset.id));
+    return button;
+  }));
+}
+
+function findPreset(name) {
+  return presets[name] || savedPresets.find((preset) => preset.id === name) || null;
+}
 
 function applyPreset(name) {
   document.querySelectorAll(".preset").forEach((button) => {
     button.classList.toggle("active", button.dataset.preset === name);
   });
-  const preset = presets[name];
+  const preset = findPreset(name);
   activePreset = preset || null;
   activePresetName = name;
   refreshBootRcText();
@@ -227,11 +243,13 @@ function applyPreset(name) {
   setArchitecture(preset.architecture);
   backendUrl.value = preset.backend;
   linuxUrl.value = preset.image;
+  proxyUrl.value = preset.proxyUrl || DEFAULT_PROXY_URL;
+  setMemory(Number.parseInt(preset.memory, 10) || 0);
   linuxFile.value = "";
   fileName.textContent = "Preparing preset image…";
   localPath = null;
   setActiveSource("url");
-  preloadImage(preset.image).then((archive) => {
+  preloadImage(proxiedUrl(preset.image)).then((archive) => {
     fileName.textContent = `Preset cached · ${(archive.size / 1048576).toFixed(1)} MB`;
   }).catch((reason) => {
     fileName.textContent = `Preset download failed: ${String(reason?.message || reason)}`;
@@ -259,11 +277,6 @@ function selectedSource() {
   const url = linuxUrl.value.trim();
   if (url) return { kind: "remote", url };
   throw new Error("Choose a local Linux image or enter a remote image URL.");
-}
-
-function memoryForArchive(archive, preset) {
-  if (preset?.memory) return preset.memory;
-  return archive.size >= 100 * 1048576 ? "2G" : "512M";
 }
 
 function preloadImage(url) {
@@ -373,7 +386,7 @@ async function startVm() {
   setStatus("loading", "PREPARING IMAGE");
   launch.disabled = true;
   updateLaunchLabel("PREPARING IMAGE");
-  const archive = source.kind === "local" ? source.file : await preloadImage(source.url);
+  const archive = source.kind === "local" ? source.file : await preloadImage(proxiedUrl(source.url));
   const localUrl = URL.createObjectURL(archive);
   const id = `instance-${++instanceCounter}`;
   const host = document.createElement("div");
@@ -390,9 +403,9 @@ async function startVm() {
   updateLaunchLabel("LAUNCHING…");
   instance.handle = await mountTerminal(host, vmSession({
         architecture: getArchitecture().value,
-        backend,
+        backend: proxiedUrl(backend),
         image: localUrl || linuxUrl.value.trim(),
-        memory: memoryForArchive(archive, activePreset),
+        memory: `${memoryInMiB()}M`,
         append: [activePreset?.append, extraArgs.value.trim()].filter((s) => s && s.length > 0).join(" "),
       }), {
     ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
@@ -405,10 +418,9 @@ async function startVm() {
   launch.disabled = false;
 }
 
-document.querySelectorAll(".preset").forEach((button) => {
-  button.addEventListener("click", () => applyPreset(button.dataset.preset));
-});
-applyPreset("v86");
+renderPresetGroups();
+renderCustomPresets();
+applyPreset("v86-minimal");
 
 linuxFile.addEventListener("change", () => {
   const file = linuxFile.files[0];
@@ -434,7 +446,7 @@ linuxUrl.addEventListener("change", () => {
   const url = linuxUrl.value.trim();
   if (!url) return;
   fileName.textContent = "Preparing remote image…";
-  preloadImage(url).then((archive) => {
+  preloadImage(proxiedUrl(url)).then((archive) => {
     fileName.textContent = `Image cached · ${(archive.size / 1048576).toFixed(1)} MB`;
   }).catch((reason) => {
     fileName.textContent = `Image download failed: ${String(reason?.message || reason)}`;
@@ -443,6 +455,40 @@ linuxUrl.addEventListener("change", () => {
 for (const input of architectureInputs) {
   input.addEventListener("change", () => { localPath = null; activePreset = null; });
 }
+memory.addEventListener("input", () => {
+  memoryInput.value = memoryStops[Number.parseInt(memory.value, 10)];
+  updateMemoryValue();
+});
+memoryInput.addEventListener("input", updateMemoryValue);
+memoryInput.addEventListener("change", updateMemoryValue);
+savePreset.addEventListener("click", () => {
+  const name = presetName.value.trim();
+  const backend = backendUrl.value.trim();
+  const image = linuxUrl.value.trim();
+  if (!name || !backend || !image) {
+    showError("Name, emulator backend URL, and Linux image URL are required to save a preset.");
+    return;
+  }
+  const id = `custom-${crypto.randomUUID()}`;
+  savedPresets = [...savedPresets, {
+    id,
+    name,
+    architecture: getArchitecture().value,
+    backend,
+    image,
+    proxyUrl: proxyUrl.value.trim(),
+    memory: `${memoryInMiB()}M`,
+    append: extraArgs.value.trim(),
+    bootRc: null,
+    postDhcp: null,
+  }];
+  saveCustomPresets(savedPresets);
+  saveScriptEdit("boot-rc", id, bootRcText.value);
+  saveScriptEdit("post-dhcp", id, postDhcpText.value);
+  presetName.value = "";
+  renderCustomPresets();
+  applyPreset(id);
+});
 launch.addEventListener("click", () => startVm().catch((reason) => {
   launch.disabled = false;
   updateLaunchLabel("LAUNCH PLAYGROUND");
@@ -453,7 +499,7 @@ launch.addEventListener("click", () => startVm().catch((reason) => {
 stop.addEventListener("click", () => stopVm().catch((reason) => showError(String(reason?.message || reason))));
 newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "READY TO CONFIGURE"); renderTabs(); });
 homeTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); renderTabs(); });
-reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
+reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; proxyUrl.value = DEFAULT_PROXY_URL; setMemory(1024); linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
 
 
 // Debug utility: drop the IndexedDB archive cache (Linux images keyed

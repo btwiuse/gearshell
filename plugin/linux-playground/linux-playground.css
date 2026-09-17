@@ -49,6 +49,15 @@ h1 { margin: 10px 0 8px; font-size: clamp(26px, 4.6vw, 44px); letter-spacing: -.
 .preset strong { color: #e6edf3; font: 12px ui-sans-serif, system-ui, sans-serif; letter-spacing: 0; }
 .preset span { color: #8291a7; font: 10px ui-monospace, monospace; letter-spacing: 0; }
 .preset.active { border-color: #3b82f6; box-shadow: inset 0 0 0 1px #3b82f6; background: #172d4b; }
+.preset-group { margin-top: 16px; }
+.custom-preset-label { margin-top: 20px; }
+.custom-presets { margin-top: 10px; }
+.preset-save { display: flex; gap: 10px; margin-top: 18px; }
+.preset-save input { flex: 1 1 auto; }
+.memory-control { display: flex; align-items: center; gap: 10px; }
+.memory-control input[type="range"] { flex: 1 1 auto; }
+.memory-control input[type="number"] { width: 7ch; }
+.memory-control span { flex: none; }
 /* Form: every field gets its own row. Architecture radios are the most
    visually distinctive, then URL / file inputs stack vertically below.
    The Linux image URL and local file picker are still mutually exclusive

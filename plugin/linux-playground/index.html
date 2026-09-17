@@ -19,15 +19,9 @@
         <div class="intro"><span class="eyebrow">EMULATOR LAB</span><h1>Bring your own Linux.</h1><p>Start with a ready-to-run preset, or choose an architecture and load a bootable archive from your device or a reachable URL.</p></div>
         <div class="presets" aria-labelledby="preset-title">
           <div class="section-label" id="preset-title">QUICK START PRESETS</div>
-          <div class="preset-grid">
-            <button class="preset active" type="button" data-preset="v86"><strong>Alpine x86</strong><span>v86 · minimal</span></button>
-            <button class="preset" type="button" data-preset="v86-container"><strong>x86 Containers</strong><span>v86 · container kernel</span></button>
-            <button class="preset" type="button" data-preset="v86-container-full"><strong>x86 Container Full</strong><span>v86 · Docker and tools</span></button>
-            <button class="preset" type="button" data-preset="rv64"><strong>Alpine RISC-V</strong><span>rv64.js · minimal</span></button>
-            <button class="preset" type="button" data-preset="rv64-container"><strong>RISC-V Containers</strong><span>rv64.js · container kernel</span></button>
-            <button class="preset" type="button" data-preset="rv64-container-full"><strong>RISC-V Container Full</strong><span>rv64.js · interpreter fallback</span></button>
-            <button class="preset custom" type="button" data-preset="custom"><strong>Custom image</strong><span>Bring your own URLs or file</span></button>
-          </div>
+          <div id="presetGroups"></div>
+          <div class="section-label custom-preset-label">SAVED CUSTOM PRESETS</div>
+          <div id="customPresets" class="preset-grid custom-presets" aria-label="Saved custom presets"></div>
         </div>
         <div class="form-grid">
           <div class="field arch-field">
@@ -49,6 +43,8 @@
           </div>
           <label class="field"><span>EMULATOR BACKEND URL</span><input id="backendUrl" type="url" placeholder="https://example.com/emulator.tgz" autocomplete="off"></label>
           <label class="field" id="linuxUrlField"><span>LINUX IMAGE URL</span><input id="linuxUrl" type="url" placeholder="https://example.com/linux-rootfs.tgz" autocomplete="off"></label>
+          <label class="field"><span>RESOURCE PROXY URL (OPTIONAL PREFIX)</span><input id="proxyUrl" type="url" value="https://no-cors.up.railway.app/" placeholder="https://proxy.example/" autocomplete="off"><small>Applied separately to backend and Linux image requests. Leave empty to fetch both URLs directly.</small></label>
+          <label class="field"><span>RAM <output id="memoryValue" for="memory">1024 MiB</output></span><div class="memory-control"><input id="memory" type="range" min="0" max="9" step="1" value="7"><input id="memoryInput" type="number" min="0" max="4096" step="1" value="1024" inputmode="numeric" aria-label="RAM in MiB"><span>MiB</span></div></label>
           <label class="file-field" id="linuxFileField"><span>OR LOAD IMAGE FROM THIS DEVICE</span><input id="linuxFile" type="file" accept=".tgz,.tar,.cpio,.img,.gz,.xz,.zst,application/octet-stream"><small id="fileName">No local image selected</small></label>
         </div>
         <details class="advanced">
@@ -66,6 +62,7 @@
             <textarea id="postDhcp" rows="14" spellcheck="false" autocomplete="off" placeholder="Loading script content…"></textarea>
           </label>
         </details>
+        <div class="preset-save"><input id="presetName" type="text" maxlength="60" placeholder="Name this custom preset" autocomplete="off"><button id="savePreset" class="secondary" type="button">SAVE PRESET</button></div>
         <div class="actions"><button id="launch" class="primary" type="button">LAUNCH PLAYGROUND <span>→</span></button><button id="reset" class="secondary" type="button">RESET</button></div>
         <p id="error" class="error" role="alert" hidden></p>
         <div class="tips"><span>TIP</span><p>Remote resources must allow cross-origin requests. Local files stay in this browser and are never uploaded to a server.</p><button id="clearCache" class="link-button" type="button" title="Drop the IndexedDB archive cache; in-memory caches reload on next preset.">CLEAR IMAGE CACHE</button></div>
