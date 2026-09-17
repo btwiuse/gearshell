@@ -29,6 +29,7 @@ const guestProfiles = [
   ["nodejs", "-nodejs", "Node.js and npm"],
   ["claude", "-claude", "Claude Code Best"],
   ["peri", "-peri", "Peri agent"],
+  ["zero", "-zero", "Zero CLI"],
   ["pi", "-pi", "Pi Coding Agent"],
   ["golang", "-golang", "Go"],
   ["container", "-container", "Container kernel"],
