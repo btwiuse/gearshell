@@ -197,7 +197,7 @@ function renderPresetGroups() {
     grid.replaceChildren(...Object.entries(presets)
       .filter(([, preset]) => preset.architecture === group.architecture)
       .map(([id, preset]) => makePresetButton(preset, id, preset.profile)));
-    section.replace(title, grid);
+    section.replaceChildren(title, grid);
     return section;
   }));
 }
