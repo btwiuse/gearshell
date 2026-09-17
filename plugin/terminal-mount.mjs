@@ -394,6 +394,7 @@ export function ghosttyIdentity(options = {}) {
 export function progressIndicator(bar) {
   let carry = "";
   let hideFrame = null;
+  const decoder = new TextDecoder();
   const render = (state, value) => {
     if (state !== 0) {
       if (hideFrame != null) cancelAnimationFrame(hideFrame);
@@ -409,7 +410,7 @@ export function progressIndicator(bar) {
     });
   };
   return (data) => {
-    const text = carry + (typeof data === "string" ? data : new TextDecoder().decode(data));
+    const text = carry + (typeof data === "string" ? data : decoder.decode(data, { stream: true }));
     for (const match of text.matchAll(/\x1b\]9;4;(\d+)(?:;(\d*))?(?:\x07|\x1b\\)/g)) {
       render(Number(match[1]), Number(match[2]) || 0);
     }
