@@ -5,8 +5,6 @@ import {
   presets,
   saveCustomPresets,
 } from "/plugin/linux-playground/linux-playground-config.js";
-import { loadLinuxArchive } from "/plugin/linux-playground/linux-image-cache.js";
-
 function presetButton(preset, id, description, applyPreset) {
   const button = document.createElement("button");
   button.className = "preset";
@@ -19,28 +17,6 @@ function presetButton(preset, id, description, applyPreset) {
   button.replaceChildren(title, detail);
   button.addEventListener("click", () => applyPreset(id));
   return button;
-}
-
-function createImageLoader({ fileName, launch, updateLaunchLabel }) {
-  const imageLoads = new Map();
-  return (url) => {
-    let load = imageLoads.get(url);
-    if (load) return load;
-    load = loadLinuxArchive(url, ({ cached, loaded, total }) => {
-      const progress = total
-        ? `${(loaded / total * 100).toFixed(0)}%`
-        : `${(loaded / 1048576).toFixed(1)} MB`;
-      fileName.textContent = cached
-        ? `Preset cached · ${(loaded / 1048576).toFixed(1)} MB`
-        : `Downloading preset · ${progress}`;
-      if (!cached && launch.disabled) {
-        updateLaunchLabel(total ? `LOADING ${Math.round((loaded / total) * 100)}%` : "DOWNLOADING…");
-      }
-    });
-    imageLoads.set(url, load);
-    load.catch(() => imageLoads.delete(url));
-    return load;
-  };
 }
 
 function renderBuiltInPresets(element, applyPreset) {
@@ -85,19 +61,19 @@ function setPresetFields(preset, controls) {
   setActiveSource("url");
 }
 
-function updateImageStatus(preset, proxiedUrl, preloadImage, fileName) {
+function updateImageStatus(preset, proxiedUrl, downloads, fileName) {
   if (!preset) return;
-  preloadImage(proxiedUrl(preset.image)).then((archive) => {
+  const url = proxiedUrl(preset.image);
+  downloads.show(url);
+  downloads.load(url).then((archive) => {
     fileName.textContent = `Preset cached · ${(archive.size / 1048576).toFixed(1)} MB`;
-  }).catch((reason) => {
-    fileName.textContent = `Preset download failed: ${String(reason?.message || reason)}`;
-  });
+  }).catch(() => {});
 }
 
 export function initPresetLibrary(controls) {
-  const { presetGroupsElement, customPresetsElement, proxyUrl, fileName, launch, updateLaunchLabel, refreshBootRcText, refreshPostDhcpText, onPresetChange } = controls;
+  const { presetGroupsElement, customPresetsElement, proxyUrl, fileName, refreshBootRcText, refreshPostDhcpText, onPresetChange, downloads } = controls;
   let savedPresets = loadCustomPresets();
-  const preloadImage = createImageLoader({ fileName, launch, updateLaunchLabel });
+  const preloadImage = (url) => downloads.load(url);
   const proxiedUrl = (url) => proxyUrl.value.trim() ? `${proxyUrl.value.trim()}${url}` : url;
   const applyPreset = (name) => {
     document.querySelectorAll(".preset").forEach((button) => button.classList.toggle("active", button.dataset.preset === name));
@@ -106,7 +82,7 @@ export function initPresetLibrary(controls) {
     refreshBootRcText();
     refreshPostDhcpText();
     setPresetFields(preset, controls);
-    updateImageStatus(preset, proxiedUrl, preloadImage, fileName);
+    updateImageStatus(preset, proxiedUrl, downloads, fileName);
   };
   const renderCustomPresets = () => renderSavedPresets(customPresetsElement, savedPresets, applyPreset);
   return {

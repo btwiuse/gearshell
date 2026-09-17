@@ -39,22 +39,20 @@ async function writeArchive(url, archive) {
   database.close();
 }
 
-export async function loadLinuxArchive(url, onProgress = () => {}) {
+export async function deleteLinuxArchive(url) {
   if (!globalThis.indexedDB) throw new Error("IndexedDB is unavailable in this browser.");
-  const cached = await readArchive(url);
-  if (cached) {
-    onProgress({ cached: true, loaded: cached.size, total: cached.size });
-    return cached;
-  }
-  const response = await fetch(url);
+  const database = await openDatabase();
+  const transaction = database.transaction(STORE, "readwrite");
+  transaction.objectStore(STORE).delete(url);
+  await transactionAsPromise(transaction);
+  database.close();
+}
+
+async function fetchArchive(url, onProgress, signal) {
+  const response = await fetch(url, { signal });
   if (!response.ok) throw new Error(`Image download failed (${response.status}).`);
   const total = Number(response.headers.get("content-length")) || 0;
-  if (!response.body) {
-    const archive = await response.blob();
-    await writeArchive(url, archive);
-    onProgress({ cached: false, loaded: archive.size, total: archive.size });
-    return archive;
-  }
+  if (!response.body) return response.blob();
   const reader = response.body.getReader();
   const chunks = [];
   let loaded = 0;
@@ -65,7 +63,19 @@ export async function loadLinuxArchive(url, onProgress = () => {}) {
     loaded += value.byteLength;
     onProgress({ cached: false, loaded, total });
   }
-  const archive = new Blob(chunks, { type: "application/gzip" });
+  return new Blob(chunks, { type: "application/gzip" });
+}
+
+export async function loadLinuxArchive(url, { onProgress = () => {}, signal, refresh = false } = {}) {
+  if (!globalThis.indexedDB) throw new Error("IndexedDB is unavailable in this browser.");
+  if (!refresh) {
+    const cached = await readArchive(url);
+    if (cached) {
+      onProgress({ cached: true, loaded: cached.size, total: cached.size });
+      return cached;
+    }
+  }
+  const archive = await fetchArchive(url, onProgress, signal);
   await writeArchive(url, archive);
   onProgress({ cached: false, loaded: archive.size, total: archive.size });
   return archive;

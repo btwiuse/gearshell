@@ -1,5 +1,6 @@
-import { mountTerminal, ghosttyIdentity } from "/plugin/terminal-mount.mjs";
+import { mountTerminal, ghosttyIdentity, progressIndicator } from "/plugin/terminal-mount.mjs";
 import { clampMemory, DEFAULT_PROXY_URL, memoryFromSlider, presets, sliderFromMemory } from "/plugin/linux-playground/linux-playground-config.js";
+import { createImageDownloadManager } from "/plugin/linux-playground/linux-image-downloads.js";
 import { initPresetLibrary } from "/plugin/linux-playground/linux-playground-presets.js";
 import { initScriptEditors } from "/plugin/linux-playground/linux-playground-scripts.js";
 
@@ -16,6 +17,7 @@ const setArchitecture = (value) => {
 };
 const backendUrl = $("backendUrl");
 const linuxUrl = $("linuxUrl");
+const imageDownload = $("imageDownload");
 const proxyUrl = $("proxyUrl");
 const memory = $("memory");
 const memoryInput = $("memoryInput");
@@ -66,6 +68,7 @@ const setup = $("setup");
 const newInstanceTab = $("newInstanceTab");
 const homeTab = $("homeTab");
 const terminalPanel = $("terminalPanel");
+const terminalProgress = $("terminalProgress");
 const instanceTabs = $("instanceTabs");
 const terminalStage = $("terminalStage");
 const status = $("status");
@@ -81,6 +84,7 @@ let activePreset = presets.v86;
 let activePresetName = "v86";
 let instanceCounter = 0;
 const instances = new Map();
+const observeTerminalProgress = progressIndicator(terminalProgress);
 const { refreshBootRcText, refreshPostDhcpText, saveScriptEdit } = initScriptEditors({
   bootRcText,
   postDhcpText,
@@ -107,6 +111,7 @@ function setMemory(value) {
   updateMemoryValue();
 }
 
+const downloads = createImageDownloadManager(imageDownload);
 const presetLibrary = initPresetLibrary({
   presetGroupsElement: presetGroups,
   customPresetsElement: customPresets,
@@ -119,6 +124,7 @@ const presetLibrary = initPresetLibrary({
   setMemory,
   setActiveSource,
   updateLaunchLabel,
+  downloads,
   refreshBootRcText,
   refreshPostDhcpText,
   onPresetChange: (preset, name) => {
@@ -263,9 +269,10 @@ async function startVm() {
         memory: `${memoryInMiB()}M`,
         append: [activePreset?.append, extraArgs.value.trim()].filter((s) => s && s.length > 0).join(" "),
       }), {
-    ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
+    ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", fontSize: 14, lineHeight: 1.25, scrollback: 10000, theme: { background: "#0b1120", foreground: "#e6edf3", cursor: "#58a6ff", selectionBackground: "#1f6feb66" } } }),
     onData: () => { instance.ready = true; if (activeInstance === id) setStatus("ready", "RUNNING"); },
     onExit: (event) => { if (activeInstance === id) showError(event?.error || "The virtual machine stopped."); },
+    onProgress: (data) => { if (activeInstance === id) observeTerminalProgress(data); },
   });
   if (activeInstance === id) handle = instance.handle;
   setStatus("loading", "STARTING");
@@ -289,11 +296,14 @@ linuxFile.addEventListener("change", () => {
   }
 });
 linuxUrl.addEventListener("input", () => {
-  if (linuxUrl.value.trim()) {
+  const url = linuxUrl.value.trim();
+  if (url) {
     linuxFile.value = "";
     activePreset = null;
     setActiveSource("url");
+    downloads.show(proxiedUrl(url));
   } else {
+    imageDownload.hidden = true;
     setActiveSource("none");
   }
 });
@@ -301,6 +311,7 @@ linuxUrl.addEventListener("change", () => {
   const url = linuxUrl.value.trim();
   if (!url) return;
   fileName.textContent = "Preparing remote image…";
+  downloads.show(proxiedUrl(url));
   preloadImage(proxiedUrl(url)).then((archive) => {
     fileName.textContent = `Image cached · ${(archive.size / 1048576).toFixed(1)} MB`;
   }).catch((reason) => {

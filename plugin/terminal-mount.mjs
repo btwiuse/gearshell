@@ -222,7 +222,15 @@ export async function mountTerminal(anchor, session, options = {}) {
   // shrinking). Defer the actual fit to the next frame so the
   // measured size matches the new container.
   let fitFrame = null;
+  let forwardTimer = null;
   let startupFits = 2;
+  const scheduleForwardSize = () => {
+    if (forwardTimer != null) clearTimeout(forwardTimer);
+    forwardTimer = setTimeout(() => {
+      forwardTimer = null;
+      forwardSize();
+    }, 50);
+  };
   const refitAndResize = () => {
     if (fitFrame != null) return;
     fitFrame = requestAnimationFrame(() => {
@@ -230,7 +238,7 @@ export async function mountTerminal(anchor, session, options = {}) {
       if (anchor.offsetWidth <= 0 || anchor.offsetHeight <= 0) return;
       try {
         fit.fit();
-        forwardSize();
+        scheduleForwardSize();
       } catch {}
       if (startupFits > 0) {
         startupFits--;
@@ -318,7 +326,7 @@ export async function mountTerminal(anchor, session, options = {}) {
       session.write(sessionId, new TextEncoder().encode(out));
     } catch {}
   });
-  term.onResize(forwardSize);
+  term.onResize(scheduleForwardSize);
 
   const observer = new ResizeObserver(refitAndResize);
   observer.observe(anchor);
@@ -350,6 +358,7 @@ export async function mountTerminal(anchor, session, options = {}) {
     },
     dispose: () => {
       if (fitFrame != null) cancelAnimationFrame(fitFrame);
+      if (forwardTimer != null) clearTimeout(forwardTimer);
       observer.disconnect();
       window.removeEventListener("resize", refitAndResize);
       offOutput?.();
