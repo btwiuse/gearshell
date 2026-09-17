@@ -1,6 +1,6 @@
 export const DEFAULT_PROXY_URL = "https://no-cors.up.railway.app/";
 
-const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.14";
+const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.15";
 const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.48";
 const guestImage = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
 const customPresetsKey = "linux-playground:custom-presets";
