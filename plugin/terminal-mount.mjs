@@ -391,14 +391,6 @@ export function ghosttyIdentity(options = {}) {
   };
 }
 
-export function ghosttyProgressIdentity(options = {}) {
-  const identity = ghosttyIdentity(options);
-  return {
-    ...identity,
-    terminal: { ...identity.terminal, termName: "xterm-256color" },
-  };
-}
-
 export function progressIndicator(bar) {
   let carry = "";
   let hideFrame = null;
