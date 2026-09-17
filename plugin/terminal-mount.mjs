@@ -221,13 +221,21 @@ export async function mountTerminal(anchor, session, options = {}) {
   // (e.g. just after a fullscreen toggle exits and the layout is
   // shrinking). Defer the actual fit to the next frame so the
   // measured size matches the new container.
+  let fitFrame = null;
+  let startupFits = 2;
   const refitAndResize = () => {
-    requestAnimationFrame(() => {
+    if (fitFrame != null) return;
+    fitFrame = requestAnimationFrame(() => {
+      fitFrame = null;
       if (anchor.offsetWidth <= 0 || anchor.offsetHeight <= 0) return;
       try {
         fit.fit();
         forwardSize();
       } catch {}
+      if (startupFits > 0) {
+        startupFits--;
+        refitAndResize();
+      }
     });
   };
 
@@ -286,7 +294,12 @@ export async function mountTerminal(anchor, session, options = {}) {
     if (lastEsc >= 0) oscCarry = haystack.slice(lastEsc);
   }
 
+  let receivedOutput = false;
   const offOutput = session.onOutput(sessionId, (data) => {
+    if (!receivedOutput) {
+      receivedOutput = true;
+      refitAndResize();
+    }
     sniffOsc(data);
     term.write(data);
     options.onProgress?.(data);
@@ -336,6 +349,7 @@ export async function mountTerminal(anchor, session, options = {}) {
       });
     },
     dispose: () => {
+      if (fitFrame != null) cancelAnimationFrame(fitFrame);
       observer.disconnect();
       window.removeEventListener("resize", refitAndResize);
       offOutput?.();
