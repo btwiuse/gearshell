@@ -1,5 +1,10 @@
 #!/bin/sh
 # rv64 guest boot rc, sourced by the wanix rv64 guest init (/boot/rc).
+export TERM=ghostty
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+if [ "$(id -u)" -eq 0 ]; then
+  export HOME=/root
+fi
 # The vnet wsproxy tunnel presents eth0 over a layer-2 relay, so the guest
 # runs DHCP exactly like the v86 plugin to get an address, a default route
 # and a resolver from the gateway.

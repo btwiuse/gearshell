@@ -1,4 +1,9 @@
 #!/bin/sh
+export TERM=ghostty
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+if [ "$(id -u)" -eq 0 ]; then
+  export HOME=/root
+fi
 mount -t tmpfs tmpfs /tmp 2>/dev/null
 ifconfig lo up 2>/dev/null
 ifconfig eth0 up 2>/dev/null
