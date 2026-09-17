@@ -56,7 +56,7 @@ h1 { margin: 10px 0 8px; font-size: clamp(26px, 4.6vw, 44px); letter-spacing: -.
 .preset-save input { flex: 1 1 auto; }
 .memory-control { display: flex; align-items: center; gap: 10px; }
 .memory-control input[type="range"] { flex: 1 1 auto; }
-.memory-control input[type="number"] { width: 7ch; }
+.memory-control input[type="number"] { width: 10ch; }
 .memory-control span { flex: none; }
 /* Form: every field gets its own row. Architecture radios are the most
    visually distinctive, then URL / file inputs stack vertically below.
