@@ -46,7 +46,6 @@ export function ExternalTerminalPanel({ params }) {
     mountTerminal(anchor.current, externalSession(params.sessionId), {
       ...ghosttyIdentity({
         terminal: {
-          convertEol: false,
           fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
           fontSize: 14,
           lineHeight: 1.25,

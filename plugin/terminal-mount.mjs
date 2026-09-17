@@ -186,7 +186,7 @@ export async function mountTerminal(anchor, session, options = {}) {
     if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
   }
   const term = new libs.Terminal({
-    convertEol: true,
+    convertEol: false,
     cursorBlink: true,
     allowProposedApi: true,
     ...(options.terminal || {}),
