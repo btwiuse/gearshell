@@ -54,9 +54,11 @@
       var V86_OVERLAY_URL =
         "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.24/wanix-overlay-x86.tgz";
       // The standalone kernel asset (the wanix overlay carries its own
-      // boot/vmlinuz, but kernelUrl lets users override).
+      // boot/vmlinuz, but kernelUrl lets users override). gzip -9
+      // compressed; browser fetch() transparently decompresses via
+      // Accept-Encoding: gzip.
       var V86_KERNEL_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.24/rv64-kernel-x86-minimal";
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.24/rv64-kernel-x86-minimal.gz";
 
       var state = {
         sessionId: null,

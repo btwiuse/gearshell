@@ -10,9 +10,11 @@ const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // is set independently via rv64-kernel-<arch>-<profile>.
 const guestRootfs = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
 const guestOverlay = (arch, profile = "") => `${RV64_RELEASE}/wanix-overlay-${arch}${profile}.tgz`;
+// Kernels ship gzipped (-9). browser fetch() automatically
+// decompresses via the standard Accept-Encoding: gzip header.
 const guestKernel = (arch, profile = "") => {
   const suffix = profile ? `-${profile}` : "";
-  return `${RV64_RELEASE}/rv64-kernel-${arch}${suffix}`;
+  return `${RV64_RELEASE}/rv64-kernel-${arch}${suffix}.gz`;
 };
 // Arch Linux rootfs lives in btwiuse/archlinux. Map wanix-side arch
 // names to the btwiuse/archlinux tarball suffixes, then compose the

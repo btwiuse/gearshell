@@ -53,7 +53,7 @@ const FALLBACK_VM_LINUX_URL =
 // Standalone kernel asset (kernel is no longer bundled in the rootfs
 // archive). The fallback only ships x86; the rv64 plugin overrides it.
 const FALLBACK_VM_KERNEL_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.24/rv64-kernel-x86-minimal";
+  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.24/rv64-kernel-x86-minimal.gz";
 // Wanix overlay tarball: kernel + busybox + init + startnet/etc +
 // wexec/hostexport + /etc overlay. Ships with every wanix guest
 // release; binds union-after the rootfs archive.
