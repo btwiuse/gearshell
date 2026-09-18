@@ -4,9 +4,10 @@ const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4
 const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.48";
 const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // Each guest is now an independent emulator + kernel + rootfs +
-// wanix-overlay quad (kernel + busybox + init + wexec + hostexport).
-// The wanix-overlay archive ships with every rv64.js release; Arch
-// rootfs needs it for busybox, Alpine uses the overlay's init/wexec.
+// wanix-overlay quad. Overlay profile (minimal / crush / claude /
+// peri / zero / pi / golang / container / container-full) tracks
+// the userland tooling — the kernel profile (minimal / container)
+// is set independently via rv64-kernel-<arch>-<profile>.
 const guestRootfs = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
 const guestOverlay = (arch, profile = "") => `${RV64_RELEASE}/wanix-overlay-${arch}${profile}.tgz`;
 const guestKernel = (arch, profile = "") => {

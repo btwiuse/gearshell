@@ -339,11 +339,11 @@ export function destroyVmSession(id) {
 
 // Binds mounted into the VM task namespace over the rootfs image:
 //   - optional standalone kernel image (kernelBindPath lands it under
-//     /boot/ where the matching adapter picks it up); skipped when an
-//     overlay tarball is provided, since the overlay already carries
-//     boot/Image (rv64) or boot/vmlinuz (v86 auto-discovery);
+//     /boot/ where the matching adapter picks it up). Independent of
+//     the overlay so users can mix and match kernel profiles with
+//     overlay profiles;
 //   - the rootfs archive (Alpine or Arch);
-//   - the optional wanix overlay tarball (kernel + busybox + init/
+//   - the optional wanix overlay tarball (busybox + /bin/init +
 //     startnet/post-dhcp/domctl/workerctl + wexec/hostexport + /etc
 //     overlay + profile binaries), union-after the rootfs so its
 //     files override;
@@ -354,7 +354,7 @@ function createVmGuestBinds(config) {
   const overlayUrl = config.overlayUrl;
   const kernelUrl = config.kernelUrl;
   return [
-    ...(kernelUrl && !overlayUrl
+    ...(kernelUrl
       ? [createWanixBindElement({
         type: "file",
         dst: kernelBindPath(config.type),
