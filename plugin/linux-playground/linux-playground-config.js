@@ -1,6 +1,6 @@
 export const DEFAULT_PROXY_URL = "https://no-cors.up.railway.app/";
 
-const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.24";
+const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.27";
 const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.48";
 const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // Each guest is now an independent emulator + kernel + rootfs +
@@ -10,11 +10,14 @@ const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // is set independently via rv64-kernel-<arch>-<profile>.
 const guestRootfs = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
 const guestOverlay = (arch, profile = "") => `${RV64_RELEASE}/wanix-overlay-${arch}${profile}.tgz`;
-// Kernels ship gzipped (-9). browser fetch() automatically
-// decompresses via the standard Accept-Encoding: gzip header.
+// Kernels ship raw. GitHub release CDN applies transport gzip on
+// HTTPS when the client sends Accept-Encoding: gzip; emulator
+// adapters read the kernel from the 9p filesystem (v86 auto-
+// discovers boot/vmlinuz*; rv64 hardcodes /boot/Image), so the
+// bytes on disk have to be raw ELF.
 const guestKernel = (arch, profile = "") => {
   const suffix = profile ? `-${profile}` : "";
-  return `${RV64_RELEASE}/rv64-kernel-${arch}${suffix}.gz`;
+  return `${RV64_RELEASE}/rv64-kernel-${arch}${suffix}`;
 };
 // Arch Linux rootfs lives in btwiuse/archlinux. Map wanix-side arch
 // names to the btwiuse/archlinux tarball suffixes, then compose the
