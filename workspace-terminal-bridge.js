@@ -49,11 +49,16 @@ import { nextVmMac } from "./workspace-vm-mac.js";
 const FALLBACK_VM_BACKEND_URL =
   "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48/v86.tgz";
 const FALLBACK_VM_LINUX_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.21/wanix-linux-x86.tgz";
+  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/wanix-linux-x86.tgz";
 // Standalone kernel asset (kernel is no longer bundled in the rootfs
 // archive). The fallback only ships x86; the rv64 plugin overrides it.
 const FALLBACK_VM_KERNEL_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.21/rv64-kernel-x86-minimal";
+  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/rv64-kernel-x86-minimal";
+// Wanix overlay tarball: kernel + busybox + init + startnet/etc +
+// wexec/hostexport + /etc overlay. Ships with every wanix guest
+// release; binds union-after the rootfs archive.
+const FALLBACK_VM_OVERLAY_URL =
+  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/wanix-overlay-x86.tgz";
 
 // sessionId -> { session|vmSession, kind, stream, source, origin, disposed }
 // — kind is "task" (shell session) or "vm". The kernel stream (reader +
@@ -251,6 +256,7 @@ function buildVmCreateConfig(rawArgs) {
     backendUrl: req.backendUrl || FALLBACK_VM_BACKEND_URL,
     linuxUrl: req.linuxUrl || FALLBACK_VM_LINUX_URL,
     kernelUrl: req.kernelUrl || FALLBACK_VM_KERNEL_URL,
+    overlayUrl: req.overlayUrl || FALLBACK_VM_OVERLAY_URL,
     memory: req.memory || "512M",
     netdev: req.netdev || "",
     ...req,

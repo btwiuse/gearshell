@@ -46,11 +46,15 @@
       var RV64_BACKEND_URL =
         "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.21/rv64.tgz";
       var RV64_LINUX_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.21/wanix-linux-rv64.tgz";
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/wanix-linux-rv64.tgz";
+      // Wanix overlay (kernel + busybox + init + wexec + hostexport +
+      // /etc overlay). Lives in the same release as the linux archive.
+      var RV64_OVERLAY_URL =
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/wanix-overlay-rv64.tgz";
       // The wanix rv64 adapter hardcodes /boot/Image as the kernel path;
-      // pass it explicitly so the rootfs archive stays decoupled.
+      // the overlay carries it, but kernelUrl lets users override.
       var RV64_KERNEL_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.21/rv64-kernel-riscv64-minimal";
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/rv64-kernel-riscv64-minimal";
 
       var state = {
         sessionId: null,
@@ -81,6 +85,7 @@
             type: "rv64",
             backendUrl: RV64_BACKEND_URL,
             linuxUrl: RV64_LINUX_URL,
+            overlayUrl: RV64_OVERLAY_URL,
             kernelUrl: RV64_KERNEL_URL,
             // Same shared vnet gateway as the v86 plugin: the adapter routes
             // the guest NIC through it (rv64.js wsproxy mode), and the guest

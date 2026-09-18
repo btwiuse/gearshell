@@ -337,19 +337,24 @@ export function destroyVmSession(id) {
   session.wrapper.remove();
 }
 
-// Binds mounted into the VM task namespace over the rootfs image: the
-// archive itself, an optional standalone kernel image (kernel is now
-// decoupled from rootfs; v86 auto-discovery and the rv64 adapter both
-// look for files under /boot/, so we land the kernel there), plus the
-// boot rc + post-dhcp overlay (the v86 plugin supplies its own via
-// vm.create; the standalone VM panel was removed, so no host defaults
-// remain).
+// Binds mounted into the VM task namespace over the rootfs image:
+//   - optional standalone kernel image (kernelBindPath lands it under
+//     /boot/ where the matching adapter picks it up); skipped when an
+//     overlay tarball is provided, since the overlay already carries
+//     boot/Image (rv64) or boot/vmlinuz (v86 auto-discovery);
+//   - the rootfs archive (Alpine or Arch);
+//   - the optional wanix overlay tarball (kernel + busybox + init/
+//     startnet/post-dhcp/domctl/workerctl + wexec/hostexport + /etc
+//     overlay + profile binaries), union-after the rootfs so its
+//     files override;
+//   - the boot rc + post-dhcp overlay.
 function createVmGuestBinds(config) {
   const rc = config.bootRc;
   const dhcp = config.postDhcp;
+  const overlayUrl = config.overlayUrl;
   const kernelUrl = config.kernelUrl;
   return [
-    ...(kernelUrl
+    ...(kernelUrl && !overlayUrl
       ? [createWanixBindElement({
         type: "file",
         dst: kernelBindPath(config.type),
@@ -362,6 +367,14 @@ function createVmGuestBinds(config) {
       dst: ".",
       src: config.linuxUrl,
     }),
+    ...(overlayUrl
+      ? [createWanixBindElement({
+        type: "archive",
+        dst: ".",
+        src: overlayUrl,
+        union: "after",
+      })]
+      : []),
     ...(rc
       ? [createWanixBindElement({
         type: "file",

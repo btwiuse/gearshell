@@ -47,11 +47,16 @@
       var V86_BACKEND_URL =
         "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48/v86.tgz";
       var V86_LINUX_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.21/wanix-linux-x86.tgz";
-      // v86 auto-discovers /boot/vmlinuz* (or /boot/bzImage) inside the
-      // rootfs archive; the standalone kernel is the new opt-in path.
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/wanix-linux-x86.tgz";
+      // Wanix overlay (kernel + init + wexec + hostexport + /etc overlay
+      // + Arch busybox when the rootfs is Arch). Lives in the same
+      // release as the linux archive.
+      var V86_OVERLAY_URL =
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/wanix-overlay-x86.tgz";
+      // The standalone kernel asset (the wanix overlay carries its own
+      // boot/vmlinuz, but kernelUrl lets users override).
       var V86_KERNEL_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.21/rv64-kernel-x86-minimal";
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.22/rv64-kernel-x86-minimal";
 
       var state = {
         sessionId: null,
@@ -81,6 +86,7 @@
           return GearShell.vm.create({
             backendUrl: V86_BACKEND_URL,
             linuxUrl: V86_LINUX_URL,
+            overlayUrl: V86_OVERLAY_URL,
             kernelUrl: V86_KERNEL_URL,
             netdev: "user,type=virtio,relay_url=" + VNET_URL,
             bootRc: "/plugin/v86/guest-boot-rc",

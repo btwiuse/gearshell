@@ -18,6 +18,7 @@ const setArchitecture = (value) => {
 const backendUrl = $("backendUrl");
 const linuxUrl = $("linuxUrl");
 const kernelUrl = $("kernelUrl");
+const overlayUrl = $("overlayUrl");
 const imageDownload = $("imageDownload");
 const proxyUrl = $("proxyUrl");
 const memory = $("memory");
@@ -119,6 +120,7 @@ const presetLibrary = initPresetLibrary({
   backendUrl,
   linuxUrl,
   kernelUrl,
+  overlayUrl,
   proxyUrl,
   linuxFile,
   fileName,
@@ -165,6 +167,7 @@ function vmSession(config) {
     type: config.architecture,
     backendUrl: config.backend,
     linuxUrl: config.image,
+    overlayUrl: config.overlay || undefined,
     kernelUrl: config.kernel || undefined,
     memory: config.memory,
     append: config.append,
@@ -269,6 +272,7 @@ async function startVm() {
         architecture: getArchitecture().value,
         backend: proxiedUrl(backend),
         image: localUrl || linuxUrl.value.trim(),
+        overlay: overlayUrl.value.trim() || undefined,
         kernel: kernelUrl.value.trim() || undefined,
         memory: `${memoryInMiB()}M`,
         append: [activePreset?.append, extraArgs.value.trim()].filter((s) => s && s.length > 0).join(" "),
@@ -346,6 +350,7 @@ savePreset.addEventListener("click", () => {
     architecture: getArchitecture().value,
     backend,
     image,
+    overlay: overlayUrl.value.trim() || undefined,
     kernel: kernelUrl.value.trim() || undefined,
     proxyUrl: proxyUrl.value.trim(),
     memory: `${memoryInMiB()}M`,
@@ -369,7 +374,7 @@ launch.addEventListener("click", () => startVm().catch((reason) => {
 stop.addEventListener("click", () => stopVm().catch((reason) => showError(String(reason?.message || reason))));
 newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "READY TO CONFIGURE"); renderTabs(); });
 homeTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); renderTabs(); });
-reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; kernelUrl.value = ""; proxyUrl.value = DEFAULT_PROXY_URL; setMemory(1024); linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
+reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; kernelUrl.value = ""; overlayUrl.value = ""; proxyUrl.value = DEFAULT_PROXY_URL; setMemory(1024); linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
 
 
 // Debug utility: drop the IndexedDB archive cache (Linux images keyed
