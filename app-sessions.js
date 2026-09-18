@@ -338,13 +338,25 @@ export function destroyVmSession(id) {
 }
 
 // Binds mounted into the VM task namespace over the rootfs image: the
-// archive itself plus an optional guest boot overlay / network hook
-// (the v86 plugin supplies its own boot/rc + post-dhcp via vm.create;
-// the standalone VM panel was removed, so no host defaults remain).
+// archive itself, an optional standalone kernel image (kernel is now
+// decoupled from rootfs; v86 auto-discovery and the rv64 adapter both
+// look for files under /boot/, so we land the kernel there), plus the
+// boot rc + post-dhcp overlay (the v86 plugin supplies its own via
+// vm.create; the standalone VM panel was removed, so no host defaults
+// remain).
 function createVmGuestBinds(config) {
   const rc = config.bootRc;
   const dhcp = config.postDhcp;
+  const kernelUrl = config.kernelUrl;
   return [
+    ...(kernelUrl
+      ? [createWanixBindElement({
+        type: "file",
+        dst: kernelBindPath(config.type),
+        src: kernelUrl,
+        mode: "0644",
+      })]
+      : []),
     createWanixBindElement({
       type: "archive",
       dst: ".",
@@ -367,6 +379,17 @@ function createVmGuestBinds(config) {
       })]
       : []),
   ];
+}
+
+// Pick a /boot/ destination that the matching adapter will pick up:
+// v86 auto-discovers files matching /vmlinuz|/bzimage under /boot/, so
+// vmlinuz works on both ext4 and 9p installs; the rv64 adapter hardcodes
+// /boot/Image. Anything else falls back to a generic boot/<name> path.
+function kernelBindPath(vmType) {
+  if (vmType === "rv64" || vmType === "rv64-legacy" || vmType === "rv64-jit") {
+    return "boot/Image";
+  }
+  return "boot/vmlinuz";
 }
 
 export function startVmSession(session, options = {}) {

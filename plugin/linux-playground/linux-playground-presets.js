@@ -29,7 +29,7 @@ function renderBuiltInPresets(element, applyPreset) {
     const grid = document.createElement("div");
     grid.className = "preset-grid";
     grid.replaceChildren(...Object.entries(presets)
-      .filter(([, preset]) => preset.architecture === group.architecture)
+      .filter(([, preset]) => preset.group === group.id)
       .map(([id, preset]) => presetButton(preset, id, preset.profile, applyPreset)));
     section.replaceChildren(title, grid);
     return section;
@@ -42,10 +42,11 @@ function renderSavedPresets(element, savedPresets, applyPreset) {
 }
 
 function setPresetFields(preset, controls) {
-  const { backendUrl, linuxUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource } = controls;
+  const { backendUrl, linuxUrl, kernelUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource } = controls;
   if (!preset) {
     backendUrl.value = "";
     linuxUrl.value = "";
+    kernelUrl.value = "";
     linuxFile.value = "";
     fileName.textContent = "No local image selected";
     setActiveSource("none");
@@ -54,6 +55,7 @@ function setPresetFields(preset, controls) {
   setArchitecture(preset.architecture);
   backendUrl.value = preset.backend;
   linuxUrl.value = preset.image;
+  kernelUrl.value = preset.kernel || "";
   proxyUrl.value = preset.proxyUrl || DEFAULT_PROXY_URL;
   setMemory(Number.parseInt(preset.memory, 10) || 0);
   linuxFile.value = "";
