@@ -1,15 +1,13 @@
 export const DEFAULT_PROXY_URL = "https://no-cors.up.railway.app/";
 
-const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.27";
-const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.48";
+const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.28";
+const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.49";
 const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
-// Each guest is now an independent emulator + kernel + rootfs +
-// wanix-overlay quad. Overlay profile (minimal / crush / claude /
-// peri / zero / pi / golang / container / container-full) tracks
-// the userland tooling — the kernel profile (minimal / container)
-// is set independently via rv64-kernel-<arch>-<profile>.
+// Each guest combines independent emulator, kernel, rootfs, and a
+// per-architecture Wanix overlay. Rootfs profiles carry their own
+// userland packages; kernel profiles remain independently selectable.
 const guestRootfs = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
-const guestOverlay = (arch, profile = "") => `${RV64_RELEASE}/wanix-overlay-${arch}${profile}.tgz`;
+const guestOverlay = (arch) => `${RV64_RELEASE}/wanix-overlay-${arch}.tgz`;
 // Kernels ship raw. GitHub release CDN applies transport gzip on
 // HTTPS when the client sends Accept-Encoding: gzip; emulator
 // adapters read the kernel from the 9p filesystem (v86 auto-
@@ -93,13 +91,13 @@ export const presets = Object.fromEntries([
     .filter((group) => group.rootfs === "alpine")
     .flatMap((group) => guestProfiles.map(([name, suffix, label]) => [
       `${group.id}-${name}`,
-      { ...preset(group.architecture, group.backend, guestRootfs(group.imageArch, suffix), guestOverlay(group.imageArch, suffix), guestKernel(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), name === "container-full" ? "2048M" : "1024M"), label, profile: name, group: group.id },
+      { ...preset(group.architecture, group.backend, guestRootfs(group.imageArch, suffix), guestOverlay(group.imageArch), guestKernel(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), name === "container-full" ? "2048M" : "1024M"), label, profile: name, group: group.id },
     ])),
   ...presetGroups
     .filter((group) => group.rootfs === "arch")
     .flatMap((group) => archProfiles.map(([name, label, kind]) => [
       `${group.id}-${name}`,
-      { ...preset(group.architecture, group.backend, archRootfs(group.imageArch, kind), guestOverlay(group.imageArch, ""), guestKernel(group.imageArch, "minimal"), "1024M"), label, profile: name, rootfs: "arch", archKind: kind, group: group.id },
+      { ...preset(group.architecture, group.backend, archRootfs(group.imageArch, kind), guestOverlay(group.imageArch), guestKernel(group.imageArch, "minimal"), "1024M"), label, profile: name, rootfs: "arch", archKind: kind, group: group.id },
     ])),
 ]);
 

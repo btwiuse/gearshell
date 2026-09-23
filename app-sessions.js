@@ -338,22 +338,22 @@ export function destroyVmSession(id) {
 }
 
 // Binds mounted into the VM task namespace over the rootfs image:
+//   - optional standalone kernel image (kernelBindPath lands it
+//     under /boot/ where the matching adapter picks it up). v86
+//     auto-discovers boot/vmlinuz*|bzimage; rv64 hardcodes
+//     /boot/Image. The wanix overlay no longer bundles the kernel,
+//     so the host always binds it explicitly when kernelUrl is set;
 //   - the rootfs archive (Alpine or Arch);
 //   - the optional wanix overlay tarball (busybox + /bin/init +
 //     startnet/post-dhcp/domctl/workerctl + wexec/hostexport + /etc
 //     overlay + profile binaries), union-after the rootfs so its
 //     files override;
 //   - the boot rc + post-dhcp overlay.
-//
-// The kernel URL is NOT bound here. wanix-vm passes it through as a
-// -kernel <url> command-line argument to the emulator WASM, which
-// fetches the kernel directly; that keeps the host side from having
-// to know which /boot/Image vs /boot/bzImage vs /boot/vmlinuz path
-// each emulator adapter wants.
 function createVmGuestBinds(config) {
   const rc = config.bootRc;
   const dhcp = config.postDhcp;
   const overlayUrl = config.overlayUrl;
+  const kernelUrl = config.kernelUrl;
   return [
     createWanixBindElement({
       type: "archive",
@@ -366,6 +366,14 @@ function createVmGuestBinds(config) {
         dst: ".",
         src: overlayUrl,
         union: "after",
+      })]
+      : []),
+    ...(kernelUrl
+      ? [createWanixBindElement({
+        type: "file",
+        dst: kernelBindPath(config.type),
+        src: kernelUrl,
+        mode: "0644",
       })]
       : []),
     ...(rc
@@ -387,6 +395,17 @@ function createVmGuestBinds(config) {
   ];
 }
 
+// Pick a /boot/ destination that the matching adapter will pick up:
+// v86 auto-discovers files matching /vmlinuz|/bzimage under /boot/, so
+// vmlinuz works on both ext4 and 9p installs; the rv64 adapter hardcodes
+// /boot/Image. Anything else falls back to a generic boot/<name> path.
+function kernelBindPath(vmType) {
+  if (vmType === "rv64" || vmType === "rv64-legacy" || vmType === "rv64-jit") {
+    return "boot/Image";
+  }
+  return "boot/bzImage";
+}
+
 export function startVmSession(session, options = {}) {
   if (session.startPromise) return session.startPromise;
   const vmType = session.config.type || "v86";
@@ -401,7 +420,6 @@ export function startVmSession(session, options = {}) {
       mem=${session.config.memory}
       append=${session.config.append || null}
       netdev=${session.config.netdev || null}
-      kernel=${session.config.kernelUrl || null}
       term=""
       start=""
     >

@@ -45,18 +45,13 @@
       // not in the host app-constants: the archive is the x86 emulator
       // adapter, and the Linux rootfs is its guest image.
       var V86_BACKEND_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.48/v86.tgz";
+        "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.49/v86.tgz";
       var V86_LINUX_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.27/wanix-linux-x86.tgz";
-      // Wanix overlay (kernel + init + wexec + hostexport + /etc overlay
-      // + Arch busybox when the rootfs is Arch). Lives in the same
-      // release as the linux archive.
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/wanix-linux-x86.tgz";
       var V86_OVERLAY_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.27/wanix-overlay-x86.tgz";
-      // The standalone kernel asset (the wanix overlay carries its own
-      // boot/vmlinuz, but kernelUrl lets users override).
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/wanix-overlay-x86.tgz";
       var V86_KERNEL_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.27/rv64-kernel-x86-minimal";
+        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/rv64-kernel-x86-minimal";
 
       var state = {
         sessionId: null,

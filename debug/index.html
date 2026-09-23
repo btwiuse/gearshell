@@ -44,6 +44,7 @@ code { color: #79c0ff; }
 <label>Wanix wasm URL<input id="wasm-url" type="url" required></label>
 <div class="actions">
 <button type="submit">Save runtime URLs</button>
+<button id="fetch-latest" class="secondary" type="button">Fetch latest Wanix tag</button>
 <button id="reset-default" class="secondary" type="button">Reset Default</button>
 </div>
 <div id="status" role="status"></div>
@@ -66,9 +67,10 @@ code { color: #79c0ff; }
   var status = document.getElementById("status");
   var history = document.getElementById("history");
   var resetButton = document.getElementById("reset-default");
+  var latestButton = document.getElementById("fetch-latest");
   var DEFAULTS = {
-    moduleUrl: "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.46/dist/wanix.min.js",
-    wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.46"
+    moduleUrl: "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.49/dist/wanix.min.js",
+    wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.49"
   };
   function historyKey(id) { return "gear-shell-debug-runtime-history:" + id; }
   function readHistory(id) {
@@ -113,6 +115,33 @@ code { color: #79c0ff; }
     wasmInput.value = workspace.runtime && workspace.runtime.wasmUrl || DEFAULTS.wasmUrl;
     renderHistory();
   }
+  function runtimeUrls(tag) {
+    return {
+      moduleUrl: "https://cdn.jsdelivr.net/gh/justwasm/wanix@" + encodeURIComponent(tag) + "/dist/wanix.min.js",
+      wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@" + encodeURIComponent(tag)
+    };
+  }
+  async function fetchLatestTag() {
+    latestButton.disabled = true;
+    latestButton.textContent = "Fetching…";
+    status.textContent = "Fetching the latest Wanix release tag…";
+    try {
+      var response = await fetch("https://api.github.com/repos/justwasm/wanix/tags?per_page=1", {
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      if (!response.ok) throw new Error("GitHub API returned HTTP " + response.status + ".");
+      var tags = await response.json();
+      var tag = tags[0] && tags[0].name;
+      if (!tag) throw new Error("GitHub returned no Wanix tag.");
+      var urls = runtimeUrls(tag);
+      saveRuntime(activeId(), urls.moduleUrl, urls.wasmUrl, "Applied Wanix " + tag + ".");
+    } catch (error) {
+      status.textContent = "Unable to fetch the latest Wanix tag: " + (error.message || error);
+    } finally {
+      latestButton.disabled = false;
+      latestButton.textContent = "Fetch latest Wanix tag";
+    }
+  }
   function saveRuntime(id, moduleUrl, wasmUrl, message) {
     var workspace = loadWorkspace();
     var current = workspace.runtime || {};
@@ -132,6 +161,9 @@ code { color: #79c0ff; }
   });
   resetButton.addEventListener("click", function () {
     saveRuntime(activeId(), DEFAULTS.moduleUrl, DEFAULTS.wasmUrl, "Reset to default runtime URLs.");
+  });
+  latestButton.addEventListener("click", function () {
+    fetchLatestTag();
   });
   load();
 }());

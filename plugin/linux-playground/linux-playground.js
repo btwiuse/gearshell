@@ -20,6 +20,8 @@ const linuxUrl = $("linuxUrl");
 const kernelUrl = $("kernelUrl");
 const overlayUrl = $("overlayUrl");
 const imageDownload = $("imageDownload");
+const kernelDownload = $("kernelDownload");
+const overlayDownload = $("overlayDownload");
 const proxyUrl = $("proxyUrl");
 const memory = $("memory");
 const memoryInput = $("memoryInput");
@@ -114,6 +116,21 @@ function setMemory(value) {
 }
 
 const downloads = createImageDownloadManager(imageDownload);
+const kernelDownloads = createImageDownloadManager(kernelDownload);
+const overlayDownloads = createImageDownloadManager(overlayDownload);
+
+function proxiedResourceUrl(url) {
+  const prefix = proxyUrl.value.trim();
+  return prefix ? `${prefix}${url}` : url;
+}
+
+async function preloadResource(manager, url) {
+  if (!url) return null;
+  const proxied = proxiedResourceUrl(url);
+  manager.show(proxied);
+  return manager.load(proxied);
+}
+
 const presetLibrary = initPresetLibrary({
   presetGroupsElement: presetGroups,
   customPresetsElement: customPresets,
@@ -255,6 +272,14 @@ async function startVm() {
   updateLaunchLabel("PREPARING IMAGE");
   const archive = source.kind === "local" ? source.file : await preloadImage(proxiedUrl(source.url));
   const localUrl = URL.createObjectURL(archive);
+  const kernelSource = kernelUrl.value.trim();
+  const overlaySource = overlayUrl.value.trim();
+  await Promise.all([
+    preloadResource(kernelDownloads, kernelSource),
+    preloadResource(overlayDownloads, overlaySource),
+  ]);
+  const kernelSourceUrl = kernelSource ? proxiedResourceUrl(kernelSource) : null;
+  const overlaySourceUrl = overlaySource ? proxiedResourceUrl(overlaySource) : null;
   const id = `instance-${++instanceCounter}`;
   const host = document.createElement("div");
   host.className = "instance-host";
@@ -272,8 +297,8 @@ async function startVm() {
         architecture: getArchitecture().value,
         backend: proxiedUrl(backend),
         image: localUrl || linuxUrl.value.trim(),
-        overlay: overlayUrl.value.trim() || undefined,
-        kernel: kernelUrl.value.trim() || undefined,
+        overlay: overlaySourceUrl || undefined,
+        kernel: kernelSourceUrl || undefined,
         memory: `${memoryInMiB()}M`,
         append: [activePreset?.append, extraArgs.value.trim()].filter((s) => s && s.length > 0).join(" "),
       }), {

@@ -50,7 +50,7 @@ export async function deleteLinuxArchive(url) {
 
 async function fetchArchive(url, onProgress, signal) {
   const response = await fetch(url, { signal });
-  if (!response.ok) throw new Error(`Image download failed (${response.status}).`);
+  if (!response.ok) throw new Error(`Resource download failed (${response.status}).`);
   const total = Number(response.headers.get("content-length")) || 0;
   if (!response.body) return response.blob();
   const reader = response.body.getReader();

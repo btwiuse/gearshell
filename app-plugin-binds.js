@@ -82,8 +82,8 @@ function collectPluginFiles(managed, need, plugin) {
 // Collect the system-level managed binds for the enabled plugins
 // (systemFiles declarations): dst -> bind. These mount into the SYSTEM
 // root namespace (workspace.system.binds) and are visible to every task
-// via the ns clone. Since the kernel's js driver started reading worker
-// scripts from the task namespace (wanix v0.4.27), js workers can be
+// via the ns clone. Since the kernel's js driver reads worker
+// scripts from the task namespace, js workers can be
 // declared per-task with `files`; systemFiles remains for resources that
 // genuinely need to live in the root namespace.
 export function collectPluginSystemBinds(plugins) {
