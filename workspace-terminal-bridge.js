@@ -47,7 +47,7 @@ import { nextVmMac } from "./workspace-vm-mac.js";
 // (v86) that pass their own assets. These are the host fallback used only
 // when a session arrives without an explicit archive/rootfs.
 const FALLBACK_VM_BACKEND_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.49/v86.tgz";
+  "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.52/v86.tgz";
 const FALLBACK_VM_LINUX_URL =
   "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/wanix-linux-x86.tgz";
 // Standalone kernel asset (kernel is no longer bundled in the rootfs
