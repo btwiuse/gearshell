@@ -24,8 +24,10 @@ function render(state, element) {
   const progress = element.querySelector("progress");
   progress.value = state.total ? state.loaded / state.total : 0;
   progress.toggleAttribute("data-indeterminate", state.status === "loading" && !state.total);
-  element.querySelector("[data-download-action=cancel]").hidden = state.status !== "loading";
-  element.querySelector("[data-download-action=resume]").hidden = state.status === "loading";
+  const cancel = element.querySelector("[data-download-action=cancel]");
+  const resume = element.querySelector("[data-download-action=resume]");
+  if (cancel) cancel.hidden = state.status !== "loading";
+  if (resume) resume.hidden = state.status === "loading";
 }
 
 function stateFor(states, url) {
