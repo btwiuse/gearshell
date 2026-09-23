@@ -7,7 +7,8 @@ const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // per-architecture Wanix overlay. Rootfs profiles carry their own
 // userland packages; kernel profiles remain independently selectable.
 const guestRootfs = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
-const guestOverlay = (arch) => `${RV64_RELEASE}/wanix-overlay-${arch}.tgz`;
+const VM_ARCH = { rv64: "riscv64" };
+const guestOverlay = (arch) => `${RV64_RELEASE}/wanix-overlay-${VM_ARCH[arch] || arch}.tgz`;
 // Kernels ship raw. GitHub release CDN applies transport gzip on
 // HTTPS when the client sends Accept-Encoding: gzip; emulator
 // adapters read the kernel from the 9p filesystem (v86 auto-
@@ -15,7 +16,7 @@ const guestOverlay = (arch) => `${RV64_RELEASE}/wanix-overlay-${arch}.tgz`;
 // bytes on disk have to be raw ELF.
 const guestKernel = (arch, profile = "") => {
   const suffix = profile ? `-${profile}` : "";
-  return `${RV64_RELEASE}/rv64-kernel-${arch}${suffix}`;
+  return `${RV64_RELEASE}/rv64-kernel-${VM_ARCH[arch] || arch}${suffix}`;
 };
 // Arch Linux rootfs lives in btwiuse/archlinux. Map wanix-side arch
 // names to the btwiuse/archlinux tarball suffixes, then compose the

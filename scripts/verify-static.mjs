@@ -229,6 +229,9 @@ if (!has("justwasm/wanix/releases/download/v0.4.49/v86.tgz")) {
     "VM bridge sessions must fall back to the public v86 archive.",
   );
 }
+if (!has('VM_ARCH = { rv64: "riscv64" }')) {
+  throw new Error("RISC-V VM presets must use published riscv64 kernel assets.");
+}
 if (!has("Workbench assets URL or path")) {
   throw new Error("Workbench asset settings must accept local paths.");
 }
