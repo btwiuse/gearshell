@@ -4,10 +4,10 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 if [ "$(id -u)" -eq 0 ]; then
   export HOME=/root
 fi
-mount -t tmpfs tmpfs /tmp 2>/dev/null
-ifconfig lo up 2>/dev/null
-ifconfig eth0 up 2>/dev/null
-udhcpc -i eth0 -s /bin/post-dhcp 2>/dev/null
+/bin/busybox mount -t tmpfs tmpfs /tmp 2>/dev/null
+/bin/busybox ifconfig lo up 2>/dev/null
+/bin/busybox ifconfig eth0 up 2>/dev/null
+/bin/busybox udhcpc -i eth0 -s /bin/post-dhcp 2>/dev/null
 
 # Mount cgroup v2 so dockerd / podman / runc can manage resources
 # inside the guest. Minimal kernels (CGROUPS=no) have no sysfs marker
