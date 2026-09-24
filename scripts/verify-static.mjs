@@ -224,7 +224,7 @@ if (
 if (!has("terminal-profile-handle") || !has("onDragStart:")) {
   throw new Error("Terminal presets need drag reorder controls.");
 }
-if (!has("justwasm/wanix/releases/download/v0.4.52/v86.tgz")) {
+if (!has("justwasm/wanix/releases/download/v0.4.53/v86.tgz")) {
   throw new Error(
     "VM bridge sessions must fall back to the public v86 archive.",
   );
