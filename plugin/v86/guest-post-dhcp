@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/busybox sh
 case "$1" in
   bound|renew)
     /bin/busybox ifconfig "$interface" "$ip" netmask "$subnet" 2>/dev/null
