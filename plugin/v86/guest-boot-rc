@@ -4,6 +4,9 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 if [ "$(id -u)" -eq 0 ]; then
   export HOME=/root
 fi
+for applet in $(/bin/busybox --list); do
+  /bin/busybox ln -sf /bin/busybox "/bin/$applet"
+done
 /bin/busybox mount -t tmpfs tmpfs /tmp 2>/dev/null
 /bin/busybox ifconfig lo up 2>/dev/null
 /bin/busybox ifconfig eth0 up 2>/dev/null
@@ -14,7 +17,7 @@ fi
 # under /sys/fs/cgroup and no cgroup2 controller, so probe /proc/filesystems
 # before attempting the mount; on minimal this whole block is a no-op.
 # See memory/gearshell-vm-cgroup.md for why container kernels need both overlays.
-if grep -qw cgroup2 /proc/filesystems && [ -d /sys/fs/cgroup ]; then
-  mount -t tmpfs tmpfs /sys/fs/cgroup 2>/dev/null
-  mount -t cgroup2 cgroup2 /sys/fs/cgroup 2>/dev/null
+if /bin/busybox grep -qw cgroup2 /proc/filesystems && [ -d /sys/fs/cgroup ]; then
+  /bin/busybox mount -t tmpfs tmpfs /sys/fs/cgroup 2>/dev/null
+  /bin/busybox mount -t cgroup2 cgroup2 /sys/fs/cgroup 2>/dev/null
 fi

@@ -229,6 +229,13 @@ if (!has("justwasm/wanix/releases/download/v0.4.54/v86.tgz")) {
     "VM bridge sessions must fall back to the public v86 archive.",
   );
 }
+const v86BootRc = readFileSync(new URL("plugin/v86/guest-boot-rc", root), "utf8");
+if (!v86BootRc.includes("/bin/busybox ln -sf /bin/busybox \"/bin/$applet\"")) {
+  throw new Error("v86 boot must repair BusyBox applet links on its writable 9P layer.");
+}
+if (!v86BootRc.includes("/bin/busybox grep -qw cgroup2 /proc/filesystems")) {
+  throw new Error("v86 boot must not use unresolved BusyBox applet links.");
+}
 if (!has('VM_ARCH = { rv64: "riscv64" }')) {
   throw new Error("RISC-V VM presets must use published riscv64 kernel assets.");
 }
