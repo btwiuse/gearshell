@@ -1,6 +1,6 @@
 export const DEFAULT_PROXY_URL = "https://no-cors.up.railway.app/";
 
-const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.28";
+const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.33";
 const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.53";
 const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // Each guest combines independent emulator, kernel, rootfs, and a
