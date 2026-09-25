@@ -244,6 +244,7 @@ function buildVmCreateConfig(rawArgs) {
     backendUrl: req.backendUrl || fallback.backendUrl,
     linuxUrl: req.linuxUrl || fallback.linuxUrl,
     rootfs,
+    kernelArchiveUrl: req.kernelArchiveUrl || fallback.kernelArchiveUrl,
     kernelUrl: req.kernelUrl || fallback.kernelUrl,
     overlayUrl: req.overlayUrl || fallback.overlayUrl,
     memory: req.memory || "512M",

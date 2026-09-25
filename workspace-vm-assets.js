@@ -1,6 +1,6 @@
 export const VM_RESOURCE_VERSIONS = Object.freeze({
   wanix: "v0.4.58",
-  guest: "v0.4.36",
+  guest: "v0.4.40",
 });
 
 const WANIX_RELEASE = "https://github.com/justwasm/wanix/releases/download";
@@ -24,12 +24,14 @@ export const VM_ASSETS = Object.freeze({
     backendUrl: wanixReleaseAsset("v86.tgz"),
     linuxUrl: guestReleaseAsset("wanix-linux-x86.tgz"),
     overlayUrl: guestReleaseAsset("wanix-overlay-x86.tgz"),
+    kernelArchiveUrl: guestReleaseAsset("rv64-kernel-x86-minimal.tgz"),
     kernelUrl: guestReleaseAsset("rv64-kernel-x86-minimal"),
   }),
   rv64: Object.freeze({
     backendUrl: guestReleaseAsset("rv64.tgz"),
     linuxUrl: guestReleaseAsset("wanix-linux-rv64.tgz"),
     overlayUrl: guestReleaseAsset("wanix-overlay-riscv64.tgz"),
+    kernelArchiveUrl: guestReleaseAsset("rv64-kernel-riscv64-minimal.tgz"),
     kernelUrl: guestReleaseAsset("rv64-kernel-riscv64-minimal"),
   }),
 });

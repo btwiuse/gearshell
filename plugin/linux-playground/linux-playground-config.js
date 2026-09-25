@@ -12,15 +12,11 @@ const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 const guestRootfs = (arch, profile = "") => guestReleaseAsset(`wanix-linux-${arch}${profile}.tgz`);
 const VM_ARCH = { rv64: "riscv64" };
 const guestOverlay = (arch) => guestReleaseAsset(`wanix-overlay-${VM_ARCH[arch] || arch}.tgz`);
-// Kernels ship raw. GitHub release CDN applies transport gzip on
-// HTTPS when the client sends Accept-Encoding: gzip; emulator
-// adapters read the kernel from the 9p filesystem (v86 auto-
-// discovers boot/vmlinuz*; rv64 hardcodes /boot/Image), so the
-// bytes on disk have to be raw ELF.
 const guestKernel = (arch, profile = "") => {
   const suffix = profile ? `-${profile}` : "";
   return guestReleaseAsset(`rv64-kernel-${VM_ARCH[arch] || arch}${suffix}`);
 };
+const guestKernelArchive = (arch, profile = "") => `${guestKernel(arch, profile)}.tgz`;
 // Arch Linux rootfs lives in btwiuse/archlinux. Map wanix-side arch
 // names to the btwiuse/archlinux tarball suffixes, then compose the
 // URL for either base or bootstrap variants.
@@ -53,7 +49,7 @@ export function sliderFromMemory(value) {
   return Math.round(Math.log2(memory / 4096 * 4095 + 1) / 12 * memorySliderMax);
 }
 
-const preset = (architecture, backend, image, overlay, kernel, memory = "1024M") => ({ architecture, backend, image, overlay, kernel, bootRc: null, postDhcp: null, append: "", memory });
+const preset = (architecture, backend, image, overlay, kernel, kernelArchive, memory = "1024M") => ({ architecture, backend, image, overlay, kernel, kernelArchive, bootRc: null, postDhcp: null, append: "", memory });
 const x86Backend = wanixReleaseAsset("v86.tgz");
 const rv64Backend = guestReleaseAsset("rv64.tgz");
 const guestProfiles = [
@@ -95,13 +91,13 @@ export const presets = Object.fromEntries([
     .filter((group) => group.rootfs === "alpine")
     .flatMap((group) => guestProfiles.map(([name, suffix, label]) => [
       `${group.id}-${name}`,
-      { ...preset(group.architecture, group.backend, guestRootfs(group.imageArch, suffix), guestOverlay(group.imageArch), guestKernel(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), name === "container-full" ? "2048M" : "1024M"), label, profile: name, group: group.id },
+      { ...preset(group.architecture, group.backend, guestRootfs(group.imageArch, suffix), guestOverlay(group.imageArch), guestKernel(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), guestKernelArchive(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), name === "container-full" ? "2048M" : "1024M"), label, profile: name, group: group.id },
     ])),
   ...presetGroups
     .filter((group) => group.rootfs === "arch")
     .flatMap((group) => archProfiles.map(([name, label, kind]) => [
       `${group.id}-${name}`,
-      { ...preset(group.architecture, group.backend, archRootfs(group.imageArch, kind), guestOverlay(group.imageArch), guestKernel(group.imageArch, "minimal"), "1024M"), label, profile: name, rootfs: "arch", archKind: kind, group: group.id },
+      { ...preset(group.architecture, group.backend, archRootfs(group.imageArch, kind), guestOverlay(group.imageArch), guestKernel(group.imageArch, "minimal"), guestKernelArchive(group.imageArch, "minimal"), "1024M"), label, profile: name, rootfs: "arch", archKind: kind, group: group.id },
     ])),
 ]);
 

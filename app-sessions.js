@@ -349,51 +349,41 @@ export function destroyVmSession(id) {
 //     overlay + profile binaries), union-after the rootfs so its
 //     files override;
 //   - the boot rc + post-dhcp overlay.
-function createVmGuestBinds(config) {
-  const rc = config.bootRc;
-  const dhcp = config.postDhcp;
-  const overlayUrl = config.overlayUrl;
-  const kernelUrl = config.kernelUrl;
+function archiveBind(src, union = null) {
+  return createWanixBindElement({ type: "archive", dst: ".", src, union });
+}
+
+function rootfsBind(config) {
   const rootfs = config.rootfs || { type: "archive", src: config.linuxUrl };
+  return createWanixBindElement({
+    type: rootfs.type,
+    dst: ".",
+    src: rootfs.src,
+    platform: rootfs.platform,
+  });
+}
+
+function kernelBind(config) {
+  if (config.kernelArchiveUrl) return archiveBind(config.kernelArchiveUrl, "after");
+  if (!config.kernelUrl) return null;
+  return createWanixBindElement({
+    type: "file",
+    dst: kernelBindPath(config.type),
+    src: config.kernelUrl,
+    mode: "0644",
+  });
+}
+
+function hookBind(dst, src) {
+  return src ? createWanixBindElement({ type: "file", dst, src, mode: "0755" }) : null;
+}
+
+function createVmGuestBinds(config) {
   return [
-    createWanixBindElement({
-      type: rootfs.type,
-      dst: ".",
-      src: rootfs.src,
-      platform: rootfs.platform,
-    }),
-    ...(overlayUrl
-      ? [createWanixBindElement({
-        type: "archive",
-        dst: ".",
-        src: overlayUrl,
-        union: "after",
-      })]
-      : []),
-    ...(kernelUrl
-      ? [createWanixBindElement({
-        type: "file",
-        dst: kernelBindPath(config.type),
-        src: kernelUrl,
-        mode: "0644",
-      })]
-      : []),
-    ...(rc
-      ? [createWanixBindElement({
-        type: "file",
-        dst: "boot/rc",
-        src: rc,
-        mode: "0755",
-      })]
-      : []),
-    ...(dhcp
-      ? [createWanixBindElement({
-        type: "file",
-        dst: "bin/post-dhcp",
-        src: dhcp,
-        mode: "0755",
-      })]
-      : []),
+    rootfsBind(config),
+    ...(config.overlayUrl ? [archiveBind(config.overlayUrl, "after")] : []),
+    ...[kernelBind(config)].filter(Boolean),
+    ...[hookBind("boot/rc", config.bootRc), hookBind("bin/post-dhcp", config.postDhcp)].filter(Boolean),
   ];
 }
 

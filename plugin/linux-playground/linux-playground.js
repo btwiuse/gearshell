@@ -191,6 +191,7 @@ function vmSession(config) {
     linuxUrl: config.image,
     rootfs,
     overlayUrl: config.overlay || undefined,
+    kernelArchiveUrl: config.kernelArchive || undefined,
     kernelUrl: config.kernel || undefined,
     memory: config.memory,
     append: config.append,

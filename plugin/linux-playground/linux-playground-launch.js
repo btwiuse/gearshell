@@ -6,13 +6,16 @@ function prepareVmSource(deps, source) {
       : deps.preloadImage(deps.proxiedUrl(source.url));
   const kernelSource = deps.kernelUrl.value.trim();
   const overlaySource = deps.overlayUrl.value.trim();
+  const kernelArchiveSource = deps.activePreset()?.kernelArchive;
   return Promise.all([
     archive,
     deps.preloadResource(deps.kernelDownloads, kernelSource),
+    deps.preloadResource(deps.kernelDownloads, kernelArchiveSource),
     deps.preloadResource(deps.overlayDownloads, overlaySource),
   ]).then(([image]) => ({
     localUrl: image ? URL.createObjectURL(image) : null,
     kernel: kernelSource ? deps.proxiedResourceUrl(kernelSource) : undefined,
+    kernelArchive: kernelArchiveSource ? deps.proxiedResourceUrl(kernelArchiveSource) : undefined,
     overlay: overlaySource ? deps.proxiedResourceUrl(overlaySource) : undefined,
   }));
 }
@@ -27,6 +30,7 @@ function buildVmConfig(deps, backend, source, prepared) {
       ? { type: "oci", src: source.image, platform: architecture === "rv64" ? "linux/riscv64" : "linux/386" }
       : undefined,
     overlay: prepared.overlay,
+    kernelArchive: prepared.kernelArchive,
     kernel: prepared.kernel,
     memory: `${deps.memoryInMiB()}M`,
     append: [deps.activePreset()?.append, deps.extraArgs.value.trim()].filter((value) => value && value.length > 0).join(" "),
