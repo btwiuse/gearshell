@@ -41,17 +41,7 @@
       // page keeps v86's VM asset config, status bar and ghostty transform.
       var MOUNT_BUNDLE = "/plugin/terminal-mount.mjs";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
-      // v86-specific assets live with the plugin (like rv64's ASSET_BASE),
-      // not in the host app-constants: the archive is the x86 emulator
-      // adapter, and the Linux rootfs is its guest image.
-      var V86_BACKEND_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.55/v86.tgz";
-      var V86_LINUX_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.36/wanix-linux-x86.tgz";
-      var V86_OVERLAY_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.36/wanix-overlay-x86.tgz";
-      var V86_KERNEL_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.36/rv64-kernel-x86-minimal";
+      var VM_ASSETS;
 
       var state = {
         sessionId: null,
@@ -79,10 +69,10 @@
         var s = m.iframeSession(GearShell);
         s.create = function () {
           return GearShell.vm.create({
-            backendUrl: V86_BACKEND_URL,
-            linuxUrl: V86_LINUX_URL,
-            overlayUrl: V86_OVERLAY_URL,
-            kernelUrl: V86_KERNEL_URL,
+            backendUrl: VM_ASSETS.backendUrl,
+            linuxUrl: VM_ASSETS.linuxUrl,
+            overlayUrl: VM_ASSETS.overlayUrl,
+            kernelUrl: VM_ASSETS.kernelUrl,
             netdev: "user,type=virtio,relay_url=" + VNET_URL,
             bootRc: "/plugin/v86/guest-boot-rc",
             postDhcp: "/plugin/v86/guest-post-dhcp",
@@ -147,7 +137,14 @@
         });
       }
 
-      start();
+      import("/workspace-vm-assets.js").then(function (assets) {
+        VM_ASSETS = assets.VM_ASSETS.v86;
+        start();
+      }).catch(function (error) {
+        var msg = error && error.message ? error.message : String(error);
+        console.error("v86 asset configuration failed", error);
+        setStatus("error", "failed: " + msg);
+      });
     })();
   </script>
 </body>

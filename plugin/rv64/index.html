@@ -40,17 +40,7 @@
       // page keeps rv64's VM asset config, vnet wiring and status bar.
       var MOUNT_BUNDLE = "/plugin/terminal-mount.mjs";
       var VNET_URL = "wss://vnet.net.k0s.io/x/net";
-      // rv64-specific assets live with the plugin: rv64.tgz is the WANIX
-      // rv64 adapter (emulator WASM + loader), and wanix-linux-rv64.tgz is
-      // the RISC-V Alpine guest built by rv64.js/integrations/wanix.
-      var RV64_BACKEND_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/rv64.tgz";
-      var RV64_LINUX_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/wanix-linux-rv64.tgz";
-      var RV64_OVERLAY_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/wanix-overlay-riscv64.tgz";
-      var RV64_KERNEL_URL =
-        "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.28/rv64-kernel-riscv64-minimal";
+      var VM_ASSETS;
 
       var state = {
         sessionId: null,
@@ -79,10 +69,10 @@
         s.create = function () {
           return GearShell.vm.create({
             type: "rv64",
-            backendUrl: RV64_BACKEND_URL,
-            linuxUrl: RV64_LINUX_URL,
-            overlayUrl: RV64_OVERLAY_URL,
-            kernelUrl: RV64_KERNEL_URL,
+            backendUrl: VM_ASSETS.backendUrl,
+            linuxUrl: VM_ASSETS.linuxUrl,
+            overlayUrl: VM_ASSETS.overlayUrl,
+            kernelUrl: VM_ASSETS.kernelUrl,
             // Same shared vnet gateway as the v86 plugin: the adapter routes
             // the guest NIC through it (rv64.js wsproxy mode), and the guest
             // boot rc runs DHCP to pick up an address + DNS.
@@ -150,7 +140,14 @@
         });
       }
 
-      start();
+      import("/workspace-vm-assets.js").then(function (assets) {
+        VM_ASSETS = assets.VM_ASSETS.rv64;
+        start();
+      }).catch(function (error) {
+        var msg = error && error.message ? error.message : String(error);
+        console.error("rv64 asset configuration failed", error);
+        setStatus("error", "failed: " + msg);
+      });
     })();
   </script>
 </body>

@@ -42,22 +42,7 @@ import {
   getDefaultTerminalProfile,
 } from "./app-terminal-profiles.js";
 import { nextVmMac } from "./workspace-vm-mac.js";
-
-// The standalone VM panel was removed; vm.create is driven by plugins
-// (v86) that pass their own assets. These are the host fallback used only
-// when a session arrives without an explicit archive/rootfs.
-const FALLBACK_VM_BACKEND_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/v0.4.55/v86.tgz";
-const FALLBACK_VM_LINUX_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.36/wanix-linux-x86.tgz";
-// Standalone kernel asset (kernel is no longer bundled in the rootfs
-// archive). The fallback only ships x86; the rv64 plugin overrides it.
-const FALLBACK_VM_KERNEL_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.36/rv64-kernel-x86-minimal";
-// Shared per-architecture Wanix overlay: busybox + init + startnet/etc
-// + wexec/hostexport + /etc overlay. Binds union-after the rootfs archive.
-const FALLBACK_VM_OVERLAY_URL =
-  "https://no-cors.up.railway.app/https://github.com/justwasm/rv64.js/releases/download/v0.4.36/wanix-overlay-x86.tgz";
+import { VM_ASSETS } from "./workspace-vm-assets.js";
 
 // sessionId -> { session|vmSession, kind, stream, source, origin, disposed }
 // — kind is "task" (shell session) or "vm". The kernel stream (reader +
@@ -251,11 +236,12 @@ function handleVmCreate(event, id, args) {
 // unparameterized session working without re-introducing host VM config.
 function buildVmCreateConfig(rawArgs) {
   const req = (rawArgs && typeof rawArgs === "object") ? rawArgs : {};
+  const fallback = VM_ASSETS[req.type] || VM_ASSETS.v86;
   const config = {
-    backendUrl: req.backendUrl || FALLBACK_VM_BACKEND_URL,
-    linuxUrl: req.linuxUrl || FALLBACK_VM_LINUX_URL,
-    kernelUrl: req.kernelUrl || FALLBACK_VM_KERNEL_URL,
-    overlayUrl: req.overlayUrl || FALLBACK_VM_OVERLAY_URL,
+    backendUrl: req.backendUrl || fallback.backendUrl,
+    linuxUrl: req.linuxUrl || fallback.linuxUrl,
+    kernelUrl: req.kernelUrl || fallback.kernelUrl,
+    overlayUrl: req.overlayUrl || fallback.overlayUrl,
     memory: req.memory || "512M",
     netdev: req.netdev || "",
     ...req,

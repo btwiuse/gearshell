@@ -224,10 +224,17 @@ if (
 if (!has("terminal-profile-handle") || !has("onDragStart:")) {
   throw new Error("Terminal presets need drag reorder controls.");
 }
-if (!has("justwasm/wanix/releases/download/v0.4.55/v86.tgz")) {
-  throw new Error(
-    "VM bridge sessions must fall back to the public v86 archive.",
-  );
+const vmAssets = readFileSync(new URL("workspace-vm-assets.js", root), "utf8");
+if (!vmAssets.includes('wanix: "v0.4.55"') || !vmAssets.includes('guest: "v0.4.36"')) {
+  throw new Error("VM resource versions must stay centralized and current.");
+}
+if (vmAssets.includes("no-cors.up.railway.app")) {
+  throw new Error("VM asset URLs must not hard-code a CORS proxy.");
+}
+const v86Page = readFileSync(new URL("plugin/v86/index.html", root), "utf8");
+const rv64Page = readFileSync(new URL("plugin/rv64/index.html", root), "utf8");
+if (!v86Page.includes('import("/workspace-vm-assets.js")') || !rv64Page.includes('import("/workspace-vm-assets.js")')) {
+  throw new Error("VM launch paths must load their assets from the shared mapping.");
 }
 const v86BootRc = readFileSync(new URL("plugin/v86/guest-boot-rc", root), "utf8");
 if (!v86BootRc.includes("if grep -qw cgroup2 /proc/filesystems")) {

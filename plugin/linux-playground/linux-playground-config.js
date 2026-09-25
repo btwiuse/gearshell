@@ -1,14 +1,17 @@
+import {
+  guestReleaseAsset,
+  wanixReleaseAsset,
+} from "../../workspace-vm-assets.js";
+
 export const DEFAULT_PROXY_URL = "https://no-cors.up.railway.app/";
 
-const RV64_RELEASE = "https://github.com/justwasm/rv64.js/releases/download/v0.4.36";
-const V86_RELEASE = "https://github.com/justwasm/wanix/releases/download/v0.4.55";
 const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // Each guest combines independent emulator, kernel, rootfs, and a
 // per-architecture Wanix overlay. Rootfs profiles carry their own
 // userland packages; kernel profiles remain independently selectable.
-const guestRootfs = (arch, profile = "") => `${RV64_RELEASE}/wanix-linux-${arch}${profile}.tgz`;
+const guestRootfs = (arch, profile = "") => guestReleaseAsset(`wanix-linux-${arch}${profile}.tgz`);
 const VM_ARCH = { rv64: "riscv64" };
-const guestOverlay = (arch) => `${RV64_RELEASE}/wanix-overlay-${VM_ARCH[arch] || arch}.tgz`;
+const guestOverlay = (arch) => guestReleaseAsset(`wanix-overlay-${VM_ARCH[arch] || arch}.tgz`);
 // Kernels ship raw. GitHub release CDN applies transport gzip on
 // HTTPS when the client sends Accept-Encoding: gzip; emulator
 // adapters read the kernel from the 9p filesystem (v86 auto-
@@ -16,7 +19,7 @@ const guestOverlay = (arch) => `${RV64_RELEASE}/wanix-overlay-${VM_ARCH[arch] ||
 // bytes on disk have to be raw ELF.
 const guestKernel = (arch, profile = "") => {
   const suffix = profile ? `-${profile}` : "";
-  return `${RV64_RELEASE}/rv64-kernel-${VM_ARCH[arch] || arch}${suffix}`;
+  return guestReleaseAsset(`rv64-kernel-${VM_ARCH[arch] || arch}${suffix}`);
 };
 // Arch Linux rootfs lives in btwiuse/archlinux. Map wanix-side arch
 // names to the btwiuse/archlinux tarball suffixes, then compose the
@@ -51,8 +54,8 @@ export function sliderFromMemory(value) {
 }
 
 const preset = (architecture, backend, image, overlay, kernel, memory = "1024M") => ({ architecture, backend, image, overlay, kernel, bootRc: null, postDhcp: null, append: "", memory });
-const x86Backend = `${V86_RELEASE}/v86.tgz`;
-const rv64Backend = `${RV64_RELEASE}/rv64.tgz`;
+const x86Backend = wanixReleaseAsset("v86.tgz");
+const rv64Backend = guestReleaseAsset("rv64.tgz");
 const guestProfiles = [
   ["minimal", "", "Alpine minimal"],
   ["crush", "-crush", "Crush agent"],

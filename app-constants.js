@@ -3,6 +3,7 @@
 // built-in workspace presets. Pure data (500-line rule split).
 
 import { icons as LucideIcons } from "lucide-react";
+import { WANIX_RUNTIME_ASSETS } from "./workspace-vm-assets.js";
 import {
   DEFAULT_GEAR_BINARY_URL,
   DEFAULT_HUSH_BINARY_URL,
@@ -304,11 +305,7 @@ export const BUILTIN_TERMINAL_PROFILES = [
   },
 ];
 
-export const WANIX_RUNTIME = {
-  wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.54",
-  moduleUrl:
-    "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.54/dist/wanix.min.js",
-};
+export const WANIX_RUNTIME = WANIX_RUNTIME_ASSETS;
 
 // The shell toolset (bash/w9y/gear binaries + the rc file) now ships as
 // the `shell-tools` plugin (app-plugin-manifests.js): the plugin-declared

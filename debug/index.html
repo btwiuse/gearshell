@@ -55,7 +55,9 @@ code { color: #79c0ff; }
 <div id="history"></div>
 </section>
 </main>
-<script>
+<script type="module">
+import { WANIX_RUNTIME_ASSETS } from "/workspace-vm-assets.js";
+
 (function () {
   "use strict";
   var ACTIVE_KEY = "gear-shell-active-workspace";
@@ -68,10 +70,7 @@ code { color: #79c0ff; }
   var history = document.getElementById("history");
   var resetButton = document.getElementById("reset-default");
   var latestButton = document.getElementById("fetch-latest");
-  var DEFAULTS = {
-    moduleUrl: "https://cdn.jsdelivr.net/gh/justwasm/wanix@v0.4.54/dist/wanix.min.js",
-    wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@v0.4.54"
-  };
+  var DEFAULTS = WANIX_RUNTIME_ASSETS;
   function historyKey(id) { return "gear-shell-debug-runtime-history:" + id; }
   function readHistory(id) {
     try { return JSON.parse(localStorage.getItem(historyKey(id)) || "[]"); }
