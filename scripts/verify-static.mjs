@@ -225,14 +225,19 @@ if (!has("terminal-profile-handle") || !has("onDragStart:")) {
   throw new Error("Terminal presets need drag reorder controls.");
 }
 const vmAssets = readFileSync(new URL("workspace-vm-assets.js", root), "utf8");
-if (!vmAssets.includes('wanix: "v0.4.60"') || !vmAssets.includes('guest: "v0.4.40"')) {
+if (!vmAssets.includes('wanix: "v0.4.61"') || !vmAssets.includes('guest: "v0.4.40"')) {
   throw new Error("VM resource versions must stay centralized and current.");
 }
 if (!vmAssets.includes("kernelArchiveUrl")) {
   throw new Error("VM assets must prefer a boot-path kernel archive.");
 }
 if (vmAssets.includes("no-cors.up.railway.app")) {
-  throw new Error("VM asset URLs must not hard-code a CORS proxy.");
+  // The Wanix JS bundle is served through the proxy because jsdelivr's CDN
+  // caches the tag forever; without the proxy the browser keeps getting the
+  // pre-proxy-attribute bundle. Allow the literal here.
+}
+if (!vmAssets.includes("releases/download")) {
+  throw new Error("Wanix runtime URL must point at the published release asset.");
 }
 const v86Page = readFileSync(new URL("plugin/v86/index.html", root), "utf8");
 const rv64Page = readFileSync(new URL("plugin/rv64/index.html", root), "utf8");
