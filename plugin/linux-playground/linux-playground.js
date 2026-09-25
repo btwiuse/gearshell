@@ -317,6 +317,7 @@ const startVm = createVmLauncher({
   memoryInMiB,
   mountTerminal,
   observeTerminalProgress,
+  ociProxy: () => proxyUrl.value.trim(),
   overlayDownloads,
   overlayUrl,
   preloadImage,

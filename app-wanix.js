@@ -17,6 +17,7 @@ export function createWanixBindElement(bind) {
     dst=${bind.dst}
     src=${(bind.src && (cached || bind.src)) || null}
     platform=${bind.platform || null}
+    proxy=${bind.proxy || null}
     perm=${bind.mode || null}
     union=${bind.union || null}
   >${bind.content || null}</wanix-bind>`;

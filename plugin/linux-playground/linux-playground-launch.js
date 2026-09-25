@@ -20,7 +20,7 @@ function prepareVmSource(deps, source) {
 function buildVmConfig(deps, backend, source, prepared) {
   const architecture = deps.getArchitecture().value;
   const proxiedOci = source.kind === "oci"
-    ? { type: "oci", src: deps.proxiedResourceUrl(source.image), platform: architecture === "rv64" ? "linux/riscv64" : "linux/386" }
+    ? { type: "oci", src: deps.proxiedResourceUrl(source.image), proxy: deps.ociProxy(), platform: architecture === "rv64" ? "linux/riscv64" : "linux/386" }
     : undefined;
   return {
     architecture,

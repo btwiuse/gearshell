@@ -360,6 +360,7 @@ function rootfsBind(config) {
     dst: ".",
     src: rootfs.src,
     platform: rootfs.platform,
+    proxy: rootfs.proxy,
   });
 }
 
