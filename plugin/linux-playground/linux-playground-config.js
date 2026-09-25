@@ -49,7 +49,7 @@ export function sliderFromMemory(value) {
   return Math.round(Math.log2(memory / 4096 * 4095 + 1) / 12 * memorySliderMax);
 }
 
-const preset = (architecture, backend, image, overlay, kernel, kernelArchive, memory = "1024M") => ({ architecture, backend, image, overlay, kernel, kernelArchive, bootRc: null, postDhcp: null, append: "", memory });
+const preset = (architecture, backend, image, overlay, kernelArchive, memory = "1024M") => ({ architecture, backend, image, overlay, kernelArchive, bootRc: null, postDhcp: null, append: "", memory });
 const x86Backend = wanixReleaseAsset("v86.tgz");
 const rv64Backend = guestReleaseAsset("rv64.tgz");
 const guestProfiles = [
@@ -91,13 +91,13 @@ export const presets = Object.fromEntries([
     .filter((group) => group.rootfs === "alpine")
     .flatMap((group) => guestProfiles.map(([name, suffix, label]) => [
       `${group.id}-${name}`,
-      { ...preset(group.architecture, group.backend, guestRootfs(group.imageArch, suffix), guestOverlay(group.imageArch), guestKernel(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), guestKernelArchive(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), name === "container-full" ? "2048M" : "1024M"), label, profile: name, group: group.id },
+      { ...preset(group.architecture, group.backend, guestRootfs(group.imageArch, suffix), guestOverlay(group.imageArch), guestKernelArchive(group.imageArch, name === "container" || name === "container-full" ? "container" : "minimal"), name === "container-full" ? "2048M" : "1024M"), label, profile: name, group: group.id },
     ])),
   ...presetGroups
     .filter((group) => group.rootfs === "arch")
     .flatMap((group) => archProfiles.map(([name, label, kind]) => [
       `${group.id}-${name}`,
-      { ...preset(group.architecture, group.backend, archRootfs(group.imageArch, kind), guestOverlay(group.imageArch), guestKernel(group.imageArch, "minimal"), guestKernelArchive(group.imageArch, "minimal"), "1024M"), label, profile: name, rootfs: "arch", archKind: kind, group: group.id },
+      { ...preset(group.architecture, group.backend, archRootfs(group.imageArch, kind), guestOverlay(group.imageArch), guestKernelArchive(group.imageArch, "minimal"), "1024M"), label, profile: name, rootfs: "arch", archKind: kind, group: group.id },
     ])),
 ]);
 

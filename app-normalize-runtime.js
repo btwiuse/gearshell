@@ -5,9 +5,7 @@ import { WANIX_RUNTIME } from "./app-constants.js";
 
 const WANIX_RUNTIME_SEMVER = /^v\d+\.\d+\.\d+/;
 const LEGACY_WANIX_KERNEL_WASM = "v0.4.0";
-// Local-directory mounting needs the "localdir" bind type added in v0.4.11;
-// workspaces saved against older pins hit an unknown-type rejection instead.
-const MIN_LOCALDIR_RUNTIME = [0, 4, 11];
+const MIN_SUPPORTED_WANIX_RUNTIME = [0, 4, 58];
 
 function semverParts(ref) {
   const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(ref);
@@ -30,9 +28,8 @@ export function isLegacyWanixRuntimeUrl(url, kind) {
   }
   const ref = url.slice(url.lastIndexOf("@") + 1);
   if (WANIX_RUNTIME_SEMVER.test(ref)) {
-    return kind === "wasm" &&
-      (ref === LEGACY_WANIX_KERNEL_WASM ||
-        isOlderThan(ref, MIN_LOCALDIR_RUNTIME));
+    return ref === LEGACY_WANIX_KERNEL_WASM ||
+      isOlderThan(ref, MIN_SUPPORTED_WANIX_RUNTIME);
   }
   return true; // commit hashes, @main, or any other floating ref
 }
@@ -65,9 +62,11 @@ export async function resolveWanixRuntime(runtime = {}) {
   const configuredModule = configured.moduleUrl;
   const configuredWasm = configured.wasmUrl;
   if (!configuredModule || configuredModule === moduleUrl) {
-    // No override (or already the packaged default): load the default pair,
-    // keeping a configured wasm that points at the same module.
     return { moduleUrl, wasmUrl: configuredWasm || wasmUrl };
+  }
+  if (isLegacyWanixRuntimeUrl(configuredModule, "module") ||
+      isLegacyWanixRuntimeUrl(configuredWasm, "wasm")) {
+    return { moduleUrl, wasmUrl };
   }
   try {
     await import(configuredModule);

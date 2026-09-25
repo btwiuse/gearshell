@@ -42,11 +42,11 @@ function renderSavedPresets(element, savedPresets, applyPreset) {
 }
 
 function setPresetFields(preset, controls) {
-  const { backendUrl, linuxUrl, kernelUrl, overlayUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource } = controls;
+  const { backendUrl, linuxUrl, kernelArchiveUrl, overlayUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource } = controls;
   if (!preset) {
     backendUrl.value = "";
     linuxUrl.value = "";
-    kernelUrl.value = "";
+    kernelArchiveUrl.value = "";
     overlayUrl.value = "";
     linuxFile.value = "";
     fileName.textContent = "No local image selected";
@@ -56,7 +56,7 @@ function setPresetFields(preset, controls) {
   setArchitecture(preset.architecture);
   backendUrl.value = preset.backend;
   linuxUrl.value = preset.image;
-  kernelUrl.value = preset.kernel || "";
+  kernelArchiveUrl.value = preset.kernelArchive || "";
   overlayUrl.value = preset.overlay || "";
   proxyUrl.value = preset.proxyUrl || DEFAULT_PROXY_URL;
   setMemory(Number.parseInt(preset.memory, 10) || 0);
