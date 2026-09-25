@@ -3,6 +3,7 @@ import { clampMemory, DEFAULT_PROXY_URL, memoryFromSlider, presets, sliderFromMe
 import { createImageDownloadManager } from "/plugin/linux-playground/linux-image-downloads.js";
 import { initPresetLibrary } from "/plugin/linux-playground/linux-playground-presets.js";
 import { initScriptEditors } from "/plugin/linux-playground/linux-playground-scripts.js";
+import { createVmLauncher } from "/plugin/linux-playground/linux-playground-launch.js";
 
 const $ = (id) => document.getElementById(id);
 // Architecture radios (replaces the legacy <select>); all radios share
@@ -17,6 +18,7 @@ const setArchitecture = (value) => {
 };
 const backendUrl = $("backendUrl");
 const linuxUrl = $("linuxUrl");
+const ociImage = $("ociImage");
 const kernelUrl = $("kernelUrl");
 const overlayUrl = $("overlayUrl");
 const imageDownload = $("imageDownload");
@@ -172,18 +174,22 @@ function clearError() {
 }
 
 function selectedSource() {
+  const image = ociImage.value.trim();
+  if (image) return { kind: "oci", image };
   if (linuxFile.files[0]) return { kind: "local", file: linuxFile.files[0] };
   const url = linuxUrl.value.trim();
   if (url) return { kind: "remote", url };
-  throw new Error("Choose a local Linux image or enter a remote image URL.");
+  throw new Error("Choose an OCI image, local Linux image, or remote image URL.");
 }
 
 
 function vmSession(config) {
+  const rootfs = config.rootfs;
   const session = { create: () => GearShell.vm.create({
     type: config.architecture,
     backendUrl: config.backend,
     linuxUrl: config.image,
+    rootfs,
     overlayUrl: config.overlay || undefined,
     kernelUrl: config.kernel || undefined,
     memory: config.memory,
@@ -262,56 +268,69 @@ async function stopVm() {
   renderTabs();
 }
 
-async function startVm() {
-  clearError();
-  const backend = backendUrl.value.trim();
-  if (!backend) throw new Error("Enter the emulator backend URL.");
-  const source = selectedSource();
-  setStatus("loading", "PREPARING IMAGE");
-  launch.disabled = true;
-  updateLaunchLabel("PREPARING IMAGE");
-  const archive = source.kind === "local" ? source.file : await preloadImage(proxiedUrl(source.url));
-  const localUrl = URL.createObjectURL(archive);
-  const kernelSource = kernelUrl.value.trim();
-  const overlaySource = overlayUrl.value.trim();
-  await Promise.all([
-    preloadResource(kernelDownloads, kernelSource),
-    preloadResource(overlayDownloads, overlaySource),
-  ]);
-  const kernelSourceUrl = kernelSource ? proxiedResourceUrl(kernelSource) : null;
-  const overlaySourceUrl = overlaySource ? proxiedResourceUrl(overlaySource) : null;
+function createVmInstance(source, localUrl) {
   const id = `instance-${++instanceCounter}`;
   const host = document.createElement("div");
   host.className = "instance-host";
-  const instance = { id, host, handle: null, localUrl, ready: false, label: `${getArchitecture().value.toUpperCase()} #${instanceCounter}`, machine: `${getArchitecture().dataset.label} Linux`, source: source.kind === "local" ? source.file.name : source.url };
-  instances.set(id, instance);
+  const architecture = getArchitecture();
+  const sourceLabel = source.kind === "local"
+    ? source.file.name
+    : source.kind === "oci"
+      ? source.image
+      : source.url;
+  return {
+    id,
+    host,
+    handle: null,
+    localUrl,
+    ready: false,
+    label: `${architecture.value.toUpperCase()} #${instanceCounter}`,
+    machine: `${architecture.dataset.label} Linux`,
+    source: sourceLabel,
+  };
+}
+
+function showVmInstance(instance) {
+  instances.set(instance.id, instance);
   setup.hidden = true;
   terminalPanel.hidden = false;
-  activeInstance = id;
-  terminalStage.replaceChildren(host);
+  activeInstance = instance.id;
+  terminalStage.replaceChildren(instance.host);
   machineName.textContent = instance.machine;
   sourceName.textContent = instance.source;
   renderTabs();
-  updateLaunchLabel("LAUNCHING…");
-  instance.handle = await mountTerminal(host, vmSession({
-        architecture: getArchitecture().value,
-        backend: proxiedUrl(backend),
-        image: localUrl || linuxUrl.value.trim(),
-        overlay: overlaySourceUrl || undefined,
-        kernel: kernelSourceUrl || undefined,
-        memory: `${memoryInMiB()}M`,
-        append: [activePreset?.append, extraArgs.value.trim()].filter((s) => s && s.length > 0).join(" "),
-      }), {
-    ...ghosttyIdentity({ terminal: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", fontSize: 13, lineHeight: 1.25, scrollback: 10000, theme: { background: "#080c12", foreground: "#e6edf3", cursor: "#60a5fa", selectionBackground: "#2563eb66" } } }),
-    onData: () => { instance.ready = true; if (activeInstance === id) setStatus("ready", "RUNNING"); },
-    onExit: (event) => { if (activeInstance === id) showError(event?.error || "The virtual machine stopped."); },
-    onProgress: (data) => { if (activeInstance === id) observeTerminalProgress(data); },
-  });
-  if (activeInstance === id) handle = instance.handle;
-  setStatus("loading", "STARTING");
-  updateLaunchLabel("LAUNCH PLAYGROUND");
-  launch.disabled = false;
 }
+
+const startVm = createVmLauncher({
+  activeInstance: () => activeInstance,
+  activePreset: () => activePreset,
+  backendUrl,
+  clearError,
+  createVmInstance,
+  extraArgs,
+  getArchitecture,
+  ghosttyIdentity,
+  kernelDownloads,
+  kernelUrl,
+  launch,
+  linuxUrl,
+  memoryInMiB,
+  mountTerminal,
+  observeTerminalProgress,
+  overlayDownloads,
+  overlayUrl,
+  preloadImage,
+  preloadResource,
+  proxiedResourceUrl,
+  proxiedUrl,
+  selectedSource,
+  setHandle: (next) => { handle = next; },
+  setStatus,
+  showError,
+  showVmInstance,
+  updateLaunchLabel,
+  vmSession,
+});
 
 renderGroups();
 renderCustomPresets();
@@ -322,9 +341,19 @@ linuxFile.addEventListener("change", () => {
   fileName.textContent = file ? `${file.name} · ${(file.size / 1048576).toFixed(1)} MB` : "No local image selected";
   if (file) {
     linuxUrl.value = "";
+    ociImage.value = "";
     activePreset = null;
     setActiveSource("file");
   } else {
+    setActiveSource("none");
+  }
+});
+ociImage.addEventListener("input", () => {
+  if (ociImage.value.trim()) {
+    linuxFile.value = "";
+    linuxUrl.value = "";
+    activePreset = null;
+    imageDownload.hidden = true;
     setActiveSource("none");
   }
 });
@@ -332,6 +361,7 @@ linuxUrl.addEventListener("input", () => {
   const url = linuxUrl.value.trim();
   if (url) {
     linuxFile.value = "";
+    ociImage.value = "";
     activePreset = null;
     setActiveSource("url");
     downloads.show(proxiedUrl(url));
@@ -399,7 +429,7 @@ launch.addEventListener("click", () => startVm().catch((reason) => {
 stop.addEventListener("click", () => stopVm().catch((reason) => showError(String(reason?.message || reason))));
 newInstanceTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); clearError(); setStatus("idle", "READY TO CONFIGURE"); renderTabs(); });
 homeTab.addEventListener("click", () => { setup.hidden = false; terminalPanel.hidden = true; homeTab.classList.add("active"); renderTabs(); });
-reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; kernelUrl.value = ""; overlayUrl.value = ""; proxyUrl.value = DEFAULT_PROXY_URL; setMemory(1024); linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
+reset.addEventListener("click", () => { backendUrl.value = ""; linuxUrl.value = ""; ociImage.value = ""; kernelUrl.value = ""; overlayUrl.value = ""; proxyUrl.value = DEFAULT_PROXY_URL; setMemory(1024); linuxFile.value = ""; fileName.textContent = "No local image selected"; clearError(); setActiveSource("none"); });
 
 
 // Debug utility: drop the IndexedDB archive cache (Linux images keyed

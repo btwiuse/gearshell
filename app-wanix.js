@@ -16,6 +16,7 @@ export function createWanixBindElement(bind) {
     type=${bind.type && bind.type !== "ns" ? bind.type : null}
     dst=${bind.dst}
     src=${(bind.src && (cached || bind.src)) || null}
+    platform=${bind.platform || null}
     perm=${bind.mode || null}
     union=${bind.union || null}
   >${bind.content || null}</wanix-bind>`;

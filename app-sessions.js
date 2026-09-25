@@ -354,11 +354,13 @@ function createVmGuestBinds(config) {
   const dhcp = config.postDhcp;
   const overlayUrl = config.overlayUrl;
   const kernelUrl = config.kernelUrl;
+  const rootfs = config.rootfs || { type: "archive", src: config.linuxUrl };
   return [
     createWanixBindElement({
-      type: "archive",
+      type: rootfs.type,
       dst: ".",
-      src: config.linuxUrl,
+      src: rootfs.src,
+      platform: rootfs.platform,
     }),
     ...(overlayUrl
       ? [createWanixBindElement({

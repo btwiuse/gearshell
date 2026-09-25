@@ -1,5 +1,5 @@
 export const VM_RESOURCE_VERSIONS = Object.freeze({
-  wanix: "v0.4.55",
+  wanix: "v0.4.57",
   guest: "v0.4.36",
 });
 

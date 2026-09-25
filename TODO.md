@@ -2479,6 +2479,15 @@ WANIX_GUEST_ARCH=x86 WANIX_ROOTFS_PROFILE=minimal \
 - [ ] 将所有硬编码的临时 Release tag 升级为每个上游仓库的正式稳定 tag；目前 GearShell 指向 `justwasm/wanix` v86 archive、`justwasm/rv64.js` rv64 archive，以及 `wanix-guests-rc33` rootfs。
 - [ ] 为 large Release assets 部署受限 allowlist 的 CORS/R2 Worker；不要以公共第三方 CORS proxy 作为生产依赖。
 
+## OCI guest rootfs layering
+
+- [ ] 让 Linux guest 可用 OCI image reference 指定用户态 rootfs，并按 manifest 顺序应用 layer。
+- [ ] 实现 OCI manifest/index 解析、架构选择、digest 校验、压缩 layer 拉取和浏览器端缓存。
+- [ ] 将 OCI whiteout 与 opaque-directory 语义映射到 WANIX namespace union，保证 image layer 的删除与遮蔽正确。
+- [ ] OCI rootfs 之后自动叠加架构对应 WANIX overlay、boot rc 与 DHCP hook；保持 kernel、initrd、emulator、内存、网络和 9P 策略独立配置。
+- [ ] 固化 OCI guest browser smoke test：覆盖 layer precedence、whiteout、WANIX overlay precedence、正常 `/bin/init`/`/bin/sh` 启动和 kernel 与 image digest 解耦。
+- [ ] 设计记录见 `memory/oci-guest-layers.md`。
+
 ## 待办状态(汇总)
 
 按"做对的事"原则,本里程碑只做调研 + 文档,不写实现代码。后续

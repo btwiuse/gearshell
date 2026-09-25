@@ -237,9 +237,13 @@ function handleVmCreate(event, id, args) {
 function buildVmCreateConfig(rawArgs) {
   const req = (rawArgs && typeof rawArgs === "object") ? rawArgs : {};
   const fallback = VM_ASSETS[req.type] || VM_ASSETS.v86;
+  const rootfs = req.rootfs?.type === "oci"
+    ? { type: "oci", src: req.rootfs.src, platform: req.rootfs.platform }
+    : null;
   const config = {
     backendUrl: req.backendUrl || fallback.backendUrl,
     linuxUrl: req.linuxUrl || fallback.linuxUrl,
+    rootfs,
     kernelUrl: req.kernelUrl || fallback.kernelUrl,
     overlayUrl: req.overlayUrl || fallback.overlayUrl,
     memory: req.memory || "512M",
