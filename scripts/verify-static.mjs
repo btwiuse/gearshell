@@ -232,12 +232,10 @@ if (!vmAssets.includes("kernelArchiveUrl")) {
   throw new Error("VM assets must prefer a boot-path kernel archive.");
 }
 if (vmAssets.includes("no-cors.up.railway.app")) {
-  // The Wanix JS bundle is served through the proxy because jsdelivr's CDN
-  // caches the tag forever; without the proxy the browser keeps getting the
-  // pre-proxy-attribute bundle. Allow the literal here.
+  throw new Error("VM asset URLs must not hard-code a CORS proxy.");
 }
-if (!vmAssets.includes("releases/download")) {
-  throw new Error("Wanix runtime URL must point at the published release asset.");
+if (!vmAssets.includes("wanix-min") || !vmAssets.includes("releases/download")) {
+  throw new Error("Wanix JS URL must point at the justwasm/wanix-min mirror.");
 }
 const v86Page = readFileSync(new URL("plugin/v86/index.html", root), "utf8");
 const rv64Page = readFileSync(new URL("plugin/rv64/index.html", root), "utf8");

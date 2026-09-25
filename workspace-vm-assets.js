@@ -15,7 +15,7 @@ export function guestReleaseAsset(name) {
 }
 
 export const WANIX_RUNTIME_ASSETS = Object.freeze({
-  moduleUrl: `https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/${VM_RESOURCE_VERSIONS.wanix}/wanix.min.js`,
+  moduleUrl: `https://cdn.jsdelivr.net/gh/justwasm/wanix-min@${VM_RESOURCE_VERSIONS.wanix}/wanix.min.js`,
   wasmUrl: `https://w9y.io/go/github.com/justwasm/wanix/wasm@${VM_RESOURCE_VERSIONS.wanix}`,
 });
 

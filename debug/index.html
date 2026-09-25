@@ -117,7 +117,7 @@ import { WANIX_RUNTIME_ASSETS } from "/workspace-vm-assets.js";
   function runtimeUrls(tag) {
     var encoded = encodeURIComponent(tag);
     return {
-      moduleUrl: "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/" + encoded + "/wanix.min.js",
+      moduleUrl: "https://cdn.jsdelivr.net/gh/justwasm/wanix-min@" + encoded + "/wanix.min.js",
       wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@" + encoded
     };
   }
