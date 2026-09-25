@@ -236,6 +236,10 @@ const rv64Page = readFileSync(new URL("plugin/rv64/index.html", root), "utf8");
 if (!v86Page.includes('import("/workspace-vm-assets.js")') || !rv64Page.includes('import("/workspace-vm-assets.js")')) {
   throw new Error("VM launch paths must load their assets from the shared mapping.");
 }
+const debugPage = readFileSync(new URL("debug/index.html", root), "utf8");
+if (!debugPage.includes("/releases/latest") || debugPage.includes("/tags?per_page=1")) {
+  throw new Error("Runtime debug must use the latest published Wanix release.");
+}
 const v86BootRc = readFileSync(new URL("plugin/v86/guest-boot-rc", root), "utf8");
 if (!v86BootRc.includes("if grep -qw cgroup2 /proc/filesystems")) {
   throw new Error("v86 boot must use the restored BusyBox applet links.");

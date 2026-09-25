@@ -125,13 +125,13 @@ import { WANIX_RUNTIME_ASSETS } from "/workspace-vm-assets.js";
     latestButton.textContent = "Fetching…";
     status.textContent = "Fetching the latest Wanix release tag…";
     try {
-      var response = await fetch("https://api.github.com/repos/justwasm/wanix/tags?per_page=1", {
+      var response = await fetch("https://api.github.com/repos/justwasm/wanix/releases/latest", {
         headers: { Accept: "application/vnd.github+json" }
       });
       if (!response.ok) throw new Error("GitHub API returned HTTP " + response.status + ".");
-      var tags = await response.json();
-      var tag = tags[0] && tags[0].name;
-      if (!tag) throw new Error("GitHub returned no Wanix tag.");
+      var release = await response.json();
+      var tag = release.tag_name;
+      if (!/^v\d+\.\d+\.\d+$/.test(tag || "")) throw new Error("GitHub returned an invalid Wanix release tag.");
       var urls = runtimeUrls(tag);
       saveRuntime(activeId(), urls.moduleUrl, urls.wasmUrl, "Applied Wanix " + tag + ".");
     } catch (error) {
