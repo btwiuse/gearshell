@@ -19,13 +19,14 @@ function prepareVmSource(deps, source) {
 
 function buildVmConfig(deps, backend, source, prepared) {
   const architecture = deps.getArchitecture().value;
+  const proxiedOci = source.kind === "oci"
+    ? { type: "oci", src: deps.proxiedResourceUrl(source.image), platform: architecture === "rv64" ? "linux/riscv64" : "linux/386" }
+    : undefined;
   return {
     architecture,
     backend: deps.proxiedUrl(backend),
     image: prepared.localUrl || deps.linuxUrl.value.trim(),
-    rootfs: source.kind === "oci"
-      ? { type: "oci", src: source.image, platform: architecture === "rv64" ? "linux/riscv64" : "linux/386" }
-      : undefined,
+    rootfs: proxiedOci,
     overlay: prepared.overlay,
     kernelArchive: prepared.kernelArchive,
     memory: `${deps.memoryInMiB()}M`,
