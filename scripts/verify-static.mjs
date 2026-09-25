@@ -225,7 +225,7 @@ if (!has("terminal-profile-handle") || !has("onDragStart:")) {
   throw new Error("Terminal presets need drag reorder controls.");
 }
 const vmAssets = readFileSync(new URL("workspace-vm-assets.js", root), "utf8");
-if (!vmAssets.includes('wanix: "v0.4.57"') || !vmAssets.includes('guest: "v0.4.36"')) {
+if (!vmAssets.includes('wanix: "v0.4.58"') || !vmAssets.includes('guest: "v0.4.36"')) {
   throw new Error("VM resource versions must stay centralized and current.");
 }
 if (vmAssets.includes("no-cors.up.railway.app")) {
