@@ -115,9 +115,10 @@ import { WANIX_RUNTIME_ASSETS } from "/workspace-vm-assets.js";
     renderHistory();
   }
   function runtimeUrls(tag) {
+    var encoded = encodeURIComponent(tag);
     return {
-      moduleUrl: "https://cdn.jsdelivr.net/gh/justwasm/wanix@" + encodeURIComponent(tag) + "/dist/wanix.min.js",
-      wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@" + encodeURIComponent(tag)
+      moduleUrl: "https://no-cors.up.railway.app/https://github.com/justwasm/wanix/releases/download/" + encoded + "/wanix.min.js",
+      wasmUrl: "https://w9y.io/go/github.com/justwasm/wanix/wasm@" + encoded
     };
   }
   async function fetchLatestTag() {
