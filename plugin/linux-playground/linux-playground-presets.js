@@ -42,7 +42,7 @@ function renderSavedPresets(element, savedPresets, applyPreset) {
 }
 
 function setPresetFields(preset, controls) {
-  const { backendUrl, linuxUrl, kernelArchiveUrl, overlayUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource } = controls;
+  const { backendUrl, linuxUrl, kernelArchiveUrl, overlayUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource, setRootfsSource } = controls;
   if (!preset) {
     backendUrl.value = "";
     linuxUrl.value = "";
@@ -54,6 +54,7 @@ function setPresetFields(preset, controls) {
     return;
   }
   setArchitecture(preset.architecture);
+  setRootfsSource("url");
   backendUrl.value = preset.backend;
   linuxUrl.value = preset.image;
   kernelArchiveUrl.value = preset.kernelArchive || "";

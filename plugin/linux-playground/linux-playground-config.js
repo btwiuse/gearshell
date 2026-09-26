@@ -11,10 +11,15 @@ const ARCH_RELEASE = "https://github.com/btwiuse/archlinux/releases/latest";
 // userland packages; kernel profiles remain independently selectable.
 const guestRootfs = (arch, profile = "") => guestReleaseAsset(`wanix-linux-${arch}${profile}.tgz`);
 const VM_ARCH = { rv64: "riscv64" };
-const guestOverlay = (arch) => guestReleaseAsset(`wanix-overlay-${VM_ARCH[arch] || arch}.tgz`);
+const GUEST_ARCH = {
+  x86: "x86",
+  i686: "x86",
+  rv64: "riscv64",
+};
+const guestOverlay = (arch) => guestReleaseAsset(`wanix-overlay-${GUEST_ARCH[arch] || arch}.tgz`);
 const guestKernel = (arch, profile = "") => {
   const suffix = profile ? `-${profile}` : "";
-  return guestReleaseAsset(`rv64-kernel-${VM_ARCH[arch] || arch}${suffix}`);
+  return guestReleaseAsset(`rv64-kernel-${GUEST_ARCH[arch] || arch}${suffix}`);
 };
 const guestKernelArchive = (arch, profile = "") => `${guestKernel(arch, profile)}.tgz`;
 // Arch Linux rootfs lives in btwiuse/archlinux. Map wanix-side arch

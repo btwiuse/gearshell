@@ -9,6 +9,15 @@ const $ = (id) => document.getElementById(id);
 // Architecture radios (replaces the legacy <select>); all radios share
 // name="architecture" so getArchitecture() returns the currently checked one.
 const architectureInputs = document.querySelectorAll('input[name="architecture"]');
+const rootfsSourceInputs = document.querySelectorAll('input[name="rootfsSource"]');
+const ociImageField = $("ociImageField");
+const getRootfsSource = () => [...rootfsSourceInputs].find((input) => input.checked)?.value || "url";
+const setRootfsSource = (value) => {
+  for (const input of rootfsSourceInputs) input.checked = input.value === value;
+  linuxUrlField.hidden = value !== "url";
+  ociImageField.hidden = value !== "oci";
+  linuxFileField.hidden = value !== "file";
+};
 const getArchitecture = () => {
   for (const input of architectureInputs) if (input.checked) return input;
   return architectureInputs[0];
@@ -84,11 +93,10 @@ const sourceName = $("sourceName");
 const VNET_URL = "wss://vnet.net.k0s.io/x/net";
 const bootRcDefaults = { v86: "/plugin/v86/guest-boot-rc", rv64: "/plugin/rv64/guest-boot-rc" };
 const postDhcpDefaults = { v86: "/plugin/v86/guest-post-dhcp", rv64: "/plugin/rv64/guest-post-dhcp" };
-let handle = null;
+let handle = null, instanceCounter = 0;
 let activeInstance = null;
 let activePreset = presets.v86;
 let activePresetName = "v86";
-let instanceCounter = 0;
 const instances = new Map();
 const observeTerminalProgress = progressIndicator(terminalProgress);
 const { refreshBootRcText, refreshPostDhcpText, saveScriptEdit } = initScriptEditors({
@@ -144,6 +152,7 @@ const presetLibrary = initPresetLibrary({
   linuxFile,
   fileName,
   setArchitecture,
+  setRootfsSource,
   setMemory,
   setActiveSource,
   updateLaunchLabel,
@@ -174,14 +183,20 @@ function clearError() {
 }
 
 function selectedSource() {
-  const image = ociImage.value.trim();
-  if (image) return { kind: "oci", image };
-  if (linuxFile.files[0]) return { kind: "local", file: linuxFile.files[0] };
+  const source = getRootfsSource();
+  if (source === "oci") {
+    const image = ociImage.value.trim();
+    if (image) return { kind: "oci", image };
+    throw new Error("Enter an OCI image reference, for example ubuntu:latest.");
+  }
+  if (source === "file") {
+    if (linuxFile.files[0]) return { kind: "local", file: linuxFile.files[0] };
+    throw new Error("Choose a local rootfs image file.");
+  }
   const url = linuxUrl.value.trim();
   if (url) return { kind: "remote", url };
-  throw new Error("Choose an OCI image, local Linux image, or remote image URL.");
+  throw new Error("Enter a remote rootfs archive URL.");
 }
-
 
 function vmSession(config) {
   const rootfs = config.rootfs;
@@ -336,6 +351,14 @@ const startVm = createVmLauncher({
 renderGroups();
 renderCustomPresets();
 applyPreset("v86-minimal");
+
+for (const input of rootfsSourceInputs) {
+  input.addEventListener("change", () => {
+    setRootfsSource(input.value);
+    activePreset = null;
+  });
+}
+setRootfsSource("url");
 
 linuxFile.addEventListener("change", () => {
   const file = linuxFile.files[0];
