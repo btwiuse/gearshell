@@ -9,7 +9,6 @@ fi
 # runs DHCP exactly like the v86 plugin to get an address, a default route
 # and a resolver from the gateway.
 mount -t tmpfs tmpfs /tmp 2>/dev/null
-mkdir -p /proc /sys /sys/fs/cgroup
 ifconfig lo up 2>/dev/null
 ifconfig eth0 up 2>/dev/null
 udhcpc -i eth0 -s /bin/post-dhcp 2>/dev/null
