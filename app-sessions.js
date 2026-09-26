@@ -361,6 +361,8 @@ function rootfsBind(config) {
     src: rootfs.src,
     platform: rootfs.platform,
     proxy: rootfs.proxy,
+    cache: rootfs.cache !== false,
+    cacheRoot: rootfs.cacheRoot,
   });
 }
 

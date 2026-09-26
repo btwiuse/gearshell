@@ -238,7 +238,7 @@ function buildVmCreateConfig(rawArgs) {
   const req = (rawArgs && typeof rawArgs === "object") ? rawArgs : {};
   const fallback = VM_ASSETS[req.type] || VM_ASSETS.v86;
   const rootfs = req.rootfs?.type === "oci"
-    ? { type: "oci", src: req.rootfs.src, platform: req.rootfs.platform, proxy: req.rootfs.proxy }
+    ? { type: "oci", src: req.rootfs.src, platform: req.rootfs.platform, proxy: req.rootfs.proxy, cache: req.rootfs.cache !== false, cacheRoot: req.rootfs.cacheRoot }
     : null;
   const config = {
     backendUrl: req.backendUrl || fallback.backendUrl,
