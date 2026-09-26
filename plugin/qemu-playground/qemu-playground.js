@@ -10,7 +10,7 @@ function setStatus(mode, text) {
 function loadScript(name) {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `${DEMO_ROOT}${name}`;
+    script.src = name.startsWith("http") ? name : `${DEMO_ROOT}${name}`;
     script.onload = resolve;
     script.onerror = () => reject(new Error(`Could not load ${name}.`));
     document.head.append(script);
@@ -36,16 +36,17 @@ async function start() {
   if (!window.crossOriginIsolated) {
     throw new Error("QEMU-Wasm requires cross-origin isolation.");
   }
-  await Promise.all(["load-rootfs.js", "load-kernel.js", "load-initramfs.js", "load-rom.js"].map(loadScript));
   const module = configureModule();
-  const [{ Terminal }, { openpty }, { default: initEmscriptenModule }] = await Promise.all([
-    import("https://unpkg.com/xterm@5.3.0/lib/xterm.js"),
-    import("https://unpkg.com/xterm-pty/index.js"),
-    import(`${DEMO_ROOT}out.js`),
-  ]);
-  const terminal = new Terminal({ cursorBlink: true, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", fontSize: 13, theme: { background: "#080c12", foreground: "#e6edf3" } });
+  await loadScript("https://unpkg.com/xterm@5.3.0/lib/xterm.js");
+  await loadScript("https://unpkg.com/xterm-pty/index.js");
+  await Promise.all(["load-rootfs.js", "load-kernel.js", "load-initramfs.js", "load-rom.js"].map(loadScript));
+  if (typeof window.Terminal !== "function" || typeof window.openpty !== "function") {
+    throw new Error("QEMU-Wasm terminal dependencies did not load.");
+  }
+  const { default: initEmscriptenModule } = await import(`${DEMO_ROOT}out.js`);
+  const terminal = new window.Terminal({ cursorBlink: true, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", fontSize: 13, theme: { background: "#080c12", foreground: "#e6edf3" } });
   terminal.open($("terminal"));
-  const { master, slave } = openpty();
+  const { master, slave } = window.openpty();
   terminal.loadAddon(master);
   module.pty = slave;
   setStatus("loading", "booting Alpine…");
