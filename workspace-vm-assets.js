@@ -1,6 +1,6 @@
 export const VM_RESOURCE_VERSIONS = Object.freeze({
   wanix: "v0.4.66",
-  guest: "v0.4.40",
+  guest: "v0.4.43",
 });
 
 const WANIX_RELEASE = "https://github.com/justwasm/wanix/releases/download";

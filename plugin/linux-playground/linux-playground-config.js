@@ -99,7 +99,7 @@ const ociImages = [
   ["oci-rv64-ghcr-busybox", "GHCR · BusyBox", "ghcr.io/dockerhub-mirror/busybox:latest", "oci-rv64", "GHCR"],
   ["oci-rv64-docker-alpine", "Docker Hub · Alpine", "docker.io/library/alpine:3.24", "oci-rv64", "Docker Hub"],
 ];
-const OCI_ROOTFS_TAG = "v0.4.42";
+const OCI_ROOTFS_TAG = "v0.4.43";
 const ociRootfsProfiles = [
   ["v86", "x86", "oci-v86"],
   ["rv64", "riscv64", "oci-rv64"],
