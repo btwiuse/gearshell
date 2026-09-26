@@ -42,7 +42,7 @@ function renderSavedPresets(element, savedPresets, applyPreset) {
 }
 
 function setPresetFields(preset, controls) {
-  const { backendUrl, linuxUrl, kernelArchiveUrl, overlayUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource, setRootfsSource } = controls;
+  const { backendUrl, linuxUrl, ociImage, kernelArchiveUrl, overlayUrl, proxyUrl, linuxFile, fileName, setArchitecture, setMemory, setActiveSource, setRootfsSource } = controls;
   if (!preset) {
     backendUrl.value = "";
     linuxUrl.value = "";
@@ -54,20 +54,25 @@ function setPresetFields(preset, controls) {
     return;
   }
   setArchitecture(preset.architecture);
-  setRootfsSource("url");
+  setRootfsSource(preset.rootfs === "oci" ? "oci" : "url");
   backendUrl.value = preset.backend;
-  linuxUrl.value = preset.image;
+  linuxUrl.value = preset.rootfs === "oci" ? "" : preset.image;
+  ociImage.value = preset.rootfs === "oci" ? preset.image : "";
   kernelArchiveUrl.value = preset.kernelArchive || "";
   overlayUrl.value = preset.overlay || "";
   proxyUrl.value = preset.proxyUrl || DEFAULT_PROXY_URL;
   setMemory(Number.parseInt(preset.memory, 10) || 0);
   linuxFile.value = "";
   fileName.textContent = "Preparing preset image…";
-  setActiveSource("url");
+  setActiveSource(preset.rootfs === "oci" ? "none" : "url");
 }
 
 function updateImageStatus(preset, proxiedUrl, downloads, fileName) {
   if (!preset) return;
+  if (preset.rootfs === "oci") {
+    fileName.textContent = "OCI image selected";
+    return;
+  }
   const url = proxiedUrl(preset.image);
   downloads.show(url);
   downloads.load(url).then((archive) => {

@@ -54,7 +54,7 @@ export function sliderFromMemory(value) {
   return Math.round(Math.log2(memory / 4096 * 4095 + 1) / 12 * memorySliderMax);
 }
 
-const preset = (architecture, backend, image, overlay, kernelArchive, memory = "1024M") => ({ architecture, backend, image, overlay, kernelArchive, bootRc: null, postDhcp: null, append: "", memory });
+const preset = (architecture, backend, image, overlay, kernelArchive, memory = "1024M", rootfs = "archive") => ({ architecture, backend, image, overlay, kernelArchive, rootfs, bootRc: null, postDhcp: null, append: "", memory });
 const x86Backend = wanixReleaseAsset("v86.tgz");
 const rv64Backend = guestReleaseAsset("rv64.tgz");
 const guestProfiles = [
@@ -89,7 +89,27 @@ export const presetGroups = [
   { id: "rv64", title: "RISC-V 64 · rv64.js", architecture: "rv64", backend: rv64Backend, imageArch: "rv64", rootfs: "alpine" },
   { id: "rv64-arch", title: "RISC-V 64 · Arch Linux", architecture: "rv64", backend: rv64Backend, imageArch: "rv64", rootfs: "arch" },
   { id: "v86-arch", title: "x86 · Arch Linux", architecture: "v86", backend: x86Backend, imageArch: "i686", rootfs: "arch" },
+  { id: "oci-v86", title: "x86 · OCI registries", architecture: "v86", backend: x86Backend, imageArch: "x86", rootfs: "oci" },
+  { id: "oci-rv64", title: "RISC-V 64 · OCI registries", architecture: "rv64", backend: rv64Backend, imageArch: "rv64", rootfs: "oci" },
 ];
+
+const ociImages = [
+  ["oci-v86-ghcr-alpine", "GHCR · Alpine", "ghcr.io/dockerhub-mirror/alpine:3.24", "oci-v86", "GHCR"],
+  ["oci-v86-quay-alpine", "Quay · Alpine", "quay.io/cgr.dev/chainguard/wolfi-base:latest", "oci-v86", "Quay"],
+  ["oci-rv64-ghcr-busybox", "GHCR · BusyBox", "ghcr.io/dockerhub-mirror/busybox:latest", "oci-rv64", "GHCR"],
+  ["oci-rv64-docker-alpine", "Docker Hub · Alpine", "docker.io/library/alpine:3.24", "oci-rv64", "Docker Hub"],
+];
+const OCI_ROOTFS_TAG = "v0.4.42";
+const ociRootfsProfiles = [
+  ["v86", "x86", "oci-v86"],
+  ["rv64", "riscv64", "oci-rv64"],
+].flatMap(([architecture, imageArch, group]) => guestProfiles.map(([profile, suffix, label]) => [
+  `oci-${architecture}-${profile}`,
+  `Built GHCR · ${label}`,
+  `ghcr.io/justwasm/rv64-rootfs:${imageArch}-${profile}-${OCI_ROOTFS_TAG}`,
+  group,
+  "GHCR",
+]));
 
 export const presets = Object.fromEntries([
   ...presetGroups
@@ -104,6 +124,14 @@ export const presets = Object.fromEntries([
       `${group.id}-${name}`,
       { ...preset(group.architecture, group.backend, archRootfs(group.imageArch, kind), guestOverlay(group.imageArch), guestKernelArchive(group.imageArch, "minimal"), "1024M"), label, profile: name, rootfs: "arch", archKind: kind, group: group.id },
     ])),
+  ...ociImages.map(([id, label, image, group, registry]) => {
+    const presetGroup = presetGroups.find((item) => item.id === group);
+    return [id, { ...preset(presetGroup.architecture, presetGroup.backend, image, guestOverlay(presetGroup.imageArch), guestKernelArchive(presetGroup.imageArch, "minimal"), "1024M", "oci"), label, profile: registry, group }];
+  }),
+  ...ociRootfsProfiles.map(([id, label, image, group, registry]) => {
+    const presetGroup = presetGroups.find((item) => item.id === group);
+    return [id, { ...preset(presetGroup.architecture, presetGroup.backend, image, guestOverlay(presetGroup.imageArch), guestKernelArchive(presetGroup.imageArch, "minimal"), "1024M", "oci"), label, profile: registry, group }];
+  }),
 ]);
 
 export function loadCustomPresets() {
