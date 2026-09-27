@@ -81,7 +81,20 @@ function injectPatchedOutJs(module, onReady) {
       const script = document.createElement("script");
       script.src = url;
       script.onerror = () => onReady(new Error("Could not load out.js"));
-      script.onload = () => URL.revokeObjectURL(url);
+      script.onload = () => {
+        // Belt-and-suspenders: out.js's first line is `var Module = ...
+        // {}` (var hoisting shadows plugin's window.Module with an empty
+        // object), but WASM instantiation is async — it kicks off
+        // WebAssembly.instantiate() inside out.js and only resolves
+        // later. By the time _js_wsmux_open runs (during WASM init),
+        // this onload has fired and we can re-publish wsmuxBridge on
+        // the (now empty) global Module. If the var-drop patch above
+        // already kept the original Module, this is a no-op.
+        if (window.Module && !window.Module.wsmuxBridge && module.wsmuxBridge) {
+          window.Module.wsmuxBridge = module.wsmuxBridge;
+        }
+        URL.revokeObjectURL(url);
+      };
       document.head.append(script);
       if (module.calledRun) queueMicrotask(onReady);
     });
