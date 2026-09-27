@@ -100,12 +100,17 @@ async function start() {
   }
   if (module.network) setNetwork(true);
   else setNetwork(false);
+  // openpty returns { master, slave }; the slave is what out.js reads
+  // as Module["pty"] inside initRuntime(), which runs as part of
+  // Module.onRuntimeInitialized (resolved by loadQemuModule below).
+  // Wire the slave up *before* loadQemuModule awaits the runtime
+  // hook so PTY.onSignal etc. find Module["pty"] populated.
+  const { master, slave } = window.openpty();
+  module.pty = slave;
   const instance = await loadQemuModule();
   const terminal = new window.Terminal({ cursorBlink: true, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", fontSize: 13, theme: { background: "#080c12", foreground: "#e6edf3" } });
   terminal.open($("terminal"));
-  const { master, slave } = window.openpty();
   terminal.loadAddon(master);
-  module.pty = slave;
   setStatus("loading", module.network ? "booting Alpine with vnet networking…" : "booting Alpine…");
   const poll = instance.TTY.stream_ops.poll;
   instance.TTY.stream_ops.poll = (stream, timeout) => !slave.readable ? (slave.writable ? 4 : 0) : poll.call(instance.TTY.stream_ops, stream, timeout);
