@@ -1,6 +1,12 @@
 const DEMO_ROOT = "/plugin/qemu-playground/vendor/";
+const VNET_URL = "wss://vnet.net.k0s.io/x/net";
 const $ = (id) => document.getElementById(id);
 const status = $("status");
+
+// Side-effect import: installs window.GearShell.vnet (the host-side
+// helper that speaks vnet /x/net WebSocket) before any code path
+// touches it.
+import "./vnet-bridge.js";
 
 function setStatus(mode, text) {
   status.dataset.mode = mode;
@@ -56,7 +62,13 @@ function configureModule() {
     "-drive", "id=rootfs,file=/pack-rootfs/disk-rootfs.img,format=raw,if=none",
     "-device", "virtio-blk-pci,drive=rootfs",
     "-virtfs", "local,path=/.wasmenv,mount_tag=wasm0,security_model=passthrough,id=wasm0",
-    "-netdev", "socket,id=vmnic,connect=localhost:9999", "-device", "virtio-net-pci,netdev=vmnic",
+    // -netdev wsmux forwards L2 frames through Module.wsmuxBridge
+    // (created in installWsmuxBridge below) into window.GearShell.vnet
+    // which speaks the vnet /x/net WebSocket protocol (raw L2 per
+    // WS binary message in both directions, matching gearshell/vnet,
+    // apptron/worker, and progrium/go-netstack).
+    "-netdev", `wsmux,id=vmnic,url=${VNET_URL},bridge=wsmuxBridge`,
+    "-device", "virtio-net-pci,netdev=vmnic",
   ] : [
     "-nographic", "-M", "pc", "-m", "512M", "-accel", "tcg,tb-size=500",
     "-L", "/pack-rom/", "-nic", "none", "-kernel", "/pack-kernel/vmlinuz-virt",
@@ -79,75 +91,76 @@ async function start() {
   const module = configureModule();
   await loadScript("xterm.js");
   await loadScript("xterm-pty.js");
-  if (module.network) await loadScript("network/stack.js");
   await Promise.all(["load-rootfs.js", "load-kernel.js", "load-initramfs.js", "load-rom.js"].map(loadScript));
   if (typeof window.Terminal !== "function" || typeof window.openpty !== "function") {
     throw new Error("QEMU-Wasm terminal dependencies did not load.");
   }
-  let certificate = null;
-  if (module.network) {
-    if (!window.Stack) throw new Error("QEMU-Wasm networking stack did not load.");
-    setStatus("loading", "starting browser network…");
-    certificate = await new Promise((resolve) => {
-      module.websocket = { url: "http://localhost:9999/" };
-      window.Stack.Start(
-        "http://localhost:9999/",
-        `${DEMO_ROOT}network/stack-worker.js`,
-        `${DEMO_ROOT}network/c2w-net-proxy.wasm.gzip`,
-        resolve,
-      );
-    });
-    module.preRun.push((runtime) => {
-      runtime.FS.mkdir("/.wasmenv");
-      runtime.FS.writeFile("/.wasmenv/proxy.crt", certificate);
-    });
-    setNetwork(true);
-  } else {
-    setNetwork(false);
+  if (module.network && !window.GearShell?.vnet) {
+    throw new Error("vnet-bridge did not load; GearShell.vnet is missing.");
   }
+  if (module.network) setNetwork(true);
+  else setNetwork(false);
   const instance = await loadQemuModule();
   const terminal = new window.Terminal({ cursorBlink: true, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", fontSize: 13, theme: { background: "#080c12", foreground: "#e6edf3" } });
   terminal.open($("terminal"));
   const { master, slave } = window.openpty();
   terminal.loadAddon(master);
   module.pty = slave;
-  setStatus("loading", "booting Alpine with browser networking…");
+  setStatus("loading", module.network ? "booting Alpine with vnet networking…" : "booting Alpine…");
   const poll = instance.TTY.stream_ops.poll;
   instance.TTY.stream_ops.poll = (stream, timeout) => !slave.readable ? (slave.writable ? 4 : 0) : poll.call(instance.TTY.stream_ops, stream, timeout);
-  setStatus("ready", "QEMU running");
+  setStatus("ready", module.network ? "QEMU running · vnet attached" : "QEMU running");
 }
 
-// Module.wsmuxBridge — host-side helper that the qemu-wasm fork calls when
-// the wsmux netdev is wired up. The bridge is only invoked if the guest
-// is started with `-netdev wsmux,url=...`; with the current stub binary
-// it stays unused. Frames are framed as "qemu": a 4-byte big-endian
-// length prefix followed by a raw L2 payload.
+// Module.wsmuxBridge — host-side helper that the qemu-wasm fork calls
+// when the wsmux netdev is wired up. The wasm side invokes:
+//   bridge.connect(url)             -> handle
+//   bridge.send(handle, bytes)      -> emits a raw L2 frame
+//   bridge.recv(handle, callback)   -> subscribes to incoming frames
+//   bridge.close(handle)            -> tears down
+// Frames are raw L2 per JS call (one frame per `send`/`recv`); the
+// bridge queues them, and the vnet-bridge module drives
+// `wss://vnet.net.k0s.io/x/net` (one raw L2 frame per WebSocket
+// binary message in both directions — matching the upstream
+// gearshell/vnet, apptron/worker, and progrium/go-netstack
+// gateway). 4-byte BE length prefixing is intentionally absent:
+// that prefix is purely the server-side adapter framing inside
+// `vnet.AcceptQemu` and never appears on the wire.
 function installWsmuxBridge(module) {
   module.wsmuxBridge = createVnetWsmuxBridge();
+}
+
+// Per-handle state for the wsmux bridge. Each entry owns an outbound
+// queue (frames the wasm has yet to consume via recv) and at most one
+// outstanding waiter (the most recent recv's resolve + disposer).
+function createWsmuxBridgeEntry(url) {
+  return { url, queue: [], waiting: null };
+}
+
+// Pump a freshly-delivered frame into the bridge's queue or the live
+// waiter. Called by vnet-bridge.js's onFrame callback.
+function pumpWsmuxFrame(handles, handle, frame) {
+  const entry = handles.get(handle);
+  if (!entry) return;
+  if (entry.waiting) {
+    const { resolve, dispose } = entry.waiting;
+    entry.waiting = null;
+    if (dispose) dispose();
+    resolve(frame);
+  } else {
+    entry.queue.push(frame);
+  }
 }
 
 function createVnetWsmuxBridge() {
   const handles = new Map();
   let nextHandle = 1;
 
-  function pumpFrame(handle, frame) {
-    const entry = handles.get(handle);
-    if (!entry) return;
-    if (entry.waiting) {
-      const { resolve, dispose } = entry.waiting;
-      entry.waiting = null;
-      if (dispose) dispose();
-      resolve(frame);
-    } else {
-      entry.queue.push(frame);
-    }
-  }
-
   return {
     connect(url) {
       const handle = nextHandle++;
-      handles.set(handle, { url, queue: [], waiting: null });
-      vnetAttach(handle, url, (frame) => pumpFrame(handle, frame));
+      handles.set(handle, createWsmuxBridgeEntry(url));
+      vnetAttach(handle, url, (frame) => pumpWsmuxFrame(handles, handle, frame));
       return handle;
     },
     send(handle, bytes) {
@@ -164,6 +177,10 @@ function createVnetWsmuxBridge() {
         queueMicrotask(() => callback(frame));
         return () => {};
       }
+      // Register a single-waiter slot. The wasm side invokes recv
+      // sequentially in wsmux_recv_co, so overwriting `waiting` is
+      // safe (previous disposers null it out, so callbacks never fire
+      // twice for the same handle).
       let resolve;
       const promise = new Promise((r) => { resolve = r; });
       const dispose = () => {
@@ -177,7 +194,7 @@ function createVnetWsmuxBridge() {
     },
     close(handle) {
       const entry = handles.get(handle);
-      if (entry && entry.waiting && entry.waiting.dispose) entry.waiting.dispose();
+      if (entry?.waiting?.dispose) entry.waiting.dispose();
       handles.delete(handle);
       vnetDetach(handle).catch(() => {});
     },
