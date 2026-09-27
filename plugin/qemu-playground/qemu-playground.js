@@ -69,6 +69,7 @@ function injectPatchedOutJs(module, onReady) {
       return r.text();
     })
     .then((src) => {
+      // Drop the var-hoisted shadow on Module's first line.
       const patched = src.replace(
         /^var Module = typeof Module != "undefined" \? Module : \{\};/m,
         'Module = typeof Module != "undefined" ? Module : {};',
@@ -82,14 +83,18 @@ function injectPatchedOutJs(module, onReady) {
       script.src = url;
       script.onerror = () => onReady(new Error("Could not load out.js"));
       script.onload = () => {
-        // Belt-and-suspenders: out.js's first line is `var Module = ...
-        // {}` (var hoisting shadows plugin's window.Module with an empty
-        // object), but WASM instantiation is async — it kicks off
-        // WebAssembly.instantiate() inside out.js and only resolves
-        // later. By the time _js_wsmux_open runs (during WASM init),
-        // this onload has fired and we can re-publish wsmuxBridge on
-        // the (now empty) global Module. If the var-drop patch above
-        // already kept the original Module, this is a no-op.
+        // Belt-and-suspenders (rounds 75–81 of plugin work): out.js's
+        // first line `var Module = ... {};` shadows plugin's
+        // window.Module via hoisting. The var-drop regex patch
+        // suppresses the shadow, but if it ever silently misses
+        // (regex stale, vendor change), out.js still constructs an
+        // empty `Module` global and `_js_wsmux_open` (called during
+        // WASM init) sees `Module.wsmuxBridge === undefined`. WebAssembly
+        // instantiation is async — out.js sync body finishes first
+        // (createWasm returns a Promise), so onload fires here before
+        // the WASM imports resolve. Re-publish the bridge on the
+        // global Module so _js_wsmux_open finds it. If the var-drop
+        // patch already kept the original Module, this is a no-op.
         if (window.Module && !window.Module.wsmuxBridge && module.wsmuxBridge) {
           window.Module.wsmuxBridge = module.wsmuxBridge;
         }
