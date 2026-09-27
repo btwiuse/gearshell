@@ -13,14 +13,14 @@
 #
 # Environment overrides:
 #   QEMU_WASM_REPO  default: justwasm/qemu-wasm
-#   QEMU_WASM_TAG   default: v0.4.44-wsmux14
+#   QEMU_WASM_TAG   default: v0.4.44-wsmux15
 #
 # Requires: gh (GitHub CLI), curl, sha256sum.
 
 set -euo pipefail
 
 REPO="${QEMU_WASM_REPO:-justwasm/qemu-wasm}"
-TAG="${QEMU_WASM_TAG:-${1:-v0.4.44-wsmux14}}"
+TAG="${QEMU_WASM_TAG:-${1:-v0.4.44-wsmux15}}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/../plugin/qemu-playground" && pwd)"
