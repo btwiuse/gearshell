@@ -55,11 +55,13 @@ function loadQemuModule() {
 // plugin.wsmuxBridge out of out.js's reach and produces
 // "wsmux: js bridge 'wsmuxBridge' did not accept url (handle=0)".
 //
-// Workaround: fetch out.js as text, rewrite the hoisted `var Module`
-// line so it reads globalThis.Module (which is not hoisted, so the
-// read goes to the real global), and inject the patched source as a
-// blob URL. The moduleOverrides snapshot that follows in out.js then
-// sees every property the plugin set (wsmuxBridge, pty, arguments, ...).
+// Workaround: fetch out.js as text, drop the `var` keyword from
+// that line so the binding doesn't get hoisted. Without `var`,
+// `Module` on the RHS reads from globalThis (where plugin has set
+// window.Module = module), and the LHS assigns that same object
+// back. The moduleOverrides snapshot that follows in out.js then
+// sees every property the plugin set (wsmuxBridge, pty, arguments,
+// ...).
 function injectPatchedOutJs(module, onReady) {
   return fetch(`${DEMO_ROOT}out.js`, { cache: "no-store" })
     .then((r) => {
@@ -69,7 +71,7 @@ function injectPatchedOutJs(module, onReady) {
     .then((src) => {
       const patched = src.replace(
         /^var Module = typeof Module != "undefined" \? Module : \{\};/m,
-        'var Module = typeof globalThis.Module != "undefined" ? globalThis.Module : {};',
+        'Module = typeof Module != "undefined" ? Module : {};',
       );
       if (patched === src) {
         throw new Error("out.js: hoisted `var Module` line not found; vendor changed?");
