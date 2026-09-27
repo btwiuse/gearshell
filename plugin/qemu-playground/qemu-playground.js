@@ -133,35 +133,6 @@ async function start() {
 // `vnet.AcceptQemu` and never appears on the wire.
 function installWsmuxBridge(module) {
   module.wsmuxBridge = createVnetWsmuxBridge();
-  // Sanity: the qemu-wasm fork's js_wsmux_open needs Module["wsmuxBridge"]
-  // with a .connect(url) function. The "did not accept url" error from
-  // qemu-system-x86_64 means it didn't find that shape; this log is
-  // here to confirm the bridge is in place if the error recurs.
-  console.log("[qemu-playground] Module.wsmuxBridge keys:",
-    Object.keys(module.wsmuxBridge),
-    "connect is fn?", typeof module.wsmuxBridge.connect === "function",
-    "window.Module is module?", window.Module === module);
-  // Self-test: invoke connect once now so the user can see in
-  // devtools whether the bridge round-trips before out.js ever
-  // touches it. We immediately close the handle so the test does
-  // not actually open a WebSocket.
-  try {
-    const probe = module.wsmuxBridge.connect("ws://probe.invalid/");
-    console.log("[qemu-playground] probe connect returned", probe,
-      "typeof probe:", typeof probe);
-    if (probe) module.wsmuxBridge.close(probe);
-  } catch (err) {
-    console.warn("[qemu-playground] probe connect threw", err);
-  }
-  // out.js sees Module via its own top-level `var Module = ...`
-  // and `Module["wsmuxBridge"]` for js_wsmux_open. If the wasm
-  // still reports "did not accept url" after the probe succeeds,
-  // out.js is reading a different Module object than we set.
-  console.log("[qemu-playground] before out.js load:",
-    "globalThis.Module === window.Module === module?",
-    globalThis.Module === module,
-    "globalThis.Module keys:",
-    Object.keys(globalThis.Module).slice(0, 20));
 }
 
 // Per-handle state for the wsmux bridge. Each entry owns an outbound
