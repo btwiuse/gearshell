@@ -162,6 +162,15 @@ function installWsmuxBridge(module) {
     globalThis.Module === module,
     "globalThis.Module keys:",
     Object.keys(globalThis.Module).slice(0, 20));
+  // The qemu-wasm fork's out.js declares at top level:
+  //   var Module = typeof Module != "undefined" ? Module : {};
+  // That var Module is, in classic script, the globalThis.Module
+  // binding — so once we set globalThis.Module = module above,
+  // out.js should pick it up. Re-assert just before out.js loads
+  // in case any other <script> raced in and reset globalThis.Module.
+  // (loadQemuModule has not been called yet at this point; this
+  // is the last hook inside configureModule's synchronous tail.)
+  globalThis.Module = module;
 }
 
 // Per-handle state for the wsmux bridge. Each entry owns an outbound
