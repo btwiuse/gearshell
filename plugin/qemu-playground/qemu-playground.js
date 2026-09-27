@@ -43,12 +43,46 @@ function loadQemuModule() {
       resolve(module);
     };
     module.onRuntimeInitialized = finish;
-    const script = document.createElement("script");
-    script.src = `${DEMO_ROOT}out.js`;
-    script.onerror = () => reject(new Error("Could not load out.js"));
-    document.head.append(script);
-    if (module.calledRun) queueMicrotask(finish);
+    injectPatchedOutJs(module, finish).catch((err) => reject(err));
   });
+}
+
+// out.js starts with `var Module = typeof Module != "undefined"
+// ? Module : {};`. Due to `var` hoisting the binding exists (but
+// uninitialized) before the RHS is evaluated, so `typeof Module`
+// returns "undefined" and the assignment is always `{}` — shadowing
+// whatever the plugin set on window.Module. That drops
+// plugin.wsmuxBridge out of out.js's reach and produces
+// "wsmux: js bridge 'wsmuxBridge' did not accept url (handle=0)".
+//
+// Workaround: fetch out.js as text, rewrite the hoisted `var Module`
+// line so it reads globalThis.Module (which is not hoisted, so the
+// read goes to the real global), and inject the patched source as a
+// blob URL. The moduleOverrides snapshot that follows in out.js then
+// sees every property the plugin set (wsmuxBridge, pty, arguments, ...).
+function injectPatchedOutJs(module, onReady) {
+  return fetch(`${DEMO_ROOT}out.js`, { cache: "no-store" })
+    .then((r) => {
+      if (!r.ok) throw new Error(`Could not load out.js (${r.status})`);
+      return r.text();
+    })
+    .then((src) => {
+      const patched = src.replace(
+        /^var Module = typeof Module != "undefined" \? Module : \{\};/m,
+        'var Module = typeof globalThis.Module != "undefined" ? globalThis.Module : {};',
+      );
+      if (patched === src) {
+        throw new Error("out.js: hoisted `var Module` line not found; vendor changed?");
+      }
+      const blob = new Blob([patched], { type: "text/javascript" });
+      const url = URL.createObjectURL(blob);
+      const script = document.createElement("script");
+      script.src = url;
+      script.onerror = () => onReady(new Error("Could not load out.js"));
+      script.onload = () => URL.revokeObjectURL(url);
+      document.head.append(script);
+      if (module.calledRun) queueMicrotask(onReady);
+    });
 }
 
 function configureModule() {
